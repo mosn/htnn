@@ -1,4 +1,5 @@
 SHELL = /bin/bash
+OS = $(shell uname)
 
 TARGET_SO       = libgolang.so
 PROJECT_NAME    = mosn.io/moe
