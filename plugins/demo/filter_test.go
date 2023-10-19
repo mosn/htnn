@@ -22,7 +22,7 @@ func TestDecodeHeaders(t *testing.T) {
 		"header_name": "hdr",
 	}))
 	cb.SetStreamInfo(info)
-	f := configFactory(&config{})(cb)
+	f := configFactory(&Config{})(cb)
 	hdr := envoy.NewRequestHeaderMap(http.Header{})
 	assert.Equal(t, api.Continue, f.DecodeHeaders(hdr, true))
 	v, _ := hdr.Get("hdr")

@@ -1,7 +1,10 @@
 package demo
 
 import (
+	"bytes"
+
 	"github.com/envoyproxy/envoy/contrib/golang/common/go/api"
+	"github.com/golang/protobuf/jsonpb"
 
 	"mosn.io/moe/pkg/plugins"
 )
@@ -24,19 +27,25 @@ func (p *plugin) ConfigParser() api.StreamFilterConfigParser {
 	return plugins.NewPluginConfigParser(&parser{})
 }
 
-type config struct {
-}
-
 type parser struct {
 }
 
 func (p *parser) Validate(data []byte) (interface{}, error) {
-	conf := &config{}
+	conf := &Config{}
+	marshaler := &jsonpb.Unmarshaler{}
+	err := marshaler.Unmarshal(bytes.NewReader(data), conf)
+	if err != nil {
+		return nil, err
+	}
+
+	if err = conf.Validate(); err != nil {
+		return nil, err
+	}
 	return conf, nil
 }
 
 func (p *parser) Handle(c interface{}, callbacks api.ConfigCallbackHandler) (interface{}, error) {
-	conf := c.(config)
+	conf := c.(*Config)
 	return conf, nil
 }
 

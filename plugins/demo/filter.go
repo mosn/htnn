@@ -5,7 +5,7 @@ import (
 )
 
 func configFactory(c interface{}) api.StreamFilterFactory {
-	conf, ok := c.(*config)
+	conf, ok := c.(*Config)
 	if !ok {
 		panic("unexpected config type")
 	}
@@ -21,7 +21,7 @@ type filter struct {
 	api.PassThroughStreamFilter
 
 	callbacks api.FilterCallbackHandler
-	config    *config
+	config    *Config
 }
 
 func (f *filter) DecodeHeaders(header api.RequestHeaderMap, endStream bool) api.StatusType {

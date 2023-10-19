@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package moe.plugins.demo;
+
+import "validate/validate.proto";
+
+option go_package = "mosn.io/moe/plugins/demo";
+
+message Config {
+  string guest_name = 1 [(validate.rules).string = {ignore_empty: false, min_len: 1}];
+}

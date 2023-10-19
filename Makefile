@@ -10,6 +10,17 @@ PROXY_IMAGE     ?= envoyproxy/envoy:contrib-debug-dev
 MAJOR_VERSION   = $(shell cat VERSION)
 GIT_VERSION     = $(shell git log -1 --pretty=format:%h)
 
+# Define a recursive wildcard function
+rwildcard=$(foreach d,$(wildcard $(addsuffix *,$(1))),$(call rwildcard,$d/,$(2))$(filter $(subst *,%,$(2)),$d))
+
+PROTOC = protoc
+PROTO_FILES = $(call rwildcard,./plugins/,*.proto)
+GO_TARGETS = $(patsubst %.proto,%.pb.go,$(PROTO_FILES))
+
+gen-proto: $(GO_TARGETS)
+%.pb.go: %.proto
+	protoc --proto_path=. --go_opt="paths=source_relative" --go_out=. --validate_out="lang=go,paths=source_relative:." -I ../protoc-gen-validate $<
+
 test:
 	go test -gcflags="all=-N -l" -v ./...
 
@@ -33,4 +44,4 @@ run-demo:
 		${PROXY_IMAGE} \
 		envoy -c /etc/demo.yaml --log-level debug
 
-.PHONY: test build-so build-so-local run-demo
+.PHONY: gen-proto test build-so build-so-local run-demo
