@@ -2,8 +2,27 @@ package demo
 
 import (
 	"github.com/envoyproxy/envoy/contrib/golang/common/go/api"
-	"google.golang.org/protobuf/types/known/anypb"
+
+	"mosn.io/moe/pkg/plugins"
 )
+
+const (
+	Name = "demo"
+)
+
+func init() {
+	plugins.RegisterHttpPlugin(Name, &plugin{})
+}
+
+type plugin struct{}
+
+func (p *plugin) ConfigFactory() api.StreamFilterConfigFactory {
+	return configFactory
+}
+
+func (p *plugin) ConfigParser() api.StreamFilterConfigParser {
+	return plugins.NewPluginConfigParser(&parser{})
+}
 
 type config struct {
 }
@@ -11,8 +30,13 @@ type config struct {
 type parser struct {
 }
 
-func (p *parser) Parse(any *anypb.Any, callbacks api.ConfigCallbackHandler) (interface{}, error) {
+func (p *parser) Validate(data []byte) (interface{}, error) {
 	conf := &config{}
+	return conf, nil
+}
+
+func (p *parser) Handle(c interface{}, callbacks api.ConfigCallbackHandler) (interface{}, error) {
+	conf := c.(config)
 	return conf, nil
 }
 

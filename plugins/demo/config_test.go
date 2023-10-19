@@ -4,13 +4,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"google.golang.org/protobuf/types/known/anypb"
 )
 
 func TestParser(t *testing.T) {
 	p := &parser{}
-	cfg := &anypb.Any{}
-	_, err := p.Parse(cfg, nil)
+	data := []byte("{}")
+	_, err := p.Validate(data)
 	assert.Nil(t, err)
 
 	parentConfig := &config{}
