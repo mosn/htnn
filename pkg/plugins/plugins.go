@@ -35,14 +35,21 @@ func NewPluginConfigParser(parser ConfigParser) *PluginConfigParser {
 
 func (cp *PluginConfigParser) Parse(any *anypb.Any, callbacks api.ConfigCallbackHandler) (interface{}, error) {
 	configStruct := &xds.TypedStruct{}
-	if err := any.UnmarshalTo(configStruct); err != nil {
-		return nil, err
-	}
+	var data []byte
+	var err error
+	if any.GetTypeUrl() == "" {
+		// no config
+		data = []byte(`{}`)
+	} else {
+		if err := any.UnmarshalTo(configStruct); err != nil {
+			return nil, err
+		}
 
-	v := configStruct.Value
-	data, err := v.MarshalJSON()
-	if err != nil {
-		return nil, err
+		v := configStruct.Value
+		data, err = v.MarshalJSON()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	c, err := cp.Validate(data)

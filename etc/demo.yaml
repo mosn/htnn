@@ -22,6 +22,13 @@ static_resources:
                       library_id: demo
                       library_path: /etc/libgolang.so
                       plugin_name: demo
+                      plugin_config:
+                        "@type": type.googleapis.com/xds.type.v3.TypedStruct
+                        value:
+                          host_name: Jack
+                  - name: envoy.filters.http.lua
+                    typed_config:
+                      "@type": type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
                   - name: envoy.filters.http.router
                     typed_config:
                       "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
@@ -33,9 +40,10 @@ static_resources:
                       routes:
                         - match:
                             prefix: "/"
-                          route:
-                            host_rewrite_literal: mosn.io
-                            cluster: service_mosn_io
+                          direct_response:
+                            status: 200
+                            body:
+                              inline_string: ""
                           typed_per_filter_config:
                             envoy.filters.http.golang:
                               "@type": type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.ConfigsPerRoute
@@ -44,22 +52,28 @@ static_resources:
                                   config:
                                     "@type": type.googleapis.com/xds.type.v3.TypedStruct
                                     value:
+                                      host_name: Tom
+                            envoy.filters.http.lua:
+                              "@type": type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
+                              source_code:
+                                inline_string: |
+                                  function envoy_on_request(handle)
+                                    local headers = handle:headers()
+                                    local resp_headers = {[":status"] = "200"}
+                                    for key, value in pairs(headers) do
+                                      resp_headers["resp-" .. key] = value
+                                    end
 
-  clusters:
-    - name: service_mosn_io
-      type: LOGICAL_DNS
-      dns_lookup_family: V4_ONLY
-      load_assignment:
-        cluster_name: service_mosn_io
-        endpoints:
-          - lb_endpoints:
-              - endpoint:
-                  address:
-                    socket_address:
-                      address: mosn.io
-                      port_value: 443
-      transport_socket:
-        name: envoy.transport_sockets.tls
-        typed_config:
-          "@type": type.googleapis.com/envoy.extensions.transport_sockets.tls.v3.UpstreamTlsContext
-          sni: mosn.io
+                                    local always_wrap_body = true
+                                    local body = handle:body(always_wrap_body)
+                                    local size = body:length()
+                                    local data = ""
+                                    if size > 0 then
+                                      data = body:getBytes(0, size)
+                                    end
+
+                                    handle:respond(
+                                      resp_headers,
+                                      data
+                                    )
+                                  end

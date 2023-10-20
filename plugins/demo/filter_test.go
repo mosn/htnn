@@ -11,20 +11,30 @@ import (
 )
 
 func TestHello(t *testing.T) {
-	f := &filter{}
-	assert.Equal(t, "hello", f.hello())
+	cb := &envoy.FiterCallbackHandler{}
+	info := &envoy.StreamInfo{}
+	info.SetFilterState(envoy.NewFilterState(map[string]string{
+		"guest_name": "Jack",
+	}))
+	cb.SetStreamInfo(info)
+	f := configFactory(&Config{
+		HostName: "Tom",
+	})(cb).(*filter)
+	assert.Equal(t, "hello, Jack", f.hello())
 }
 
 func TestDecodeHeaders(t *testing.T) {
 	cb := &envoy.FiterCallbackHandler{}
 	info := &envoy.StreamInfo{}
 	info.SetFilterState(envoy.NewFilterState(map[string]string{
-		"header_name": "hdr",
+		"guest_name": "Jack",
 	}))
 	cb.SetStreamInfo(info)
-	f := configFactory(&Config{})(cb)
+	f := configFactory(&Config{
+		HostName: "Tom",
+	})(cb)
 	hdr := envoy.NewRequestHeaderMap(http.Header{})
 	assert.Equal(t, api.Continue, f.DecodeHeaders(hdr, true))
-	v, _ := hdr.Get("hdr")
-	assert.Equal(t, "hello", v)
+	v, _ := hdr.Get("Tom")
+	assert.Equal(t, "hello, Jack", v)
 }

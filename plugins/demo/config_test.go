@@ -8,11 +8,11 @@ import (
 
 func TestParser(t *testing.T) {
 	p := &parser{}
-	data := []byte(`{"guest_name":"Jack"}`)
+	data := []byte(`{"host_name":"Jack"}`)
 	ty, err := p.Validate(data)
 	assert.Nil(t, err)
 	c := ty.(*Config)
-	assert.Equal(t, "Jack", c.GuestName)
+	assert.Equal(t, "Jack", c.HostName)
 
 	parentConfig := &Config{}
 	childConfig := &Config{}
@@ -25,12 +25,12 @@ func TestBadConfig(t *testing.T) {
 		input string
 	}{
 		{
-			name:  "no guest_name",
+			name:  "no host_name",
 			input: `{}`,
 		},
 		{
-			name:  "empty guest_name",
-			input: `{"guest_name":""}`,
+			name:  "empty host_name",
+			input: `{"host_name":""}`,
 		},
 	}
 
