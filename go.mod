@@ -6,13 +6,13 @@ require (
 	github.com/cncf/xds/go v0.0.0-20231016030527-8bd2eac9fb4a
 	github.com/envoyproxy/envoy v1.27.1-0.20231018234125-ff5d3f93ce41
 	github.com/envoyproxy/protoc-gen-validate v1.0.2
-	github.com/golang/protobuf v1.5.0
 	github.com/stretchr/testify v1.8.4
 	google.golang.org/protobuf v1.31.0
 )
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/golang/protobuf v1.5.0 // indirect
 	github.com/google/go-cmp v0.5.8 // indirect
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/kr/text v0.2.0 // indirect

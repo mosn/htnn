@@ -24,6 +24,7 @@ TEST_OPTION ?= -gcflags="all=-N -l" -v
 gen-proto: $(GO_TARGETS)
 %.pb.go: %.proto
 	protoc --proto_path=. --go_opt="paths=source_relative" --go_out=. --validate_out="lang=go,paths=source_relative:." -I ../protoc-gen-validate $<
+	go run github.com/rinchsan/gosimports/cmd/gosimports@latest -w -local ${PROJECT_NAME} $@
 
 .PHONY: test
 test:
@@ -52,3 +53,12 @@ run-demo: build-so
 		-p 10000:10000 \
 		${PROXY_IMAGE} \
 		envoy -c /etc/demo.yaml --log-level debug
+
+.PHONY: lint-go
+lint-go:
+	go run github.com/golangci/golangci-lint/cmd/golangci-lint@latest run
+
+.PHONY: fmt-go
+fmt-go:
+	go mod tidy
+	go run github.com/rinchsan/gosimports/cmd/gosimports@latest -w -local ${PROJECT_NAME} .

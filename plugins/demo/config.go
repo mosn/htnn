@@ -1,10 +1,8 @@
 package demo
 
 import (
-	"bytes"
-
 	"github.com/envoyproxy/envoy/contrib/golang/common/go/api"
-	"github.com/golang/protobuf/jsonpb"
+	"google.golang.org/protobuf/encoding/protojson"
 
 	"mosn.io/moe/pkg/plugins"
 )
@@ -32,8 +30,7 @@ type parser struct {
 
 func (p *parser) Validate(data []byte) (interface{}, error) {
 	conf := &Config{}
-	marshaler := &jsonpb.Unmarshaler{}
-	err := marshaler.Unmarshal(bytes.NewReader(data), conf)
+	err := protojson.Unmarshal(data, conf)
 	if err != nil {
 		return nil, err
 	}
