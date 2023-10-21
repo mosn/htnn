@@ -62,3 +62,7 @@ lint-go:
 fmt-go:
 	go mod tidy
 	go run github.com/rinchsan/gosimports/cmd/gosimports@latest -w -local ${PROJECT_NAME} .
+
+.PHONY: lint-spell
+lint-spell:
+	codespell --skip '.git,.idea,go.mod,go.sum,*.svg' --check-filenames --check-hidden --ignore-words ./.ignore_words
