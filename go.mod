@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/cncf/xds/go v0.0.0-20231016030527-8bd2eac9fb4a
-	github.com/envoyproxy/envoy v1.27.1-0.20231018234125-ff5d3f93ce41
+	github.com/envoyproxy/envoy v1.28.0
 	github.com/envoyproxy/protoc-gen-validate v1.0.2
 	github.com/stretchr/testify v1.8.4
 	google.golang.org/protobuf v1.31.0
