@@ -59,3 +59,6 @@ func (cp *PluginConfigParser) Parse(any *anypb.Any, callbacks api.ConfigCallback
 
 	return cp.Handle(c, callbacks)
 }
+
+// PluginMethodDefaultImpl provides reasonable implementation for optional methods
+type PluginMethodDefaultImpl struct{}

@@ -6,6 +6,7 @@ PROJECT_NAME    = mosn.io/moe
 # Both images use glibc 2.31. Ensure libc in the images match each other.
 BUILD_IMAGE     ?= golang:1.20-bullseye
 PROXY_IMAGE     ?= envoyproxy/envoy:contrib-debug-dev
+DEV_TOOLS_IMAGE ?= moe-dev-tools:2022-10-23
 
 MAJOR_VERSION   = $(shell cat VERSION)
 GIT_VERSION     = $(shell git log -1 --pretty=format:%h)
@@ -21,9 +22,12 @@ TEST_OPTION ?= -gcflags="all=-N -l" -v
 
 
 .PHONY: gen-proto
-gen-proto: $(GO_TARGETS)
+gen-proto: build-dev-tools $(GO_TARGETS)
 %.pb.go: %.proto
-	protoc --proto_path=. --go_opt="paths=source_relative" --go_out=. --validate_out="lang=go,paths=source_relative:." -I ../protoc-gen-validate $<
+	docker run --rm -v $(PWD):/go/src/${PROJECT_NAME} -w /go/src/${PROJECT_NAME} \
+		${DEV_TOOLS_IMAGE} \
+		protoc --proto_path=. --go_opt="paths=source_relative" --go_out=. --validate_out="lang=go,paths=source_relative:." \
+			-I ../../protoc-gen-validate $<
 	go run github.com/rinchsan/gosimports/cmd/gosimports@latest -w -local ${PROJECT_NAME} $@
 
 .PHONY: test
@@ -47,12 +51,18 @@ build-so:
 		make build-so-local
 
 .PHONY: run-demo
-run-demo: build-so
+run-demo:
 	docker run --rm -v $(PWD)/etc/demo.yaml:/etc/demo.yaml \
 		-v $(PWD)/libgolang.so:/etc/libgolang.so \
 		-p 10000:10000 \
 		${PROXY_IMAGE} \
 		envoy -c /etc/demo.yaml --log-level debug
+
+.PHONY: build-dev-tools
+build-dev-tools:
+	@if ! docker images ${DEV_TOOLS_IMAGE} | grep dev-tools > /dev/null; then \
+		docker build --network=host -t ${DEV_TOOLS_IMAGE} -f tools/Dockerfile.dev ./tools; \
+	fi
 
 .PHONY: lint-go
 lint-go:
@@ -64,5 +74,11 @@ fmt-go:
 	go run github.com/rinchsan/gosimports/cmd/gosimports@latest -w -local ${PROJECT_NAME} .
 
 .PHONY: lint-spell
-lint-spell:
+lint-spell: build-dev-tools
+	docker run --rm -v $(PWD):/go/src/${PROJECT_NAME} -w /go/src/${PROJECT_NAME} \
+		${DEV_TOOLS_IMAGE} \
+		make lint-spell-local
+
+.PHONY: lint-spell-local
+lint-spell-local:
 	codespell --skip '.git,.idea,go.mod,go.sum,*.svg' --check-filenames --check-hidden --ignore-words ./.ignore_words

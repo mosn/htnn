@@ -15,7 +15,9 @@ func init() {
 	plugins.RegisterHttpPlugin(Name, &plugin{})
 }
 
-type plugin struct{}
+type plugin struct {
+	plugins.PluginMethodDefaultImpl
+}
 
 func (p *plugin) ConfigFactory() api.StreamFilterConfigFactory {
 	return configFactory

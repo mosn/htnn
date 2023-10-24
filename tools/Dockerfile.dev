@@ -1,0 +1,36 @@
+FROM golang:1.20-bullseye
+
+# This Docker image provides the command line tools which can't be managed by `go`
+
+# codespell
+RUN apt update && apt install -y --no-install-recommends pip && pip install codespell
+
+# protoc
+RUN apt install -y --no-install-recommends unzip
+# I have researched https://github.com/bufbuild/protovalidate/ which claims itself as the successor of protoc-gen-validate.
+# Currently (2023 year), this project looks experimental and it has lots of break change compared with protoc-gen-validate.
+# So we still stick on the protoc-gen-validate.
+RUN VER=1.0.2 && \
+    ARCH=$(dpkg --print-architecture) && \
+    set -ex && \
+    git clone https://github.com/bufbuild/protoc-gen-validate -b v${VER} --depth 1 /go/src/protoc-gen-validate && \
+    wget https://github.com/bufbuild/protoc-gen-validate/releases/download/v${VER}/protoc-gen-validate_${VER}_linux_${ARCH}.tar.gz && \
+    tar -zxvpf protoc-gen-validate_${VER}_linux_${ARCH}.tar.gz && \
+    mv protoc-gen-validate-go /usr/bin && \
+    mv protoc-gen-validate /usr/bin
+RUN VER=24.4 && \
+    ARCH=$(dpkg --print-architecture) && \
+    set -ex && \
+    case "${ARCH}" in \
+      amd64) \
+        NAME=protoc-${VER}-linux-x86_64.zip \
+        ;; \
+      arm64) \
+        NAME=protoc-${VER}-linux-aarch_64.zip \
+        ;; \
+    esac && \
+    wget https://github.com/protocolbuffers/protobuf/releases/download/v${VER}/${NAME} && \
+    unzip -o ${NAME} -d /usr/local bin/protoc && \
+    unzip -o ${NAME} -d /usr/local 'include/*' && \
+    go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.31.0
+
