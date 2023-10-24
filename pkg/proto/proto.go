@@ -2,11 +2,16 @@ package proto
 
 import (
 	"fmt"
-	"log"
 
 	"google.golang.org/protobuf/encoding/prototext"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
+
+	"mosn.io/moe/pkg/log"
+)
+
+var (
+	logger = log.DefaultLogger.WithName("proto")
 )
 
 // Functions below are copied from istio, under Apache License
@@ -26,7 +31,8 @@ func MessageToAnyWithError(msg proto.Message) (*anypb.Any, error) {
 func MessageToAny(msg proto.Message) *anypb.Any {
 	out, err := MessageToAnyWithError(msg)
 	if err != nil {
-		log.Println(fmt.Sprintf("error marshaling Any %s: %v", prototext.Format(msg), err))
+		logger.Error(err, fmt.Sprintf("error marshaling Any %s", prototext.Format(msg)))
+		return nil
 	}
 	return out
 }
