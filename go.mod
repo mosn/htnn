@@ -3,6 +3,7 @@ module mosn.io/moe
 go 1.20
 
 require (
+	github.com/agiledragon/gomonkey/v2 v2.10.1
 	github.com/cncf/xds/go v0.0.0-20231016030527-8bd2eac9fb4a
 	github.com/envoyproxy/envoy v1.28.0
 	github.com/envoyproxy/protoc-gen-validate v1.0.2

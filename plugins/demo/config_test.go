@@ -13,6 +13,9 @@ func TestParser(t *testing.T) {
 	assert.Nil(t, err)
 	c := ty.(*Config)
 	assert.Equal(t, "Jack", c.HostName)
+	res, err := p.Handle(c, nil)
+	assert.Nil(t, err)
+	assert.Equal(t, c, res)
 
 	parentConfig := &Config{}
 	childConfig := &Config{}

@@ -6,6 +6,8 @@ PROJECT_NAME    = mosn.io/moe
 # Both images use glibc 2.31. Ensure libc in the images match each other.
 BUILD_IMAGE     ?= golang:1.20-bullseye
 PROXY_IMAGE     ?= envoyproxy/envoy:contrib-debug-dev
+# The TEST_IMAGE doesn't need to be the same with BUILD_IMAGE
+TEST_IMAGE      ?= golang:1.20-bullseye
 DEV_TOOLS_IMAGE ?= moe-dev-tools:2022-10-23
 
 MAJOR_VERSION   = $(shell cat VERSION)
@@ -28,12 +30,20 @@ gen-proto: build-dev-tools $(GO_TARGETS)
 		${DEV_TOOLS_IMAGE} \
 		protoc --proto_path=. --go_opt="paths=source_relative" --go_out=. --validate_out="lang=go,paths=source_relative:." \
 			-I ../../protoc-gen-validate $<
+	# format the generated Go code so the `fmt-go` task can pass
 	go run github.com/rinchsan/gosimports/cmd/gosimports@latest -w -local ${PROJECT_NAME} $@
 
-.PHONY: test
-test:
-	go test ${TEST_OPTION} ./pkg/...
-	go test ${TEST_OPTION} ./plugins/...
+.PHONY: unit-test
+unit-test:
+	# So far, the gomonkey library used in the test can't always run in Mac.
+	# We have a discussion about whether to run test in Docker or use uber-go/mock.
+	# The conclusion is, we prefer easier to write test to easier to run test.
+	docker run --rm -v $(shell go env GOPATH):/go -v $(PWD):/go/src/${PROJECT_NAME} -w /go/src/${PROJECT_NAME} ${TEST_IMAGE} make unit-test-local
+
+.PHONY: unit-test-local
+unit-test-local:
+	# EXTRA_TEST_OPTION can be used to pass coverage options
+	go test ${TEST_OPTION} ${EXTRA_TEST_OPTION} $(shell go list ./... | grep -v test/)
 
 .PHONY: build-so-local
 build-so-local:
