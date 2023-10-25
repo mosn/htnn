@@ -1,2 +1,3 @@
 libgolang.so
 coverage.out
+/test-envoy/

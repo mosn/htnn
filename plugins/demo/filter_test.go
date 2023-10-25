@@ -7,7 +7,7 @@ import (
 	"github.com/envoyproxy/envoy/contrib/golang/common/go/api"
 	"github.com/stretchr/testify/assert"
 
-	"mosn.io/moe/test/pkg/envoy"
+	"mosn.io/moe/tests/pkg/envoy"
 )
 
 func TestHello(t *testing.T) {

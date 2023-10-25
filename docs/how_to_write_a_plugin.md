@@ -5,6 +5,7 @@
 3. Finish the plugin. Don't forget to write tests.
 4. Add the doc of the plugin in the `./plugins/$your_plugin/README.md`.
 5. Run `make build-so`. Now the plugin is compiled into `libgolang.so`.
+6. Add integration test in the `./tests/integration/plugins`.
 
 You can take `./plugins/demo` as the example.
 
