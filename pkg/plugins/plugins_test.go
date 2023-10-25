@@ -10,6 +10,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/structpb"
+
 	"mosn.io/moe/pkg/proto"
 )
 

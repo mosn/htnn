@@ -72,7 +72,10 @@ func StartDataPlane(t *testing.T) (*DataPlane, error) {
 
 	go func() {
 		logger.Info("start envoy")
-		dp.cmd.Start()
+		err := dp.cmd.Start()
+		if err != nil {
+			logger.Error(err, "failed to start envoy")
+		}
 	}()
 	time.Sleep(5 * time.Second)
 
@@ -90,7 +93,7 @@ func (dp *DataPlane) root() string {
 func (dp *DataPlane) cleanup(t *testing.T) error {
 	cmd := exec.Command("docker", "stop", containerName)
 	// ignore error when the containerName is not left over
-	cmd.Run()
+	_ = cmd.Run()
 
 	dir := dp.root()
 	_, err := os.Stat(dir)
@@ -118,7 +121,7 @@ func (dp *DataPlane) Stop() {
 	}
 
 	// ensure envoy is gone
-	dp.cmd.Wait()
+	_ = dp.cmd.Wait()
 	logger.Info("envoy stopped")
 
 	f := dp.cmd.Stdout.(*os.File)
