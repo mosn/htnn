@@ -5,10 +5,14 @@ TARGET_SO       = libgolang.so
 PROJECT_NAME    = mosn.io/moe
 # Both images use glibc 2.31. Ensure libc in the images match each other.
 BUILD_IMAGE     ?= golang:1.20-bullseye
-PROXY_IMAGE     ?= envoyproxy/envoy:contrib-debug-dev
+# This is the envoyproxy/envoy:contrib-debug-dev fetched in 2023-10-27
+# Use docker inspect --format='{{index .RepoDigests 0}}' envoyproxy/envoy:contrib-debug-dev
+# to get the sha256 ID
+PROXY_IMAGE     ?= envoyproxy/envoy@sha256:216c1c849c326ffad0a249de6886fd90c1364bbac193d5b1e36846098615071b
 # The TEST_IMAGE doesn't need to be the same with BUILD_IMAGE
 TEST_IMAGE      ?= golang:1.20-bullseye
-DEV_TOOLS_IMAGE ?= moe-dev-tools:2022-10-23
+# local build image doesn't have RepoDigests, use timestamp as tag to distinguish different images
+DEV_TOOLS_IMAGE ?= moe-dev-tools:2023-10-23
 
 MAJOR_VERSION   = $(shell cat VERSION)
 GIT_VERSION     = $(shell git log -1 --pretty=format:%h)
