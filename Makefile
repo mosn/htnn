@@ -31,7 +31,7 @@ TEST_OPTION ?= -gcflags="all=-N -l" -v
 gen-proto: build-dev-tools $(GO_TARGETS)
 # format the generated Go code so the `fmt-go` task can pass
 %.pb.go: %.proto
-	docker run --rm -v $(PWD):/go/src/${PROJECT_NAME} -w /go/src/${PROJECT_NAME} \
+	docker run --rm -v $(PWD):/go/src/${PROJECT_NAME} --user $(shell id -u) -w /go/src/${PROJECT_NAME} \
 		${DEV_TOOLS_IMAGE} \
 		protoc --proto_path=. --go_opt="paths=source_relative" --go_out=. --validate_out="lang=go,paths=source_relative:." \
 			-I ../../protoc-gen-validate $<

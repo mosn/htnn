@@ -7,10 +7,7 @@ import (
 )
 
 func configFactory(c interface{}) api.StreamFilterFactory {
-	conf, ok := c.(*Config)
-	if !ok {
-		panic("unexpected config type")
-	}
+	conf := c.(*Config)
 	return func(callbacks api.FilterCallbackHandler) api.StreamFilter {
 		return &filter{
 			callbacks: callbacks,
