@@ -2,9 +2,10 @@ FROM golang:1.20-bullseye
 
 # This Docker image provides the command line tools which can't be managed by `go`
 
-#For Chinese developers, you may need to uncomment these lines to use proxy
-#RUN sed -i 's#http://deb.debian.org#https://mirrors.163.com#g' /etc/apt/sources.list
-#ENV GOPROXY=https://goproxy.cn
+#For Chinese developers
+RUN sed -i 's#http://deb.debian.org#https://mirrors.163.com#g' /etc/apt/sources.list
+ARG GOPROXY
+ENV GOPROXY=$GOPROXY
 
 # codespell
 RUN apt update && apt install -y --no-install-recommends pip && pip install codespell

@@ -78,7 +78,7 @@ run-demo:
 .PHONY: build-dev-tools
 build-dev-tools:
 	@if ! docker images ${DEV_TOOLS_IMAGE} | grep dev-tools > /dev/null; then \
-		docker build --network=host -t ${DEV_TOOLS_IMAGE} -f tools/Dockerfile.dev ./tools; \
+		docker build --network=host --build-arg GOPROXY=${GOPROXY} -t ${DEV_TOOLS_IMAGE} -f tools/Dockerfile.dev ./tools; \
 	fi
 
 .PHONY: lint-go
