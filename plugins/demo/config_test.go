@@ -26,14 +26,17 @@ func TestBadConfig(t *testing.T) {
 	tests := []struct {
 		name  string
 		input string
+		err   string
 	}{
 		{
 			name:  "no host_name",
 			input: `{}`,
+			err:   "invalid Config.HostName: value length must be at least 1 runes",
 		},
 		{
 			name:  "empty host_name",
 			input: `{"host_name":""}`,
+			err:   "invalid Config.HostName: value length must be at least 1 runes",
 		},
 	}
 
@@ -41,6 +44,7 @@ func TestBadConfig(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := (&parser{}).Validate([]byte(tt.input))
 			assert.NotNil(t, err)
+			assert.ErrorContains(t, err, tt.err)
 		})
 	}
 }
