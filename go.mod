@@ -4,6 +4,7 @@ go 1.20
 
 require (
 	github.com/agiledragon/gomonkey/v2 v2.10.1
+	github.com/casbin/casbin/v2 v2.77.2
 	github.com/cncf/xds/go v0.0.0-20231016030527-8bd2eac9fb4a
 	github.com/envoyproxy/envoy v1.28.0
 	github.com/envoyproxy/go-control-plane v0.11.1
@@ -18,9 +19,13 @@ require (
 )
 
 require (
+	github.com/Knetic/govaluate v3.0.1-0.20171022003610-9aa49832a739+incompatible // indirect
 	github.com/census-instrumentation/opencensus-proto v0.4.1 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
+	github.com/tidwall/gjson v1.14.4 // indirect
+	github.com/tidwall/match v1.1.1 // indirect
+	github.com/tidwall/pretty v1.2.0 // indirect
 	go.uber.org/multierr v1.10.0 // indirect
 	golang.org/x/net v0.17.0 // indirect
 	golang.org/x/sys v0.13.0 // indirect

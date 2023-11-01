@@ -95,7 +95,7 @@ func (i *RequestHeaderMap) Scheme() string {
 }
 
 func (i *RequestHeaderMap) Method() string {
-	return ""
+	return "GET"
 }
 
 func (i *RequestHeaderMap) Host() string {
@@ -103,7 +103,11 @@ func (i *RequestHeaderMap) Host() string {
 }
 
 func (i *RequestHeaderMap) Path() string {
-	return ""
+	path := i.Header.Get(":path")
+	if path != "" {
+		return path
+	}
+	return "/"
 }
 
 var _ api.RequestHeaderMap = (*RequestHeaderMap)(nil)
