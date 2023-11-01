@@ -87,11 +87,11 @@ func NewRequestHeaderMap(hdr http.Header) *RequestHeaderMap {
 }
 
 func (i *RequestHeaderMap) Protocol() string {
-	return ""
+	return "HTTP/1.1"
 }
 
 func (i *RequestHeaderMap) Scheme() string {
-	return ""
+	return "http"
 }
 
 func (i *RequestHeaderMap) Method() string {
@@ -99,15 +99,15 @@ func (i *RequestHeaderMap) Method() string {
 }
 
 func (i *RequestHeaderMap) Host() string {
-	return ""
+	return "localhost"
 }
 
 func (i *RequestHeaderMap) Path() string {
-	path := i.Header.Get(":path")
-	if path != "" {
-		return path
+	path, ok := i.Get(":path")
+	if !ok {
+		return "/"
 	}
-	return "/"
+	return path
 }
 
 var _ api.RequestHeaderMap = (*RequestHeaderMap)(nil)
@@ -231,6 +231,7 @@ var _ api.StreamInfo = (*StreamInfo)(nil)
 
 type FiterCallbackHandler struct {
 	streamInfo api.StreamInfo
+	respCode   int
 }
 
 func (i *FiterCallbackHandler) StreamInfo() api.StreamInfo {
@@ -245,6 +246,11 @@ func (i *FiterCallbackHandler) Continue(status api.StatusType) {
 }
 
 func (i *FiterCallbackHandler) SendLocalReply(responseCode int, bodyText string, headers map[string]string, grpcStatus int64, details string) {
+	i.respCode = responseCode
+}
+
+func (i *FiterCallbackHandler) LocalResponseCode() int {
+	return i.respCode
 }
 
 func (i *FiterCallbackHandler) RecoverPanic() {
