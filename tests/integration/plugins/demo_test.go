@@ -46,7 +46,7 @@ func TestDemo(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			controlPlane.UseGoPluginConfig(tt.config)
-			resp, err := dp.Do("GET", "/echo", nil)
+			resp, err := dp.Get("/echo", nil)
 			assert.Nil(t, err)
 			tt.expect(t, resp)
 		})

@@ -24,7 +24,7 @@ PROTOC = protoc
 PROTO_FILES = $(call rwildcard,./plugins/,*.proto)
 GO_TARGETS = $(patsubst %.proto,%.pb.go,$(PROTO_FILES))
 
-TEST_OPTION ?= -gcflags="all=-N -l" -v
+TEST_OPTION ?= -gcflags="all=-N -l" -v -race
 
 
 .PHONY: gen-proto
@@ -83,7 +83,7 @@ build-dev-tools:
 
 .PHONY: lint-go
 lint-go:
-	go run github.com/golangci/golangci-lint/cmd/golangci-lint@latest run
+	go run github.com/golangci/golangci-lint/cmd/golangci-lint@latest run --config=.golangci.yml
 
 .PHONY: fmt-go
 fmt-go:
