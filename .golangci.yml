@@ -22,6 +22,9 @@ linters:
     - unused
 
 linters-settings:
+  gocritic:
+    enabled-tags:
+      - diagnostic
   unparam:
     check-exported: false
 

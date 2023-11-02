@@ -37,7 +37,7 @@ func (p *parser) Validate(data []byte) (interface{}, error) {
 		return nil, err
 	}
 
-	if err = conf.Validate(); err != nil {
+	if err := conf.Validate(); err != nil {
 		return nil, err
 	}
 	return conf, nil

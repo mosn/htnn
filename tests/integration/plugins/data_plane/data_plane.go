@@ -45,7 +45,7 @@ func StartDataPlane(t *testing.T) (*DataPlane, error) {
 	// to get the sha256 ID
 	image := "envoyproxy/envoy@sha256:216c1c849c326ffad0a249de6886fd90c1364bbac193d5b1e36846098615071b"
 	pwd, _ := os.Getwd()
-	projectRoot := filepath.Join(pwd, "../../..")
+	projectRoot := filepath.Join(pwd, "..", "..", "..")
 	cmdline := "docker run --name " +
 		containerName + " --rm -t -v " +
 		projectRoot +
@@ -86,7 +86,7 @@ func StartDataPlane(t *testing.T) (*DataPlane, error) {
 
 func (dp *DataPlane) root() string {
 	pwd, _ := os.Getwd()
-	projectRoot := filepath.Join(pwd, "../../..")
+	projectRoot := filepath.Join(pwd, "..", "..", "..")
 	name := dp.t.Name()
 	dir := filepath.Join(projectRoot, testRootDirName, name)
 	return dir
