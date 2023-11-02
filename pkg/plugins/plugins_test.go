@@ -111,3 +111,21 @@ func TestParse(t *testing.T) {
 		})
 	}
 }
+
+type Merger struct {
+	MockConfigParser
+}
+
+func (m *Merger) Merge(parentConfig interface{}, childConfig interface{}) interface{} {
+	return parentConfig
+}
+
+func TestMerge(t *testing.T) {
+	cp := NewPluginConfigParser(&MockConfigParser{})
+	res := cp.Merge("parent", "child")
+	assert.Equal(t, "child", res)
+
+	cp = NewPluginConfigParser(&Merger{})
+	res = cp.Merge("parent", "child")
+	assert.Equal(t, "parent", res)
+}

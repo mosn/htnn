@@ -23,7 +23,3 @@ func (m *MockConfigParser) Validate(encodedJSON []byte) (validated interface{}, 
 func (m *MockConfigParser) Handle(validated interface{}, cb api.ConfigCallbackHandler) (configInDP interface{}, err error) {
 	return
 }
-
-func (m *MockConfigParser) Merge(parentConfig interface{}, childConfig interface{}) interface{} {
-	return childConfig
-}

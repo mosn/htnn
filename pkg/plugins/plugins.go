@@ -60,5 +60,16 @@ func (cp *PluginConfigParser) Parse(any *anypb.Any, callbacks api.ConfigCallback
 	return cp.Handle(c, callbacks)
 }
 
+type merger interface {
+	Merge(parent interface{}, child interface{}) interface{}
+}
+
+func (cp *PluginConfigParser) Merge(parent interface{}, child interface{}) interface{} {
+	if merger, ok := cp.ConfigParser.(merger); ok {
+		return merger.Merge(parent, child)
+	}
+	return child
+}
+
 // PluginMethodDefaultImpl provides reasonable implementation for optional methods
 type PluginMethodDefaultImpl struct{}
