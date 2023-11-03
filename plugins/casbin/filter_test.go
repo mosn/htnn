@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/envoyproxy/envoy/contrib/golang/common/go/api"
 	"github.com/stretchr/testify/assert"
 
 	"mosn.io/moe/tests/pkg/envoy"
@@ -61,12 +60,8 @@ func TestCasbin(t *testing.T) {
 			assert.Nil(t, err)
 			f := configFactory(config)(cb)
 			hdr := envoy.NewRequestHeaderMap(tt.header)
-			st := f.DecodeHeaders(hdr, true)
-			if tt.status > 0 {
-				assert.Equal(t, api.LocalReply, st)
-			} else {
-				assert.Equal(t, api.Continue, st)
-			}
+			f.DecodeHeaders(hdr, true)
+			assert.Equal(t, tt.status, cb.LocalResponseCode())
 		})
 	}
 }

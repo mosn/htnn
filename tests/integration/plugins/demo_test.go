@@ -6,11 +6,13 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"mosn.io/moe/pkg/filtermanager"
+	"mosn.io/moe/tests/integration/plugins/control_plane"
 	"mosn.io/moe/tests/integration/plugins/data_plane"
 )
 
 func TestDemo(t *testing.T) {
-	dp, err := data_plane.StartDataPlane(t)
+	dp, err := data_plane.StartDataPlane(t, nil)
 	if err != nil {
 		t.Fatalf("failed to start data plane: %v", err)
 		return
@@ -19,26 +21,26 @@ func TestDemo(t *testing.T) {
 
 	tests := []struct {
 		name   string
-		config map[string]interface{}
+		config *filtermanager.FilterManagerConfig
 		expect func(t *testing.T, resp *http.Response)
 	}{
 		{
 			name: "happy path",
-			config: map[string]interface{}{
+			config: control_plane.NewSinglePluinConfig("demo", map[string]interface{}{
 				"host_name": "Tom",
-			},
+			}),
 			expect: func(t *testing.T, resp *http.Response) {
-				assert.Equal(t, "hello,", resp.Header.Get("Resp-Tom"), resp)
+				assert.Equal(t, "hello,", resp.Header.Get("Echo-Tom"), resp)
 			},
 		},
 		{
 			name: "change config",
-			config: map[string]interface{}{
+			config: control_plane.NewSinglePluinConfig("demo", map[string]interface{}{
 				"host_name": "Mike",
-			},
+			}),
 
 			expect: func(t *testing.T, resp *http.Response) {
-				assert.Equal(t, "hello,", resp.Header.Get("Resp-Mike"), resp)
+				assert.Equal(t, "hello,", resp.Header.Get("Echo-Mike"), resp)
 			},
 		},
 	}

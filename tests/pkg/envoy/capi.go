@@ -5,6 +5,7 @@ package envoy
 import (
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/envoyproxy/envoy/contrib/golang/common/go/api"
 )
@@ -111,6 +112,121 @@ func (i *RequestHeaderMap) Path() string {
 }
 
 var _ api.RequestHeaderMap = (*RequestHeaderMap)(nil)
+
+type ResponseHeaderMap struct {
+	HeaderMap
+}
+
+func NewResponseHeaderMap(hdr http.Header) *ResponseHeaderMap {
+	return &ResponseHeaderMap{
+		HeaderMap: HeaderMap{hdr},
+	}
+}
+
+func (i *ResponseHeaderMap) Status() (int, bool) {
+	s, ok := i.Get(":status")
+	if !ok {
+		// for test
+		return 200, true
+	}
+	code, _ := strconv.Atoi(s)
+	return code, true
+}
+
+var _ api.ResponseHeaderMap = (*ResponseHeaderMap)(nil)
+
+type DataBuffer struct {
+	buffer []byte
+}
+
+// TODO: implement methods below
+
+func (db *DataBuffer) Write(p []byte) (int, error) {
+	return len(p), nil
+}
+
+func (db *DataBuffer) WriteString(s string) (int, error) {
+	return len(s), nil
+}
+
+func (db *DataBuffer) WriteByte(b byte) error {
+	return nil
+}
+
+func (db *DataBuffer) WriteUint16(u uint16) error {
+	return nil
+}
+
+func (db *DataBuffer) WriteUint32(u uint32) error {
+	return nil
+}
+
+func (db *DataBuffer) WriteUint64(u uint64) error {
+	return nil
+}
+
+func (db *DataBuffer) Bytes() []byte {
+	return db.buffer
+}
+
+func (db *DataBuffer) Drain(offset int) {
+}
+
+func (db *DataBuffer) Len() int {
+	return len(db.buffer)
+}
+
+func (db *DataBuffer) Reset() {
+	db.buffer = nil
+}
+
+func (db *DataBuffer) String() string {
+	return string(db.buffer)
+}
+
+func (db *DataBuffer) Append(data []byte) error {
+	db.buffer = append(db.buffer, data...)
+	return nil
+}
+
+func NewBufferInstance(b []byte) *BufferInstance {
+	return &BufferInstance{
+		DataBuffer: DataBuffer{
+			buffer: b,
+		},
+	}
+}
+
+var _ api.DataBufferBase = (*DataBuffer)(nil)
+
+type BufferInstance struct {
+	DataBuffer
+}
+
+var _ api.BufferInstance = (*BufferInstance)(nil)
+
+func (bi *BufferInstance) Set(data []byte) error {
+	bi.buffer = data
+	return nil
+}
+
+func (bi *BufferInstance) SetString(s string) error {
+	bi.buffer = []byte(s)
+	return nil
+}
+
+func (bi *BufferInstance) Prepend(data []byte) error {
+	bi.buffer = append(data, bi.buffer...)
+	return nil
+}
+
+func (bi *BufferInstance) PrependString(s string) error {
+	return bi.Prepend([]byte(s))
+}
+
+func (bi *BufferInstance) AppendString(s string) error {
+	return bi.Append([]byte(s))
+}
 
 type DynamicMetadata struct {
 	store map[string]map[string]interface{}
@@ -231,6 +347,7 @@ var _ api.StreamInfo = (*StreamInfo)(nil)
 
 type FiterCallbackHandler struct {
 	streamInfo api.StreamInfo
+	respCode   int
 }
 
 func (i *FiterCallbackHandler) StreamInfo() api.StreamInfo {
@@ -245,6 +362,11 @@ func (i *FiterCallbackHandler) Continue(status api.StatusType) {
 }
 
 func (i *FiterCallbackHandler) SendLocalReply(responseCode int, bodyText string, headers map[string]string, grpcStatus int64, details string) {
+	i.respCode = responseCode
+}
+
+func (i *FiterCallbackHandler) LocalResponseCode() int {
+	return i.respCode
 }
 
 func (i *FiterCallbackHandler) RecoverPanic() {

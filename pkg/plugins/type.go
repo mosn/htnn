@@ -1,12 +1,12 @@
 package plugins
 
 import (
-	"github.com/envoyproxy/envoy/contrib/golang/common/go/api"
+	"mosn.io/moe/pkg/filtermanager/api"
 )
 
 type Plugin interface {
-	ConfigFactory() api.StreamFilterConfigFactory
-	ConfigParser() api.StreamFilterConfigParser
+	ConfigFactory() api.FilterConfigFactory
+	ConfigParser() api.FilterConfigParser
 }
 
 // We split the Parse method into Validate & Handle, so that

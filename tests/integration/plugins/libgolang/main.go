@@ -8,11 +8,7 @@ import (
 	"mosn.io/moe/pkg/filtermanager"
 	"mosn.io/moe/pkg/plugins"
 	_ "mosn.io/moe/plugins"
-)
-
-// Version is specified by build tag, in VERSION file
-var (
-	Version string = ""
+	_ "mosn.io/moe/tests/integration/plugins"
 )
 
 func init() {

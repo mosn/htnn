@@ -5,13 +5,9 @@ import (
 	"testing"
 
 	"github.com/agiledragon/gomonkey/v2"
-	xds "github.com/cncf/xds/go/xds/type/v3"
 	"github.com/envoyproxy/envoy/contrib/golang/common/go/api"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/types/known/anypb"
-	"google.golang.org/protobuf/types/known/structpb"
-
-	"mosn.io/moe/pkg/proto"
 )
 
 func TestIterateHttpPlugin(t *testing.T) {
@@ -26,16 +22,14 @@ func TestIterateHttpPlugin(t *testing.T) {
 }
 
 func TestParse(t *testing.T) {
-	ts := xds.TypedStruct{}
-	ts.Value, _ = structpb.NewStruct(map[string]interface{}{
+	any1 := map[string]interface{}{
 		"pet": "cat",
-	})
-	any1 := proto.MessageToAny(&ts)
+	}
 
 	cfg := "this is plugin conf"
 	cases := []struct {
 		name    string
-		input   *anypb.Any
+		input   interface{}
 		checker func(t *testing.T, cp *PluginConfigParser) func()
 		wantErr bool
 	}{
@@ -58,21 +52,6 @@ func TestParse(t *testing.T) {
 			wantErr: false,
 		},
 		{
-			name:  "happy path without config",
-			input: &anypb.Any{},
-			checker: func(t *testing.T, cp *PluginConfigParser) func() {
-				patches := gomonkey.ApplyMethodFunc(cp.ConfigParser, "Validate", func(data []byte) (interface{}, error) {
-					assert.Equal(t, "{}", string(data))
-					return cfg, nil
-				})
-				patches.ApplyMethodReturn(cp.ConfigParser, "Handle", cfg, nil)
-				return func() {
-					patches.Reset()
-				}
-			},
-			wantErr: false,
-		},
-		{
 			name:  "error validate",
 			input: &anypb.Any{},
 			checker: func(t *testing.T, cp *PluginConfigParser) func() {
@@ -80,16 +59,6 @@ func TestParse(t *testing.T) {
 				return func() {
 					patches.Reset()
 				}
-			},
-			wantErr: true,
-		},
-		{
-			name: "error UnmarshalTo",
-			input: &anypb.Any{
-				TypeUrl: "aaa",
-			},
-			checker: func(t *testing.T, cp *PluginConfigParser) func() {
-				return func() {}
 			},
 			wantErr: true,
 		},

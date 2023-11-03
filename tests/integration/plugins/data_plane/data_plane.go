@@ -2,6 +2,7 @@ package data_plane
 
 import (
 	"context"
+	"io"
 	"net"
 	"net/http"
 	"os"
@@ -26,7 +27,15 @@ type DataPlane struct {
 	t   *testing.T
 }
 
-func StartDataPlane(t *testing.T) (*DataPlane, error) {
+type Option struct {
+	LogLevel string
+}
+
+func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
+	if opt == nil {
+		opt = &Option{}
+	}
+
 	dp := &DataPlane{
 		t: t,
 	}
@@ -40,6 +49,11 @@ func StartDataPlane(t *testing.T) (*DataPlane, error) {
 		return nil, err
 	}
 
+	envoyCmd := "envoy -c /etc/envoy.yaml"
+	if opt.LogLevel != "" {
+		envoyCmd += " -l " + opt.LogLevel
+	}
+
 	// This is the envoyproxy/envoy:contrib-debug-dev fetched in 2023-10-27
 	// Use docker inspect --format='{{index .RepoDigests 0}}' envoyproxy/envoy:contrib-debug-dev
 	// to get the sha256 ID
@@ -51,8 +65,9 @@ func StartDataPlane(t *testing.T) (*DataPlane, error) {
 		projectRoot +
 		"/tests/integration/plugins/data_plane/envoy.yaml:/etc/envoy.yaml -v " +
 		projectRoot +
-		"/libgolang.so:/etc/libgolang.so" + " -p 10000:10000 -p 9998:9998 " +
-		image + " envoy -c /etc/envoy.yaml"
+		"/tests/integration/plugins/libgolang.so:/etc/libgolang.so" +
+		" -p 10000:10000 -p 9998:9998 " +
+		image + " " + envoyCmd
 
 	logger.Info("run cmd", "cmdline", cmdline)
 
@@ -134,6 +149,15 @@ func (dp *DataPlane) Stop() {
 
 func (dp *DataPlane) Get(path string, header http.Header) (*http.Response, error) {
 	req, err := http.NewRequest("GET", "http://localhost:10000"+path, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header = header
+	return dp.do(req)
+}
+
+func (dp *DataPlane) Post(path string, header http.Header, body io.Reader) (*http.Response, error) {
+	req, err := http.NewRequest("POST", "http://localhost:10000"+path, body)
 	if err != nil {
 		return nil, err
 	}

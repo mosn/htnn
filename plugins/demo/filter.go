@@ -3,12 +3,12 @@ package demo
 import (
 	"fmt"
 
-	"github.com/envoyproxy/envoy/contrib/golang/common/go/api"
+	"mosn.io/moe/pkg/filtermanager/api"
 )
 
-func configFactory(c interface{}) api.StreamFilterFactory {
+func configFactory(c interface{}) api.FilterFactory {
 	conf := c.(*Config)
-	return func(callbacks api.FilterCallbackHandler) api.StreamFilter {
+	return func(callbacks api.FilterCallbackHandler) api.Filter {
 		return &filter{
 			callbacks: callbacks,
 			config:    conf,
@@ -17,15 +17,14 @@ func configFactory(c interface{}) api.StreamFilterFactory {
 }
 
 type filter struct {
-	api.PassThroughStreamFilter
+	api.PassThroughFilter
 
 	callbacks api.FilterCallbackHandler
 	config    *Config
 }
 
-func (f *filter) DecodeHeaders(header api.RequestHeaderMap, endStream bool) api.StatusType {
+func (f *filter) DecodeHeaders(header api.RequestHeaderMap, endStream bool) {
 	header.Set(f.config.HostName, f.hello())
-	return api.Continue
 }
 
 func (f *filter) hello() string {

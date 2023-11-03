@@ -1,11 +1,10 @@
 package plugins
 
 import (
+	"encoding/json"
 	"sync"
 
-	xds "github.com/cncf/xds/go/xds/type/v3"
 	"github.com/envoyproxy/envoy/contrib/golang/common/go/api"
-	"google.golang.org/protobuf/types/known/anypb"
 )
 
 var httpPlugins = sync.Map{}
@@ -33,23 +32,10 @@ func NewPluginConfigParser(parser ConfigParser) *PluginConfigParser {
 	}
 }
 
-func (cp *PluginConfigParser) Parse(any *anypb.Any, callbacks api.ConfigCallbackHandler) (interface{}, error) {
-	configStruct := &xds.TypedStruct{}
-	var data []byte
-	var err error
-	if any.GetTypeUrl() == "" {
-		// no config
-		data = []byte(`{}`)
-	} else {
-		if err := any.UnmarshalTo(configStruct); err != nil {
-			return nil, err
-		}
-
-		v := configStruct.Value
-		data, err = v.MarshalJSON()
-		if err != nil {
-			return nil, err
-		}
+func (cp *PluginConfigParser) Parse(any interface{}, callbacks api.ConfigCallbackHandler) (interface{}, error) {
+	data, err := json.Marshal(any)
+	if err != nil {
+		return nil, err
 	}
 
 	c, err := cp.Validate(data)
