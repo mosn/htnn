@@ -16,10 +16,6 @@ func TestParser(t *testing.T) {
 	res, err := p.Handle(c, nil)
 	assert.Nil(t, err)
 	assert.Equal(t, c, res)
-
-	parentConfig := &Config{}
-	childConfig := &Config{}
-	assert.Equal(t, childConfig, p.Merge(parentConfig, childConfig))
 }
 
 func TestBadConfig(t *testing.T) {

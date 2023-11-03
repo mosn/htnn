@@ -63,7 +63,3 @@ func (p *parser) Handle(c interface{}, callbacks api.ConfigCallbackHandler) (int
 	conf.enforcer = e
 	return conf, nil
 }
-
-func (p *parser) Merge(parent interface{}, child interface{}) interface{} {
-	return child
-}
