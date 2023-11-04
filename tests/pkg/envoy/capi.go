@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"sync"
 
 	"github.com/envoyproxy/envoy/contrib/golang/common/go/api"
 )
@@ -345,43 +346,60 @@ func (i *StreamInfo) GetProperty(key string) (string, bool) {
 
 var _ api.StreamInfo = (*StreamInfo)(nil)
 
-type FiterCallbackHandler struct {
+type fiterCallbackHandler struct {
+	// add lock to the test helper to satisfy -race check
+	lock *sync.RWMutex
+
 	streamInfo api.StreamInfo
 	respCode   int
 }
 
-func (i *FiterCallbackHandler) StreamInfo() api.StreamInfo {
+func NewFilterCallbackHandler() *fiterCallbackHandler {
+	return &fiterCallbackHandler{
+		lock: &sync.RWMutex{},
+	}
+}
+
+func (i *fiterCallbackHandler) StreamInfo() api.StreamInfo {
+	i.lock.RLock()
+	defer i.lock.RUnlock()
 	return i.streamInfo
 }
 
-func (i *FiterCallbackHandler) SetStreamInfo(data api.StreamInfo) {
+func (i *fiterCallbackHandler) SetStreamInfo(data api.StreamInfo) {
+	i.lock.Lock()
+	defer i.lock.Unlock()
 	i.streamInfo = data
 }
 
-func (i *FiterCallbackHandler) Continue(status api.StatusType) {
+func (i *fiterCallbackHandler) Continue(status api.StatusType) {
 }
 
-func (i *FiterCallbackHandler) SendLocalReply(responseCode int, bodyText string, headers map[string]string, grpcStatus int64, details string) {
+func (i *fiterCallbackHandler) SendLocalReply(responseCode int, bodyText string, headers map[string]string, grpcStatus int64, details string) {
+	i.lock.Lock()
+	defer i.lock.Unlock()
 	i.respCode = responseCode
 }
 
-func (i *FiterCallbackHandler) LocalResponseCode() int {
+func (i *fiterCallbackHandler) LocalResponseCode() int {
+	i.lock.RLock()
+	defer i.lock.RUnlock()
 	return i.respCode
 }
 
-func (i *FiterCallbackHandler) RecoverPanic() {
+func (i *fiterCallbackHandler) RecoverPanic() {
 }
 
-func (i *FiterCallbackHandler) Log(level api.LogType, msg string) {
+func (i *fiterCallbackHandler) Log(level api.LogType, msg string) {
 	logInGo(level, msg)
 }
 
-func (i *FiterCallbackHandler) LogLevel() api.LogType {
+func (i *fiterCallbackHandler) LogLevel() api.LogType {
 	return 0
 }
 
-func (i *FiterCallbackHandler) GetProperty(key string) (string, error) {
+func (i *fiterCallbackHandler) GetProperty(key string) (string, error) {
 	return "", nil
 }
 
-var _ api.FilterCallbackHandler = (*FiterCallbackHandler)(nil)
+var _ api.FilterCallbackHandler = (*fiterCallbackHandler)(nil)

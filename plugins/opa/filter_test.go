@@ -14,7 +14,7 @@ import (
 )
 
 func TestOpaRemote(t *testing.T) {
-	cb := &envoy.FiterCallbackHandler{}
+	cb := envoy.NewFilterCallbackHandler()
 	cli := http.DefaultClient
 	f := configFactory(&config{
 		Config: &Config{

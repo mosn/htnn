@@ -5,12 +5,12 @@ import (
 	"encoding/json"
 	"net/url"
 
-	"github.com/envoyproxy/envoy/contrib/golang/common/go/api"
+	"mosn.io/moe/pkg/filtermanager/api"
 )
 
-func configFactory(c interface{}) api.StreamFilterFactory {
+func configFactory(c interface{}) api.FilterFactory {
 	conf := c.(*config)
-	return func(callbacks api.FilterCallbackHandler) api.StreamFilter {
+	return func(callbacks api.FilterCallbackHandler) api.Filter {
 		return &filter{
 			callbacks: callbacks,
 			config:    conf,
@@ -19,7 +19,7 @@ func configFactory(c interface{}) api.StreamFilterFactory {
 }
 
 type filter struct {
-	api.PassThroughStreamFilter
+	api.PassThroughFilter
 
 	callbacks api.FilterCallbackHandler
 	config    *config
@@ -72,25 +72,23 @@ func (f *filter) isAllowed(input map[string]interface{}) (bool, error) {
 	return opaResponse.Result.Allow, nil
 }
 
-func (f *filter) DecodeHeaders(header api.RequestHeaderMap, endStream bool) api.StatusType {
+func (f *filter) DecodeHeaders(header api.RequestHeaderMap, endStream bool) {
 	input, err := f.buildInput(header)
 	if err != nil {
 		api.LogErrorf("failed to build input: %v", err)
 		f.callbacks.SendLocalReply(503, "", nil, 0, "")
-		return api.LocalReply
+		return
 	}
 
 	allow, err := f.isAllowed(input)
 	if err != nil {
 		api.LogErrorf("failed to call OPA server: %v", err)
 		f.callbacks.SendLocalReply(503, "", nil, 0, "")
-		return api.LocalReply
+		return
 	}
 
 	if !allow {
 		f.callbacks.SendLocalReply(403, "", nil, 0, "")
-		return api.LocalReply
+		return
 	}
-
-	return api.Continue
 }

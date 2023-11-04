@@ -10,7 +10,7 @@ import (
 )
 
 func TestHello(t *testing.T) {
-	cb := &envoy.FiterCallbackHandler{}
+	cb := envoy.NewFilterCallbackHandler()
 	info := &envoy.StreamInfo{}
 	info.SetFilterState(envoy.NewFilterState(map[string]string{
 		"guest_name": "Jack",
@@ -23,7 +23,7 @@ func TestHello(t *testing.T) {
 }
 
 func TestDecodeHeaders(t *testing.T) {
-	cb := &envoy.FiterCallbackHandler{}
+	cb := envoy.NewFilterCallbackHandler()
 	info := &envoy.StreamInfo{}
 	info.SetFilterState(envoy.NewFilterState(map[string]string{
 		"guest_name": "Jack",

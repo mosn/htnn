@@ -62,7 +62,7 @@ static_resources:
                       stat_prefix: bandwidth_limiter_custom_route
                       enable_mode: RESPONSE
                       limit_kbps: 1
-                      # dummy config to satify Envoy validator, doesn't take effect
+                      # dummy config to satisfy Envoy validator, doesn't take effect
                     disabled: true
                   - name: envoy.filters.http.lua
                     typed_config:
