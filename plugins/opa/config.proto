@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package moe.plugins.demo;
+
+import "validate/validate.proto";
+
+option go_package = "mosn.io/moe/plugins/opa";
+
+message Remote {
+    string url = 1
+        [(validate.rules).string = { ignore_empty: false, min_len: 1 }];
+    string policy = 2
+        [(validate.rules).string = { ignore_empty: false, min_len: 1 }];
+}
+
+message Config {
+    oneof config_type {
+        option (validate.required) = true;
+        Remote remote = 1;
+        // TODO: allow validating via local file/text
+    }
+}
