@@ -19,13 +19,9 @@ static_resources:
                   - name: envoy.filters.http.golang
                     typed_config:
                       "@type": type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.Config
-                      library_id: demo
+                      library_id: fm
                       library_path: /etc/libgolang.so
-                      plugin_name: demo
-                      plugin_config:
-                        "@type": type.googleapis.com/xds.type.v3.TypedStruct
-                        value:
-                          host_name: Jack
+                      plugin_name: fm
                   - name: envoy.filters.http.lua
                     typed_config:
                       "@type": type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
@@ -48,11 +44,14 @@ static_resources:
                             envoy.filters.http.golang:
                               "@type": type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.ConfigsPerRoute
                               plugins_config:
-                                demo:
+                                fm:
                                   config:
                                     "@type": type.googleapis.com/xds.type.v3.TypedStruct
                                     value:
-                                      host_name: Tom
+                                      plugins:
+                                        - name: demo
+                                          config:
+                                            host_name: Tom
                             envoy.filters.http.lua:
                               "@type": type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
                               source_code:

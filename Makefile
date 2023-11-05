@@ -48,8 +48,23 @@ unit-test:
 unit-test-local:
 	go test ${TEST_OPTION} $(shell go list ./... | grep -v tests/)
 
+.PHONY: build-test-so-local
+build-test-so-local:
+	CGO_ENABLED=1 go build -tags so \
+		-ldflags "-B 0x$(shell head -c20 /dev/urandom|od -An -tx1|tr -d ' \n') -X main.Version=${MAJOR_VERSION}(${GIT_VERSION})" \
+		--buildmode=c-shared \
+		-v -o tests/integration/plugins/${TARGET_SO} \
+		${PROJECT_NAME}/tests/integration/plugins/libgolang
+
+.PHONY: build-test-so
+build-test-so:
+	docker run --rm -v $(shell go env GOPATH):/go -v $(PWD):/go/src/${PROJECT_NAME} -w /go/src/${PROJECT_NAME} \
+		-e GOPROXY \
+		${BUILD_IMAGE} \
+		make build-test-so-local
+
 .PHONY: integration-test
-integration-test:
+integration-test: build-test-so
 	go test ${TEST_OPTION} ./tests/integration/...
 
 .PHONY: build-so-local

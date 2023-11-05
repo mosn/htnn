@@ -2,6 +2,7 @@ package control_plane
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net"
 	"time"
@@ -22,6 +23,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/structpb"
 
+	"mosn.io/moe/pkg/filtermanager"
 	"mosn.io/moe/pkg/log"
 	"mosn.io/moe/pkg/proto"
 )
@@ -84,8 +86,7 @@ func (cp *ControlPlane) updateConfig(res Resources) {
 	time.Sleep(1 * time.Second)
 }
 
-func (cp *ControlPlane) UseGoPluginConfig(config map[string]interface{}) {
-	st, _ := structpb.NewStruct(config)
+func (cp *ControlPlane) UseGoPluginConfig(config *filtermanager.FilterManagerConfig) {
 	cp.updateConfig(Resources{
 		resource.RouteType: []types.Resource{
 			&route.RouteConfiguration{
@@ -111,11 +112,10 @@ func (cp *ControlPlane) UseGoPluginConfig(config map[string]interface{}) {
 								TypedPerFilterConfig: map[string]*any1.Any{
 									"envoy.filters.http.golang": proto.MessageToAny(&golang.ConfigsPerRoute{
 										PluginsConfig: map[string]*golang.RouterPlugin{
-											"demo": {
+											"fm": {
 												Override: &golang.RouterPlugin_Config{
-													Config: proto.MessageToAny(&xds.TypedStruct{
-														Value: st,
-													}),
+													Config: proto.MessageToAny(
+														FilterManagerConfigToTypedStruct(config)),
 												},
 											},
 										},
@@ -128,4 +128,24 @@ func (cp *ControlPlane) UseGoPluginConfig(config map[string]interface{}) {
 			},
 		},
 	})
+}
+
+func FilterManagerConfigToTypedStruct(fmc *filtermanager.FilterManagerConfig) *xds.TypedStruct {
+	v := map[string]interface{}{}
+	data, _ := json.Marshal(fmc)
+	json.Unmarshal(data, &v)
+	st, err := structpb.NewStruct(v)
+	if err != nil {
+		logger.Error(err, "failed to TypedStruct", "FilterManagerConfig", fmc)
+		return nil
+	}
+	return &xds.TypedStruct{
+		Value: st,
+	}
+}
+
+func NewSinglePluinConfig(name string, config interface{}) *filtermanager.FilterManagerConfig {
+	fmc := &filtermanager.FilterManagerConfig{}
+	fmc.Plugins = []*filtermanager.FilterConfig{{Name: name, Config: config}}
+	return fmc
 }

@@ -2,9 +2,9 @@ package casbin
 
 import (
 	"github.com/casbin/casbin/v2"
-	"github.com/envoyproxy/envoy/contrib/golang/common/go/api"
 	"google.golang.org/protobuf/encoding/protojson"
 
+	"mosn.io/moe/pkg/filtermanager/api"
 	"mosn.io/moe/pkg/plugins"
 )
 
@@ -20,11 +20,11 @@ type plugin struct {
 	plugins.PluginMethodDefaultImpl
 }
 
-func (p *plugin) ConfigFactory() api.StreamFilterConfigFactory {
+func (p *plugin) ConfigFactory() api.FilterConfigFactory {
 	return configFactory
 }
 
-func (p *plugin) ConfigParser() api.StreamFilterConfigParser {
+func (p *plugin) ConfigParser() api.FilterConfigParser {
 	return plugins.NewPluginConfigParser(&parser{})
 }
 

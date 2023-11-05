@@ -6,6 +6,7 @@ linters:
     # sorted in alphabetic order
     - bodyclose
     - contextcheck
+    - cyclop
     - errcheck
     - exportloopref
     - gocheckcompilerdirectives
@@ -22,6 +23,12 @@ linters:
     - unused
 
 linters-settings:
+  cyclop:
+    # The maximal code complexity to report.
+    # Default: 10
+    max-complexity: 20
+    package-average: 10
+    skip-tests: true
   gocritic:
     enabled-tags:
       - diagnostic

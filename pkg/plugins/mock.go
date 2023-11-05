@@ -1,15 +1,15 @@
 package plugins
 
-import "github.com/envoyproxy/envoy/contrib/golang/common/go/api"
+import "mosn.io/moe/pkg/filtermanager/api"
 
 type MockPlugin struct {
 }
 
-func (m *MockPlugin) ConfigFactory() api.StreamFilterConfigFactory {
+func (m *MockPlugin) ConfigFactory() api.FilterConfigFactory {
 	return nil
 }
 
-func (m *MockPlugin) ConfigParser() api.StreamFilterConfigParser {
+func (m *MockPlugin) ConfigParser() api.FilterConfigParser {
 	return nil
 }
 

@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/envoyproxy/envoy/contrib/golang/common/go/api"
 	"github.com/stretchr/testify/assert"
 
 	"mosn.io/moe/tests/pkg/envoy"
@@ -34,7 +33,7 @@ func TestDecodeHeaders(t *testing.T) {
 		HostName: "Tom",
 	})(cb)
 	hdr := envoy.NewRequestHeaderMap(http.Header{})
-	assert.Equal(t, api.Continue, f.DecodeHeaders(hdr, true))
+	f.DecodeHeaders(hdr, true)
 	v, _ := hdr.Get("Tom")
 	assert.Equal(t, "hello, Jack", v)
 }
