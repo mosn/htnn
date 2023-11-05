@@ -56,15 +56,20 @@ build-test-so-local:
 		-v -o tests/integration/plugins/${TARGET_SO} \
 		${PROJECT_NAME}/tests/integration/plugins/libgolang
 
+# Go 1.19+ adds vcs check which will cause error "fatal: detected dubious ownership in repository at '...'".
+# So here we disable the error via git configuration when running inside Docker.
 .PHONY: build-test-so
 build-test-so:
 	docker run --rm -v $(shell go env GOPATH):/go -v $(PWD):/go/src/${PROJECT_NAME} -w /go/src/${PROJECT_NAME} \
 		-e GOPROXY \
 		${BUILD_IMAGE} \
-		make build-test-so-local
+		bash -c "git config --global --add safe.directory '*' && make build-test-so-local"
 
 .PHONY: integration-test
 integration-test: build-test-so
+	if ! docker images ${PROXY_IMAGE} | grep envoyproxy/envoy > /dev/null; then \
+		docker pull ${PROXY_IMAGE}; \
+	fi
 	go test ${TEST_OPTION} ./tests/integration/...
 
 .PHONY: build-so-local
@@ -80,7 +85,7 @@ build-so:
 	docker run --rm -v $(shell go env GOPATH):/go -v $(PWD):/go/src/${PROJECT_NAME} -w /go/src/${PROJECT_NAME} \
 		-e GOPROXY \
 		${BUILD_IMAGE} \
-		make build-so-local
+		bash -c "git config --global --add safe.directory '*' && make build-so-local"
 
 .PHONY: run-demo
 run-demo:
