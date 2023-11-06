@@ -346,7 +346,7 @@ func (i *StreamInfo) GetProperty(key string) (string, bool) {
 
 var _ api.StreamInfo = (*StreamInfo)(nil)
 
-type fiterCallbackHandler struct {
+type filterCallbackHandler struct {
 	// add lock to the test helper to satisfy -race check
 	lock *sync.RWMutex
 
@@ -354,52 +354,52 @@ type fiterCallbackHandler struct {
 	respCode   int
 }
 
-func NewFilterCallbackHandler() *fiterCallbackHandler {
-	return &fiterCallbackHandler{
+func NewFilterCallbackHandler() *filterCallbackHandler {
+	return &filterCallbackHandler{
 		lock: &sync.RWMutex{},
 	}
 }
 
-func (i *fiterCallbackHandler) StreamInfo() api.StreamInfo {
+func (i *filterCallbackHandler) StreamInfo() api.StreamInfo {
 	i.lock.RLock()
 	defer i.lock.RUnlock()
 	return i.streamInfo
 }
 
-func (i *fiterCallbackHandler) SetStreamInfo(data api.StreamInfo) {
+func (i *filterCallbackHandler) SetStreamInfo(data api.StreamInfo) {
 	i.lock.Lock()
 	defer i.lock.Unlock()
 	i.streamInfo = data
 }
 
-func (i *fiterCallbackHandler) Continue(status api.StatusType) {
+func (i *filterCallbackHandler) Continue(status api.StatusType) {
 }
 
-func (i *fiterCallbackHandler) SendLocalReply(responseCode int, bodyText string, headers map[string]string, grpcStatus int64, details string) {
+func (i *filterCallbackHandler) SendLocalReply(responseCode int, bodyText string, headers map[string]string, grpcStatus int64, details string) {
 	i.lock.Lock()
 	defer i.lock.Unlock()
 	i.respCode = responseCode
 }
 
-func (i *fiterCallbackHandler) LocalResponseCode() int {
+func (i *filterCallbackHandler) LocalResponseCode() int {
 	i.lock.RLock()
 	defer i.lock.RUnlock()
 	return i.respCode
 }
 
-func (i *fiterCallbackHandler) RecoverPanic() {
+func (i *filterCallbackHandler) RecoverPanic() {
 }
 
-func (i *fiterCallbackHandler) Log(level api.LogType, msg string) {
+func (i *filterCallbackHandler) Log(level api.LogType, msg string) {
 	logInGo(level, msg)
 }
 
-func (i *fiterCallbackHandler) LogLevel() api.LogType {
+func (i *filterCallbackHandler) LogLevel() api.LogType {
 	return 0
 }
 
-func (i *fiterCallbackHandler) GetProperty(key string) (string, error) {
+func (i *filterCallbackHandler) GetProperty(key string) (string, error) {
 	return "", nil
 }
 
-var _ api.FilterCallbackHandler = (*fiterCallbackHandler)(nil)
+var _ api.FilterCallbackHandler = (*filterCallbackHandler)(nil)
