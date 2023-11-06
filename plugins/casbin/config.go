@@ -1,9 +1,12 @@
 package casbin
 
 import (
+	sync "sync"
+
 	"github.com/casbin/casbin/v2"
 	"google.golang.org/protobuf/encoding/protojson"
 
+	"mosn.io/moe/pkg/file"
 	"mosn.io/moe/pkg/filtermanager/api"
 	"mosn.io/moe/pkg/plugins"
 )
@@ -33,7 +36,12 @@ type parser struct {
 
 type config struct {
 	*Config
-	enforcer *casbin.Enforcer
+
+	lock *sync.RWMutex
+
+	enforcer   *casbin.Enforcer
+	modelFile  *file.File
+	policyFile *file.File
 }
 
 func (p *parser) Validate(data []byte) (interface{}, error) {
@@ -53,9 +61,21 @@ func (p *parser) Handle(c interface{}, callbacks api.ConfigCallbackHandler) (int
 	cfg := c.(*Config)
 	conf := &config{
 		Config: cfg,
+		lock:   &sync.RWMutex{},
 	}
 
-	// TODO: record the mtime of Model/Policy files and check if it's up to date in OnLog
+	f, err := file.Stat(conf.Rule.Model)
+	if err != nil {
+		return nil, err
+	}
+	conf.modelFile = f
+
+	f, err = file.Stat(conf.Rule.Policy)
+	if err != nil {
+		return nil, err
+	}
+	conf.policyFile = f
+
 	e, err := casbin.NewEnforcer(conf.Rule.Model, conf.Rule.Policy)
 	if err != nil {
 		return nil, err

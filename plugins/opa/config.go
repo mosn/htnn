@@ -4,9 +4,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/envoyproxy/envoy/contrib/golang/common/go/api"
 	"google.golang.org/protobuf/encoding/protojson"
 
+	"mosn.io/moe/pkg/filtermanager/api"
 	"mosn.io/moe/pkg/plugins"
 )
 
@@ -22,11 +22,11 @@ type plugin struct {
 	plugins.PluginMethodDefaultImpl
 }
 
-func (p *plugin) ConfigFactory() api.StreamFilterConfigFactory {
+func (p *plugin) ConfigFactory() api.FilterConfigFactory {
 	return configFactory
 }
 
-func (p *plugin) ConfigParser() api.StreamFilterConfigParser {
+func (p *plugin) ConfigParser() api.FilterConfigParser {
 	return plugins.NewPluginConfigParser(&parser{})
 }
 
@@ -46,7 +46,7 @@ func (p *parser) Validate(data []byte) (interface{}, error) {
 		return nil, err
 	}
 
-	if err = conf.Validate(); err != nil {
+	if err := conf.Validate(); err != nil {
 		return nil, err
 	}
 	return conf, nil

@@ -57,7 +57,7 @@ func TestParse(t *testing.T) {
 }
 
 func TestPassThrough(t *testing.T) {
-	cb := &envoy.FiterCallbackHandler{}
+	cb := envoy.NewFilterCallbackHandler()
 	m := FilterManagerConfigFactory(&filterManagerConfig{
 		current: []*filterConfig{
 			{

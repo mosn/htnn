@@ -8,7 +8,6 @@ import (
 
 	xds "github.com/cncf/xds/go/xds/type/v3"
 	capi "github.com/envoyproxy/envoy/contrib/golang/common/go/api"
-
 	"google.golang.org/protobuf/types/known/anypb"
 
 	"mosn.io/moe/pkg/filtermanager/api"

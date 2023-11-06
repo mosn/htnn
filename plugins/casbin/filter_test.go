@@ -2,6 +2,7 @@ package casbin
 
 import (
 	"net/http"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -45,7 +46,7 @@ func TestCasbin(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cb := &envoy.FiterCallbackHandler{}
+			cb := envoy.NewFilterCallbackHandler()
 			p := &parser{}
 			cfg := &Config{
 				Rule: &Config_Rule{
@@ -60,8 +61,18 @@ func TestCasbin(t *testing.T) {
 			assert.Nil(t, err)
 			f := configFactory(config)(cb)
 			hdr := envoy.NewRequestHeaderMap(tt.header)
-			f.DecodeHeaders(hdr, true)
-			assert.Equal(t, tt.status, cb.LocalResponseCode())
+
+			wg := sync.WaitGroup{}
+			for i := 0; i < 3; i++ {
+				wg.Add(1)
+				go func() {
+					// ensure the lock takes effect
+					f.DecodeHeaders(hdr, true)
+					wg.Done()
+					assert.Equal(t, tt.status, cb.LocalResponseCode())
+				}()
+			}
+			wg.Wait()
 		})
 	}
 }
