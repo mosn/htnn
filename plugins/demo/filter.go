@@ -23,8 +23,9 @@ type filter struct {
 	config    *Config
 }
 
-func (f *filter) DecodeHeaders(header api.RequestHeaderMap, endStream bool) {
+func (f *filter) DecodeHeaders(header api.RequestHeaderMap, endStream bool) api.ResultAction {
 	header.Set(f.config.HostName, f.hello())
+	return api.Continue
 }
 
 func (f *filter) hello() string {

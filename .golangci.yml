@@ -30,8 +30,10 @@ linters-settings:
     package-average: 10
     skip-tests: true
   gocritic:
-    enabled-tags:
-      - diagnostic
+    disabled-tags:
+      - style
+      - experimental
+      - opinionated
   unparam:
     check-exported: false
 

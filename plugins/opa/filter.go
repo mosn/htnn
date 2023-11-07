@@ -72,23 +72,21 @@ func (f *filter) isAllowed(input map[string]interface{}) (bool, error) {
 	return opaResponse.Result.Allow, nil
 }
 
-func (f *filter) DecodeHeaders(header api.RequestHeaderMap, endStream bool) {
+func (f *filter) DecodeHeaders(header api.RequestHeaderMap, endStream bool) api.ResultAction {
 	input, err := f.buildInput(header)
 	if err != nil {
 		api.LogErrorf("failed to build input: %v", err)
-		f.callbacks.SendLocalReply(503, "", nil, 0, "")
-		return
+		return &api.LocalResponse{Code: 503}
 	}
 
 	allow, err := f.isAllowed(input)
 	if err != nil {
 		api.LogErrorf("failed to call OPA server: %v", err)
-		f.callbacks.SendLocalReply(503, "", nil, 0, "")
-		return
+		return &api.LocalResponse{Code: 503}
 	}
 
 	if !allow {
-		f.callbacks.SendLocalReply(403, "", nil, 0, "")
-		return
+		return &api.LocalResponse{Code: 403}
 	}
+	return api.Continue
 }

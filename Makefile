@@ -119,3 +119,6 @@ lint-spell: build-dev-tools
 .PHONY: lint-spell-local
 lint-spell-local:
 	codespell --skip '.git,.idea,test-envoy,go.mod,go.sum,*.svg' --check-filenames --check-hidden --ignore-words ./.ignore_words
+
+.PHONY: lint
+lint: lint-go fmt-go lint-spell

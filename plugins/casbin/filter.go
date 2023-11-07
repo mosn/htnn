@@ -25,7 +25,7 @@ type filter struct {
 	config    *config
 }
 
-func (f *filter) DecodeHeaders(header api.RequestHeaderMap, endStream bool) {
+func (f *filter) DecodeHeaders(header api.RequestHeaderMap, endStream bool) api.ResultAction {
 	role, _ := header.Get(f.config.Token.Name) // role can be ""
 	url := request.GetUrl(header)
 
@@ -35,9 +35,11 @@ func (f *filter) DecodeHeaders(header api.RequestHeaderMap, endStream bool) {
 
 	if !ok {
 		api.LogInfof("reject forbidden user %s", role)
-		f.callbacks.SendLocalReply(403, "", nil, 0, "")
-		return
+		return &api.LocalResponse{
+			Code: 403,
+		}
 	}
+	return api.Continue
 }
 
 func (f *filter) OnLog() {

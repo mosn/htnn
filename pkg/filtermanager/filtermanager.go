@@ -102,7 +102,7 @@ func (p *FilterManagerConfigParser) Parse(any *anypb.Any, callbacks capi.ConfigC
 }
 
 func (p *FilterManagerConfigParser) Merge(parent interface{}, child interface{}) interface{} {
-	// TODO: We have considered to implemented a Merge Policy between the LDS's filter & RDS's per route
+	// We have considered to implemented a Merge Policy between the LDS's filter & RDS's per route
 	// config. A thought is to reuse the current Merge method. For example, considering we have
 	// LDS:
 	//	 - name: A
@@ -169,30 +169,61 @@ func FilterManagerConfigFactory(c interface{}) capi.StreamFilterFactory {
 	}
 }
 
+func (m *filterManager) handleAction(res api.ResultAction) (needReturn bool) {
+	if res != api.Continue {
+		switch v := res.(type) {
+		case *api.LocalResponse:
+			m.localReply(v)
+			return true
+		default:
+			api.LogErrorf("unknown result action: %+v", v)
+		}
+	}
+	return false
+}
+
+func (m *filterManager) localReply(v *api.LocalResponse) {
+	// TODO: support multiple same name header in Envoy
+	var hdr map[string]string
+	if v.Header != nil {
+		hdr = map[string]string{}
+		for k, vv := range map[string][]string(v.Header) {
+			hdr[k] = vv[0]
+		}
+	}
+	// TODO: provide JSON / gRPC reply according to the request info
+	if v.Code == 0 {
+		v.Code = 200
+	}
+	m.callbacks.SendLocalReply(v.Code, v.Msg, hdr, 0, "")
+	m.callbacks.Continue(capi.Continue)
+}
+
 func (m *filterManager) DecodeHeaders(header api.RequestHeaderMap, endStream bool) capi.StatusType {
 	go func() {
 		defer m.callbacks.RecoverPanic()
 
 		for i, f := range m.filters {
-			runDecodeRequest := false
-			if wr, ok := f.(api.DecodeWholeRequestFilter); ok {
-				needed := wr.NeedDecodeWholeRequest(header)
-				if needed {
-					if !endStream {
-						m.decodeIdx = i
-						m.reqHdr = header
-						m.callbacks.Continue(capi.StopAndBuffer)
-						return
-					}
-
-					// no body
-					runDecodeRequest = true
-					wr.DecodeRequest(header, nil, nil)
+			needed := f.NeedDecodeWholeRequest(header)
+			if needed {
+				if !endStream {
+					m.decodeIdx = i
+					m.reqHdr = header
+					m.callbacks.Continue(capi.StopAndBuffer)
+					return
 				}
 			}
 
-			if !runDecodeRequest {
-				f.DecodeHeaders(header, endStream)
+			var res api.ResultAction
+			if needed {
+				// no body
+				res = f.DecodeRequest(header, nil, nil)
+			} else {
+				res = f.DecodeHeaders(header, endStream)
+			}
+
+			if m.handleAction(res) {
+				return
 			}
 		}
 		m.callbacks.Continue(capi.Continue)
@@ -204,36 +235,44 @@ func (m *filterManager) DecodeHeaders(header api.RequestHeaderMap, endStream boo
 func (m *filterManager) DecodeData(buf api.BufferInstance, endStream bool) capi.StatusType {
 	go func() {
 		defer m.callbacks.RecoverPanic()
+		var res api.ResultAction
 
 		n := len(m.filters)
 		if m.decodeIdx == -1 {
 			// every filter doesn't need buffered body
 			for i := 0; i < n; i++ {
 				f := m.filters[i]
-				f.DecodeData(buf, endStream)
+				res = f.DecodeData(buf, endStream)
+				if m.handleAction(res) {
+					return
+				}
 			}
 			m.callbacks.Continue(capi.Continue)
 
 		} else {
-			for i := 0; i < m.decodeIdx; i++ {
+			for i := 0; i < n; i++ {
 				f := m.filters[i]
-				f.DecodeData(buf, endStream)
-			}
-			wr := m.filters[m.decodeIdx].(api.DecodeWholeRequestFilter)
-			wr.DecodeRequest(m.reqHdr, buf, nil)
-			for i := m.decodeIdx + 1; i < n; i++ {
-				f := m.filters[i]
-				runDecodeRequest := false
-				if wr, ok := f.(api.DecodeWholeRequestFilter); ok {
-					needed := wr.NeedDecodeWholeRequest(m.reqHdr)
+
+				if i < m.decodeIdx {
+					res = f.DecodeData(buf, endStream)
+				} else if i == m.decodeIdx {
+					res = f.DecodeRequest(m.reqHdr, buf, nil)
+				} else {
+					needed := f.NeedDecodeWholeRequest(m.reqHdr)
 					if needed {
-						runDecodeRequest = true
-						wr.DecodeRequest(m.reqHdr, buf, nil)
+						res = f.DecodeRequest(m.reqHdr, buf, nil)
+					} else {
+						res = f.DecodeHeaders(m.reqHdr, endStream)
+						if m.handleAction(res) {
+							return
+						}
+
+						res = f.DecodeData(buf, endStream)
 					}
 				}
-				if !runDecodeRequest {
-					f.DecodeHeaders(m.reqHdr, endStream)
-					f.DecodeData(buf, endStream)
+
+				if m.handleAction(res) {
+					return
 				}
 			}
 			m.callbacks.Continue(capi.Continue)
@@ -250,25 +289,26 @@ func (m *filterManager) EncodeHeaders(header api.ResponseHeaderMap, endStream bo
 		n := len(m.filters)
 		for i := n - 1; i >= 0; i-- {
 			f := m.filters[i]
-			runEncodeResponse := false
-			if wr, ok := f.(api.EncodeWholeResponseFilter); ok {
-				needed := wr.NeedEncodeWholeResponse(header)
-				if needed {
-					if !endStream {
-						m.encodeIdx = i
-						m.rspHdr = header
-						m.callbacks.Continue(capi.StopAndBuffer)
-						return
-					}
-
-					// no body
-					runEncodeResponse = true
-					wr.EncodeResponse(header, nil, nil)
+			needed := f.NeedEncodeWholeResponse(header)
+			if needed {
+				if !endStream {
+					m.encodeIdx = i
+					m.rspHdr = header
+					m.callbacks.Continue(capi.StopAndBuffer)
+					return
 				}
 			}
 
-			if !runEncodeResponse {
-				f.EncodeHeaders(header, endStream)
+			var res api.ResultAction
+			if needed {
+				// no body
+				res = f.EncodeResponse(header, nil, nil)
+			} else {
+				res = f.EncodeHeaders(header, endStream)
+			}
+
+			if m.handleAction(res) {
+				return
 			}
 		}
 		m.callbacks.Continue(capi.Continue)
@@ -280,36 +320,44 @@ func (m *filterManager) EncodeHeaders(header api.ResponseHeaderMap, endStream bo
 func (m *filterManager) EncodeData(buf api.BufferInstance, endStream bool) capi.StatusType {
 	go func() {
 		defer m.callbacks.RecoverPanic()
+		var res api.ResultAction
 
 		n := len(m.filters)
 		if m.encodeIdx == -1 {
 			// every filter doesn't need buffered body
 			for i := n - 1; i >= 0; i-- {
 				f := m.filters[i]
-				f.EncodeData(buf, endStream)
+				res = f.EncodeData(buf, endStream)
+				if m.handleAction(res) {
+					return
+				}
 			}
 			m.callbacks.Continue(capi.Continue)
 
 		} else {
-			for i := n - 1; i > m.encodeIdx; i-- {
+			for i := n - 1; i >= 0; i-- {
 				f := m.filters[i]
-				f.EncodeData(buf, endStream)
-			}
-			wr := m.filters[m.encodeIdx].(api.EncodeWholeResponseFilter)
-			wr.EncodeResponse(m.rspHdr, buf, nil)
-			for i := m.encodeIdx - 1; i >= 0; i-- {
-				f := m.filters[i]
-				runEncodeResponse := false
-				if wr, ok := f.(api.EncodeWholeResponseFilter); ok {
-					needed := wr.NeedEncodeWholeResponse(m.rspHdr)
+
+				if i > m.encodeIdx {
+					res = f.EncodeData(buf, endStream)
+				} else if i == m.encodeIdx {
+					res = f.EncodeResponse(m.rspHdr, buf, nil)
+				} else {
+					needed := f.NeedEncodeWholeResponse(m.rspHdr)
 					if needed {
-						runEncodeResponse = true
-						wr.EncodeResponse(m.rspHdr, buf, nil)
+						res = f.EncodeResponse(m.rspHdr, buf, nil)
+					} else {
+						res = f.EncodeHeaders(m.rspHdr, endStream)
+						if m.handleAction(res) {
+							return
+						}
+
+						res = f.EncodeData(buf, endStream)
 					}
 				}
-				if !runEncodeResponse {
-					f.EncodeHeaders(m.rspHdr, endStream)
-					f.EncodeData(buf, endStream)
+
+				if m.handleAction(res) {
+					return
 				}
 			}
 			m.callbacks.Continue(capi.Continue)

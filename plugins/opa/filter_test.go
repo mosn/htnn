@@ -10,6 +10,7 @@ import (
 	"github.com/agiledragon/gomonkey/v2"
 	"github.com/stretchr/testify/assert"
 
+	"mosn.io/moe/pkg/filtermanager/api"
 	"mosn.io/moe/tests/pkg/envoy"
 )
 
@@ -85,8 +86,12 @@ func TestOpaRemote(t *testing.T) {
 				})
 			defer patches.Reset()
 
-			f.DecodeHeaders(hdr, true)
-			assert.Equal(t, tt.status, cb.LocalResponseCode())
+			lr, ok := f.DecodeHeaders(hdr, true).(*api.LocalResponse)
+			if !ok {
+				assert.Equal(t, tt.status, 0)
+			} else {
+				assert.Equal(t, tt.status, lr.Code)
+			}
 		})
 	}
 }
