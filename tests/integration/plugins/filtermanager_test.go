@@ -610,7 +610,7 @@ func TestFilterManagerDecodeLocalReply(t *testing.T) {
 			config: bThenDd,
 		},
 		{
-			name:   "LocalReply rewrited by Encode",
+			name:   "LocalReply rewritten by Encode",
 			config: lrThenE,
 			expect: func(t *testing.T, resp *http.Response) {
 				assert.Equal(t, []string{"stream"}, resp.Header.Values("Run"))
