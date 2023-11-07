@@ -1,6 +1,7 @@
 package plugins
 
 import (
+	"bytes"
 	"io"
 	"net/http"
 	"strconv"
@@ -245,6 +246,8 @@ func TestFilterManagerDecode(t *testing.T) {
 func assertBodyHas(t *testing.T, exp string, resp *http.Response) {
 	d, _ := io.ReadAll(resp.Body)
 	assert.Contains(t, string(d), exp)
+	// set the body back so the next assertion can read the body
+	resp.Body = io.NopCloser(bytes.NewBuffer(d))
 }
 
 func TestFilterManagerEncode(t *testing.T) {
@@ -558,9 +561,29 @@ func TestFilterManagerDecodeLocalReply(t *testing.T) {
 		},
 	}
 
+	lrThenE := &filtermanager.FilterManagerConfig{
+		Plugins: []*filtermanager.FilterConfig{
+			{
+				Name: "localReply",
+				Config: &Config{
+					Decode: true,
+					Data:   true,
+				},
+			},
+			{
+				Name: "stream",
+				Config: &Config{
+					Encode: true,
+					Need:   true,
+				},
+			},
+		},
+	}
+
 	tests := []struct {
 		name   string
 		config *filtermanager.FilterManagerConfig
+		expect func(t *testing.T, resp *http.Response)
 	}{
 		{
 			name:   "DecodeHeaders",
@@ -586,15 +609,27 @@ func TestFilterManagerDecodeLocalReply(t *testing.T) {
 			name:   "DecodeData after DecodeRequest",
 			config: bThenDd,
 		},
+		{
+			name:   "LocalReply rewrited by Encode",
+			config: lrThenE,
+			expect: func(t *testing.T, resp *http.Response) {
+				assert.Equal(t, []string{"stream"}, resp.Header.Values("Run"))
+				assertBodyHas(t, "stream\n", resp)
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			controlPlane.UseGoPluginConfig(tt.config)
 			resp, err := dp.Post("/echo", nil, strings.NewReader("any"))
 			assert.Nil(t, err)
-			assert.Equal(t, 200, resp.StatusCode)
+			assert.Equal(t, 206, resp.StatusCode)
 			assert.Equal(t, []string{"reply"}, resp.Header.Values("local"))
 			assertBodyHas(t, "ok", resp)
+
+			if tt.expect != nil {
+				tt.expect(t, resp)
+			}
 		})
 	}
 }
@@ -731,7 +766,7 @@ func TestFilterManagerEncodeLocalReply(t *testing.T) {
 			hdr.Add("from", "reply")
 			resp, err := dp.Post("/echo", hdr, strings.NewReader("any"))
 			assert.Nil(t, err)
-			assert.Equal(t, 200, resp.StatusCode)
+			assert.Equal(t, 206, resp.StatusCode)
 			assert.Equal(t, "reply", resp.Header.Get("local"))
 			assertBodyHas(t, "ok", resp)
 		})

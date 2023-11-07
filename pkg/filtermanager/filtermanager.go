@@ -196,7 +196,6 @@ func (m *filterManager) localReply(v *api.LocalResponse) {
 		v.Code = 200
 	}
 	m.callbacks.SendLocalReply(v.Code, v.Msg, hdr, 0, "")
-	m.callbacks.Continue(capi.Continue)
 }
 
 func (m *filterManager) DecodeHeaders(header api.RequestHeaderMap, endStream bool) capi.StatusType {

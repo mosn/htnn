@@ -193,7 +193,7 @@ func (f *localReplyFilter) NeedDecodeWholeRequest(headers api.RequestHeaderMap) 
 func NewLocalResponse(reply string) *api.LocalResponse {
 	hdr := http.Header{}
 	hdr.Set("local", reply)
-	return &api.LocalResponse{Code: 200, Msg: "ok", Header: hdr}
+	return &api.LocalResponse{Code: 206, Msg: "ok", Header: hdr}
 }
 
 func (f *localReplyFilter) DecodeRequest(headers api.RequestHeaderMap, buf api.BufferInstance, trailer api.RequestTrailerMap) api.ResultAction {
