@@ -9,7 +9,7 @@ require (
 	github.com/envoyproxy/envoy v1.28.0
 	github.com/envoyproxy/go-control-plane v0.11.1
 	github.com/envoyproxy/protoc-gen-validate v1.0.2
-	github.com/go-logr/logr v1.2.4
+	github.com/go-logr/logr v1.3.0
 	github.com/go-logr/zapr v1.2.4
 	github.com/golang/protobuf v1.5.3
 	github.com/jellydator/ttlcache/v3 v3.1.0
