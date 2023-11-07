@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net"
+	"runtime"
 	"time"
 
 	xds "github.com/cncf/xds/go/xds/type/v3"
@@ -56,7 +57,16 @@ func NewControlPlane() *ControlPlane {
 }
 
 func (cp *ControlPlane) Start() {
-	lis, _ := net.Listen("tcp", "127.0.0.1:9999")
+	host := "127.0.0.1"
+	if runtime.GOOS == "linux" {
+		// We need to use 0.0.0.0 on Linux so the data plane in the Docker
+		// can connect to it.
+		host = "0.0.0.0"
+		// Use 0.0.0.0 on Mac will be prompted by some security policies so we
+		// only use it on Linux.
+	}
+
+	lis, _ := net.Listen("tcp", host+":9999")
 	if err := cp.grpcServer.Serve(lis); err != nil {
 		logger.Error(err, "failed to start control plane")
 	}
