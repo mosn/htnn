@@ -80,7 +80,9 @@ integration-test:
 	if ! docker images ${PROXY_IMAGE} | grep envoyproxy/envoy > /dev/null; then \
 		docker pull ${PROXY_IMAGE}; \
 	fi
-	go test ${TEST_OPTION} ./tests/integration/...
+	$(foreach PKG, $(shell go list ./tests/integration/...), \
+		go test ${TEST_OPTION} ${PKG} || exit 1; \
+	)
 
 .PHONY: build-so-local
 build-so-local:
