@@ -574,7 +574,63 @@ func TestFilterManagerDecodeLocalReply(t *testing.T) {
 				Name: "stream",
 				Config: &Config{
 					Encode: true,
+				},
+			},
+		},
+	}
+	fOrder := &filtermanager.FilterManagerConfig{
+		Plugins: []*filtermanager.FilterConfig{
+			{
+				Name: "buffer",
+				Config: &Config{
+					Decode: true,
 					Need:   true,
+				},
+			},
+			{
+				Name: "localReply",
+				Config: &Config{
+					Decode: true,
+					Data:   true,
+				},
+			},
+			{
+				Name: "stream",
+				Config: &Config{
+					Decode: true,
+				},
+			},
+			// should local reply in DecodeData after running all DecodeHeaders
+		},
+	}
+	fOrderM := &filtermanager.FilterManagerConfig{
+		Plugins: []*filtermanager.FilterConfig{
+			{
+				Name: "buffer",
+				Config: &Config{
+					Decode: true,
+					Need:   true,
+				},
+			},
+			{
+				Name: "localReply",
+				Config: &Config{
+					Decode: true,
+					Data:   true,
+				},
+			},
+			// should local reply in DecodeData before DecodeRequest
+			{
+				Name: "buffer",
+				Config: &Config{
+					Decode: true,
+					Need:   true,
+				},
+			},
+			{
+				Name: "stream",
+				Config: &Config{
+					Decode: true,
 				},
 			},
 		},
@@ -615,6 +671,20 @@ func TestFilterManagerDecodeLocalReply(t *testing.T) {
 			expect: func(t *testing.T, resp *http.Response) {
 				assert.Equal(t, []string{"stream"}, resp.Header.Values("Run"))
 				assertBodyHas(t, "stream\n", resp)
+			},
+		},
+		{
+			name:   "Ensure the header filters' order after DecodeRequest",
+			config: fOrder,
+			expect: func(t *testing.T, resp *http.Response) {
+				assert.Equal(t, "buffer|stream", resp.Header.Get("Order"))
+			},
+		},
+		{
+			name:   "Ensure the header filters' order between multiple DecodeRequest",
+			config: fOrderM,
+			expect: func(t *testing.T, resp *http.Response) {
+				assert.Equal(t, "buffer", resp.Header.Get("Order"))
 			},
 		},
 	}
@@ -729,10 +799,35 @@ func TestFilterManagerEncodeLocalReply(t *testing.T) {
 			},
 		},
 	}
+	bThenSThenEh := &filtermanager.FilterManagerConfig{
+		Plugins: []*filtermanager.FilterConfig{
+			{
+				Name: "localReply",
+				Config: &Config{
+					Encode:  true,
+					Headers: true,
+				},
+			},
+			{
+				Name: "stream",
+				Config: &Config{
+					Encode: true,
+				},
+			},
+			{
+				Name: "buffer",
+				Config: &Config{
+					Encode: true,
+					Need:   true,
+				},
+			},
+		},
+	}
 
 	tests := []struct {
 		name   string
 		config *filtermanager.FilterManagerConfig
+		expect func(t *testing.T, resp *http.Response)
 	}{
 		{
 			name:   "EncodeHeaders",
@@ -758,6 +853,14 @@ func TestFilterManagerEncodeLocalReply(t *testing.T) {
 			name:   "EncodeData after EncodeResponse",
 			config: bThenEd,
 		},
+		{
+			name:   "Buffer all, then run header filters from stream and local reply",
+			config: bThenSThenEh,
+			expect: func(t *testing.T, resp *http.Response) {
+				// only EncodeData in localReply is run
+				assertBody(t, "ok", resp)
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -769,6 +872,10 @@ func TestFilterManagerEncodeLocalReply(t *testing.T) {
 			assert.Equal(t, 206, resp.StatusCode)
 			assert.Equal(t, "reply", resp.Header.Get("local"))
 			assertBodyHas(t, "ok", resp)
+
+			if tt.expect != nil {
+				tt.expect(t, resp)
+			}
 		})
 	}
 }

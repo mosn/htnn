@@ -15,13 +15,13 @@ type EncodeWholeResponseFilter interface {
 }
 
 type Filter interface {
-	DecodeHeaders(RequestHeaderMap, bool) ResultAction
-	DecodeData(BufferInstance, bool) ResultAction
-	DecodeTrailers(RequestTrailerMap) ResultAction
+	DecodeHeaders(headers RequestHeaderMap, endStream bool) ResultAction
+	DecodeData(data BufferInstance, endStream bool) ResultAction
+	DecodeTrailers(trailers RequestTrailerMap) ResultAction
 
-	EncodeHeaders(ResponseHeaderMap, bool) ResultAction
-	EncodeData(BufferInstance, bool) ResultAction
-	EncodeTrailers(ResponseTrailerMap) ResultAction
+	EncodeHeaders(headers ResponseHeaderMap, endStream bool) ResultAction
+	EncodeData(data BufferInstance, endStream bool) ResultAction
+	EncodeTrailers(trailers ResponseTrailerMap) ResultAction
 
 	OnLog()
 

@@ -170,16 +170,18 @@ func FilterManagerConfigFactory(c interface{}) capi.StreamFilterFactory {
 }
 
 func (m *filterManager) handleAction(res api.ResultAction) (needReturn bool) {
-	if res != api.Continue {
-		switch v := res.(type) {
-		case *api.LocalResponse:
-			m.localReply(v)
-			return true
-		default:
-			api.LogErrorf("unknown result action: %+v", v)
-		}
+	if res == api.Continue {
+		return false
 	}
-	return false
+
+	switch v := res.(type) {
+	case *api.LocalResponse:
+		m.localReply(v)
+		return true
+	default:
+		api.LogErrorf("unknown result action: %+v", v)
+		return false
+	}
 }
 
 func (m *filterManager) localReply(v *api.LocalResponse) {
@@ -201,6 +203,7 @@ func (m *filterManager) localReply(v *api.LocalResponse) {
 func (m *filterManager) DecodeHeaders(header api.RequestHeaderMap, endStream bool) capi.StatusType {
 	go func() {
 		defer m.callbacks.RecoverPanic()
+		var res api.ResultAction
 
 		for i, f := range m.filters {
 			needed := f.NeedDecodeWholeRequest(header)
@@ -211,10 +214,7 @@ func (m *filterManager) DecodeHeaders(header api.RequestHeaderMap, endStream boo
 					m.callbacks.Continue(capi.StopAndBuffer)
 					return
 				}
-			}
 
-			var res api.ResultAction
-			if needed {
 				// no body
 				res = f.DecodeRequest(header, nil, nil)
 			} else {
@@ -259,14 +259,20 @@ func (m *filterManager) DecodeData(buf api.BufferInstance, endStream bool) capi.
 				} else {
 					needed := f.NeedDecodeWholeRequest(m.reqHdr)
 					if needed {
-						res = f.DecodeRequest(m.reqHdr, buf, nil)
-					} else {
-						res = f.DecodeHeaders(m.reqHdr, endStream)
-						if m.handleAction(res) {
-							return
+						// When there are multiple filters want to decode the whole req,
+						// run part of the DecodeData which is before them
+						for j := m.decodeIdx + 1; j < i; j++ {
+							prevF := m.filters[j]
+							res = prevF.DecodeData(buf, endStream)
+							if m.handleAction(res) {
+								return
+							}
 						}
 
-						res = f.DecodeData(buf, endStream)
+						res = f.DecodeRequest(m.reqHdr, buf, nil)
+						m.decodeIdx = i
+					} else {
+						res = f.DecodeHeaders(m.reqHdr, endStream)
 					}
 				}
 
@@ -274,6 +280,15 @@ func (m *filterManager) DecodeData(buf api.BufferInstance, endStream bool) capi.
 					return
 				}
 			}
+
+			for j := m.decodeIdx + 1; j < n; j++ {
+				f := m.filters[j]
+				res = f.DecodeData(buf, endStream)
+				if m.handleAction(res) {
+					return
+				}
+			}
+
 			m.callbacks.Continue(capi.Continue)
 		}
 	}()
@@ -284,6 +299,7 @@ func (m *filterManager) DecodeData(buf api.BufferInstance, endStream bool) capi.
 func (m *filterManager) EncodeHeaders(header api.ResponseHeaderMap, endStream bool) capi.StatusType {
 	go func() {
 		defer m.callbacks.RecoverPanic()
+		var res api.ResultAction
 
 		n := len(m.filters)
 		for i := n - 1; i >= 0; i-- {
@@ -296,10 +312,7 @@ func (m *filterManager) EncodeHeaders(header api.ResponseHeaderMap, endStream bo
 					m.callbacks.Continue(capi.StopAndBuffer)
 					return
 				}
-			}
 
-			var res api.ResultAction
-			if needed {
 				// no body
 				res = f.EncodeResponse(header, nil, nil)
 			} else {
@@ -344,14 +357,18 @@ func (m *filterManager) EncodeData(buf api.BufferInstance, endStream bool) capi.
 				} else {
 					needed := f.NeedEncodeWholeResponse(m.rspHdr)
 					if needed {
-						res = f.EncodeResponse(m.rspHdr, buf, nil)
-					} else {
-						res = f.EncodeHeaders(m.rspHdr, endStream)
-						if m.handleAction(res) {
-							return
+						for j := m.encodeIdx - 1; j > i; j-- {
+							prevF := m.filters[j]
+							res = prevF.EncodeData(buf, endStream)
+							if m.handleAction(res) {
+								return
+							}
 						}
 
-						res = f.EncodeData(buf, endStream)
+						res = f.EncodeResponse(m.rspHdr, buf, nil)
+						m.encodeIdx = i
+					} else {
+						res = f.EncodeHeaders(m.rspHdr, endStream)
 					}
 				}
 
@@ -359,6 +376,15 @@ func (m *filterManager) EncodeData(buf api.BufferInstance, endStream bool) capi.
 					return
 				}
 			}
+
+			for j := m.encodeIdx - 1; j >= 0; j-- {
+				f := m.filters[j]
+				res = f.EncodeData(buf, endStream)
+				if m.handleAction(res) {
+					return
+				}
+			}
+
 			m.callbacks.Continue(capi.Continue)
 		}
 	}()
