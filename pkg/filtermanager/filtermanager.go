@@ -264,31 +264,38 @@ func (m *filterManager) DecodeData(buf api.BufferInstance, endStream bool) capi.
 			m.callbacks.Continue(capi.Continue)
 
 		} else {
-			for i := 0; i < n; i++ {
+			for i := 0; i < m.decodeIdx; i++ {
 				f := m.filters[i]
+				res = f.DecodeData(buf, endStream)
+				if m.handleAction(res) {
+					return
+				}
+			}
 
-				if i < m.decodeIdx {
-					res = f.DecodeData(buf, endStream)
-				} else if i == m.decodeIdx {
-					res = f.DecodeRequest(m.reqHdr, buf, nil)
-				} else {
-					needed := f.NeedDecodeWholeRequest(m.reqHdr)
-					if needed {
-						// When there are multiple filters want to decode the whole req,
-						// run part of the DecodeData which is before them
-						for j := m.decodeIdx + 1; j < i; j++ {
-							prevF := m.filters[j]
-							res = prevF.DecodeData(buf, endStream)
-							if m.handleAction(res) {
-								return
-							}
+			f := m.filters[m.decodeIdx]
+			res = f.DecodeRequest(m.reqHdr, buf, nil)
+			if m.handleAction(res) {
+				return
+			}
+
+			for i := m.decodeIdx + 1; i < n; i++ {
+				f := m.filters[i]
+				needed := f.NeedDecodeWholeRequest(m.reqHdr)
+				if needed {
+					// When there are multiple filters want to decode the whole req,
+					// run part of the DecodeData which is before them
+					for j := m.decodeIdx + 1; j < i; j++ {
+						prevF := m.filters[j]
+						res = prevF.DecodeData(buf, endStream)
+						if m.handleAction(res) {
+							return
 						}
-
-						res = f.DecodeRequest(m.reqHdr, buf, nil)
-						m.decodeIdx = i
-					} else {
-						res = f.DecodeHeaders(m.reqHdr, endStream)
 					}
+
+					res = f.DecodeRequest(m.reqHdr, buf, nil)
+					m.decodeIdx = i
+				} else {
+					res = f.DecodeHeaders(m.reqHdr, endStream)
 				}
 
 				if m.handleAction(res) {
