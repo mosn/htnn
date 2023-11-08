@@ -211,6 +211,8 @@ func (m *filterManager) DecodeHeaders(header api.RequestHeaderMap, endStream boo
 				if !endStream {
 					m.decodeIdx = i
 					m.reqHdr = header
+					// some filters, like authorization with request body, need to
+					// have a whole body before passing to the next filter
 					m.callbacks.Continue(capi.StopAndBuffer)
 					return
 				}
@@ -235,6 +237,19 @@ func (m *filterManager) DecodeData(buf api.BufferInstance, endStream bool) capi.
 	go func() {
 		defer m.callbacks.RecoverPanic()
 		var res api.ResultAction
+
+		// We have discussed a lot about how to support processing data both streamingly and
+		// as a whole body. Here are some solutions we have considered:
+		// 1. let Envoy process data streamingly, and do buffering in Go. This solution is costly
+		// and may be broken if the buffered data at Go side is rewritten by later C++ filter.
+		// 2. separate the filters which need a whole body in a separate C++ filter. It can't
+		// be done without a special control plane.
+		// 3. add multiple virtual C++ filters to Envoy when init the Envoy Golang filter. It
+		// is complex because we need to share and move the state between multiple Envoy C++
+		// filter.
+		// 4. when a filter requires a whole body, all the filters will use a whole body.
+		// Otherwise, streaming processing is used. It's simple and already satisfies our
+		// most demand, so we choose this way for now.
 
 		n := len(m.filters)
 		if m.decodeIdx == -1 {
