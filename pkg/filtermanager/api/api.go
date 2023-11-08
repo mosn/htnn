@@ -84,8 +84,6 @@ type FilterCallbackHandler interface {
 	StreamInfo() StreamInfo
 	RecoverPanic()
 	GetProperty(key string) (string, error)
-	// TODO: remove it later
-	SendLocalReply(responseCode int, bodyText string, headers map[string]string, grpcStatus int64, details string)
 }
 
 type FilterFactory func(callbacks FilterCallbackHandler) Filter
