@@ -68,8 +68,8 @@ func TestCasbin(t *testing.T) {
 				go func() {
 					// ensure the lock takes effect
 					f.DecodeHeaders(hdr, true)
-					wg.Done()
 					assert.Equal(t, tt.status, cb.LocalResponseCode())
+					wg.Done()
 				}()
 			}
 			wg.Wait()
