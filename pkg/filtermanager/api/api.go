@@ -6,12 +6,12 @@ import (
 
 type DecodeWholeRequestFilter interface {
 	NeedDecodeWholeRequest(headers api.RequestHeaderMap) bool
-	DecodeRequest(headers api.RequestHeaderMap, buf api.BufferInstance, trailers api.RequestTrailerMap) ResultAction
+	DecodeRequest(headers api.RequestHeaderMap, data api.BufferInstance, trailers api.RequestTrailerMap) ResultAction
 }
 
 type EncodeWholeResponseFilter interface {
 	NeedEncodeWholeResponse(headers api.ResponseHeaderMap) bool
-	EncodeResponse(headers api.ResponseHeaderMap, buf api.BufferInstance, trailers api.ResponseTrailerMap) ResultAction
+	EncodeResponse(headers api.ResponseHeaderMap, data api.BufferInstance, trailers api.ResponseTrailerMap) ResultAction
 }
 
 type Filter interface {
@@ -58,12 +58,12 @@ func (f *PassThroughFilter) EncodeTrailers(trailers ResponseTrailerMap) ResultAc
 func (f *PassThroughFilter) OnLog() {}
 
 func (f *PassThroughFilter) NeedDecodeWholeRequest(headers api.RequestHeaderMap) bool { return false }
-func (f *PassThroughFilter) DecodeRequest(headers api.RequestHeaderMap, buf api.BufferInstance, trailers api.RequestTrailerMap) ResultAction {
+func (f *PassThroughFilter) DecodeRequest(headers api.RequestHeaderMap, data api.BufferInstance, trailers api.RequestTrailerMap) ResultAction {
 	return Continue
 }
 
 func (f *PassThroughFilter) NeedEncodeWholeResponse(headers api.ResponseHeaderMap) bool { return false }
-func (f *PassThroughFilter) EncodeResponse(headers api.ResponseHeaderMap, buf api.BufferInstance, trailers api.ResponseTrailerMap) ResultAction {
+func (f *PassThroughFilter) EncodeResponse(headers api.ResponseHeaderMap, data api.BufferInstance, trailers api.ResponseTrailerMap) ResultAction {
 	return Continue
 }
 

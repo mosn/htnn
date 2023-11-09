@@ -279,35 +279,41 @@ func (m *filterManager) DecodeData(buf api.BufferInstance, endStream bool) capi.
 			}
 
 			for i := m.decodeIdx + 1; i < n; i++ {
-				f := m.filters[i]
-				needed := f.NeedDecodeWholeRequest(m.reqHdr)
-				if needed {
-					// When there are multiple filters want to decode the whole req,
-					// run part of the DecodeData which is before them
-					for j := m.decodeIdx + 1; j < i; j++ {
-						prevF := m.filters[j]
-						res = prevF.DecodeData(buf, endStream)
-						if m.handleAction(res) {
-							return
-						}
+				var needed bool
+				for ; i < n; i++ {
+					f := m.filters[i]
+					needed = f.NeedDecodeWholeRequest(m.reqHdr)
+					if needed {
+						break
 					}
+				}
 
-					res = f.DecodeRequest(m.reqHdr, buf, nil)
+				for j := m.decodeIdx + 1; j < i; j++ {
+					f := m.filters[j]
+					// The endStream in DecodeHeaders indicates whether there is a body.
+					// The body always exists when we hit this path.
+					res = f.DecodeHeaders(m.reqHdr, false)
+					if m.handleAction(res) {
+						return
+					}
+				}
+				// When there are multiple filters want to decode the whole req,
+				// run part of the DecodeData which is before them
+				for j := m.decodeIdx + 1; j < i; j++ {
+					f := m.filters[j]
+					res = f.DecodeData(buf, endStream)
+					if m.handleAction(res) {
+						return
+					}
+				}
+
+				if needed {
 					m.decodeIdx = i
-				} else {
-					res = f.DecodeHeaders(m.reqHdr, endStream)
-				}
-
-				if m.handleAction(res) {
-					return
-				}
-			}
-
-			for j := m.decodeIdx + 1; j < n; j++ {
-				f := m.filters[j]
-				res = f.DecodeData(buf, endStream)
-				if m.handleAction(res) {
-					return
+					f := m.filters[m.decodeIdx]
+					res = f.DecodeRequest(m.reqHdr, buf, nil)
+					if m.handleAction(res) {
+						return
+					}
 				}
 			}
 
@@ -369,41 +375,52 @@ func (m *filterManager) EncodeData(buf api.BufferInstance, endStream bool) capi.
 			m.callbacks.Continue(capi.Continue)
 
 		} else {
-			for i := n - 1; i >= 0; i-- {
+			for i := n - 1; i > m.encodeIdx; i-- {
 				f := m.filters[i]
-
-				if i > m.encodeIdx {
-					res = f.EncodeData(buf, endStream)
-				} else if i == m.encodeIdx {
-					res = f.EncodeResponse(m.rspHdr, buf, nil)
-				} else {
-					needed := f.NeedEncodeWholeResponse(m.rspHdr)
-					if needed {
-						for j := m.encodeIdx - 1; j > i; j-- {
-							prevF := m.filters[j]
-							res = prevF.EncodeData(buf, endStream)
-							if m.handleAction(res) {
-								return
-							}
-						}
-
-						res = f.EncodeResponse(m.rspHdr, buf, nil)
-						m.encodeIdx = i
-					} else {
-						res = f.EncodeHeaders(m.rspHdr, endStream)
-					}
-				}
-
+				res = f.EncodeData(buf, endStream)
 				if m.handleAction(res) {
 					return
 				}
 			}
 
-			for j := m.encodeIdx - 1; j >= 0; j-- {
-				f := m.filters[j]
-				res = f.EncodeData(buf, endStream)
-				if m.handleAction(res) {
-					return
+			f := m.filters[m.encodeIdx]
+			res = f.EncodeResponse(m.rspHdr, buf, nil)
+			if m.handleAction(res) {
+				return
+			}
+
+			for i := m.encodeIdx - 1; i >= 0; i-- {
+				var needed bool
+				for ; i >= 0; i-- {
+					f := m.filters[i]
+					needed = f.NeedEncodeWholeResponse(m.rspHdr)
+					if needed {
+						break
+					}
+				}
+
+				for j := m.encodeIdx - 1; j > i; j-- {
+					f := m.filters[j]
+					res = f.EncodeHeaders(m.rspHdr, false)
+					if m.handleAction(res) {
+						return
+					}
+				}
+				for j := m.encodeIdx - 1; j > i; j-- {
+					f := m.filters[j]
+					res = f.EncodeData(buf, endStream)
+					if m.handleAction(res) {
+						return
+					}
+				}
+
+				if needed {
+					m.encodeIdx = i
+					f := m.filters[m.encodeIdx]
+					res = f.EncodeResponse(m.rspHdr, buf, nil)
+					if m.handleAction(res) {
+						return
+					}
 				}
 			}
 
