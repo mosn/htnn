@@ -1,8 +1,9 @@
 package plugins
 
 import (
-	"github.com/envoyproxy/envoy/contrib/golang/common/go/api"
+	"net/http"
 
+	"mosn.io/moe/pkg/filtermanager/api"
 	"mosn.io/moe/pkg/plugins"
 )
 
@@ -18,11 +19,11 @@ type plugin struct {
 	plugins.PluginMethodDefaultImpl
 }
 
-func (p *plugin) ConfigFactory() api.StreamFilterConfigFactory {
+func (p *plugin) ConfigFactory() api.FilterConfigFactory {
 	return configFactory
 }
 
-func (p *plugin) ConfigParser() api.StreamFilterConfigParser {
+func (p *plugin) ConfigParser() api.FilterConfigParser {
 	return plugins.NewPluginConfigParser(&parser{})
 }
 
@@ -40,12 +41,8 @@ func (p *parser) Handle(c interface{}, callbacks api.ConfigCallbackHandler) (int
 	return c, nil
 }
 
-func (p *parser) Merge(parent interface{}, child interface{}) interface{} {
-	return child
-}
-
-func configFactory(c interface{}) api.StreamFilterFactory {
-	return func(callbacks api.FilterCallbackHandler) api.StreamFilter {
+func configFactory(c interface{}) api.FilterFactory {
+	return func(callbacks api.FilterCallbackHandler) api.Filter {
 		return &filter{
 			callbacks: callbacks,
 		}
@@ -53,12 +50,17 @@ func configFactory(c interface{}) api.StreamFilterFactory {
 }
 
 type filter struct {
-	api.PassThroughStreamFilter
+	api.PassThroughFilter
 
 	callbacks api.FilterCallbackHandler
 }
 
-func (f *filter) DecodeHeaders(header api.RequestHeaderMap, endStream bool) api.StatusType {
-	f.callbacks.SendLocalReply(200, "Your plugin is run\n", nil, 0, "")
-	return api.LocalReply
+func (f *filter) DecodeHeaders(header api.RequestHeaderMap, endStream bool) api.ResultAction {
+	hdr := http.Header{}
+	hdr.Set("content-type", "text/plain")
+	return &api.LocalResponse{
+		Code:   200,
+		Msg:    "Your plugin is run\n",
+		Header: hdr,
+	}
 }

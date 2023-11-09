@@ -16,22 +16,20 @@ static_resources:
                     typed_config:
                       "@type": type.googleapis.com/envoy.extensions.access_loggers.stream.v3.StdoutAccessLog
                 http_filters:
-                  - name: envoy.filters.http.golang.demo
+                  - name: envoy.filters.http.golang
                     typed_config:
                       "@type": type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.Config
-                      library_id: demo
+                      library_id: fm
                       library_path: /etc/libgolang.so
-                      plugin_name: demo
+                      plugin_name: fm
                       plugin_config:
                         "@type": type.googleapis.com/xds.type.v3.TypedStruct
                         value:
-                          host_name: Jack
-                  - name: envoy.filters.http.golang.your_plugin
-                    typed_config:
-                      "@type": type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.Config
-                      library_id: your_plugin
-                      library_path: /etc/libgolang.so
-                      plugin_name: your_plugin
+                          plugins:
+                            - name: demo
+                              config:
+                                host_name: Jack
+                            - name: your_plugin
                   - name: envoy.filters.http.router
                     typed_config:
                       "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
