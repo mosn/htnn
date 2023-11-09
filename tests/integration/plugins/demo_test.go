@@ -12,7 +12,7 @@ import (
 )
 
 func TestDemo(t *testing.T) {
-	dp, err := data_plane.StartDataPlane(t, &data_plane.Option{})
+	dp, err := data_plane.StartDataPlane(t, nil)
 	if err != nil {
 		t.Fatalf("failed to start data plane: %v", err)
 		return

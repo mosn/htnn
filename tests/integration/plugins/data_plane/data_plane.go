@@ -1,6 +1,7 @@
 package data_plane
 
 import (
+	"bufio"
 	"context"
 	"io"
 	"net"
@@ -12,6 +13,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 
 	"mosn.io/moe/pkg/log"
 )
@@ -26,21 +29,25 @@ var (
 type DataPlane struct {
 	cmd *exec.Cmd
 	t   *testing.T
+	opt *Option
 }
 
 type Option struct {
-	LogLevel string
+	LogLevel      string
+	CheckErrorLog bool
 }
 
 func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 	if opt == nil {
 		opt = &Option{
-			LogLevel: "debug",
+			LogLevel:      "debug",
+			CheckErrorLog: true,
 		}
 	}
 
 	dp := &DataPlane{
-		t: t,
+		t:   t,
+		opt: opt,
 	}
 	err := dp.cleanup(t)
 	if err != nil {
@@ -153,6 +160,18 @@ func (dp *DataPlane) Stop() {
 	logger.Info("envoy stopped")
 
 	f := dp.cmd.Stdout.(*os.File)
+	if dp.opt.CheckErrorLog {
+		f.Seek(0, 0)
+		sc := bufio.NewScanner(f)
+		for sc.Scan() {
+			s := sc.Text()
+			if strings.Contains(s, "[error]") || strings.Contains(s, "[critical]") {
+				assert.Falsef(dp.t, true, "error/critical level log found: %s", s)
+				break
+			}
+		}
+	}
+
 	f.Close()
 	f = dp.cmd.Stderr.(*os.File)
 	f.Close()
