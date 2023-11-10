@@ -4,42 +4,67 @@ import (
 	"github.com/envoyproxy/envoy/contrib/golang/common/go/api"
 )
 
-type Filter interface {
-	DecodeHeaders(RequestHeaderMap, bool)
-	DecodeData(BufferInstance, bool)
-	DecodeTrailers(RequestTrailerMap)
-
-	EncodeHeaders(ResponseHeaderMap, bool)
-	EncodeData(BufferInstance, bool)
-	EncodeTrailers(ResponseTrailerMap)
-
-	OnLog()
-}
-
-type PassThroughFilter struct{}
-
-func (f *PassThroughFilter) DecodeHeaders(headers RequestHeaderMap, endStream bool) {}
-
-func (f *PassThroughFilter) DecodeData(data BufferInstance, endStream bool) {}
-
-func (f *PassThroughFilter) DecodeTrailers(trailers RequestTrailerMap) {}
-
-func (f *PassThroughFilter) EncodeHeaders(headers ResponseHeaderMap, endStream bool) {}
-
-func (f *PassThroughFilter) EncodeData(data BufferInstance, endStream bool) {}
-
-func (f *PassThroughFilter) EncodeTrailers(trailers ResponseTrailerMap) {}
-
-func (f *PassThroughFilter) OnLog() {}
-
 type DecodeWholeRequestFilter interface {
 	NeedDecodeWholeRequest(headers api.RequestHeaderMap) bool
-	DecodeRequest(headers api.RequestHeaderMap, buf api.BufferInstance, trailers api.RequestTrailerMap)
+	DecodeRequest(headers api.RequestHeaderMap, data api.BufferInstance, trailers api.RequestTrailerMap) ResultAction
 }
 
 type EncodeWholeResponseFilter interface {
 	NeedEncodeWholeResponse(headers api.ResponseHeaderMap) bool
-	EncodeResponse(headers api.ResponseHeaderMap, buf api.BufferInstance, trailers api.ResponseTrailerMap)
+	EncodeResponse(headers api.ResponseHeaderMap, data api.BufferInstance, trailers api.ResponseTrailerMap) ResultAction
+}
+
+type Filter interface {
+	DecodeHeaders(headers RequestHeaderMap, endStream bool) ResultAction
+	DecodeData(data BufferInstance, endStream bool) ResultAction
+	DecodeTrailers(trailers RequestTrailerMap) ResultAction
+
+	EncodeHeaders(headers ResponseHeaderMap, endStream bool) ResultAction
+	EncodeData(data BufferInstance, endStream bool) ResultAction
+	EncodeTrailers(trailers ResponseTrailerMap) ResultAction
+
+	OnLog()
+
+	DecodeWholeRequestFilter
+	EncodeWholeResponseFilter
+}
+
+type PassThroughFilter struct{}
+
+func (f *PassThroughFilter) DecodeHeaders(headers RequestHeaderMap, endStream bool) ResultAction {
+	return Continue
+}
+
+func (f *PassThroughFilter) DecodeData(data BufferInstance, endStream bool) ResultAction {
+	return Continue
+}
+
+func (f *PassThroughFilter) DecodeTrailers(trailers RequestTrailerMap) ResultAction {
+	return Continue
+}
+
+func (f *PassThroughFilter) EncodeHeaders(headers ResponseHeaderMap, endStream bool) ResultAction {
+	return Continue
+}
+
+func (f *PassThroughFilter) EncodeData(data BufferInstance, endStream bool) ResultAction {
+	return Continue
+}
+
+func (f *PassThroughFilter) EncodeTrailers(trailers ResponseTrailerMap) ResultAction {
+	return Continue
+}
+
+func (f *PassThroughFilter) OnLog() {}
+
+func (f *PassThroughFilter) NeedDecodeWholeRequest(headers api.RequestHeaderMap) bool { return false }
+func (f *PassThroughFilter) DecodeRequest(headers api.RequestHeaderMap, data api.BufferInstance, trailers api.RequestTrailerMap) ResultAction {
+	return Continue
+}
+
+func (f *PassThroughFilter) NeedEncodeWholeResponse(headers api.ResponseHeaderMap) bool { return false }
+func (f *PassThroughFilter) EncodeResponse(headers api.ResponseHeaderMap, data api.BufferInstance, trailers api.ResponseTrailerMap) ResultAction {
+	return Continue
 }
 
 type RequestHeaderMap = api.RequestHeaderMap
@@ -59,8 +84,6 @@ type FilterCallbackHandler interface {
 	StreamInfo() StreamInfo
 	RecoverPanic()
 	GetProperty(key string) (string, error)
-	// TODO: remove it later
-	SendLocalReply(responseCode int, bodyText string, headers map[string]string, grpcStatus int64, details string)
 }
 
 type FilterFactory func(callbacks FilterCallbackHandler) Filter

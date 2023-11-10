@@ -7,6 +7,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
+	"mosn.io/moe/pkg/filtermanager/api"
 	"mosn.io/moe/tests/pkg/envoy"
 )
 
@@ -67,8 +68,12 @@ func TestCasbin(t *testing.T) {
 				wg.Add(1)
 				go func() {
 					// ensure the lock takes effect
-					f.DecodeHeaders(hdr, true)
-					assert.Equal(t, tt.status, cb.LocalResponseCode())
+					lr, ok := f.DecodeHeaders(hdr, true).(*api.LocalResponse)
+					if !ok {
+						assert.Equal(t, tt.status, 0)
+					} else {
+						assert.Equal(t, tt.status, lr.Code)
+					}
 					wg.Done()
 				}()
 			}

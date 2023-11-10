@@ -1,6 +1,7 @@
 package plugins
 
 import (
+	"bytes"
 	"io"
 	"net/http"
 	"strconv"
@@ -243,6 +244,8 @@ func TestFilterManagerDecode(t *testing.T) {
 func assertBodyHas(t *testing.T, exp string, resp *http.Response) {
 	d, _ := io.ReadAll(resp.Body)
 	assert.Contains(t, string(d), exp)
+	// set the body back so the next assertion can read the body
+	resp.Body = io.NopCloser(bytes.NewBuffer(d))
 }
 
 func TestFilterManagerEncode(t *testing.T) {
@@ -454,6 +457,421 @@ func TestFilterManagerEncode(t *testing.T) {
 			assert.Nil(t, err)
 			defer resp.Body.Close()
 			tt.expectWithBody(t, resp)
+		})
+	}
+}
+
+func TestFilterManagerDecodeLocalReply(t *testing.T) {
+	dp, err := data_plane.StartDataPlane(t, &data_plane.Option{})
+	if err != nil {
+		t.Fatalf("failed to start data plane: %v", err)
+		return
+	}
+	defer dp.Stop()
+
+	dh := &filtermanager.FilterManagerConfig{
+		Plugins: []*filtermanager.FilterConfig{
+			{
+				Name: "localReply",
+				Config: &Config{
+					Decode:  true,
+					Headers: true,
+				},
+			},
+		},
+	}
+	dd := &filtermanager.FilterManagerConfig{
+		Plugins: []*filtermanager.FilterConfig{
+			{
+				Name: "localReply",
+				Config: &Config{
+					Decode: true,
+					Data:   true,
+				},
+			},
+		},
+	}
+	ddThenB := &filtermanager.FilterManagerConfig{
+		Plugins: []*filtermanager.FilterConfig{
+			{
+				Name: "localReply",
+				Config: &Config{
+					Decode: true,
+					Data:   true,
+				},
+			},
+			{
+				Name: "buffer",
+				Config: &Config{
+					Decode: true,
+					Need:   true,
+				},
+			},
+		},
+	}
+	dr := &filtermanager.FilterManagerConfig{
+		Plugins: []*filtermanager.FilterConfig{
+			{
+				Name: "localReply",
+				Config: &Config{
+					Decode: true,
+					Need:   true,
+				},
+			},
+		},
+	}
+	bThenDh := &filtermanager.FilterManagerConfig{
+		Plugins: []*filtermanager.FilterConfig{
+			{
+				Name: "buffer",
+				Config: &Config{
+					Decode: true,
+					Need:   true,
+				},
+			},
+			{
+				Name: "localReply",
+				Config: &Config{
+					Decode:  true,
+					Headers: true,
+				},
+			},
+		},
+	}
+	bThenDd := &filtermanager.FilterManagerConfig{
+		Plugins: []*filtermanager.FilterConfig{
+			{
+				Name: "buffer",
+				Config: &Config{
+					Decode: true,
+					Need:   true,
+				},
+			},
+			{
+				Name: "localReply",
+				Config: &Config{
+					Decode: true,
+					Data:   true,
+				},
+			},
+		},
+	}
+
+	lrThenE := &filtermanager.FilterManagerConfig{
+		Plugins: []*filtermanager.FilterConfig{
+			{
+				Name: "localReply",
+				Config: &Config{
+					Decode: true,
+					Data:   true,
+				},
+			},
+			{
+				Name: "stream",
+				Config: &Config{
+					Encode: true,
+				},
+			},
+		},
+	}
+	fOrder := &filtermanager.FilterManagerConfig{
+		Plugins: []*filtermanager.FilterConfig{
+			{
+				Name: "buffer",
+				Config: &Config{
+					Decode: true,
+					Need:   true,
+				},
+			},
+			{
+				Name: "localReply",
+				Config: &Config{
+					Decode: true,
+					Data:   true,
+				},
+			},
+			{
+				Name: "stream",
+				Config: &Config{
+					Decode: true,
+				},
+			},
+			// should local reply in DecodeData after running all DecodeHeaders
+		},
+	}
+	fOrderM := &filtermanager.FilterManagerConfig{
+		Plugins: []*filtermanager.FilterConfig{
+			{
+				Name: "buffer",
+				Config: &Config{
+					Decode: true,
+					Need:   true,
+				},
+			},
+			{
+				Name: "localReply",
+				Config: &Config{
+					Decode: true,
+					Data:   true,
+				},
+			},
+			// should local reply in DecodeData before DecodeRequest
+			{
+				Name: "buffer",
+				Config: &Config{
+					Decode: true,
+					Need:   true,
+				},
+			},
+			{
+				Name: "stream",
+				Config: &Config{
+					Decode: true,
+				},
+			},
+		},
+	}
+
+	tests := []struct {
+		name   string
+		config *filtermanager.FilterManagerConfig
+		expect func(t *testing.T, resp *http.Response)
+	}{
+		{
+			name:   "DecodeHeaders",
+			config: dh,
+		},
+		{
+			name:   "DecodeData",
+			config: dd,
+		},
+		{
+			name:   "DecodeData before DecodeRequest",
+			config: ddThenB,
+		},
+		{
+			name:   "DecodeRequest",
+			config: dr,
+		},
+		{
+			name:   "DecodeHeaders after DecodeRequest",
+			config: bThenDh,
+		},
+		{
+			name:   "DecodeData after DecodeRequest",
+			config: bThenDd,
+		},
+		{
+			name:   "LocalReply rewritten by Encode",
+			config: lrThenE,
+			expect: func(t *testing.T, resp *http.Response) {
+				assert.Equal(t, []string{"stream"}, resp.Header.Values("Run"))
+				assertBodyHas(t, "stream\n", resp)
+			},
+		},
+		{
+			name:   "Ensure the header filters' order after DecodeRequest",
+			config: fOrder,
+			expect: func(t *testing.T, resp *http.Response) {
+				assert.Equal(t, "buffer|stream", resp.Header.Get("Order"))
+			},
+		},
+		{
+			name:   "Ensure the header filters' order between multiple DecodeRequest",
+			config: fOrderM,
+			expect: func(t *testing.T, resp *http.Response) {
+				assert.Equal(t, "buffer", resp.Header.Get("Order"))
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			controlPlane.UseGoPluginConfig(tt.config)
+			resp, err := dp.Post("/echo", nil, strings.NewReader("any"))
+			assert.Nil(t, err)
+			assert.Equal(t, 206, resp.StatusCode)
+			assert.Equal(t, []string{"reply"}, resp.Header.Values("local"))
+			assertBodyHas(t, "ok", resp)
+
+			if tt.expect != nil {
+				tt.expect(t, resp)
+			}
+		})
+	}
+}
+
+func TestFilterManagerEncodeLocalReply(t *testing.T) {
+	dp, err := data_plane.StartDataPlane(t, &data_plane.Option{})
+	if err != nil {
+		t.Fatalf("failed to start data plane: %v", err)
+		return
+	}
+	defer dp.Stop()
+
+	eh := &filtermanager.FilterManagerConfig{
+		Plugins: []*filtermanager.FilterConfig{
+			{
+				Name: "localReply",
+				Config: &Config{
+					Encode:  true,
+					Headers: true,
+				},
+			},
+		},
+	}
+	ed := &filtermanager.FilterManagerConfig{
+		Plugins: []*filtermanager.FilterConfig{
+			{
+				Name: "localReply",
+				Config: &Config{
+					Encode: true,
+					Data:   true,
+				},
+			},
+		},
+	}
+	er := &filtermanager.FilterManagerConfig{
+		Plugins: []*filtermanager.FilterConfig{
+			{
+				Name: "localReply",
+				Config: &Config{
+					Encode: true,
+					Need:   true,
+				},
+			},
+		},
+	}
+	edThenB := &filtermanager.FilterManagerConfig{
+		Plugins: []*filtermanager.FilterConfig{
+			{
+				Name: "buffer",
+				Config: &Config{
+					Encode: true,
+					Need:   true,
+				},
+			},
+			{
+				Name: "localReply",
+				Config: &Config{
+					Encode: true,
+					Data:   true,
+				},
+			},
+		},
+	}
+	bThenEh := &filtermanager.FilterManagerConfig{
+		Plugins: []*filtermanager.FilterConfig{
+			{
+				Name: "localReply",
+				Config: &Config{
+					Encode:  true,
+					Headers: true,
+				},
+			},
+			{
+				Name: "buffer",
+				Config: &Config{
+					Encode: true,
+					Need:   true,
+				},
+			},
+		},
+	}
+	bThenEd := &filtermanager.FilterManagerConfig{
+		Plugins: []*filtermanager.FilterConfig{
+			{
+				Name: "localReply",
+				Config: &Config{
+					Encode: true,
+					Data:   true,
+				},
+			},
+			{
+				Name: "buffer",
+				Config: &Config{
+					Encode: true,
+					Need:   true,
+				},
+			},
+		},
+	}
+	bThenSThenEh := &filtermanager.FilterManagerConfig{
+		Plugins: []*filtermanager.FilterConfig{
+			{
+				Name: "localReply",
+				Config: &Config{
+					Encode:  true,
+					Headers: true,
+				},
+			},
+			{
+				Name: "stream",
+				Config: &Config{
+					Encode: true,
+				},
+			},
+			{
+				Name: "buffer",
+				Config: &Config{
+					Encode: true,
+					Need:   true,
+				},
+			},
+		},
+	}
+
+	tests := []struct {
+		name   string
+		config *filtermanager.FilterManagerConfig
+		expect func(t *testing.T, resp *http.Response)
+	}{
+		{
+			name:   "EncodeHeaders",
+			config: eh,
+		},
+		{
+			name:   "EncodeData",
+			config: ed,
+		},
+		{
+			name:   "EncodeResponse",
+			config: er,
+		},
+		{
+			name:   "EncodeData before EncodeResponse",
+			config: edThenB,
+		},
+		{
+			name:   "EncodeHeaders after EncodeResponse",
+			config: bThenEh,
+		},
+		{
+			name:   "EncodeData after EncodeResponse",
+			config: bThenEd,
+		},
+		{
+			name:   "Buffer all, then run header filters from stream and local reply",
+			config: bThenSThenEh,
+			expect: func(t *testing.T, resp *http.Response) {
+				// only EncodeData in localReply is run
+				assertBody(t, "ok", resp)
+			},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			controlPlane.UseGoPluginConfig(tt.config)
+			hdr := http.Header{}
+			hdr.Add("from", "reply")
+			resp, err := dp.Post("/echo", hdr, strings.NewReader("any"))
+			assert.Nil(t, err)
+			assert.Equal(t, 206, resp.StatusCode)
+			assert.Equal(t, "reply", resp.Header.Get("local"))
+			assertBodyHas(t, "ok", resp)
+
+			if tt.expect != nil {
+				tt.expect(t, resp)
+			}
 		})
 	}
 }

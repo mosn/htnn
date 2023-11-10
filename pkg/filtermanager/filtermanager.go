@@ -102,7 +102,7 @@ func (p *FilterManagerConfigParser) Parse(any *anypb.Any, callbacks capi.ConfigC
 }
 
 func (p *FilterManagerConfigParser) Merge(parent interface{}, child interface{}) interface{} {
-	// TODO: We have considered to implemented a Merge Policy between the LDS's filter & RDS's per route
+	// We have considered to implemented a Merge Policy between the LDS's filter & RDS's per route
 	// config. A thought is to reuse the current Merge method. For example, considering we have
 	// LDS:
 	//	 - name: A
@@ -169,30 +169,62 @@ func FilterManagerConfigFactory(c interface{}) capi.StreamFilterFactory {
 	}
 }
 
+func (m *filterManager) handleAction(res api.ResultAction) (needReturn bool) {
+	if res == api.Continue {
+		return false
+	}
+
+	switch v := res.(type) {
+	case *api.LocalResponse:
+		m.localReply(v)
+		return true
+	default:
+		api.LogErrorf("unknown result action: %+v", v)
+		return false
+	}
+}
+
+func (m *filterManager) localReply(v *api.LocalResponse) {
+	// TODO: support multiple same name header in Envoy
+	var hdr map[string]string
+	if v.Header != nil {
+		hdr = map[string]string{}
+		for k, vv := range map[string][]string(v.Header) {
+			hdr[k] = vv[0]
+		}
+	}
+	// TODO: provide JSON / gRPC reply according to the request info
+	if v.Code == 0 {
+		v.Code = 200
+	}
+	m.callbacks.SendLocalReply(v.Code, v.Msg, hdr, 0, "")
+}
+
 func (m *filterManager) DecodeHeaders(header api.RequestHeaderMap, endStream bool) capi.StatusType {
 	go func() {
 		defer m.callbacks.RecoverPanic()
+		var res api.ResultAction
 
 		for i, f := range m.filters {
-			runDecodeRequest := false
-			if wr, ok := f.(api.DecodeWholeRequestFilter); ok {
-				needed := wr.NeedDecodeWholeRequest(header)
-				if needed {
-					if !endStream {
-						m.decodeIdx = i
-						m.reqHdr = header
-						m.callbacks.Continue(capi.StopAndBuffer)
-						return
-					}
-
-					// no body
-					runDecodeRequest = true
-					wr.DecodeRequest(header, nil, nil)
+			needed := f.NeedDecodeWholeRequest(header)
+			if needed {
+				if !endStream {
+					m.decodeIdx = i
+					m.reqHdr = header
+					// some filters, like authorization with request body, need to
+					// have a whole body before passing to the next filter
+					m.callbacks.Continue(capi.StopAndBuffer)
+					return
 				}
+
+				// no body
+				res = f.DecodeRequest(header, nil, nil)
+			} else {
+				res = f.DecodeHeaders(header, endStream)
 			}
 
-			if !runDecodeRequest {
-				f.DecodeHeaders(header, endStream)
+			if m.handleAction(res) {
+				return
 			}
 		}
 		m.callbacks.Continue(capi.Continue)
@@ -204,38 +236,89 @@ func (m *filterManager) DecodeHeaders(header api.RequestHeaderMap, endStream boo
 func (m *filterManager) DecodeData(buf api.BufferInstance, endStream bool) capi.StatusType {
 	go func() {
 		defer m.callbacks.RecoverPanic()
+		var res api.ResultAction
+
+		// We have discussed a lot about how to support processing data both streamingly and
+		// as a whole body. Here are some solutions we have considered:
+		// 1. let Envoy process data streamingly, and do buffering in Go. This solution is costly
+		// and may be broken if the buffered data at Go side is rewritten by later C++ filter.
+		// 2. separate the filters which need a whole body in a separate C++ filter. It can't
+		// be done without a special control plane.
+		// 3. add multiple virtual C++ filters to Envoy when init the Envoy Golang filter. It
+		// is complex because we need to share and move the state between multiple Envoy C++
+		// filter.
+		// 4. when a filter requires a whole body, all the filters will use a whole body.
+		// Otherwise, streaming processing is used. It's simple and already satisfies our
+		// most demand, so we choose this way for now.
 
 		n := len(m.filters)
 		if m.decodeIdx == -1 {
 			// every filter doesn't need buffered body
 			for i := 0; i < n; i++ {
 				f := m.filters[i]
-				f.DecodeData(buf, endStream)
+				res = f.DecodeData(buf, endStream)
+				if m.handleAction(res) {
+					return
+				}
 			}
 			m.callbacks.Continue(capi.Continue)
 
 		} else {
 			for i := 0; i < m.decodeIdx; i++ {
 				f := m.filters[i]
-				f.DecodeData(buf, endStream)
+				res = f.DecodeData(buf, endStream)
+				if m.handleAction(res) {
+					return
+				}
 			}
-			wr := m.filters[m.decodeIdx].(api.DecodeWholeRequestFilter)
-			wr.DecodeRequest(m.reqHdr, buf, nil)
-			for i := m.decodeIdx + 1; i < n; i++ {
-				f := m.filters[i]
-				runDecodeRequest := false
-				if wr, ok := f.(api.DecodeWholeRequestFilter); ok {
-					needed := wr.NeedDecodeWholeRequest(m.reqHdr)
+
+			f := m.filters[m.decodeIdx]
+			res = f.DecodeRequest(m.reqHdr, buf, nil)
+			if m.handleAction(res) {
+				return
+			}
+
+			i := m.decodeIdx + 1
+			for i < n {
+				var needed bool
+				for ; i < n; i++ {
+					f := m.filters[i]
+					needed = f.NeedDecodeWholeRequest(m.reqHdr)
 					if needed {
-						runDecodeRequest = true
-						wr.DecodeRequest(m.reqHdr, buf, nil)
+						break
 					}
 				}
-				if !runDecodeRequest {
-					f.DecodeHeaders(m.reqHdr, endStream)
-					f.DecodeData(buf, endStream)
+
+				for j := m.decodeIdx + 1; j < i; j++ {
+					f := m.filters[j]
+					// The endStream in DecodeHeaders indicates whether there is a body.
+					// The body always exists when we hit this path.
+					res = f.DecodeHeaders(m.reqHdr, false)
+					if m.handleAction(res) {
+						return
+					}
+				}
+				// When there are multiple filters want to decode the whole req,
+				// run part of the DecodeData which is before them
+				for j := m.decodeIdx + 1; j < i; j++ {
+					f := m.filters[j]
+					res = f.DecodeData(buf, endStream)
+					if m.handleAction(res) {
+						return
+					}
+				}
+
+				if needed {
+					m.decodeIdx = i
+					f := m.filters[m.decodeIdx]
+					res = f.DecodeRequest(m.reqHdr, buf, nil)
+					if m.handleAction(res) {
+						return
+					}
+					i++
 				}
 			}
+
 			m.callbacks.Continue(capi.Continue)
 		}
 	}()
@@ -246,29 +329,28 @@ func (m *filterManager) DecodeData(buf api.BufferInstance, endStream bool) capi.
 func (m *filterManager) EncodeHeaders(header api.ResponseHeaderMap, endStream bool) capi.StatusType {
 	go func() {
 		defer m.callbacks.RecoverPanic()
+		var res api.ResultAction
 
 		n := len(m.filters)
 		for i := n - 1; i >= 0; i-- {
 			f := m.filters[i]
-			runEncodeResponse := false
-			if wr, ok := f.(api.EncodeWholeResponseFilter); ok {
-				needed := wr.NeedEncodeWholeResponse(header)
-				if needed {
-					if !endStream {
-						m.encodeIdx = i
-						m.rspHdr = header
-						m.callbacks.Continue(capi.StopAndBuffer)
-						return
-					}
-
-					// no body
-					runEncodeResponse = true
-					wr.EncodeResponse(header, nil, nil)
+			needed := f.NeedEncodeWholeResponse(header)
+			if needed {
+				if !endStream {
+					m.encodeIdx = i
+					m.rspHdr = header
+					m.callbacks.Continue(capi.StopAndBuffer)
+					return
 				}
+
+				// no body
+				res = f.EncodeResponse(header, nil, nil)
+			} else {
+				res = f.EncodeHeaders(header, endStream)
 			}
 
-			if !runEncodeResponse {
-				f.EncodeHeaders(header, endStream)
+			if m.handleAction(res) {
+				return
 			}
 		}
 		m.callbacks.Continue(capi.Continue)
@@ -280,38 +362,72 @@ func (m *filterManager) EncodeHeaders(header api.ResponseHeaderMap, endStream bo
 func (m *filterManager) EncodeData(buf api.BufferInstance, endStream bool) capi.StatusType {
 	go func() {
 		defer m.callbacks.RecoverPanic()
+		var res api.ResultAction
 
 		n := len(m.filters)
 		if m.encodeIdx == -1 {
 			// every filter doesn't need buffered body
 			for i := n - 1; i >= 0; i-- {
 				f := m.filters[i]
-				f.EncodeData(buf, endStream)
+				res = f.EncodeData(buf, endStream)
+				if m.handleAction(res) {
+					return
+				}
 			}
 			m.callbacks.Continue(capi.Continue)
 
 		} else {
 			for i := n - 1; i > m.encodeIdx; i-- {
 				f := m.filters[i]
-				f.EncodeData(buf, endStream)
+				res = f.EncodeData(buf, endStream)
+				if m.handleAction(res) {
+					return
+				}
 			}
-			wr := m.filters[m.encodeIdx].(api.EncodeWholeResponseFilter)
-			wr.EncodeResponse(m.rspHdr, buf, nil)
-			for i := m.encodeIdx - 1; i >= 0; i-- {
-				f := m.filters[i]
-				runEncodeResponse := false
-				if wr, ok := f.(api.EncodeWholeResponseFilter); ok {
-					needed := wr.NeedEncodeWholeResponse(m.rspHdr)
+
+			f := m.filters[m.encodeIdx]
+			res = f.EncodeResponse(m.rspHdr, buf, nil)
+			if m.handleAction(res) {
+				return
+			}
+
+			i := m.encodeIdx - 1
+			for i >= 0 {
+				var needed bool
+				for ; i >= 0; i-- {
+					f := m.filters[i]
+					needed = f.NeedEncodeWholeResponse(m.rspHdr)
 					if needed {
-						runEncodeResponse = true
-						wr.EncodeResponse(m.rspHdr, buf, nil)
+						break
 					}
 				}
-				if !runEncodeResponse {
-					f.EncodeHeaders(m.rspHdr, endStream)
-					f.EncodeData(buf, endStream)
+
+				for j := m.encodeIdx - 1; j > i; j-- {
+					f := m.filters[j]
+					res = f.EncodeHeaders(m.rspHdr, false)
+					if m.handleAction(res) {
+						return
+					}
+				}
+				for j := m.encodeIdx - 1; j > i; j-- {
+					f := m.filters[j]
+					res = f.EncodeData(buf, endStream)
+					if m.handleAction(res) {
+						return
+					}
+				}
+
+				if needed {
+					m.encodeIdx = i
+					f := m.filters[m.encodeIdx]
+					res = f.EncodeResponse(m.rspHdr, buf, nil)
+					if m.handleAction(res) {
+						return
+					}
+					i--
 				}
 			}
+
 			m.callbacks.Continue(capi.Continue)
 		}
 	}()
