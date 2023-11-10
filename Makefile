@@ -10,8 +10,6 @@ BUILD_IMAGE     ?= golang:1.20-bullseye
 # Use docker inspect --format='{{index .RepoDigests 0}}' envoyproxy/envoy:contrib-debug-dev
 # to get the sha256 ID
 PROXY_IMAGE     ?= envoyproxy/envoy@sha256:216c1c849c326ffad0a249de6886fd90c1364bbac193d5b1e36846098615071b
-# The TEST_IMAGE doesn't need to be the same with BUILD_IMAGE
-TEST_IMAGE      ?= golang:1.20-bullseye
 # local build image doesn't have RepoDigests, use timestamp as tag to distinguish different images
 DEV_TOOLS_IMAGE ?= moe-dev-tools:2023-10-23
 
@@ -47,15 +45,8 @@ gen-proto: build-dev-tools $(GO_TARGETS)
 			-I ../../protoc-gen-validate $<
 	go run github.com/rinchsan/gosimports/cmd/gosimports@latest -w -local ${PROJECT_NAME} $@
 
-# So far, the gomonkey library used in the test can't always run in Mac.
-# We have a discussion about whether to run test in Docker or use uber-go/mock.
-# The conclusion is, we prefer easier to write test to easier to run test.
 .PHONY: unit-test
 unit-test:
-	docker run --rm ${MOUNT_GOMOD_CACHE} -v $(PWD):/go/src/${PROJECT_NAME} -w /go/src/${PROJECT_NAME} ${TEST_IMAGE} make unit-test-local
-
-.PHONY: unit-test-local
-unit-test-local:
 	go test ${TEST_OPTION} $(shell go list ./... | grep -v tests/)
 
 .PHONY: build-test-so-local
