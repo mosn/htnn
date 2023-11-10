@@ -21,9 +21,7 @@ func assertBody(t *testing.T, exp string, resp *http.Response) {
 }
 
 func TestFilterManagerDecode(t *testing.T) {
-	dp, err := data_plane.StartDataPlane(t, &data_plane.Option{
-		LogLevel: "debug",
-	})
+	dp, err := data_plane.StartDataPlane(t, nil)
 	if err != nil {
 		t.Fatalf("failed to start data plane: %v", err)
 		return
@@ -229,7 +227,7 @@ func TestFilterManagerDecode(t *testing.T) {
 			rd, wt := io.Pipe()
 			go func() {
 				for i := 0; i < 2; i++ {
-					time.Sleep(10 * time.Millisecond)
+					time.Sleep(20 * time.Millisecond)
 					_, err := wt.Write([]byte(strconv.Itoa(i)))
 					assert.Nil(t, err)
 				}
@@ -251,9 +249,7 @@ func assertBodyHas(t *testing.T, exp string, resp *http.Response) {
 }
 
 func TestFilterManagerEncode(t *testing.T) {
-	dp, err := data_plane.StartDataPlane(t, &data_plane.Option{
-		LogLevel: "debug",
-	})
+	dp, err := data_plane.StartDataPlane(t, nil)
 	if err != nil {
 		t.Fatalf("failed to start data plane: %v", err)
 		return

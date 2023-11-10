@@ -1,0 +1,50 @@
+name: test
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+env:
+  IN_CI: true
+
+jobs:
+  unit-test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        # Note: the Go toolchain here is only used to provide go env
+        # To update the go version, please specify the TEST_IMAGE in Makefile
+        go-version: '1.20'
+
+    - name: Build
+      run: make build-so
+
+    - name: Test
+      run: make unit-test
+
+  integration-test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+
+    - name: Build
+      run: make build-test-so
+
+    - name: Test
+      run: make integration-test
+    - name: Upload logs
+      uses: actions/upload-artifact@v3
+      if: failure()
+      with:
+        # upload artifact can be found in https://github.com/mosn/moe/actions/runs/$id
+        name: ci-logs
+        path: ./test-envoy

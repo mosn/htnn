@@ -1,6 +1,7 @@
 package data_plane
 
 import (
+	"bufio"
 	"context"
 	"io"
 	"net"
@@ -8,9 +9,12 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/assert"
 
 	"mosn.io/moe/pkg/log"
 )
@@ -25,19 +29,25 @@ var (
 type DataPlane struct {
 	cmd *exec.Cmd
 	t   *testing.T
+	opt *Option
 }
 
 type Option struct {
-	LogLevel string
+	LogLevel      string
+	CheckErrorLog bool
 }
 
 func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 	if opt == nil {
-		opt = &Option{}
+		opt = &Option{
+			LogLevel:      "debug",
+			CheckErrorLog: true,
+		}
 	}
 
 	dp := &DataPlane{
-		t: t,
+		t:   t,
+		opt: opt,
 	}
 	err := dp.cleanup(t)
 	if err != nil {
@@ -54,6 +64,14 @@ func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 		envoyCmd += " -l " + opt.LogLevel
 	}
 
+	hostAddr := ""
+	if runtime.GOOS == "linux" {
+		// We use this special domain to access the control plane on host.
+		// It works with Docker for Win/Mac (--network host doesn't work).
+		// For Linux's Docker, a special option is used instead
+		hostAddr = "--add-host=host.docker.internal:host-gateway"
+	}
+
 	// This is the envoyproxy/envoy:contrib-debug-dev fetched in 2023-10-27
 	// Use docker inspect --format='{{index .RepoDigests 0}}' envoyproxy/envoy:contrib-debug-dev
 	// to get the sha256 ID
@@ -66,12 +84,12 @@ func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 		"/tests/integration/plugins/data_plane/envoy.yaml:/etc/envoy.yaml -v " +
 		projectRoot +
 		"/tests/integration/plugins/libgolang.so:/etc/libgolang.so" +
-		" -p 10000:10000 -p 9998:9998 " +
+		" -p 10000:10000 -p 9998:9998 " + hostAddr + " " +
 		image + " " + envoyCmd
 
 	logger.Info("run cmd", "cmdline", cmdline)
 
-	cmds := strings.Split(cmdline, " ")
+	cmds := strings.Fields(cmdline)
 	cmd := exec.Command(cmds[0], cmds[1:]...)
 
 	stdout, err := os.Create(filepath.Join(dir, "stdout"))
@@ -142,6 +160,18 @@ func (dp *DataPlane) Stop() {
 	logger.Info("envoy stopped")
 
 	f := dp.cmd.Stdout.(*os.File)
+	if dp.opt.CheckErrorLog {
+		f.Seek(0, 0)
+		sc := bufio.NewScanner(f)
+		for sc.Scan() {
+			s := sc.Text()
+			if strings.Contains(s, "[error]") || strings.Contains(s, "[critical]") {
+				assert.Falsef(dp.t, true, "error/critical level log found: %s", s)
+				break
+			}
+		}
+	}
+
 	f.Close()
 	f = dp.cmd.Stderr.(*os.File)
 	f.Close()

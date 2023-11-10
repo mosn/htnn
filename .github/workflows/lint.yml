@@ -1,0 +1,30 @@
+name: lint
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+
+    - name: format go
+      run: |
+        make fmt-go
+        if !git diff --exit-code; then
+          echo "Files are not well formatted"
+          exit 1
+        fi
+
+    - name: lint go
+      run: make lint-go
+
+    - name: lint spell
+      run: make lint-spell

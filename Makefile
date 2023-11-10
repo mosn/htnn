@@ -1,5 +1,6 @@
 SHELL = /bin/bash
 OS = $(shell uname)
+IN_CI ?=
 
 TARGET_SO       = libgolang.so
 PROJECT_NAME    = mosn.io/moe
@@ -26,6 +27,15 @@ GO_TARGETS = $(patsubst %.proto,%.pb.go,$(PROTO_FILES))
 
 TEST_OPTION ?= -gcflags="all=-N -l" -v -race
 
+MOUNT_GOMOD_CACHE = -v $(shell go env GOPATH):/go
+ifeq ($(IN_CI), true)
+	# Mount go mod cache in the CI environment will cause 'Permission denied' error
+	# when accessing files on host in later phase because the mounted directory will
+	# have files which is created by the root user in Docker.
+	# Run as low privilege user in the Docker doesn't
+	# work because we also need root to create /.cache in the Docker.
+	MOUNT_GOMOD_CACHE =
+endif
 
 .PHONY: gen-proto
 gen-proto: build-dev-tools $(GO_TARGETS)
@@ -42,7 +52,7 @@ gen-proto: build-dev-tools $(GO_TARGETS)
 # The conclusion is, we prefer easier to write test to easier to run test.
 .PHONY: unit-test
 unit-test:
-	docker run --rm -v $(shell go env GOPATH):/go -v $(PWD):/go/src/${PROJECT_NAME} -w /go/src/${PROJECT_NAME} ${TEST_IMAGE} make unit-test-local
+	docker run --rm ${MOUNT_GOMOD_CACHE} -v $(PWD):/go/src/${PROJECT_NAME} -w /go/src/${PROJECT_NAME} ${TEST_IMAGE} make unit-test-local
 
 .PHONY: unit-test-local
 unit-test-local:
@@ -60,17 +70,19 @@ build-test-so-local:
 # So here we disable the error via git configuration when running inside Docker.
 .PHONY: build-test-so
 build-test-so:
-	docker run --rm -v $(shell go env GOPATH):/go -v $(PWD):/go/src/${PROJECT_NAME} -w /go/src/${PROJECT_NAME} \
+	docker run --rm ${MOUNT_GOMOD_CACHE} -v $(PWD):/go/src/${PROJECT_NAME} -w /go/src/${PROJECT_NAME} \
 		-e GOPROXY \
 		${BUILD_IMAGE} \
 		bash -c "git config --global --add safe.directory '*' && make build-test-so-local"
 
 .PHONY: integration-test
-integration-test: build-test-so
+integration-test:
 	if ! docker images ${PROXY_IMAGE} | grep envoyproxy/envoy > /dev/null; then \
 		docker pull ${PROXY_IMAGE}; \
 	fi
-	go test ${TEST_OPTION} ./tests/integration/...
+	$(foreach PKG, $(shell go list ./tests/integration/...), \
+		go test ${TEST_OPTION} ${PKG} || exit 1; \
+	)
 
 .PHONY: build-so-local
 build-so-local:
