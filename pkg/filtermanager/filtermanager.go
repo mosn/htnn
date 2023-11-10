@@ -278,7 +278,8 @@ func (m *filterManager) DecodeData(buf api.BufferInstance, endStream bool) capi.
 				return
 			}
 
-			for i := m.decodeIdx + 1; i < n; {
+			i := m.decodeIdx + 1
+			for i < n {
 				var needed bool
 				for ; i < n; i++ {
 					f := m.filters[i]
@@ -390,7 +391,8 @@ func (m *filterManager) EncodeData(buf api.BufferInstance, endStream bool) capi.
 				return
 			}
 
-			for i := m.encodeIdx - 1; i >= 0; {
+			i := m.encodeIdx - 1
+			for i >= 0 {
 				var needed bool
 				for ; i >= 0; i-- {
 					f := m.filters[i]
