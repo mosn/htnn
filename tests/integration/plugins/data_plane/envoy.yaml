@@ -101,7 +101,7 @@ static_resources:
                                       end
                                       resp_headers[k] = value
                                     end
-                                    
+
                                     local always_wrap_body = true
                                     local body = handle:body(always_wrap_body)
                                     local size = body:length()
