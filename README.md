@@ -1,5 +1,7 @@
 # Moe
 
+[![test](https://github.com/mosn/moe/actions/workflows/test.yml/badge.svg)](https://github.com/mosn/moe/actions/workflows/test.yml)
+
 Moe is...
 
 ## the hub of the Envoy Go plugins.
