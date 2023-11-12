@@ -4,11 +4,13 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/agiledragon/gomonkey/v2"
 	xds "github.com/cncf/xds/go/xds/type/v3"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/structpb"
 
+	"mosn.io/moe/pkg/filtermanager/api"
 	"mosn.io/moe/pkg/proto"
 	"mosn.io/moe/tests/pkg/envoy"
 )
@@ -74,4 +76,131 @@ func TestPassThrough(t *testing.T) {
 	m.EncodeHeaders(respHdr, false)
 	m.EncodeData(buf, true)
 	m.OnLog()
+}
+
+func TestLocalReplyJSON_UseReqHeader(t *testing.T) {
+	tests := []struct {
+		name string
+		hdr  func(hdr http.Header) http.Header
+		body string
+	}{
+		{
+			name: "default",
+			hdr: func(h http.Header) http.Header {
+				return h
+			},
+			body: `{"msg":"msg"}`,
+		},
+		{
+			name: "application/json",
+			hdr: func(h http.Header) http.Header {
+				h.Add("content-type", "application/json")
+				return h
+			},
+			body: `{"msg":"msg"}`,
+		},
+		{
+			name: "no JSON",
+			hdr: func(h http.Header) http.Header {
+				h.Add("content-type", "text/plain")
+				return h
+			},
+			body: `msg`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cb := envoy.NewFilterCallbackHandler()
+			m := FilterManagerConfigFactory(&filterManagerConfig{
+				current: []*filterConfig{
+					{
+						Name: "test",
+					},
+				},
+			})(cb).(*filterManager)
+			patches := gomonkey.ApplyMethodReturn(m.filters[0], "DecodeHeaders", &api.LocalResponse{
+				Code: 200,
+				Msg:  "msg",
+			})
+			defer patches.Reset()
+
+			h := http.Header{}
+			if tt.hdr != nil {
+				h = tt.hdr(h)
+			}
+			hdr := envoy.NewRequestHeaderMap(h)
+			m.DecodeHeaders(hdr, false)
+			cb.WaitContinued()
+			lr := cb.LocalResponse()
+			assert.Equal(t, tt.body, lr.Body)
+		})
+	}
+}
+
+func TestLocalReplyJSON_UseRespHeader(t *testing.T) {
+	tests := []struct {
+		name string
+		hdr  func(hdr http.Header) http.Header
+		body string
+	}{
+		{
+			name: "no content-type",
+			hdr: func(h http.Header) http.Header {
+				return h
+			},
+			body: `{"msg":"msg"}`,
+		},
+		{
+			name: "application/json",
+			hdr: func(h http.Header) http.Header {
+				h.Add("content-type", "application/json")
+				return h
+			},
+			body: `{"msg":"msg"}`,
+		},
+		{
+			name: "no JSON",
+			hdr: func(h http.Header) http.Header {
+				h.Add("content-type", "text/plain")
+				return h
+			},
+			body: `msg`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cb := envoy.NewFilterCallbackHandler()
+			m := FilterManagerConfigFactory(&filterManagerConfig{
+				current: []*filterConfig{
+					{
+						Name: "test",
+					},
+				},
+			})(cb).(*filterManager)
+			patches := gomonkey.ApplyMethodReturn(m.filters[0], "EncodeHeaders", &api.LocalResponse{
+				Code: 200,
+				Msg:  "msg",
+			})
+			defer patches.Reset()
+
+			reqHdr := http.Header{}
+			reqHdr.Set("content-type", "application/json")
+			hdr := envoy.NewRequestHeaderMap(reqHdr)
+			m.DecodeHeaders(hdr, true)
+			cb.WaitContinued()
+
+			h := http.Header{}
+			if tt.hdr != nil {
+				h = tt.hdr(h)
+			}
+			respHdr := envoy.NewResponseHeaderMap(h)
+			m.EncodeHeaders(respHdr, false)
+			cb.WaitContinued()
+
+			lr := cb.LocalResponse()
+			assert.Equal(t, tt.body, lr.Body)
+		})
+	}
 }

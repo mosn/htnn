@@ -4,8 +4,11 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net"
+	"os"
 	"runtime"
+	"strings"
 	"time"
 
 	xds "github.com/cncf/xds/go/xds/type/v3"
@@ -56,9 +59,21 @@ func NewControlPlane() *ControlPlane {
 	return cp
 }
 
+func isWsl() bool {
+	f, err := os.Open("/proc/version")
+	if err != nil {
+		return false
+	}
+	d, err := io.ReadAll(f)
+	if err != nil {
+		return false
+	}
+	return strings.Contains(string(d), "-WSL")
+}
+
 func (cp *ControlPlane) Start() {
 	host := "127.0.0.1"
-	if runtime.GOOS == "linux" {
+	if runtime.GOOS == "linux" && !isWsl() {
 		// We need to use 0.0.0.0 on Linux so the data plane in the Docker
 		// can connect to it.
 		host = "0.0.0.0"
