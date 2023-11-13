@@ -84,6 +84,7 @@ func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 		"/tests/integration/plugins/data_plane/envoy.yaml:/etc/envoy.yaml -v " +
 		projectRoot +
 		"/tests/integration/plugins/libgolang.so:/etc/libgolang.so" +
+		" -v /tmp:/tmp" +
 		" -p 10000:10000 -p 9998:9998 " + hostAddr + " " +
 		image + " " + envoyCmd
 

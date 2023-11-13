@@ -462,7 +462,7 @@ func TestFilterManagerEncode(t *testing.T) {
 }
 
 func TestFilterManagerDecodeLocalReply(t *testing.T) {
-	dp, err := data_plane.StartDataPlane(t, &data_plane.Option{})
+	dp, err := data_plane.StartDataPlane(t, nil)
 	if err != nil {
 		t.Fatalf("failed to start data plane: %v", err)
 		return
@@ -701,7 +701,7 @@ func TestFilterManagerDecodeLocalReply(t *testing.T) {
 }
 
 func TestFilterManagerEncodeLocalReply(t *testing.T) {
-	dp, err := data_plane.StartDataPlane(t, &data_plane.Option{})
+	dp, err := data_plane.StartDataPlane(t, nil)
 	if err != nil {
 		t.Fatalf("failed to start data plane: %v", err)
 		return
