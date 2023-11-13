@@ -28,3 +28,8 @@ jobs:
 
     - name: lint spell
       run: make lint-spell
+
+    - name: lint editorconfig
+      run: |
+        # See https://editorconfig.org/ to know how to support editorconfig in your editor
+        make lint-editorconfig

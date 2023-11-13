@@ -119,6 +119,10 @@ lint-spell: build-dev-tools
 		${DEV_TOOLS_IMAGE} \
 		make lint-spell-local
 
+.PHONY: lint-editorconfig
+lint-editorconfig:
+	go run github.com/editorconfig-checker/editorconfig-checker/cmd/editorconfig-checker@2.7.2
+
 .PHONY: lint-spell-local
 lint-spell-local:
 	codespell --skip '.git,.idea,test-envoy,go.mod,go.sum,*.svg' --check-filenames --check-hidden --ignore-words ./.ignore_words
