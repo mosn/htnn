@@ -23,8 +23,12 @@ build-so:
 
 .PHONY: run-plugin
 run-plugin:
-	docker run --rm -v $(PWD)/etc/demo.yaml:/etc/demo.yaml \
+	docker run --name dev_your_plugin --rm -d -v $(PWD)/etc/demo.yaml:/etc/demo.yaml \
 		-v $(PWD)/libgolang.so:/etc/libgolang.so \
 		-p 10000:10000 \
 		${PROXY_IMAGE} \
 		envoy -c /etc/demo.yaml
+
+.PHONY: stop-plugin
+stop-plugin:
+	docker stop dev_your_plugin

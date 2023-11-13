@@ -129,3 +129,7 @@ lint-spell-local:
 
 .PHONY: lint
 lint: lint-go fmt-go lint-spell
+
+.PHONY: verify-example
+verify-example:
+	cd ./examples/dev_your_plugin && ./verify.sh
