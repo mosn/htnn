@@ -203,7 +203,7 @@ func (m *filterManager) localReply(v *api.LocalResponse) {
 
 	msg := v.Msg
 	// TODO: we can also add custom template response
-	if msg != "" {
+	if msg != "" && hdr["Content-Type"] == "" {
 		isJSON := false
 		var ok bool
 		var ct string
@@ -226,6 +226,10 @@ func (m *filterManager) localReply(v *api.LocalResponse) {
 			rsp := &jsonReply{Msg: msg}
 			data, _ := json.Marshal(rsp)
 			msg = string(data)
+			if hdr == nil {
+				hdr = map[string]string{}
+			}
+			hdr["Content-Type"] = "application/json"
 		}
 	}
 	m.callbacks.SendLocalReply(v.Code, msg, hdr, 0, "")

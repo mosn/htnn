@@ -80,16 +80,20 @@ func TestPassThrough(t *testing.T) {
 
 func TestLocalReplyJSON_UseReqHeader(t *testing.T) {
 	tests := []struct {
-		name string
-		hdr  func(hdr http.Header) http.Header
-		body string
+		name  string
+		hdr   func(hdr http.Header) http.Header
+		reply envoy.LocalResponse
 	}{
 		{
 			name: "default",
 			hdr: func(h http.Header) http.Header {
 				return h
 			},
-			body: `{"msg":"msg"}`,
+			reply: envoy.LocalResponse{
+				Code:    200,
+				Headers: map[string]string{"Content-Type": "application/json"},
+				Body:    `{"msg":"msg"}`,
+			},
 		},
 		{
 			name: "application/json",
@@ -97,7 +101,11 @@ func TestLocalReplyJSON_UseReqHeader(t *testing.T) {
 				h.Add("content-type", "application/json")
 				return h
 			},
-			body: `{"msg":"msg"}`,
+			reply: envoy.LocalResponse{
+				Code:    200,
+				Body:    `{"msg":"msg"}`,
+				Headers: map[string]string{"Content-Type": "application/json"},
+			},
 		},
 		{
 			name: "no JSON",
@@ -105,7 +113,10 @@ func TestLocalReplyJSON_UseReqHeader(t *testing.T) {
 				h.Add("content-type", "text/plain")
 				return h
 			},
-			body: `msg`,
+			reply: envoy.LocalResponse{
+				Code: 200,
+				Body: "msg",
+			},
 		},
 	}
 
@@ -133,23 +144,28 @@ func TestLocalReplyJSON_UseReqHeader(t *testing.T) {
 			m.DecodeHeaders(hdr, false)
 			cb.WaitContinued()
 			lr := cb.LocalResponse()
-			assert.Equal(t, tt.body, lr.Body)
+			assert.Equal(t, tt.reply, lr)
 		})
 	}
 }
 
 func TestLocalReplyJSON_UseRespHeader(t *testing.T) {
 	tests := []struct {
-		name string
-		hdr  func(hdr http.Header) http.Header
-		body string
+		name  string
+		hdr   func(hdr http.Header) http.Header
+		reply envoy.LocalResponse
 	}{
 		{
 			name: "no content-type",
 			hdr: func(h http.Header) http.Header {
 				return h
 			},
-			body: `{"msg":"msg"}`,
+			// use the Content-Type from the request
+			reply: envoy.LocalResponse{
+				Code:    200,
+				Body:    `{"msg":"msg"}`,
+				Headers: map[string]string{"Content-Type": "application/json"},
+			},
 		},
 		{
 			name: "application/json",
@@ -157,7 +173,11 @@ func TestLocalReplyJSON_UseRespHeader(t *testing.T) {
 				h.Add("content-type", "application/json")
 				return h
 			},
-			body: `{"msg":"msg"}`,
+			reply: envoy.LocalResponse{
+				Code:    200,
+				Body:    `{"msg":"msg"}`,
+				Headers: map[string]string{"Content-Type": "application/json"},
+			},
 		},
 		{
 			name: "no JSON",
@@ -165,7 +185,10 @@ func TestLocalReplyJSON_UseRespHeader(t *testing.T) {
 				h.Add("content-type", "text/plain")
 				return h
 			},
-			body: `msg`,
+			reply: envoy.LocalResponse{
+				Code: 200,
+				Body: "msg",
+			},
 		},
 	}
 
@@ -200,7 +223,35 @@ func TestLocalReplyJSON_UseRespHeader(t *testing.T) {
 			cb.WaitContinued()
 
 			lr := cb.LocalResponse()
-			assert.Equal(t, tt.body, lr.Body)
+			assert.Equal(t, tt.reply, lr)
 		})
 	}
+}
+
+func TestLocalReplyJSON_DoNotChangeMsgIfContentTypeIsGiven(t *testing.T) {
+	cb := envoy.NewFilterCallbackHandler()
+	m := FilterManagerConfigFactory(&filterManagerConfig{
+		current: []*filterConfig{
+			{
+				Name: "test",
+			},
+		},
+	})(cb).(*filterManager)
+	patches := gomonkey.ApplyMethodReturn(m.filters[0], "DecodeHeaders", &api.LocalResponse{
+		Msg:    "msg",
+		Header: http.Header(map[string][]string{"Content-Type": {"text/plain"}}),
+	})
+	defer patches.Reset()
+
+	h := http.Header{}
+	h.Set("Content-Type", "application/json")
+	hdr := envoy.NewRequestHeaderMap(h)
+	m.DecodeHeaders(hdr, false)
+	cb.WaitContinued()
+	lr := cb.LocalResponse()
+	assert.Equal(t, envoy.LocalResponse{
+		Code:    200,
+		Body:    "msg",
+		Headers: map[string]string{"Content-Type": "text/plain"},
+	}, lr)
 }
