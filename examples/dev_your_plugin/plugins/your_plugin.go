@@ -23,22 +23,12 @@ func (p *plugin) ConfigFactory() api.FilterConfigFactory {
 	return configFactory
 }
 
-func (p *plugin) ConfigParser() api.FilterConfigParser {
-	return plugins.NewPluginConfigParser(&parser{})
+func (p *plugin) Config() plugins.PluginConfig {
+	return &Config{}
 }
 
-type parser struct {
-}
-
-type config struct {
-}
-
-func (p *parser) Validate(data []byte) (interface{}, error) {
-	return &config{}, nil
-}
-
-func (p *parser) Handle(c interface{}, callbacks api.ConfigCallbackHandler) (interface{}, error) {
-	return c, nil
+func (c *Config) Init(cb api.ConfigCallbackHandler) error {
+	return nil
 }
 
 func configFactory(c interface{}) api.FilterFactory {

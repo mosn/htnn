@@ -4,7 +4,6 @@ import (
 	sync "sync"
 
 	"github.com/casbin/casbin/v2"
-	"google.golang.org/protobuf/encoding/protojson"
 
 	"mosn.io/moe/pkg/file"
 	"mosn.io/moe/pkg/filtermanager/api"
@@ -27,15 +26,12 @@ func (p *plugin) ConfigFactory() api.FilterConfigFactory {
 	return configFactory
 }
 
-func (p *plugin) ConfigParser() api.FilterConfigParser {
-	return plugins.NewPluginConfigParser(&parser{})
-}
-
-type parser struct {
+func (p *plugin) Config() plugins.PluginConfig {
+	return &config{}
 }
 
 type config struct {
-	*Config
+	Config
 
 	lock *sync.RWMutex
 
@@ -44,42 +40,25 @@ type config struct {
 	policyFile *file.File
 }
 
-func (p *parser) Validate(data []byte) (interface{}, error) {
-	conf := &Config{}
-	err := protojson.Unmarshal(data, conf)
-	if err != nil {
-		return nil, err
-	}
-
-	if err := conf.Validate(); err != nil {
-		return nil, err
-	}
-	return conf, nil
-}
-
-func (p *parser) Handle(c interface{}, callbacks api.ConfigCallbackHandler) (interface{}, error) {
-	cfg := c.(*Config)
-	conf := &config{
-		Config: cfg,
-		lock:   &sync.RWMutex{},
-	}
+func (conf *config) Init(cb api.ConfigCallbackHandler) error {
+	conf.lock = &sync.RWMutex{}
 
 	f, err := file.Stat(conf.Rule.Model)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	conf.modelFile = f
 
 	f, err = file.Stat(conf.Rule.Policy)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	conf.policyFile = f
 
 	e, err := casbin.NewEnforcer(conf.Rule.Model, conf.Rule.Policy)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	conf.enforcer = e
-	return conf, nil
+	return nil
 }

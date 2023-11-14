@@ -5,9 +5,10 @@ import (
 	"testing"
 
 	"github.com/agiledragon/gomonkey/v2"
-	"github.com/envoyproxy/envoy/contrib/golang/common/go/api"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/types/known/anypb"
+
+	_ "mosn.io/moe/tests/pkg/envoy"
 )
 
 func TestIterateHttpPlugin(t *testing.T) {
@@ -22,40 +23,36 @@ func TestIterateHttpPlugin(t *testing.T) {
 }
 
 func TestParse(t *testing.T) {
+	cat := "cat"
 	any1 := map[string]interface{}{
-		"pet": "cat",
+		"pet": cat,
 	}
 
-	cfg := "this is plugin conf"
 	cases := []struct {
 		name    string
 		input   interface{}
 		checker func(t *testing.T, cp *PluginConfigParser) func()
 		wantErr bool
+		pet     string
 	}{
 		{
-			name:  "happy path",
-			input: any1,
-			checker: func(t *testing.T, cp *PluginConfigParser) func() {
-				patches := gomonkey.ApplyMethodFunc(cp.ConfigParser, "Validate", func(data []byte) (interface{}, error) {
-					assert.Equal(t, `{"pet":"cat"}`, string(data))
-					return cfg, nil
-				})
-				patches.ApplyMethodFunc(cp.ConfigParser, "Handle", func(config interface{}, cb api.ConfigCallbackHandler) (interface{}, error) {
-					assert.Equal(t, cfg, config)
-					return cfg, nil
-				})
-				return func() {
-					patches.Reset()
-				}
-			},
+			name:    "happy path",
+			input:   any1,
 			wantErr: false,
+			pet:     "cat",
+		},
+		{
+			name:    "no input",
+			wantErr: false,
+			pet:     "", // use default value
 		},
 		{
 			name:  "error validate",
 			input: &anypb.Any{},
 			checker: func(t *testing.T, cp *PluginConfigParser) func() {
-				patches := gomonkey.ApplyMethodReturn(cp.ConfigParser, "Validate", nil, errors.New("ouch"))
+				conf := &MockPluginConfig{}
+				patches := gomonkey.ApplyMethodReturn(conf, "Validate", errors.New("ouch"))
+				patches.ApplyMethodReturn(cp.Plugin, "Config", conf)
 				return func() {
 					patches.Reset()
 				}
@@ -66,23 +63,25 @@ func TestParse(t *testing.T) {
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			cp := NewPluginConfigParser(&MockConfigParser{})
-			cln := c.checker(t, cp)
-			defer cln()
+			cp := NewPluginConfigParser(&MockPlugin{})
+			if c.checker != nil {
+				cln := c.checker(t, cp)
+				defer cln()
+			}
 
 			res, err := cp.Parse(c.input, nil)
 			if c.wantErr {
 				assert.NotNil(t, err)
 			} else {
 				assert.Nil(t, err)
-				assert.Equal(t, cfg, res)
+				assert.Equal(t, c.pet, res.(*MockPluginConfig).Pet)
 			}
 		})
 	}
 }
 
 type Merger struct {
-	MockConfigParser
+	MockPlugin
 }
 
 func (m *Merger) Merge(parentConfig interface{}, childConfig interface{}) interface{} {
@@ -90,7 +89,7 @@ func (m *Merger) Merge(parentConfig interface{}, childConfig interface{}) interf
 }
 
 func TestMerge(t *testing.T) {
-	cp := NewPluginConfigParser(&MockConfigParser{})
+	cp := NewPluginConfigParser(&MockPlugin{})
 	res := cp.Merge("parent", "child")
 	assert.Equal(t, "child", res)
 

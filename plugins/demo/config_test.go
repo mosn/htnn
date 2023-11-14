@@ -4,18 +4,18 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
-func TestParser(t *testing.T) {
-	p := &parser{}
+func TestPlugin(t *testing.T) {
 	data := []byte(`{"host_name":"Jack"}`)
-	ty, err := p.Validate(data)
+	c := &Config{}
+	protojson.Unmarshal(data, c)
+	err := c.Validate()
 	assert.Nil(t, err)
-	c := ty.(*Config)
 	assert.Equal(t, "Jack", c.HostName)
-	res, err := p.Handle(c, nil)
+	err = c.Init(nil)
 	assert.Nil(t, err)
-	assert.Equal(t, c, res)
 }
 
 func TestBadConfig(t *testing.T) {
@@ -38,7 +38,9 @@ func TestBadConfig(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := (&parser{}).Validate([]byte(tt.input))
+			conf := &Config{}
+			protojson.Unmarshal([]byte(tt.input), conf)
+			err := conf.Validate()
 			assert.NotNil(t, err)
 			assert.ErrorContains(t, err, tt.err)
 		})

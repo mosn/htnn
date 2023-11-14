@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 func TestBadConfig(t *testing.T) {
@@ -35,7 +36,9 @@ func TestBadConfig(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := (&parser{}).Validate([]byte(tt.input))
+			conf := &config{}
+			protojson.Unmarshal([]byte(tt.input), conf)
+			err := conf.Validate()
 			assert.NotNil(t, err)
 			assert.ErrorContains(t, err, tt.err)
 		})

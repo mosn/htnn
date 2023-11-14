@@ -20,7 +20,7 @@ GIT_VERSION     = $(shell git log -1 --pretty=format:%h)
 rwildcard=$(foreach d,$(wildcard $(addsuffix *,$(1))),$(call rwildcard,$d/,$(2))$(filter $(subst *,%,$(2)),$d))
 
 PROTOC = protoc
-PROTO_FILES = $(call rwildcard,./plugins/,*.proto)
+PROTO_FILES = $(call rwildcard,./,*.proto)
 GO_TARGETS = $(patsubst %.proto,%.pb.go,$(PROTO_FILES))
 
 TEST_OPTION ?= -gcflags="all=-N -l" -v -race

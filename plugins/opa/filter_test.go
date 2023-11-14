@@ -18,7 +18,7 @@ func TestOpaRemote(t *testing.T) {
 	cb := envoy.NewFilterCallbackHandler()
 	cli := http.DefaultClient
 	f := configFactory(&config{
-		Config: &Config{
+		Config: Config{
 			ConfigType: &Config_Remote{
 				Remote: &Remote{
 					Url:    "http://127.0.0.1:8181",

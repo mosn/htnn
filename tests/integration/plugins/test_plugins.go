@@ -1,7 +1,6 @@
 package plugins
 
 import (
-	"encoding/json"
 	"net/http"
 	"runtime/debug"
 	"strings"
@@ -10,16 +9,20 @@ import (
 	"mosn.io/moe/pkg/plugins"
 )
 
-type Config struct {
-	Need    bool `json:"need"`
-	Decode  bool `json:"decode"`
-	Encode  bool `json:"encode"`
-	Headers bool `json:"headers"`
-	Data    bool `json:"data"`
+func (c *Config) Init(cb api.ConfigCallbackHandler) error {
+	return nil
+}
+
+type basePlugin struct {
+}
+
+func (p basePlugin) Config() plugins.PluginConfig {
+	return &Config{}
 }
 
 type streamPlugin struct {
 	plugins.PluginMethodDefaultImpl
+	basePlugin
 }
 
 func streamConfigFactory(c interface{}) api.FilterFactory {
@@ -72,12 +75,9 @@ func (p *streamPlugin) ConfigFactory() api.FilterConfigFactory {
 	return streamConfigFactory
 }
 
-func (p *streamPlugin) ConfigParser() api.FilterConfigParser {
-	return plugins.NewPluginConfigParser(&parser{})
-}
-
 type bufferPlugin struct {
 	plugins.PluginMethodDefaultImpl
+	basePlugin
 }
 
 func bufferConfigFactory(c interface{}) api.FilterFactory {
@@ -161,12 +161,9 @@ func (p *bufferPlugin) ConfigFactory() api.FilterConfigFactory {
 	return bufferConfigFactory
 }
 
-func (p *bufferPlugin) ConfigParser() api.FilterConfigParser {
-	return plugins.NewPluginConfigParser(&parser{})
-}
-
 type localReplyPlugin struct {
 	plugins.PluginMethodDefaultImpl
+	basePlugin
 }
 
 func localReplyConfigFactory(c interface{}) api.FilterFactory {
@@ -262,31 +259,6 @@ func (f *localReplyFilter) EncodeData(data api.BufferInstance, endStream bool) a
 
 func (p *localReplyPlugin) ConfigFactory() api.FilterConfigFactory {
 	return localReplyConfigFactory
-}
-
-func (p *localReplyPlugin) ConfigParser() api.FilterConfigParser {
-	return plugins.NewPluginConfigParser(&parser{})
-}
-
-type parser struct {
-}
-
-func (p *parser) Validate(data []byte) (interface{}, error) {
-	conf := &Config{}
-	err := json.Unmarshal(data, conf)
-	if err != nil {
-		return nil, err
-	}
-	return conf, nil
-}
-
-func (p *parser) Handle(c interface{}, callbacks api.ConfigCallbackHandler) (interface{}, error) {
-	conf := c.(*Config)
-	return conf, nil
-}
-
-func (p *parser) Merge(parent interface{}, child interface{}) interface{} {
-	return child
 }
 
 func init() {
