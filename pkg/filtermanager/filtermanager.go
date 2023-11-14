@@ -184,6 +184,10 @@ func (m *filterManager) handleAction(res api.ResultAction) (needReturn bool) {
 	}
 }
 
+type jsonReply struct {
+	Msg string `json:"msg"`
+}
+
 func (m *filterManager) localReply(v *api.LocalResponse) {
 	// TODO: support multiple same name header in Envoy
 	var hdr map[string]string
@@ -193,11 +197,42 @@ func (m *filterManager) localReply(v *api.LocalResponse) {
 			hdr[k] = vv[0]
 		}
 	}
-	// TODO: provide JSON / gRPC reply according to the request info
 	if v.Code == 0 {
 		v.Code = 200
 	}
-	m.callbacks.SendLocalReply(v.Code, v.Msg, hdr, 0, "")
+
+	msg := v.Msg
+	// TODO: we can also add custom template response
+	if msg != "" && hdr["Content-Type"] == "" {
+		isJSON := false
+		var ok bool
+		var ct string
+		if m.rspHdr != nil {
+			ct, ok = m.rspHdr.Get("content-type")
+		}
+
+		if ok {
+			if ct == "application/json" {
+				isJSON = true
+			}
+		} else {
+			ct, ok = m.reqHdr.Get("content-type")
+			if !ok || ct == "application/json" {
+				isJSON = true
+			}
+		}
+
+		if isJSON {
+			rsp := &jsonReply{Msg: msg}
+			data, _ := json.Marshal(rsp)
+			msg = string(data)
+			if hdr == nil {
+				hdr = map[string]string{}
+			}
+			hdr["Content-Type"] = "application/json"
+		}
+	}
+	m.callbacks.SendLocalReply(v.Code, msg, hdr, 0, "")
 }
 
 func (m *filterManager) DecodeHeaders(header api.RequestHeaderMap, endStream bool) capi.StatusType {
@@ -205,12 +240,12 @@ func (m *filterManager) DecodeHeaders(header api.RequestHeaderMap, endStream boo
 		defer m.callbacks.RecoverPanic()
 		var res api.ResultAction
 
+		m.reqHdr = header
 		for i, f := range m.filters {
 			needed := f.NeedDecodeWholeRequest(header)
 			if needed {
 				if !endStream {
 					m.decodeIdx = i
-					m.reqHdr = header
 					// some filters, like authorization with request body, need to
 					// have a whole body before passing to the next filter
 					m.callbacks.Continue(capi.StopAndBuffer)
@@ -331,6 +366,7 @@ func (m *filterManager) EncodeHeaders(header api.ResponseHeaderMap, endStream bo
 		defer m.callbacks.RecoverPanic()
 		var res api.ResultAction
 
+		m.rspHdr = header
 		n := len(m.filters)
 		for i := n - 1; i >= 0; i-- {
 			f := m.filters[i]
@@ -338,7 +374,6 @@ func (m *filterManager) EncodeHeaders(header api.ResponseHeaderMap, endStream bo
 			if needed {
 				if !endStream {
 					m.encodeIdx = i
-					m.rspHdr = header
 					m.callbacks.Continue(capi.StopAndBuffer)
 					return
 				}

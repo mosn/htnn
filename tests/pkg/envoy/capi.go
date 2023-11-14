@@ -346,17 +346,27 @@ func (i *StreamInfo) GetProperty(key string) (string, bool) {
 
 var _ api.StreamInfo = (*StreamInfo)(nil)
 
+type LocalResponse struct {
+	Code    int
+	Body    string
+	Headers map[string]string
+}
+
 type filterCallbackHandler struct {
 	// add lock to the test helper to satisfy -race check
 	lock *sync.RWMutex
 
 	streamInfo api.StreamInfo
-	respCode   int
+	resp       LocalResponse
+	ch         chan struct{}
 }
 
 func NewFilterCallbackHandler() *filterCallbackHandler {
 	return &filterCallbackHandler{
 		lock: &sync.RWMutex{},
+		// we create channel with buffer so the goroutine won't leak when we don't call WaitContinued
+		// manually. When running in Envoy, Envoy won't re-run the filter until Continue is called.
+		ch: make(chan struct{}, 10),
 	}
 }
 
@@ -373,18 +383,25 @@ func (i *filterCallbackHandler) SetStreamInfo(data api.StreamInfo) {
 }
 
 func (i *filterCallbackHandler) Continue(status api.StatusType) {
+	i.ch <- struct{}{}
+}
+
+func (i *filterCallbackHandler) WaitContinued() {
+	<-i.ch
 }
 
 func (i *filterCallbackHandler) SendLocalReply(responseCode int, bodyText string, headers map[string]string, grpcStatus int64, details string) {
 	i.lock.Lock()
 	defer i.lock.Unlock()
-	i.respCode = responseCode
+	i.resp = LocalResponse{Code: responseCode, Body: bodyText, Headers: headers}
+
+	i.Continue(api.LocalReply)
 }
 
-func (i *filterCallbackHandler) LocalResponseCode() int {
+func (i *filterCallbackHandler) LocalResponse() LocalResponse {
 	i.lock.RLock()
 	defer i.lock.RUnlock()
-	return i.respCode
+	return i.resp
 }
 
 func (i *filterCallbackHandler) RecoverPanic() {
