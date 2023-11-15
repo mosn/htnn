@@ -1,18 +1,19 @@
 package plugins
 
 import (
+	"google.golang.org/protobuf/reflect/protoreflect"
+
 	"mosn.io/moe/pkg/filtermanager/api"
 )
 
 type Plugin interface {
+	Config() PluginConfig
 	ConfigFactory() api.FilterConfigFactory
-	ConfigParser() api.FilterConfigParser
+	Merge(parent interface{}, child interface{}) interface{}
 }
 
-// We split the interface into Validate & Handle, so that
-// 1. the Validate can be used separately elsewhere
-// 2. we can put common logic before Validate, like exacting configuration from xDS
-type ConfigParser interface {
-	Validate(encodedJSON []byte) (validated interface{}, err error)
-	Handle(validated interface{}, cb api.ConfigCallbackHandler) (configInDP interface{}, err error)
+type PluginConfig interface {
+	ProtoReflect() protoreflect.Message
+	Validate() error
+	Init(cb api.ConfigCallbackHandler) error
 }

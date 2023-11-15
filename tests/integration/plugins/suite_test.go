@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"mosn.io/moe/tests/integration/plugins/control_plane"
+	_ "mosn.io/moe/tests/pkg/envoy"
 )
 
 var (

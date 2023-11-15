@@ -48,19 +48,19 @@ func TestCasbin(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cb := envoy.NewFilterCallbackHandler()
-			p := &parser{}
-			cfg := &Config{
-				Rule: &Config_Rule{
-					Model:  "./testdata/model.conf",
-					Policy: "./testdata/policy.csv",
-				},
-				Token: &Config_Token{
-					Name: "user",
+			c := &config{
+				Config: Config{
+					Rule: &Config_Rule{
+						Model:  "./testdata/model.conf",
+						Policy: "./testdata/policy.csv",
+					},
+					Token: &Config_Token{
+						Name: "user",
+					},
 				},
 			}
-			config, err := p.Handle(cfg, nil)
-			assert.Nil(t, err)
-			f := configFactory(config)(cb)
+			c.Init(nil)
+			f := configFactory(c)(cb)
 			hdr := envoy.NewRequestHeaderMap(tt.header)
 
 			wg := sync.WaitGroup{}

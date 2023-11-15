@@ -5,6 +5,9 @@ import (
 	"sync"
 
 	"github.com/envoyproxy/envoy/contrib/golang/common/go/api"
+	"google.golang.org/protobuf/encoding/protojson"
+
+	"mosn.io/moe/pkg/filtermanager"
 )
 
 var httpPlugins = sync.Map{}
@@ -13,6 +16,12 @@ func RegisterHttpPlugin(name string, plugin Plugin) {
 	if plugin == nil {
 		panic("plugin should not be nil")
 	}
+
+	api.LogInfof("register plugin %s", name)
+	filtermanager.RegisterHttpFilterConfigFactoryAndParser(name,
+		plugin.ConfigFactory(),
+		NewPluginConfigParser(plugin))
+
 	httpPlugins.Store(name, plugin)
 }
 
@@ -23,39 +32,48 @@ func IterateHttpPlugin(f func(key string, value Plugin) bool) {
 }
 
 type PluginConfigParser struct {
-	ConfigParser
+	Plugin
 }
 
-func NewPluginConfigParser(parser ConfigParser) *PluginConfigParser {
+func NewPluginConfigParser(parser Plugin) *PluginConfigParser {
 	return &PluginConfigParser{
-		ConfigParser: parser,
+		Plugin: parser,
 	}
 }
 
 func (cp *PluginConfigParser) Parse(any interface{}, callbacks api.ConfigCallbackHandler) (interface{}, error) {
-	data, err := json.Marshal(any)
+	conf := cp.Config()
+	if any != nil {
+		data, err := json.Marshal(any)
+		if err != nil {
+			return nil, err
+		}
+
+		err = protojson.Unmarshal(data, conf)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	err := conf.Validate()
 	if err != nil {
 		return nil, err
 	}
 
-	c, err := cp.Validate(data)
+	err = conf.Init(callbacks)
 	if err != nil {
 		return nil, err
 	}
-
-	return cp.Handle(c, callbacks)
-}
-
-type merger interface {
-	Merge(parent interface{}, child interface{}) interface{}
-}
-
-func (cp *PluginConfigParser) Merge(parent interface{}, child interface{}) interface{} {
-	if merger, ok := cp.ConfigParser.(merger); ok {
-		return merger.Merge(parent, child)
-	}
-	return child
+	return conf, nil
 }
 
 // PluginMethodDefaultImpl provides reasonable implementation for optional methods
 type PluginMethodDefaultImpl struct{}
+
+func (p *PluginMethodDefaultImpl) Handle(c interface{}, callbacks api.ConfigCallbackHandler) (interface{}, error) {
+	return c, nil
+}
+
+func (p *PluginMethodDefaultImpl) Merge(parent interface{}, child interface{}) interface{} {
+	return child
+}

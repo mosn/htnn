@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+package moe.tests.integration.plugins;
+
+option go_package = "mosn.io/moe/tests/integration/plugins";
+
+message Config {
+  bool need = 1;
+  bool decode = 2;
+  bool encode = 3;
+  bool headers = 4;
+  bool data = 5;
+}
