@@ -1,0 +1,19 @@
+version: "3.8"
+
+services:
+  opa:
+    image: openpolicyagent/opa:0.58.0
+    restart: unless-stopped
+    ports:
+      - 8181:8181
+    command: run -s /test.rego
+    volumes:
+      - type: bind
+        source: ./opa/test.rego
+        target: /test.rego
+    networks:
+      service:
+
+
+networks:
+  service:

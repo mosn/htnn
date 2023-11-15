@@ -3,9 +3,9 @@ package opa
 import (
 	"bytes"
 	"encoding/json"
-	"net/url"
 
 	"mosn.io/moe/pkg/filtermanager/api"
+	"mosn.io/moe/pkg/request"
 )
 
 func configFactory(c interface{}) api.FilterFactory {
@@ -31,23 +31,23 @@ var opaResponse struct {
 	} `json:"result"`
 }
 
-func (f *filter) buildInput(header api.RequestHeaderMap) (map[string]interface{}, error) {
-	requestURI := header.Path()
-	uri, err := url.ParseRequestURI(requestURI)
-	if err != nil {
-		return nil, err
+func (f *filter) buildInput(header api.RequestHeaderMap) map[string]interface{} {
+	uri := request.GetUrl(header)
+	req := map[string]interface{}{
+		"method": header.Method(),
+		"scheme": header.Scheme(),
+		"host":   header.Host(),
+		"path":   uri.Path,
+	}
+	if uri.RawQuery != "" {
+		req["query"] = map[string][]string(uri.Query())
 	}
 
 	return map[string]interface{}{
-		"request": map[string]interface{}{
-			"method":   header.Method(),
-			"scheme":   header.Scheme(),
-			"host":     header.Host(),
-			"path":     uri.Path,
-			"query":    uri.RawQuery,
-			"protocol": header.Protocol(),
+		"input": map[string]interface{}{
+			"request": req,
 		},
-	}, nil
+	}
 }
 
 func (f *filter) isAllowed(input map[string]interface{}) (bool, error) {
@@ -73,12 +73,7 @@ func (f *filter) isAllowed(input map[string]interface{}) (bool, error) {
 }
 
 func (f *filter) DecodeHeaders(header api.RequestHeaderMap, endStream bool) api.ResultAction {
-	input, err := f.buildInput(header)
-	if err != nil {
-		api.LogErrorf("failed to build input: %v", err)
-		return &api.LocalResponse{Code: 503}
-	}
-
+	input := f.buildInput(header)
 	allow, err := f.isAllowed(input)
 	if err != nil {
 		api.LogErrorf("failed to call OPA server: %v", err)

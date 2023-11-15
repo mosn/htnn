@@ -28,9 +28,10 @@ var (
 )
 
 type DataPlane struct {
-	cmd *exec.Cmd
-	t   *testing.T
-	opt *Option
+	cmd  *exec.Cmd
+	t    *testing.T
+	opt  *Option
+	done chan error
 }
 
 type Option struct {
@@ -78,6 +79,16 @@ func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 		return nil, err
 	}
 
+	networkName := "testdata_service"
+	err = exec.Command("docker", "network", "inspect", networkName).Run()
+	if err != nil {
+		logger.Info("docker network used by test not found, create one")
+		err = exec.Command("docker", "network", "create", networkName).Run()
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	// This is the envoyproxy/envoy:contrib-debug-dev fetched in 2023-10-27
 	// Use docker inspect --format='{{index .RepoDigests 0}}' envoyproxy/envoy:contrib-debug-dev
 	// to get the sha256 ID
@@ -86,6 +97,7 @@ func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 	projectRoot := filepath.Join(pwd, "..", "..", "..")
 	cmdline := "docker run" +
 		" --name " + containerName +
+		" --network " + networkName +
 		" --user " + currentUser.Uid +
 		" --rm -t -v " +
 		projectRoot +
@@ -114,14 +126,26 @@ func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 	cmd.Stderr = stderr
 	dp.cmd = cmd
 
+	done := make(chan error)
 	go func() {
 		logger.Info("start envoy")
 		err := dp.cmd.Start()
 		if err != nil {
 			logger.Error(err, "failed to start envoy")
+			return
 		}
+		go func() { done <- cmd.Wait() }()
 	}()
-	time.Sleep(5 * time.Second)
+
+	time.Sleep(5 * time.Second) // TODO: detect when the Envoy is ready via readiness request
+
+	select {
+	case err := <-done:
+		return nil, err
+	default:
+	}
+
+	dp.done = done
 
 	return dp, nil
 }
@@ -165,7 +189,7 @@ func (dp *DataPlane) Stop() {
 	}
 
 	// ensure envoy is gone
-	_ = dp.cmd.Wait()
+	<-dp.done
 	logger.Info("envoy stopped")
 
 	f := dp.cmd.Stdout.(*os.File)

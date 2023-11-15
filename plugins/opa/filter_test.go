@@ -29,7 +29,7 @@ func TestOpaRemote(t *testing.T) {
 		client: cli,
 	})(cb)
 	hdr := envoy.NewRequestHeaderMap(http.Header(map[string][]string{
-		":path": {"/?a=1"},
+		":path": {"/?a=1&b&c=true&c=foo"},
 	}))
 
 	tests := []struct {
@@ -44,13 +44,16 @@ func TestOpaRemote(t *testing.T) {
 			resp: `{"result":{"allow":true}}`,
 			checkInput: func(input map[string]interface{}) {
 				assert.Equal(t, map[string]interface{}{
-					"method":   "GET",
-					"scheme":   "http",
-					"host":     "localhost",
-					"path":     "/",
-					"query":    "a=1",
-					"protocol": "HTTP/1.1",
-				}, input["request"])
+					"method": "GET",
+					"scheme": "http",
+					"host":   "localhost",
+					"path":   "/",
+					"query": map[string]interface{}{
+						"a": []interface{}{"1"},
+						"b": []interface{}{""},
+						"c": []interface{}{"true", "foo"},
+					},
+				}, input["input"].(map[string]interface{})["request"])
 			},
 		},
 		{
