@@ -70,10 +70,6 @@ func (cp *PluginConfigParser) Parse(any interface{}, callbacks api.ConfigCallbac
 // PluginMethodDefaultImpl provides reasonable implementation for optional methods
 type PluginMethodDefaultImpl struct{}
 
-func (p *PluginMethodDefaultImpl) Handle(c interface{}, callbacks api.ConfigCallbackHandler) (interface{}, error) {
-	return c, nil
-}
-
 func (p *PluginMethodDefaultImpl) Merge(parent interface{}, child interface{}) interface{} {
 	return child
 }

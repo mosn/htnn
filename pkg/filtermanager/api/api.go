@@ -73,12 +73,6 @@ type BufferInstance = api.BufferInstance
 type RequestTrailerMap = api.RequestTrailerMap
 type ResponseTrailerMap = api.ResponseTrailerMap
 
-type FilterConfigParser interface {
-	Parse(input interface{}, callbacks ConfigCallbackHandler) (interface{}, error)
-	Merge(parentConfig interface{}, childConfig interface{}) interface{}
-}
-type FilterConfigFactory func(config interface{}) FilterFactory
-
 type StreamInfo = api.StreamInfo
 type FilterCallbackHandler interface {
 	StreamInfo() StreamInfo
@@ -87,6 +81,7 @@ type FilterCallbackHandler interface {
 }
 
 type FilterFactory func(callbacks FilterCallbackHandler) Filter
+type FilterConfigFactory func(config interface{}) FilterFactory
 
 type DynamicMetadata = api.DynamicMetadata
 type FilterState = api.FilterState
