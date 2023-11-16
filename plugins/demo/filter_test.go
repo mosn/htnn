@@ -16,8 +16,10 @@ func TestHello(t *testing.T) {
 		"guest_name": "Jack",
 	}))
 	cb.SetStreamInfo(info)
-	f := configFactory(&Config{
-		HostName: "Tom",
+	f := configFactory(&config{
+		Config: Config{
+			HostName: "Tom",
+		},
 	})(cb).(*filter)
 	assert.Equal(t, "hello, Jack", f.hello())
 }
@@ -29,8 +31,10 @@ func TestDecodeHeaders(t *testing.T) {
 		"guest_name": "Jack",
 	}))
 	cb.SetStreamInfo(info)
-	f := configFactory(&Config{
-		HostName: "Tom",
+	f := configFactory(&config{
+		Config: Config{
+			HostName: "Tom",
+		},
 	})(cb)
 	hdr := envoy.NewRequestHeaderMap(http.Header{})
 	f.DecodeHeaders(hdr, true)

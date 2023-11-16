@@ -9,7 +9,7 @@ import (
 // configFactory returns a factory that produces per-request Filter.
 // You can use it to bind the configuration and do per-request initialization.
 func configFactory(c interface{}) api.FilterFactory {
-	conf := c.(*Config)
+	conf := c.(*config)
 	return func(callbacks api.FilterCallbackHandler) api.Filter {
 		return &filter{
 			callbacks: callbacks,
@@ -25,7 +25,7 @@ type filter struct {
 
 	// callbacks provides the API we can use to implement filter's feature
 	callbacks api.FilterCallbackHandler
-	config    *Config
+	config    *config
 }
 
 // The doc of each API can be found in package pkg/filtermanager/api
