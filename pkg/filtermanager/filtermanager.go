@@ -17,14 +17,22 @@ var (
 	httpFilterConfigFactoryAndParser = sync.Map{}
 )
 
+// Here we introduce extra struct to avoid cyclic import between pkg/filtermanager and pkg/plugins
+type FilterConfigParser interface {
+	Parse(input interface{}, callbacks api.ConfigCallbackHandler) (interface{}, error)
+	Merge(parentConfig interface{}, childConfig interface{}) interface{}
+}
+
 type filterConfigFactoryAndParser struct {
-	configParser  api.FilterConfigParser
+	configParser  FilterConfigParser
 	configFactory api.FilterConfigFactory
 }
 
-// we can't import package below here which will cause the integration test to fail in Mac
+// We can't import package below here that will cause build failure in Mac
 // "github.com/envoyproxy/envoy/contrib/golang/filters/http/source/go/pkg/http"
-// therefore, we choice to export these fields
+// Therefore, the FilterManagerConfigParser & FilterManagerConfigFactory need to be exportable.
+// The http.RegisterHttpFilterConfigFactoryAndParser will be called in the main.go when building
+// the shared library in Linux.
 
 type FilterManagerConfigParser struct {
 }
@@ -478,7 +486,7 @@ func (m *filterManager) OnLog() {
 	}
 }
 
-func RegisterHttpFilterConfigFactoryAndParser(name string, factory api.FilterConfigFactory, parser api.FilterConfigParser) {
+func RegisterHttpFilterConfigFactoryAndParser(name string, factory api.FilterConfigFactory, parser FilterConfigParser) {
 	if factory == nil {
 		panic("config factory should not be nil")
 	}
