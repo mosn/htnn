@@ -16,6 +16,9 @@ static_resources:
                     typed_config:
                       "@type": type.googleapis.com/envoy.extensions.access_loggers.stream.v3.StdoutAccessLog
                 http_filters:
+                  # The LDS configuration set the path of Go shared library.
+                  # The name of plugin_name is registered in the ./cmd/libgolang/main.go.
+                  # The value of library_id is not used yet.
                   - name: envoy.filters.http.golang
                     typed_config:
                       "@type": type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.Config
@@ -41,6 +44,8 @@ static_resources:
                             body:
                               inline_string: ""
                           typed_per_filter_config:
+                            # The RDS configuration set the per-route configuration.
+                            # Each plugin is run in the order specified under the field 'plugins'.
                             envoy.filters.http.golang:
                               "@type": type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.ConfigsPerRoute
                               plugins_config:
