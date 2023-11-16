@@ -9,7 +9,7 @@ import (
 
 func TestPlugin(t *testing.T) {
 	data := []byte(`{"host_name":"Jack"}`)
-	c := &Config{}
+	c := &config{}
 	protojson.Unmarshal(data, c)
 	err := c.Validate()
 	assert.Nil(t, err)

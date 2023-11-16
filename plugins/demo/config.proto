@@ -6,6 +6,11 @@ import "validate/validate.proto";
 
 option go_package = "mosn.io/moe/plugins/demo";
 
+// We use protobuf to generate plugin configuration, and use protoc-gen-validate to
+// generate relative validation.
+// See https://github.com/bufbuild/protoc-gen-validate/blob/main/docs.md#constraint-rules
+// for how to write validation.
+
 message Config {
   string host_name = 1
     [(validate.rules).string = { ignore_empty: false, min_len: 1 }];
