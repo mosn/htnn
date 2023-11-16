@@ -9,8 +9,8 @@ option go_package = "mosn.io/moe/api/v1";
 message HeaderValue {
   // Header name.
   string key = 1
-      [(validate.rules).string =
-           {min_len: 1 max_bytes: 16384 well_known_regex: HTTP_HEADER_NAME strict: false}];
+    [(validate.rules).string =
+      {min_len: 1 max_bytes: 16384 well_known_regex: HTTP_HEADER_NAME strict: false}];
 
   // Header value.
   string value = 2 [
