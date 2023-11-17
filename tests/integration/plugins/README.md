@@ -11,4 +11,9 @@ Some tests require third-party services. You can start them via running `docker-
 
 ## Port usage
 
-The test framework will use `:9999` for the control plane, `:10000` for the Envoy proxy, and `:10001` for the backend server.
+The test framework will use:
+
+* `:2023` for invalid port
+* `:9999` for the control plane
+* `:10000` for the Envoy proxy
+* `:10001` for the backend server and mock external server

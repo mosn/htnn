@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"time"
 
+	"mosn.io/moe/pkg/expr"
 	"mosn.io/moe/pkg/filtermanager/api"
 	"mosn.io/moe/pkg/plugins"
 )
@@ -33,7 +34,8 @@ func (p *plugin) Config() plugins.PluginConfig {
 type config struct {
 	Config
 
-	client *http.Client
+	client                  *http.Client
+	headerToUpstreamMatcher expr.Matcher
 }
 
 func (conf *config) Init(cb api.ConfigCallbackHandler) error {
@@ -44,5 +46,16 @@ func (conf *config) Init(cb api.ConfigCallbackHandler) error {
 	}
 
 	conf.client = &http.Client{Timeout: du}
+
+	resp := conf.GetHttpService().GetAuthorizationResponse()
+	if resp != nil {
+		if len(resp.AllowedUpstreamHeaders) > 0 {
+			headerToUpstreamMatcher, err := expr.BuildRepeatedStringMatcherIgnoreCase(resp.AllowedUpstreamHeaders)
+			if err != nil {
+				return err
+			}
+			conf.headerToUpstreamMatcher = headerToUpstreamMatcher
+		}
+	}
 	return nil
 }

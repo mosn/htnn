@@ -63,7 +63,15 @@ func (f *filter) check(headers api.RequestHeaderMap) api.ResultAction {
 
 	rsp.Body.Close()
 	if rsp.StatusCode != 200 {
-		return &api.LocalResponse{Code: rsp.StatusCode}
+		return &api.LocalResponse{Code: rsp.StatusCode, Header: rsp.Header}
+	}
+
+	if f.config.headerToUpstreamMatcher != nil {
+		for k, v := range rsp.Header {
+			if f.config.headerToUpstreamMatcher.Match(k) {
+				headers.Set(k, v[len(v)-1])
+			}
+		}
 	}
 	return api.Continue
 }

@@ -133,6 +133,7 @@ static_resources:
                                     local headers = handle:headers()
                                     if headers:get("authorization") ~= "Basic amFjazIwMjE6MTIzNDU2" then
                                       resp_headers[":status"] = "403"
+                                      resp_headers["reason"] = "not matched"
                                     end
                                     handle:respond(resp_headers)
                                   end
