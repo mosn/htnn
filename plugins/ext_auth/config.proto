@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package moe.plugins.ext_auth;
+
+import "api/v1/header.proto";
+import "api/v1/http_status.proto";
+
+import "google/protobuf/duration.proto";
+import "validate/validate.proto";
+
+option go_package = "mosn.io/moe/plugins/ext_auth";
+
+message Config {
+    // External authorization service configuration.
+    oneof services {
+        option (validate.required) = true;
+        // HTTP service configuration (default timeout: 200ms).
+        HttpService http_service = 1;
+    }
+}
+
+message HttpService {
+    // Sets the HTTP server which the authorization requests must be sent to.
+    // We don't use HttpUri like Envoy because we set the Host directly instead of using
+    // the result from Cluster.
+    string url = 1 [(validate.rules).string = { ignore_empty: false, uri: true }];
+    google.protobuf.Duration timeout = 2;
+
+    // Settings used for controlling authorization request metadata.
+    AuthorizationRequest authorization_request = 3;
+
+    // Settings used for controlling authorization response metadata.
+    AuthorizationResponse authorization_response = 4;
+
+    // Sets the HTTP status that is returned to the client when the authorization server
+    // returns an error or cannot be reached. The default status is HTTP 403 Forbidden.
+    api.v1.StatusCode status_on_error = 5;
+}
+
+message AuthorizationRequest {
+    // Sets a list of headers that will be included to the request to authorization service. Note that
+    // client request of the same key will be overridden.
+    repeated api.v1.HeaderValue headers_to_add = 1;
+}
+
+message AuthorizationResponse {
+}

@@ -118,6 +118,27 @@ static_resources:
                                   function envoy_on_response(handle)
                                   end
                         - match:
+                            path_separated_prefix: /ext_auth
+                          direct_response:
+                            status: 200
+                            body:
+                              inline_string: ""
+                          typed_per_filter_config:
+                            envoy.filters.http.lua:
+                              "@type": type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
+                              source_code:
+                                inline_string: |
+                                  function envoy_on_request(handle)
+                                    local resp_headers = {[":status"] = "200"}
+                                    local headers = handle:headers()
+                                    if headers:get("authorization") ~= "Basic amFjazIwMjE6MTIzNDU2" then
+                                      resp_headers[":status"] = "403"
+                                    end
+                                    handle:respond(resp_headers)
+                                  end
+                                  function envoy_on_response(handle)
+                                  end
+                        - match:
                             path: /slow_resp
                           direct_response:
                             status: 200

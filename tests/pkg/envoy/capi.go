@@ -97,11 +97,19 @@ func (i *RequestHeaderMap) Scheme() string {
 }
 
 func (i *RequestHeaderMap) Method() string {
-	return "GET"
+	method, ok := i.Get(":method")
+	if !ok {
+		return "GET"
+	}
+	return method
 }
 
 func (i *RequestHeaderMap) Host() string {
-	return "localhost"
+	host, ok := i.Get(":authority")
+	if !ok {
+		return "localhost"
+	}
+	return host
 }
 
 func (i *RequestHeaderMap) Path() string {

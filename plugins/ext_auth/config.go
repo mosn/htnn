@@ -1,4 +1,4 @@
-package opa
+package ext_auth
 
 import (
 	"net/http"
@@ -9,7 +9,9 @@ import (
 )
 
 const (
-	Name = "opa"
+	// We name this plugin as ext_auth to distinguish it from the C++ implementation ext_authz.
+	// We may add new feature to this plugin which will make it different from its C++ sibling.
+	Name = "ext_auth"
 )
 
 func init() {
@@ -35,6 +37,12 @@ type config struct {
 }
 
 func (conf *config) Init(cb api.ConfigCallbackHandler) error {
-	conf.client = &http.Client{Timeout: 200 * time.Millisecond}
+	du := 200 * time.Millisecond
+	timeout := conf.GetHttpService().Timeout
+	if timeout != nil {
+		du = timeout.AsDuration()
+	}
+
+	conf.client = &http.Client{Timeout: du}
 	return nil
 }
