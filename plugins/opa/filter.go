@@ -59,6 +59,7 @@ func (f *filter) isAllowed(input map[string]interface{}) (bool, error) {
 	remote := f.config.GetRemote()
 	// When parsing the config, we have already validated the remote is not nil
 	path := remote.GetUrl() + "/v1/data/" + remote.GetPolicy()
+	api.LogInfof("send request to opa: %s, param: %s", path, params)
 	resp, err := f.config.client.Post(path, "application/json", bytes.NewReader(params))
 	if err != nil {
 		return false, err
