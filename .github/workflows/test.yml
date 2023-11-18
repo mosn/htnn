@@ -3,8 +3,14 @@ name: test
 on:
   push:
     branches: [ "main" ]
+    paths-ignore:
+    - "./docs"
+    - "**/*.md"
   pull_request:
     branches: [ "main" ]
+    paths-ignore:
+    - "./docs"
+    - "**/*.md"
 
 env:
   IN_CI: true
@@ -17,6 +23,8 @@ jobs:
 
     - name: Set up Go
       uses: actions/setup-go@v4
+      with:
+          go-version: '1.20'
 
     - name: Build
       run: make build-so
@@ -31,6 +39,8 @@ jobs:
 
     - name: Set up Go
       uses: actions/setup-go@v4
+      with:
+          go-version: '1.20'
 
     - name: Set up services
       run: |
