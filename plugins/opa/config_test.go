@@ -26,7 +26,7 @@ func TestBadConfig(t *testing.T) {
 					"policy": "authz"
 				}
 			}`,
-			err: "invalid Remote.Url: value length must be at least 1 runes",
+			err: "invalid Remote.Url: value must be absolute",
 		},
 		{
 			name: "empty policy in remote",
@@ -37,6 +37,16 @@ func TestBadConfig(t *testing.T) {
 				}
 			}`,
 			err: "invalid Remote.Policy: value length must be at least 1 runes",
+		},
+		{
+			name: "bad url in remote",
+			input: `{
+				"remote": {
+					"url": "127.0.0.1:8181",
+					"policy": "test"
+				}
+			}`,
+			err: "invalid Remote.Url: value must be a valid URI",
 		},
 	}
 
