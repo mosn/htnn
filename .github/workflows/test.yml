@@ -34,7 +34,7 @@ jobs:
 
     - name: Set up services
       run: |
-        cd ./tests/integration/plugins/testdata && docker-compose up -d
+        cd ./ci/ && docker-compose up -d
 
     - name: Build
       run: make build-test-so

@@ -79,7 +79,7 @@ func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 		return nil, err
 	}
 
-	networkName := "testdata_service"
+	networkName := "ci_service"
 	err = exec.Command("docker", "network", "inspect", networkName).Run()
 	if err != nil {
 		logger.Info("docker network used by test not found, create one")

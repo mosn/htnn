@@ -60,7 +60,7 @@ Here is the JSON data OPA sends back to Moe, set by the configured policy:
 First of all, launch the Open Policy Agent:
 
 ```shell
-cd tests/integration/plugins/testdata
+cd ci/
 docker-compose up opa
 ```
 
