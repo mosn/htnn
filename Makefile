@@ -49,6 +49,9 @@ gen-proto: build-dev-tools $(GO_TARGETS)
 unit-test:
 	go test ${TEST_OPTION} $(shell go list ./... | grep -v tests/)
 
+# We can't specify -race to `go build` because it seems that
+# race detector assumes that the executable is loaded around the 0 address. When loaded by the Envoy,
+# the race detector will allocate memory out of 48bits address which is not allowed in x64.
 .PHONY: build-test-so-local
 build-test-so-local:
 	CGO_ENABLED=1 go build -tags so \
