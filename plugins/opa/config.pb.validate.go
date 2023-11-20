@@ -56,10 +56,20 @@ func (m *Remote) validate(all bool) error {
 
 	var errors []error
 
-	if utf8.RuneCountInString(m.GetUrl()) < 1 {
+	if uri, err := url.Parse(m.GetUrl()); err != nil {
+		err = RemoteValidationError{
+			field:  "Url",
+			reason: "value must be a valid URI",
+			cause:  err,
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	} else if !uri.IsAbs() {
 		err := RemoteValidationError{
 			field:  "Url",
-			reason: "value length must be at least 1 runes",
+			reason: "value must be absolute",
 		}
 		if !all {
 			return err
