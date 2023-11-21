@@ -23,6 +23,7 @@ func TestExtAuth(t *testing.T) {
 	tests := []struct {
 		name   string
 		config *filtermanager.FilterManagerConfig
+		run    func(t *testing.T)
 	}{
 		{
 			name: "default",
@@ -31,18 +32,35 @@ func TestExtAuth(t *testing.T) {
 					"url": "http://127.0.0.1:10001/ext_auth",
 				},
 			}),
+			run: func(t *testing.T) {
+				hdr := http.Header{}
+				hdr.Set("Authorization", "Basic amFjazIwMjE6MTIzNDU2")
+				resp, _ := dp.Post("/echo", hdr, strings.NewReader("any"))
+				assert.Equal(t, 200, resp.StatusCode)
+				resp, _ = dp.Post("/echo", nil, strings.NewReader("any"))
+				assert.Equal(t, 403, resp.StatusCode)
+				assert.Equal(t, "not matched", resp.Header.Get("reason"))
+			},
+		},
+		{
+			name: "failed to ext auth",
+			config: control_plane.NewSinglePluinConfig("ext_auth", map[string]interface{}{
+				"http_service": map[string]interface{}{
+					"url":             "http://127.0.0.1:2023/ext_auth",
+					"status_on_error": 401,
+				},
+			}),
+			run: func(t *testing.T) {
+				resp, _ := dp.Post("/echo", nil, strings.NewReader("any"))
+				assert.Equal(t, 401, resp.StatusCode)
+			},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			controlPlane.UseGoPluginConfig(tt.config)
-			hdr := http.Header{}
-			hdr.Set("Authorization", "Basic amFjazIwMjE6MTIzNDU2")
-			resp, _ := dp.Post("/echo", hdr, strings.NewReader("any"))
-			assert.Equal(t, 200, resp.StatusCode)
-			resp, _ = dp.Post("/echo", nil, strings.NewReader("any"))
-			assert.Equal(t, 403, resp.StatusCode)
+			tt.run(t)
 		})
 	}
 }

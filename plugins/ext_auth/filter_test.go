@@ -17,6 +17,7 @@ func response(status int) *http.Response {
 	return &http.Response{
 		StatusCode: status,
 		Body:       http.NoBody,
+		Header:     http.Header{},
 	}
 }
 
@@ -27,6 +28,7 @@ func TestExtAuth(t *testing.T) {
 		hdr    map[string][]string
 		server func(r *http.Request) (*http.Response, error)
 		res    api.ResultAction
+		upHdr  map[string][]string
 	}{
 		{
 			name: "default",
@@ -71,9 +73,17 @@ func TestExtAuth(t *testing.T) {
 				"url": "http://127.0.0.1:10001/ext_auth"
 			}}`,
 			server: func(r *http.Request) (*http.Response, error) {
-				return response(401), nil
+				resp := response(401)
+				resp.Header.Set("foo", "bar")
+				resp.Header.Set("date", "now")
+				return resp, nil
 			},
-			res: &api.LocalResponse{Code: 401},
+			res: &api.LocalResponse{Code: 401,
+				Header: http.Header(map[string][]string{
+					"Foo":  {"bar"},
+					"Date": {"now"},
+				}),
+			},
 		},
 		{
 			name: "auth error",
@@ -96,6 +106,36 @@ func TestExtAuth(t *testing.T) {
 			},
 			res: &api.LocalResponse{Code: 401},
 		},
+		{
+			name: "add matched headers",
+			input: `{"http_service":{
+				"url": "http://127.0.0.1:10001/ext_auth",
+				"authorization_response": {
+					"allowed_upstream_headers": [
+						{"exact": "foo"},
+						{"regex": "^ba(r|lh)$"}
+					]
+				}
+			}}`,
+			hdr: map[string][]string{
+				// header from request will be overridden
+				"foo": {"blah"},
+			},
+			server: func(r *http.Request) (*http.Response, error) {
+				resp := response(200)
+				resp.Header.Set("foo", "bar")
+				resp.Header.Set("bar", "foo")
+				resp.Header.Add("balh", "foo")
+				resp.Header.Add("balh", "bar")
+				resp.Header.Set("blah", "foo")
+				return resp, nil
+			},
+			upHdr: map[string][]string{
+				"foo":  {"bar"},
+				"bar":  {"foo"},
+				"balh": {"bar"},
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -117,6 +157,10 @@ func TestExtAuth(t *testing.T) {
 			}
 			hdr := envoy.NewRequestHeaderMap(http.Header(defaultHdr))
 			assert.Equal(t, tt.res, f.DecodeHeaders(hdr, true))
+
+			for k, v := range tt.upHdr {
+				assert.Equal(t, v, hdr.Values(k))
+			}
 		})
 	}
 }
