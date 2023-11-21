@@ -1,0 +1,12 @@
+version: v1
+breaking:
+  use:
+    - FILE
+lint:
+  use:
+    # This subset of rules enforce correctness, while keeping it easy to add new proto
+    - MINIMAL
+    - IMPORT_USED
+    - PROTOVALIDATE
+deps:
+  - buf.build/envoyproxy/protoc-gen-validate

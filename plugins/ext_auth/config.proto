@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package moe.plugins.ext_auth;
+package plugins.ext_auth;
 
 import "api/v1/header.proto";
 import "api/v1/http_status.proto";

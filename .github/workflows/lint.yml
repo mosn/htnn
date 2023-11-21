@@ -34,6 +34,9 @@ jobs:
     - name: lint go
       run: make lint-go
 
+    - name: lint proto
+      run: make lint-proto
+
     - name: lint spell
       run: make lint-spell
 
