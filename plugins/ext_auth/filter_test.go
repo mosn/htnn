@@ -136,6 +136,29 @@ func TestExtAuth(t *testing.T) {
 				"balh": {"bar"},
 			},
 		},
+		{
+			name: "auth denied, only matched header to the client",
+			input: `{"http_service":{
+				"url": "http://127.0.0.1:10001/ext_auth",
+				"authorization_response": {
+					"allowed_client_headers": [
+						{"exact": "foo"}
+					]
+				}
+			}}`,
+			server: func(r *http.Request) (*http.Response, error) {
+				resp := response(401)
+				resp.Header.Set("foo", "bar")
+				resp.Header.Add("foo", "blah")
+				resp.Header.Set("date", "now")
+				return resp, nil
+			},
+			res: &api.LocalResponse{Code: 401,
+				Header: http.Header(map[string][]string{
+					"Foo": {"bar", "blah"},
+				}),
+			},
+		},
 	}
 
 	for _, tt := range tests {

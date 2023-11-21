@@ -210,6 +210,15 @@ func (dp *DataPlane) Stop() {
 	f.Close()
 }
 
+func (dp *DataPlane) Head(path string, header http.Header) (*http.Response, error) {
+	req, err := http.NewRequest("GET", "http://localhost:10000"+path, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header = header
+	return dp.do(req)
+}
+
 func (dp *DataPlane) Get(path string, header http.Header) (*http.Response, error) {
 	req, err := http.NewRequest("GET", "http://localhost:10000"+path, nil)
 	if err != nil {

@@ -49,4 +49,8 @@ message AuthorizationResponse {
   // to the original client request.
   // Note that coexistent headers will be overridden.
   repeated api.v1.StringMatcher allowed_upstream_headers = 1 [(validate.rules).repeated = {min_items: 1}];
+
+  // When this is set, authorization response headers that have a correspondent match will be added
+  // to the client's response when the request is rejected.
+  repeated api.v1.StringMatcher allowed_client_headers = 2 [(validate.rules).repeated = {min_items: 1}];
 }
