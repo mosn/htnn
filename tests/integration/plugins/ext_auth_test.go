@@ -35,7 +35,9 @@ func TestExtAuth(t *testing.T) {
 			run: func(t *testing.T) {
 				hdr := http.Header{}
 				hdr.Set("Authorization", "Basic amFjazIwMjE6MTIzNDU2")
-				resp, _ := dp.Post("/echo", hdr, strings.NewReader("any"))
+				resp, _ := dp.Head("/echo", hdr)
+				assert.Equal(t, 200, resp.StatusCode)
+				resp, _ = dp.Post("/echo", hdr, strings.NewReader("any"))
 				assert.Equal(t, 200, resp.StatusCode)
 				resp, _ = dp.Post("/echo", nil, strings.NewReader("any"))
 				assert.Equal(t, 403, resp.StatusCode)
