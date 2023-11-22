@@ -88,7 +88,7 @@ build-so-local:
 
 .PHONY: build-so
 build-so:
-	docker run --rm -v $(shell go env GOPATH):/go -v $(PWD):/go/src/${PROJECT_NAME} -w /go/src/${PROJECT_NAME} \
+	docker run --rm ${MOUNT_GOMOD_CACHE} -v $(PWD):/go/src/${PROJECT_NAME} -w /go/src/${PROJECT_NAME} \
 		-e GOPROXY \
 		${BUILD_IMAGE} \
 		bash -c "git config --global --add safe.directory '*' && make build-so-local"
