@@ -12,6 +12,9 @@ type isResultAction struct {
 var (
 	// Continue is a placeholder which indicates the process can continue without steering
 	Continue ResultAction = nil
+	// WaitAllData controls if the request/response body needs to be fully buffered during processing by Go plugin.
+	// If this action is returned, DecodeData/EncodeData will be called by DecodeRequest/EncodeResponse.
+	WaitAllData ResultAction = &isResultAction{}
 )
 
 func (i *isResultAction) OK() {}
@@ -32,9 +35,3 @@ type LocalResponse struct {
 	Msg    string
 	Header http.Header
 }
-
-var (
-	// WaitAllData controls if the request/response body needs to be fully buffered during processing by Go plugin.
-	// If this action is returned, DecodeData/EncodeData will be called by DecodeRequest/EncodeResponse.
-	WaitAllData ResultAction = &isResultAction{}
-)
