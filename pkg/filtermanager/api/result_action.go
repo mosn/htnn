@@ -33,12 +33,8 @@ type LocalResponse struct {
 	Header http.Header
 }
 
-type WaitAllDataType struct {
-	isResultAction
-}
-
 var (
 	// WaitAllData controls if the request/response body needs to be fully buffered during processing by Go plugin.
 	// If this action is returned, DecodeData/EncodeData will be called by DecodeRequest/EncodeResponse.
-	WaitAllData ResultAction = &WaitAllDataType{}
+	WaitAllData ResultAction = &isResultAction{}
 )

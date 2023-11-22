@@ -196,12 +196,7 @@ func (m *filterManager) handleAction(res api.ResultAction, phase phase) (needRet
 	if res == api.Continue {
 		return false
 	}
-
-	switch v := res.(type) {
-	case *api.LocalResponse:
-		m.localReply(v)
-		return true
-	case *api.WaitAllDataType:
+	if res == api.WaitAllData {
 		if phase == phaseDecodeHeaders {
 			m.decodeRequestNeeded = true
 		} else if phase == phaseEncodeHeaders {
@@ -210,6 +205,12 @@ func (m *filterManager) handleAction(res api.ResultAction, phase phase) (needRet
 			api.LogErrorf("WaitAllData only allowed when processing headers, phase: %v", phase)
 		}
 		return false
+	}
+
+	switch v := res.(type) {
+	case *api.LocalResponse:
+		m.localReply(v)
+		return true
 	default:
 		api.LogErrorf("unknown result action: %+v", v)
 		return false
