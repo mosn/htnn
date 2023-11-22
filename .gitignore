@@ -1,4 +1,7 @@
+# binaries
 libgolang.so
-coverage.out
-/test-envoy/
+bin/
+# test generated files
+*.out
 *.test
+test-envoy/
