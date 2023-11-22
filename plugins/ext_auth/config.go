@@ -36,6 +36,7 @@ type config struct {
 
 	client                  *http.Client
 	headerToUpstreamMatcher expr.Matcher
+	headerToClientMatcher   expr.Matcher
 }
 
 func (conf *config) Init(cb api.ConfigCallbackHandler) error {
@@ -50,11 +51,18 @@ func (conf *config) Init(cb api.ConfigCallbackHandler) error {
 	resp := conf.GetHttpService().GetAuthorizationResponse()
 	if resp != nil {
 		if len(resp.AllowedUpstreamHeaders) > 0 {
-			headerToUpstreamMatcher, err := expr.BuildRepeatedStringMatcherIgnoreCase(resp.AllowedUpstreamHeaders)
+			matcher, err := expr.BuildRepeatedStringMatcherIgnoreCase(resp.AllowedUpstreamHeaders)
 			if err != nil {
 				return err
 			}
-			conf.headerToUpstreamMatcher = headerToUpstreamMatcher
+			conf.headerToUpstreamMatcher = matcher
+		}
+		if len(resp.AllowedClientHeaders) > 0 {
+			matcher, err := expr.BuildRepeatedStringMatcherIgnoreCase(resp.AllowedClientHeaders)
+			if err != nil {
+				return err
+			}
+			conf.headerToClientMatcher = matcher
 		}
 	}
 	return nil
