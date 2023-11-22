@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package moe.tests.integration.plugins;
+package tests.integration.plugins;
 
 option go_package = "mosn.io/moe/tests/integration/plugins";
 

@@ -43,7 +43,7 @@ gen-proto: build-dev-tools $(GO_TARGETS)
 		${DEV_TOOLS_IMAGE} \
 		protoc --proto_path=. --go_opt="paths=source_relative" --go_out=. --validate_out="lang=go,paths=source_relative:." \
 			-I ../../protoc-gen-validate $<
-	go run github.com/rinchsan/gosimports/cmd/gosimports@latest -w -local ${PROJECT_NAME} $@
+	go run github.com/rinchsan/gosimports/cmd/gosimports@v0.3.8 -w -local ${PROJECT_NAME} $@
 
 .PHONY: unit-test
 unit-test:
@@ -114,7 +114,13 @@ lint-go:
 .PHONY: fmt-go
 fmt-go:
 	go mod tidy
-	go run github.com/rinchsan/gosimports/cmd/gosimports@latest -w -local ${PROJECT_NAME} .
+	go run github.com/rinchsan/gosimports/cmd/gosimports@v0.3.8 -w -local ${PROJECT_NAME} .
+
+# Don't use `buf format` to format the protobuf files! Buf's code style is different from Envoy.
+# That will break lots of things.
+.PHONY: lint-proto
+lint-proto:
+	go run github.com/bufbuild/buf/cmd/buf@v1.28.1 lint
 
 .PHONY: lint-spell
 lint-spell: build-dev-tools
@@ -131,7 +137,10 @@ lint-editorconfig:
 	go run github.com/editorconfig-checker/editorconfig-checker/cmd/editorconfig-checker@2.7.2
 
 .PHONY: lint
-lint: lint-go fmt-go lint-spell lint-editorconfig
+lint: lint-go lint-proto lint-spell lint-editorconfig
+
+.PHONY: fmt
+fmt: fmt-go
 
 .PHONY: verify-example
 verify-example:

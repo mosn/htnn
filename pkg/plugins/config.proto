@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package moe.pkg.plugins;
+package pkg.plugins;
 
 option go_package = "mosn.io/moe/pkg/plugins";
 

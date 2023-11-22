@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package moe.plugins.opa;
+package plugins.opa;
 
 import "validate/validate.proto";
 

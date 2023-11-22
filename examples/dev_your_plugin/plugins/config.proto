@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package moe.dev_your_plugin.plugins;
+package examples.dev_your_plugin.plugins;
 
 option go_package = "mosn.io/moe/dev_your_plugin/plugins";
 

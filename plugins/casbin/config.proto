@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package moe.plugins.casbin;
+package plugins.casbin;
 
 import "validate/validate.proto";
 
