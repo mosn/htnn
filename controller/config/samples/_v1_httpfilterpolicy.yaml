@@ -1,0 +1,20 @@
+apiVersion: mosn.io/v1
+kind: HTTPFilterPolicy
+metadata:
+  labels:
+    app.kubernetes.io/name: httpfilterpolicy
+    app.kubernetes.io/instance: httpfilterpolicy-sample
+    app.kubernetes.io/part-of: controller
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: controller
+  name: httpfilterpolicy-sample
+spec:
+  targetRef:
+    group: networking.istio.io
+    kind: VirtualService
+    name: reviews-route
+  filters:
+    opa:
+      config:
+        url: http://opa:8181
+        policy: test
