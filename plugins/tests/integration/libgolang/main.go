@@ -7,7 +7,7 @@ import (
 
 	"mosn.io/moe/pkg/filtermanager"
 	_ "mosn.io/moe/plugins"
-	_ "mosn.io/moe/tests/integration/plugins"
+	_ "mosn.io/moe/plugins/tests/integration"
 )
 
 func init() {

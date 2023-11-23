@@ -8,8 +8,8 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"mosn.io/moe/pkg/filtermanager"
-	"mosn.io/moe/tests/integration/plugins/control_plane"
-	"mosn.io/moe/tests/integration/plugins/data_plane"
+	"mosn.io/moe/plugins/tests/integration/control_plane"
+	"mosn.io/moe/plugins/tests/integration/data_plane"
 )
 
 func TestCasbin(t *testing.T) {

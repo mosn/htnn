@@ -11,7 +11,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"mosn.io/moe/pkg/filtermanager/api"
-	"mosn.io/moe/tests/pkg/envoy"
+	"mosn.io/moe/plugins/tests/pkg/envoy"
 )
 
 func TestOpaRemote(t *testing.T) {

@@ -1,0 +1,12 @@
+controller:
+- controller/**
+
+documentation:
+- docs/**
+- **/*.md
+
+filtermanager:
+- pkg/filtermanager/**
+
+plugins:
+- plugins/**

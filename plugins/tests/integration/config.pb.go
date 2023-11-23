@@ -2,7 +2,7 @@
 // versions:
 // 	protoc-gen-go v1.31.0
 // 	protoc        v4.24.4
-// source: tests/integration/plugins/config.proto
+// source: plugins/tests/integration/config.proto
 
 package plugins
 

@@ -10,7 +10,7 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 
 	"mosn.io/moe/pkg/filtermanager/api"
-	"mosn.io/moe/tests/pkg/envoy"
+	"mosn.io/moe/plugins/tests/pkg/envoy"
 )
 
 func response(status int) *http.Response {

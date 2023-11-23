@@ -5,8 +5,8 @@ import (
 	"testing"
 	"time"
 
-	"mosn.io/moe/tests/integration/plugins/control_plane"
-	_ "mosn.io/moe/tests/pkg/envoy"
+	"mosn.io/moe/plugins/tests/integration/control_plane"
+	_ "mosn.io/moe/plugins/tests/pkg/envoy"
 )
 
 var (

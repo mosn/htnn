@@ -12,7 +12,7 @@ import (
 
 	"mosn.io/moe/pkg/filtermanager/api"
 	"mosn.io/moe/pkg/proto"
-	"mosn.io/moe/tests/pkg/envoy"
+	"mosn.io/moe/plugins/tests/pkg/envoy"
 )
 
 func TestParse(t *testing.T) {

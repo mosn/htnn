@@ -45,9 +45,11 @@ gen-proto: build-dev-tools $(GO_TARGETS)
 			-I ../../protoc-gen-validate $<
 	go run github.com/rinchsan/gosimports/cmd/gosimports@v0.3.8 -w -local ${PROJECT_NAME} $@
 
+# We don't run the controller's unit test in this task. Because the controller is considered as a
+# separate components.
 .PHONY: unit-test
 unit-test:
-	go test ${TEST_OPTION} $(shell go list ./... | grep -v tests/ | grep -v controller/ )
+	go test ${TEST_OPTION} $(shell go list ./... | grep -v tests/integration)
 
 # We can't specify -race to `go build` because it seems that
 # race detector assumes that the executable is loaded around the 0 address. When loaded by the Envoy,
@@ -57,8 +59,8 @@ build-test-so-local:
 	CGO_ENABLED=1 go build -tags so \
 		-ldflags "-B 0x$(shell head -c20 /dev/urandom|od -An -tx1|tr -d ' \n') -X main.Version=${MAJOR_VERSION}(${GIT_VERSION})" \
 		--buildmode=c-shared \
-		-v -o tests/integration/plugins/${TARGET_SO} \
-		${PROJECT_NAME}/tests/integration/plugins/libgolang
+		-v -o plugins/tests/integration/${TARGET_SO} \
+		${PROJECT_NAME}/plugins/tests/integration/libgolang
 
 # Go 1.19+ adds vcs check which will cause error "fatal: detected dubious ownership in repository at '...'".
 # So here we disable the error via git configuration when running inside Docker.
@@ -69,14 +71,12 @@ build-test-so:
 		${BUILD_IMAGE} \
 		bash -c "git config --global --add safe.directory '*' && make build-test-so-local"
 
-.PHONY: integration-test
-integration-test:
+.PHONY: plugins-integration-test
+plugins-integration-test:
 	if ! docker images ${PROXY_IMAGE} | grep envoyproxy/envoy > /dev/null; then \
 		docker pull ${PROXY_IMAGE}; \
 	fi
-	$(foreach PKG, $(shell go list ./tests/integration/...), \
-		go test ${TEST_OPTION} ${PKG} || exit 1; \
-	)
+	go test ${TEST_OPTION} ./plugins/tests/integration/...
 
 .PHONY: build-so-local
 build-so-local:
