@@ -6,10 +6,10 @@ TARGET_SO       = libgolang.so
 PROJECT_NAME    = mosn.io/moe
 # Both images use glibc 2.31. Ensure libc in the images match each other.
 BUILD_IMAGE     ?= golang:1.20-bullseye
-# This is the envoyproxy/envoy:contrib-debug-dev fetched in 2023-10-27
+# This is the envoyproxy/envoy:contrib-debug-dev fetched in 2023-11-22
 # Use docker inspect --format='{{index .RepoDigests 0}}' envoyproxy/envoy:contrib-debug-dev
 # to get the sha256 ID
-PROXY_IMAGE     ?= envoyproxy/envoy@sha256:216c1c849c326ffad0a249de6886fd90c1364bbac193d5b1e36846098615071b
+PROXY_IMAGE     ?= envoyproxy/envoy@sha256:1fa13772ad01292fdbd73541717ef1a65fcdb2350bf13c173bddb10bf1f36c7c
 # local build image doesn't have RepoDigests, use timestamp as tag to distinguish different images
 DEV_TOOLS_IMAGE ?= moe-dev-tools:2023-10-23
 
@@ -88,7 +88,7 @@ build-so-local:
 
 .PHONY: build-so
 build-so:
-	docker run --rm -v $(shell go env GOPATH):/go -v $(PWD):/go/src/${PROJECT_NAME} -w /go/src/${PROJECT_NAME} \
+	docker run --rm ${MOUNT_GOMOD_CACHE} -v $(PWD):/go/src/${PROJECT_NAME} -w /go/src/${PROJECT_NAME} \
 		-e GOPROXY \
 		${BUILD_IMAGE} \
 		bash -c "git config --global --add safe.directory '*' && make build-so-local"

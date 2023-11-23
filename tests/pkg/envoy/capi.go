@@ -88,10 +88,6 @@ func NewRequestHeaderMap(hdr http.Header) *RequestHeaderMap {
 	}
 }
 
-func (i *RequestHeaderMap) Protocol() string {
-	return "HTTP/1.1"
-}
-
 func (i *RequestHeaderMap) Scheme() string {
 	return "http"
 }
