@@ -1,6 +1,7 @@
 package expr
 
 import (
+	"errors"
 	"regexp"
 	"strings"
 
@@ -152,6 +153,8 @@ func buildRepeatedStringMatcher(matchers []*api.StringMatcher, allIgnoreCase boo
 				return nil, err
 			}
 			matcher = &stringRegexMatcher{regex: re}
+		default:
+			return nil, errors.New("unknown string matcher type")
 		}
 
 		builtMatchers[i] = matcher

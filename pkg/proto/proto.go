@@ -1,6 +1,7 @@
 package proto
 
 import (
+	"errors"
 	"fmt"
 
 	"google.golang.org/protobuf/encoding/prototext"
@@ -17,6 +18,9 @@ var (
 // Functions below are copied from istio, under Apache License
 
 func MessageToAnyWithError(msg proto.Message) (*anypb.Any, error) {
+	if msg == nil {
+		return nil, errors.New("nil message")
+	}
 	b, err := proto.MarshalOptions{Deterministic: true}.Marshal(msg)
 	if err != nil {
 		return nil, err

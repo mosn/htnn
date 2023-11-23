@@ -41,7 +41,7 @@ type config struct {
 
 func (conf *config) Init(cb api.ConfigCallbackHandler) error {
 	du := 200 * time.Millisecond
-	timeout := conf.GetHttpService().Timeout
+	timeout := conf.GetHttpService().GetTimeout()
 	if timeout != nil {
 		du = timeout.AsDuration()
 	}
