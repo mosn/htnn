@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	istiov1b1 "istio.io/client-go/pkg/apis/networking/v1beta1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -33,6 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	mosniov1 "mosn.io/moe/controller/api/v1"
+	"mosn.io/moe/controller/internal/ir"
 )
 
 // HTTPFilterPolicyReconciler reconciles a HTTPFilterPolicy object
@@ -52,26 +54,51 @@ type HTTPFilterPolicyReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.16.3/pkg/reconcile
 func (r *HTTPFilterPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	// the controller is run with MaxConcurrentReconciles == 1, so we don't need to worry about concurrent access.
 	logger := log.FromContext(ctx)
+	logger.Info("reconcile") // req message is contained in the logger ctx
 
+	// For current implementation, let's rebuild the state each time to avoid complexity.
+	// The controller will use local cache when doing read operation.
 	var policies mosniov1.HTTPFilterPolicyList
 	if err := r.List(ctx, &policies, client.InNamespace(req.Namespace)); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to list HTTPFilterPolicy: %v", err)
 	}
 
+	state := ir.NewInitState(&logger)
+
 	for _, policy := range policies.Items {
-		for name, cfg := range policy.Spec.Filters {
-			logger.Info("get filter config", "name", name, "cfg", string(cfg.Raw))
+		err := validateHTTPFilterPolicy(&policy)
+		if err != nil {
+			// TODO: mark the policy as invalid, and skip logging
+			logger.Error(err, "invalid HTTPFilterPolicy", "name", policy.Name, "namespace", policy.Namespace)
+			continue
 		}
+
 		ref := policy.Spec.TargetRef
 		if ref.Group == "networking.istio.io" && ref.Kind == "VirtualService" {
 			var virtualService istiov1b1.VirtualService
 			err := r.Get(ctx, types.NamespacedName{Name: string(ref.Name), Namespace: req.Namespace}, &virtualService)
 			if err != nil {
-				return ctrl.Result{}, client.IgnoreNotFound(err)
+				if !apierrors.IsNotFound(err) {
+					return ctrl.Result{}, err
+				}
+				continue
 			}
-			logger.Info("matched VirtualService", "vs", &virtualService)
+
+			err = validateVirtualService(&virtualService)
+			if err != nil {
+				logger.Error(err, "invalid VirtualService", "name", virtualService.Name, "namespace", virtualService.Namespace)
+				continue
+			}
+
+			state.AddPolicyForVirtualService(&policy, &virtualService)
 		}
+	}
+
+	err := state.Process(ctx)
+	if err != nil {
+		return ctrl.Result{}, err
 	}
 
 	return ctrl.Result{}, nil

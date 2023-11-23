@@ -8,21 +8,33 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 
 	"mosn.io/moe/pkg/filtermanager"
+	"mosn.io/moe/pkg/log"
 )
 
-var httpPlugins = sync.Map{}
+var (
+	logger      = log.DefaultLogger.WithName("plugins")
+	httpPlugins = sync.Map{}
+)
 
 func RegisterHttpPlugin(name string, plugin Plugin) {
 	if plugin == nil {
 		panic("plugin should not be nil")
 	}
 
-	api.LogInfof("register plugin %s", name)
+	logger.Info("register plugin", "name", name)
 	filtermanager.RegisterHttpFilterConfigFactoryAndParser(name,
 		plugin.ConfigFactory(),
 		NewPluginConfigParser(plugin))
 
 	httpPlugins.Store(name, plugin)
+}
+
+func LoadHttpPlugin(name string) Plugin {
+	res, ok := httpPlugins.Load(name)
+	if !ok {
+		return nil
+	}
+	return res.(Plugin)
 }
 
 func IterateHttpPlugin(f func(key string, value Plugin) bool) {
