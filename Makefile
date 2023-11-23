@@ -46,7 +46,7 @@ gen-proto: build-dev-tools $(GO_TARGETS)
 	go run github.com/rinchsan/gosimports/cmd/gosimports@v0.3.8 -w -local ${PROJECT_NAME} $@
 
 # We don't run the controller's unit test in this task. Because the controller is considered as a
-# separate components.
+# separate component.
 .PHONY: unit-test
 unit-test:
 	go test ${TEST_OPTION} $(shell go list ./... | grep -v tests/integration)
