@@ -12,6 +12,11 @@ import (
 
 func validateHTTPFilterPolicy(policy *mosniov1.HTTPFilterPolicy) error {
 	// TODO: add webhook
+	ref := policy.Spec.TargetRef
+	if ref.Group != "networking.istio.io" || ref.Kind != "VirtualService" {
+		// relax this restriction once we support more
+		return errors.New("unsupported targetRef.group or targetRef.kind")
+	}
 	for name, filter := range policy.Spec.Filters {
 		p := plugins.LoadHttpPlugin(name)
 		if p == nil {

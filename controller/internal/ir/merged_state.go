@@ -8,7 +8,7 @@ type mergedState struct {
 	Hosts map[string]*hostPolicy
 }
 
-func toMergedState(ctx Ctx, state *dataPlaneState) error {
+func toMergedState(ctx *Ctx, state *dataPlaneState) error {
 	s := &mergedState{
 		Hosts: state.Hosts,
 	}

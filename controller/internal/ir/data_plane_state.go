@@ -25,7 +25,7 @@ func genRouteId(id *types.NamespacedName, r *istiov1b1.HTTPRoute, order int) str
 	return id.String() + "_" + fmt.Sprintf("%d", order)
 }
 
-func toDataPlaneState(ctx Ctx, state *InitState) error {
+func toDataPlaneState(ctx *Ctx, state *InitState) error {
 	s := &dataPlaneState{
 		Hosts: make(map[string]*hostPolicy),
 	}

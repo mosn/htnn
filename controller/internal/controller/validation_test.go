@@ -7,6 +7,7 @@ import (
 	istioapi "istio.io/api/networking/v1beta1"
 	istiov1b1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	"k8s.io/apimachinery/pkg/runtime"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	mosniov1 "mosn.io/moe/controller/api/v1"
 	"mosn.io/moe/pkg/plugins"
@@ -24,6 +25,12 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 			name: "ok",
 			policy: &mosniov1.HTTPFilterPolicy{
 				Spec: mosniov1.HTTPFilterPolicySpec{
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: "networking.istio.io",
+							Kind:  "VirtualService",
+						},
+					},
 					Filters: map[string]runtime.RawExtension{
 						"animal": {
 							Raw: []byte(`{"pet":"cat"}`),
@@ -36,6 +43,12 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 			name: "unknown",
 			policy: &mosniov1.HTTPFilterPolicy{
 				Spec: mosniov1.HTTPFilterPolicySpec{
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: "networking.istio.io",
+							Kind:  "VirtualService",
+						},
+					},
 					Filters: map[string]runtime.RawExtension{
 						"property": {
 							Raw: []byte(`{"pet":"cat"}`),
