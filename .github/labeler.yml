@@ -5,8 +5,8 @@ documentation:
 - docs/**
 - **/*.md
 
-filtermanager:
+'filter manager':
 - pkg/filtermanager/**
 
-plugins:
+'plugins hub':
 - plugins/**
