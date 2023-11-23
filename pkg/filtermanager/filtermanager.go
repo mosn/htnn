@@ -193,6 +193,7 @@ func FilterManagerConfigFactory(c interface{}) capi.StreamFilterFactory {
 }
 
 func (m *filterManager) handleAction(res api.ResultAction, phase phase) (needReturn bool) {
+	fmt.Printf("%p %p %v\n", api.Continue, api.WaitAllData, api.Continue == api.WaitAllData)
 	if res == api.Continue {
 		return false
 	}

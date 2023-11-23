@@ -8,16 +8,17 @@ type ResultAction interface {
 }
 
 type isResultAction struct {
+	typeid int // we need to add a field, otherwises Go will optimize all `&isResultAction{}` to same address.
 }
 
 func (i *isResultAction) OK() {}
 
 var (
-	// Continue is a placeholder which indicates the process can continue without steering
-	Continue ResultAction = nil
+	// Continue indicates the process can continue without steering
+	Continue ResultAction = &isResultAction{typeid: 0}
 	// WaitAllData controls if the request/response body needs to be fully buffered during processing by Go plugin.
 	// If this action is returned, DecodeData/EncodeData will be called by DecodeRequest/EncodeResponse.
-	WaitAllData ResultAction = &isResultAction{}
+	WaitAllData ResultAction = &isResultAction{typeid: 1}
 	// LocalResponse controls if a local reply should be returned from Envoy instead of using the
 	// upstream response. See comments below for how to use it.
 )

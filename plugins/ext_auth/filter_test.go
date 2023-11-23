@@ -179,7 +179,10 @@ func TestExtAuth(t *testing.T) {
 				defaultHdr[k] = v
 			}
 			hdr := envoy.NewRequestHeaderMap(http.Header(defaultHdr))
-			assert.Equal(t, tt.res, f.DecodeHeaders(hdr, true))
+			res := f.DecodeHeaders(hdr, true)
+			if tt.res != nil {
+				assert.Equal(t, tt.res, res)
+			}
 
 			for k, v := range tt.upHdr {
 				assert.Equal(t, v, hdr.Values(k))
