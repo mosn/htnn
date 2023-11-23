@@ -6,15 +6,21 @@ import "net/http"
 type ResultAction interface {
 	OK()
 }
+
 type isResultAction struct {
 }
+
+func (i *isResultAction) OK() {}
 
 var (
 	// Continue is a placeholder which indicates the process can continue without steering
 	Continue ResultAction = nil
+	// WaitAllData controls if the request/response body needs to be fully buffered during processing by Go plugin.
+	// If this action is returned, DecodeData/EncodeData will be called by DecodeRequest/EncodeResponse.
+	WaitAllData ResultAction = &isResultAction{}
+	// LocalResponse controls if a local reply should be returned from Envoy instead of using the
+	// upstream response. See comments below for how to use it.
 )
-
-func (i *isResultAction) OK() {}
 
 // LocalResponse represents the reply sent directly to the client instead of using the
 // upstream response. Return `&LocalResponse{Code: 4xx, ...}` in the method if you want

@@ -5,10 +5,7 @@ import (
 )
 
 type DecodeWholeRequestFilter interface {
-	// NeedDecodeWholeRequest decides whether this filter should run in the main process or not at runtime.
-	// If it returns true, the filter will be run with the whole body read.
-	NeedDecodeWholeRequest(headers api.RequestHeaderMap) bool
-	// DecodeRequest processes the whole request once when NeedDecodeWholeRequest returns true
+	// DecodeRequest processes the whole request once when WaitAllData is returned
 	// headers: the request header
 	// data: the whole request body, nil if the request doesn't have body
 	// trailers: TODO, just a placeholder
@@ -16,10 +13,7 @@ type DecodeWholeRequestFilter interface {
 }
 
 type EncodeWholeResponseFilter interface {
-	// NeedEncodeWholeResponse decides whether this filter should run in the main process or not at runtime.
-	// If it returns true, the filter will be run with the whole body read.
-	NeedEncodeWholeResponse(headers api.ResponseHeaderMap) bool
-	// EncodeResponse processes the whole response once when NeedEncodeWholeResponse returns true
+	// EncodeResponse processes the whole response once when WaitAllData is returned
 	// headers: the response header
 	// data: the whole response body, nil if the response doesn't have body
 	// trailers: TODO, just a placeholder
@@ -85,12 +79,10 @@ func (f *PassThroughFilter) EncodeTrailers(trailers ResponseTrailerMap) ResultAc
 
 func (f *PassThroughFilter) OnLog() {}
 
-func (f *PassThroughFilter) NeedDecodeWholeRequest(headers api.RequestHeaderMap) bool { return false }
 func (f *PassThroughFilter) DecodeRequest(headers api.RequestHeaderMap, data api.BufferInstance, trailers api.RequestTrailerMap) ResultAction {
 	return Continue
 }
 
-func (f *PassThroughFilter) NeedEncodeWholeResponse(headers api.ResponseHeaderMap) bool { return false }
 func (f *PassThroughFilter) EncodeResponse(headers api.ResponseHeaderMap, data api.BufferInstance, trailers api.ResponseTrailerMap) ResultAction {
 	return Continue
 }

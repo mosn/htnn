@@ -75,6 +75,7 @@ func TestPassThrough(t *testing.T) {
 	respHdr := envoy.NewResponseHeaderMap(http.Header{})
 	m.EncodeHeaders(respHdr, false)
 	m.EncodeData(buf, true)
+	cb.WaitContinued()
 	m.OnLog()
 }
 

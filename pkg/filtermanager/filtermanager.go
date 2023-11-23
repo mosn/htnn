@@ -128,16 +128,31 @@ type filterManager struct {
 	filters []api.Filter
 	names   []string
 
-	decodeIdx int
-	reqHdr    api.RequestHeaderMap
+	decodeRequestNeeded bool
+	decodeIdx           int
+	reqHdr              api.RequestHeaderMap
 
-	encodeIdx int
-	rspHdr    api.ResponseHeaderMap
+	encodeResponseNeeded bool
+	encodeIdx            int
+	rspHdr               api.ResponseHeaderMap
 
 	callbacks capi.FilterCallbackHandler
 
 	capi.PassThroughStreamFilter
 }
+
+type phase int
+
+const (
+	phaseDecodeHeaders phase = iota
+	phaseDecodeData
+	phaseDecodeTrailers
+	phaseDecodeRequest
+	phaseEncodeHeaders
+	phaseEncodeData
+	phaseEncodeTrailers
+	phaseEncodeResponse
+)
 
 func FilterManagerConfigFactory(c interface{}) capi.StreamFilterFactory {
 	conf := c.(*filterManagerConfig)
@@ -177,8 +192,18 @@ func FilterManagerConfigFactory(c interface{}) capi.StreamFilterFactory {
 	}
 }
 
-func (m *filterManager) handleAction(res api.ResultAction) (needReturn bool) {
+func (m *filterManager) handleAction(res api.ResultAction, phase phase) (needReturn bool) {
 	if res == api.Continue {
+		return false
+	}
+	if res == api.WaitAllData {
+		if phase == phaseDecodeHeaders {
+			m.decodeRequestNeeded = true
+		} else if phase == phaseEncodeHeaders {
+			m.encodeResponseNeeded = true
+		} else {
+			api.LogErrorf("WaitAllData only allowed when processing headers, phase: %v", phase)
+		}
 		return false
 	}
 
@@ -250,8 +275,13 @@ func (m *filterManager) DecodeHeaders(header api.RequestHeaderMap, endStream boo
 
 		m.reqHdr = header
 		for i, f := range m.filters {
-			needed := f.NeedDecodeWholeRequest(header)
-			if needed {
+			res = f.DecodeHeaders(header, endStream)
+			if m.handleAction(res, phaseDecodeHeaders) {
+				return
+			}
+
+			if m.decodeRequestNeeded {
+				m.decodeRequestNeeded = false
 				if !endStream {
 					m.decodeIdx = i
 					// some filters, like authorization with request body, need to
@@ -262,12 +292,9 @@ func (m *filterManager) DecodeHeaders(header api.RequestHeaderMap, endStream boo
 
 				// no body
 				res = f.DecodeRequest(header, nil, nil)
-			} else {
-				res = f.DecodeHeaders(header, endStream)
-			}
-
-			if m.handleAction(res) {
-				return
+				if m.handleAction(res, phaseDecodeRequest) {
+					return
+				}
 			}
 		}
 		m.callbacks.Continue(capi.Continue)
@@ -300,7 +327,7 @@ func (m *filterManager) DecodeData(buf api.BufferInstance, endStream bool) capi.
 			for i := 0; i < n; i++ {
 				f := m.filters[i]
 				res = f.DecodeData(buf, endStream)
-				if m.handleAction(res) {
+				if m.handleAction(res, phaseDecodeData) {
 					return
 				}
 			}
@@ -310,52 +337,49 @@ func (m *filterManager) DecodeData(buf api.BufferInstance, endStream bool) capi.
 			for i := 0; i < m.decodeIdx; i++ {
 				f := m.filters[i]
 				res = f.DecodeData(buf, endStream)
-				if m.handleAction(res) {
+				if m.handleAction(res, phaseDecodeData) {
 					return
 				}
 			}
 
 			f := m.filters[m.decodeIdx]
 			res = f.DecodeRequest(m.reqHdr, buf, nil)
-			if m.handleAction(res) {
+			if m.handleAction(res, phaseDecodeRequest) {
 				return
 			}
 
 			i := m.decodeIdx + 1
 			for i < n {
-				var needed bool
 				for ; i < n; i++ {
 					f := m.filters[i]
-					needed = f.NeedDecodeWholeRequest(m.reqHdr)
-					if needed {
+					// The endStream in DecodeHeaders indicates whether there is a body.
+					// The body always exists when we hit this path.
+					res = f.DecodeHeaders(m.reqHdr, false)
+					if m.handleAction(res, phaseDecodeHeaders) {
+						return
+					}
+					if m.decodeRequestNeeded {
+						// decodeRequestNeeded will be set to false below
 						break
 					}
 				}
 
-				for j := m.decodeIdx + 1; j < i; j++ {
-					f := m.filters[j]
-					// The endStream in DecodeHeaders indicates whether there is a body.
-					// The body always exists when we hit this path.
-					res = f.DecodeHeaders(m.reqHdr, false)
-					if m.handleAction(res) {
-						return
-					}
-				}
 				// When there are multiple filters want to decode the whole req,
 				// run part of the DecodeData which is before them
 				for j := m.decodeIdx + 1; j < i; j++ {
 					f := m.filters[j]
 					res = f.DecodeData(buf, endStream)
-					if m.handleAction(res) {
+					if m.handleAction(res, phaseDecodeData) {
 						return
 					}
 				}
 
-				if needed {
+				if m.decodeRequestNeeded {
+					m.decodeRequestNeeded = false
 					m.decodeIdx = i
 					f := m.filters[m.decodeIdx]
 					res = f.DecodeRequest(m.reqHdr, buf, nil)
-					if m.handleAction(res) {
+					if m.handleAction(res, phaseDecodeRequest) {
 						return
 					}
 					i++
@@ -378,8 +402,13 @@ func (m *filterManager) EncodeHeaders(header api.ResponseHeaderMap, endStream bo
 		n := len(m.filters)
 		for i := n - 1; i >= 0; i-- {
 			f := m.filters[i]
-			needed := f.NeedEncodeWholeResponse(header)
-			if needed {
+			res = f.EncodeHeaders(header, endStream)
+			if m.handleAction(res, phaseEncodeHeaders) {
+				return
+			}
+
+			if m.encodeResponseNeeded {
+				m.encodeResponseNeeded = false
 				if !endStream {
 					m.encodeIdx = i
 					m.callbacks.Continue(capi.StopAndBuffer)
@@ -388,12 +417,9 @@ func (m *filterManager) EncodeHeaders(header api.ResponseHeaderMap, endStream bo
 
 				// no body
 				res = f.EncodeResponse(header, nil, nil)
-			} else {
-				res = f.EncodeHeaders(header, endStream)
-			}
-
-			if m.handleAction(res) {
-				return
+				if m.handleAction(res, phaseEncodeResponse) {
+					return
+				}
 			}
 		}
 		m.callbacks.Continue(capi.Continue)
@@ -413,7 +439,7 @@ func (m *filterManager) EncodeData(buf api.BufferInstance, endStream bool) capi.
 			for i := n - 1; i >= 0; i-- {
 				f := m.filters[i]
 				res = f.EncodeData(buf, endStream)
-				if m.handleAction(res) {
+				if m.handleAction(res, phaseEncodeData) {
 					return
 				}
 			}
@@ -423,48 +449,45 @@ func (m *filterManager) EncodeData(buf api.BufferInstance, endStream bool) capi.
 			for i := n - 1; i > m.encodeIdx; i-- {
 				f := m.filters[i]
 				res = f.EncodeData(buf, endStream)
-				if m.handleAction(res) {
+				if m.handleAction(res, phaseEncodeData) {
 					return
 				}
 			}
 
 			f := m.filters[m.encodeIdx]
 			res = f.EncodeResponse(m.rspHdr, buf, nil)
-			if m.handleAction(res) {
+			if m.handleAction(res, phaseEncodeResponse) {
 				return
 			}
 
 			i := m.encodeIdx - 1
 			for i >= 0 {
-				var needed bool
 				for ; i >= 0; i-- {
 					f := m.filters[i]
-					needed = f.NeedEncodeWholeResponse(m.rspHdr)
-					if needed {
+					res = f.EncodeHeaders(m.rspHdr, false)
+					if m.handleAction(res, phaseEncodeHeaders) {
+						return
+					}
+					if m.encodeResponseNeeded {
+						// encodeResponseNeeded will be set to false below
 						break
 					}
 				}
 
 				for j := m.encodeIdx - 1; j > i; j-- {
 					f := m.filters[j]
-					res = f.EncodeHeaders(m.rspHdr, false)
-					if m.handleAction(res) {
-						return
-					}
-				}
-				for j := m.encodeIdx - 1; j > i; j-- {
-					f := m.filters[j]
 					res = f.EncodeData(buf, endStream)
-					if m.handleAction(res) {
+					if m.handleAction(res, phaseEncodeData) {
 						return
 					}
 				}
 
-				if needed {
+				if m.encodeResponseNeeded {
+					m.encodeResponseNeeded = false
 					m.encodeIdx = i
 					f := m.filters[m.encodeIdx]
 					res = f.EncodeResponse(m.rspHdr, buf, nil)
-					if m.handleAction(res) {
+					if m.handleAction(res, phaseEncodeResponse) {
 						return
 					}
 					i--

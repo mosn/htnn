@@ -62,24 +62,20 @@ In some situations, we need to stop the iteration of header filter, then read th
 1. Authorization with request body.
 2. Modify the body, and change the headers (`content-length` and so on).
 
-Therefore, we introduce a group of new methods:
+Therefore, we introduce a group of new types:
 
-* NeedDecodeWholeRequest(headers api.RequestHeaderMap) bool
+* WaitAllData: a ResultAction returns from the EncodeHeaders
 * DecodeRequest(headers api.RequestHeaderMap, data api.BufferInstance, trailers api.RequestTrailerMap) ResultAction
 
-`NeedDecodeWholeRequest` can be used to decide if the body needs to be buffered, according to the configuration and the headers.
+`WaitAllData` can be used to decide if the body needs to be buffered, according to the configuration and the headers.
 
-If `NeedDecodeWholeRequest` returns `false`, do what we do before:
-
-![filter manager, with DecodeWholeRequestFilter](./asserts/images/filtermanager_sub_path_false.jpg)
-
-If `true` is returned, we will:
+If `WaitAllData` is returned, we will:
 
 1. buffer the whole body
 2. execute the `DecodeData` of previous plugins
 3. execute the `DecodeRequest` of this plugin
 4. back to the original path, continue to execute the `DecodeHeaders` of the next plugin
 
-![filter manager, with DecodeWholeRequestFilter, buffer the whole request](./asserts/images/filtermanager_sub_path_true.jpg)
+![filter manager, with DecodeWholeRequestFilter, buffer the whole request](./asserts/images/filtermanager_sub_path.jpg)
 
-The same process applies to Encode path, but in a slightly different way. Method `NeedEncodeWholeResponse` and `EncodeResponse` are called instead.
+The same process applies to Encode path, but in a slightly different way. Method `EncodeResponse` is called instead.
