@@ -3,7 +3,7 @@
 Assumed you are at the root of this project:
 
 1. Run `make build-test-so` to build the Go plugins.
-2. Run `go test -v ./tests/integration/plugins -run TestPluginXX` to run the selected tests.
+2. Run `go test -v ./plugins/tests/integration -run TestPluginXX` to run the selected tests.
 
 The test framework will start Envoy to run the Go plugins. The stdout/stderr of the Envoy can be found in `./test-envoy/$test_name`.
 
