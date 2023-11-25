@@ -3,7 +3,7 @@ controller:
 
 documentation:
 - docs/**
-- **/*.md
+- '**/*.md'
 
 'filter manager':
 - pkg/filtermanager/**
