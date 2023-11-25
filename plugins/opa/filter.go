@@ -33,11 +33,13 @@ var opaResponse struct {
 
 func (f *filter) buildInput(header api.RequestHeaderMap) map[string]interface{} {
 	uri := request.GetUrl(header)
+	headers := request.GetHeaders(header)
 	req := map[string]interface{}{
-		"method": header.Method(),
-		"scheme": header.Scheme(),
-		"host":   header.Host(),
-		"path":   uri.Path,
+		"method":  header.Method(),
+		"scheme":  header.Scheme(),
+		"host":    header.Host(),
+		"path":    uri.Path,
+		"headers": headers,
 	}
 	if uri.RawQuery != "" {
 		req["query"] = map[string][]string(uri.Query())
