@@ -426,6 +426,17 @@ func (m *AuthorizationRequest) validate(all bool) error {
 
 	var errors []error
 
+	if len(m.GetHeadersToAdd()) < 1 {
+		err := AuthorizationRequestValidationError{
+			field:  "HeadersToAdd",
+			reason: "value must contain at least 1 item(s)",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
 	for idx, item := range m.GetHeadersToAdd() {
 		_, _ = idx, item
 

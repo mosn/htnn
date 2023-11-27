@@ -52,8 +52,12 @@ func (f *filter) check(headers api.RequestHeaderMap) api.ResultAction {
 	}
 
 	rsp, err := f.config.client.Do(req)
-	if err != nil {
-		api.LogWarnf("failed to call ext authz server: %v", err)
+	if err != nil || rsp.StatusCode >= 500 {
+		if err != nil {
+			api.LogWarnf("failed to call ext authz server: %v", err)
+		} else {
+			api.LogWarnf("failed to call ext authz server: %s", rsp.Status)
+		}
 		code := int(hs.GetStatusOnError())
 		if code == 0 {
 			code = 403

@@ -96,6 +96,17 @@ func TestExtAuth(t *testing.T) {
 			res: &api.LocalResponse{Code: 403},
 		},
 		{
+			name: "auth error because of 5xx",
+			input: `{"http_service":{
+				"url": "http://127.0.0.1:10001/ext_auth"
+			}}`,
+			server: func(r *http.Request) (*http.Response, error) {
+				resp := response(503)
+				return resp, nil
+			},
+			res: &api.LocalResponse{Code: 403},
+		},
+		{
 			name: "auth error, status_on_error configured",
 			input: `{"http_service":{
 				"url": "http://127.0.0.1:10001/ext_auth",
