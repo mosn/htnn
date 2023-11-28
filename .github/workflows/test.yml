@@ -12,11 +12,16 @@ on:
     - "./docs"
     - "**/*.md"
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref == 'refs/heads/main' && github.run_number || github.ref }}
+  cancel-in-progress: true
+
 env:
   IN_CI: true
 
 jobs:
   unit-test:
+    timeout-minutes: 10
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -33,6 +38,7 @@ jobs:
       run: make unit-test
 
   plugins-integration-test:
+    timeout-minutes: 10
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
@@ -60,6 +66,7 @@ jobs:
         path: ./test-envoy
 
   controller-test:
+    timeout-minutes: 10
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -73,6 +80,12 @@ jobs:
         go-version: '1.20'
         # working-directory doesn't affect the cache path
         cache-dependency-path: ./controller/go.sum
+
+    - name: binary cache
+      uses: actions/cache@v3
+      with:
+        path: ./controller/bin
+        key: ${{ runner.os }}-${{ hashFiles('./controller/Makefile') }}
 
     - name: Test
       run: make test

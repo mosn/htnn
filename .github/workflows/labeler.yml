@@ -1,15 +1,17 @@
-name: "pull request labeler"
-on:
-- pull_request_target
+# Disable this workflow for now until this repo is open source and GitHub doesn't charge us for CI
 
-jobs:
-  triage:
-    permissions:
-      contents: read
-      pull-requests: write
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    - uses: actions/labeler@v4
-      with:
-        dot: true
+#name: "pull request labeler"
+#on:
+#- pull_request_target
+
+#jobs:
+  #triage:
+    #permissions:
+      #contents: read
+      #pull-requests: write
+    #runs-on: ubuntu-latest
+    #steps:
+    #- uses: actions/checkout@v4
+    #- uses: actions/labeler@v4
+      #with:
+        #dot: true
