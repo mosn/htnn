@@ -1,4 +1,4 @@
-package ir
+package translation
 
 import (
 	"context"
@@ -15,8 +15,10 @@ type VirtualServicePolicies struct {
 	Policies       []*mosniov1.HTTPFilterPolicy
 }
 
+// InitState is the beginning of our translation.
 type InitState struct {
 	VirtualServices map[types.NamespacedName]*VirtualServicePolicies
+	VsToGateway     map[types.NamespacedName][]*istiov1b1.Gateway
 
 	logger *logr.Logger
 }
@@ -24,11 +26,12 @@ type InitState struct {
 func NewInitState(logger *logr.Logger) *InitState {
 	return &InitState{
 		VirtualServices: make(map[types.NamespacedName]*VirtualServicePolicies),
+		VsToGateway:     make(map[types.NamespacedName][]*istiov1b1.Gateway),
 		logger:          logger,
 	}
 }
 
-func (s *InitState) AddPolicyForVirtualService(policy *mosniov1.HTTPFilterPolicy, vs *istiov1b1.VirtualService) {
+func (s *InitState) AddPolicyForVirtualService(policy *mosniov1.HTTPFilterPolicy, vs *istiov1b1.VirtualService, gw *istiov1b1.Gateway) {
 	nn := types.NamespacedName{
 		Namespace: vs.ObjectMeta.Namespace,
 		Name:      vs.ObjectMeta.Name,
@@ -44,6 +47,12 @@ func (s *InitState) AddPolicyForVirtualService(policy *mosniov1.HTTPFilterPolicy
 	}
 
 	vsp.Policies = append(vsp.Policies, policy.DeepCopy())
+
+	gws, ok := s.VsToGateway[nn]
+	if !ok {
+		gws = make([]*istiov1b1.Gateway, 0)
+	}
+	s.VsToGateway[nn] = append(gws, gw.DeepCopy())
 }
 
 func (s *InitState) Process(original_ctx context.Context) error {

@@ -1,0 +1,28 @@
+toUpdate:
+- metadata:
+    creationTimestamp: null
+    name: htnn-h-test--httpbin
+  spec:
+    configPatches:
+    - applyTo: VIRTUAL_HOST
+      match:
+        routeConfiguration:
+          vhost:
+            name: '*.httpbin.example.com:80'
+      patch:
+        operation: MERGE
+        value:
+          typed_per_filter_config:
+            envoy.filters.http.golang:
+              '@type': type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.ConfigsPerRoute
+              plugins_config:
+                fm:
+                  config:
+                    '@type': type.googleapis.com/xds.type.v3.TypedStruct
+                    value:
+                      plugins:
+                      - config:
+                          decode: true
+                          need: true
+                        name: localReply
+  status: {}

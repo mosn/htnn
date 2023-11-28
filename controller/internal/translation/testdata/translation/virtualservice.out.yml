@@ -1,0 +1,54 @@
+toDelete:
+- metadata:
+    creationTimestamp: null
+    name: htnn-h-default--httpbin443
+    namespace: istio-system
+  spec: {}
+  status: {}
+toUpdate:
+- metadata:
+    creationTimestamp: null
+    name: htnn-h-default--httpbin
+  spec:
+    configPatches:
+    - applyTo: VIRTUAL_HOST
+      match:
+        routeConfiguration:
+          vhost:
+            name: httpbin.example.com:80
+      patch:
+        operation: MERGE
+        value:
+          typed_per_filter_config:
+            envoy.filters.http.golang:
+              '@type': type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.ConfigsPerRoute
+              plugins_config:
+                fm:
+                  config:
+                    '@type': type.googleapis.com/xds.type.v3.TypedStruct
+                    value:
+                      plugins:
+                      - config:
+                          host_name: goldfish
+                        name: animal
+    - applyTo: VIRTUAL_HOST
+      match:
+        routeConfiguration:
+          vhost:
+            name: httpbin.test.com:8080
+      patch:
+        operation: MERGE
+        value:
+          typed_per_filter_config:
+            envoy.filters.http.golang:
+              '@type': type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.ConfigsPerRoute
+              plugins_config:
+                fm:
+                  config:
+                    '@type': type.googleapis.com/xds.type.v3.TypedStruct
+                    value:
+                      plugins:
+                      - config:
+                          host_name: goldfish
+                        name: animal
+  status: {}
