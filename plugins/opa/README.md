@@ -31,7 +31,11 @@ Here is the JSON data Moe sends to the OPA:
                 "b": [""]
             },
             "method": "GET",
-            "host": "localhost"
+            "host": "localhost:10000",
+            "headers": {
+                "fruit": ["apple", "banana"],
+                "pet": ["dog"]
+            }
         }
     }
 }
@@ -39,7 +43,9 @@ Here is the JSON data Moe sends to the OPA:
 
 Note that:
 
-* `method` is always uppercase, while `host` and `scheme` are always lowecase.
+* `method` is always uppercase, while `host`, `headers` and `scheme` are always lowecase.
+* `host` will contain the port if the `:authority` header sent by the client has the port.
+* Multiple `headers` and `query` in the same name will be passed in an array.
 
 The data can be read as `input` document in OPA.
 

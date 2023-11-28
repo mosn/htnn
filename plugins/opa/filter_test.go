@@ -30,6 +30,8 @@ func TestOpaRemote(t *testing.T) {
 	})(cb)
 	hdr := envoy.NewRequestHeaderMap(http.Header(map[string][]string{
 		":path": {"/?a=1&b&c=true&c=foo"},
+		"pet":   {"cat"},
+		"fruit": {"apple", "banana"},
 	}))
 
 	tests := []struct {
@@ -52,6 +54,10 @@ func TestOpaRemote(t *testing.T) {
 						"a": []interface{}{"1"},
 						"b": []interface{}{""},
 						"c": []interface{}{"true", "foo"},
+					},
+					"headers": map[string]interface{}{
+						"pet":   []interface{}{"cat"},
+						"fruit": []interface{}{"apple", "banana"},
 					},
 				}, input["input"].(map[string]interface{})["request"])
 			},
