@@ -12,7 +12,7 @@ import (
 
 // mergedState does the following:
 // 1. merge policy among the same level policies
-// 2. merge policy among different hierachies
+// 2. merge policy among different hierarchies
 // 3. transform a plugin to different plugins if needed
 type mergedState struct {
 	Hosts map[string]*mergedHostPolicy

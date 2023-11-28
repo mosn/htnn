@@ -91,7 +91,7 @@ func toDataPlaneState(ctx *Ctx, state *InitState) error {
 			policy := &hostPolicy{
 				VirtualHost: vh,
 				Routes:      routes,
-				// It is possible that mutiple VirtualServices share the same host but with different routes.
+				// It is possible that multiple VirtualServices share the same host but with different routes.
 				// In this case, the host is considered a match condition but not a parent of routes.
 				// So it is unreasonable to set host level policy to such VirtualServices. We don't
 				// support this case (VirtualServices share same host & Host level policy attached) for now.

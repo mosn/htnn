@@ -117,7 +117,7 @@ func TestTranslate(t *testing.T) {
 			outputFilePath := strings.ReplaceAll(inputFile, ".in.yml", ".out.yml")
 			d, _ = os.ReadFile(outputFilePath)
 			want := string(d)
-			// google/go-cmp is not used here as it will compare unexported fileds by default.
+			// google/go-cmp is not used here as it will compare unexported fields by default.
 			// Calling IgnoreUnexported for each types in istio object is too cubmersome so we
 			// just use string comparison here.
 			require.Equal(t, want, actual)
