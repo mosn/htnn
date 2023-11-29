@@ -109,13 +109,17 @@ build-dev-tools:
 		docker build --network=host --build-arg GOPROXY=${GOPROXY} -t ${DEV_TOOLS_IMAGE} -f tools/Dockerfile.dev ./tools; \
 	fi
 
+# For lint-go/fmt-go: we don't cover examples/dev_your_plugin which is just an example
+
 .PHONY: lint-go
 lint-go:
 	go run github.com/golangci/golangci-lint/cmd/golangci-lint@latest run --config=.golangci.yml
+	pushd ./controller && go run github.com/golangci/golangci-lint/cmd/golangci-lint@latest run --config=../.golangci.yml && popd
 
 .PHONY: fmt-go
 fmt-go:
 	go mod tidy
+	pushd ./controller && go mod tidy && popd
 	go run github.com/rinchsan/gosimports/cmd/gosimports@v0.3.8 -w -local ${PROJECT_NAME} .
 
 # Don't use `buf format` to format the protobuf files! Buf's code style is different from Envoy.

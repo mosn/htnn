@@ -69,6 +69,7 @@ func (r *HTTPFilterPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	state := translation.NewInitState(&logger)
 
 	for _, policy := range policies.Items {
+		policy := policy
 		err := validateHTTPFilterPolicy(&policy)
 		if err != nil {
 			// TODO: mark the policy as invalid, and skip logging

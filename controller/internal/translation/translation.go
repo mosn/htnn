@@ -15,6 +15,9 @@ func (r *retryableError) Error() string {
 }
 
 func markAsRetryable(err error) error {
+	if err == nil {
+		return nil
+	}
 	return &retryableError{err: err}
 }
 
