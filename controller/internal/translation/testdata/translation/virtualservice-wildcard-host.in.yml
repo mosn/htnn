@@ -14,6 +14,9 @@ httpFilterPolicy:
           config:
             need: true
             decode: true
+        animal:
+          config:
+            pet: dog
 virtualService:
   policy:
     - apiVersion: networking.istio.io/v1beta1

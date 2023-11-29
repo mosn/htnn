@@ -7,6 +7,7 @@ import (
 	mosniov1 "mosn.io/moe/controller/api/v1"
 	"mosn.io/moe/controller/internal/model"
 	"mosn.io/moe/pkg/filtermanager"
+	"mosn.io/moe/pkg/plugins"
 )
 
 // mergedState does the following:
@@ -73,9 +74,9 @@ func translateHTTPFilterPolicyToFilterManagerConfig(policy *mosniov1.HTTPFilterP
 			Config: cfg.Config,
 		})
 	}
-	// FIXME: sort by the user defined order
+
 	sort.Slice(fmc.Plugins, func(i, j int) bool {
-		return fmc.Plugins[i].Name < fmc.Plugins[j].Name
+		return plugins.ComparePluginOrder(fmc.Plugins[i].Name, fmc.Plugins[j].Name)
 	})
 	return fmc, nil
 }

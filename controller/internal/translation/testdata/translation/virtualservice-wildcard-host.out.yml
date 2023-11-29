@@ -22,6 +22,9 @@ toUpdate:
                     value:
                       plugins:
                       - config:
+                          pet: dog
+                        name: animal
+                      - config:
                           decode: true
                           need: true
                         name: localReply

@@ -5,6 +5,7 @@ import (
 )
 
 type MockPlugin struct {
+	PluginMethodDefaultImpl
 }
 
 func (m *MockPlugin) ConfigFactory() api.FilterConfigFactory {
