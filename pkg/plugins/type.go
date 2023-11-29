@@ -51,12 +51,12 @@ const (
 
 type PluginOrderOperation int
 
-// If InsertFirst is specified, the plugin will be ordered from the begining of the group.
+// If InsertFirst is specified, the plugin will be ordered from the beginning of the group.
 // InsertLast is the opposite.
 const (
-	OrderOperationNop         PluginOrderOperation = 0
-	OrderOperationInsertFirst                      = -1
-	OrderOperationInsertLast                       = 1
+	OrderOperationInsertFirst PluginOrderOperation = -1
+	OrderOperationNop         PluginOrderOperation = 0 // Nop is the default
+	OrderOperationInsertLast  PluginOrderOperation = 1
 )
 
 type PluginOrder struct {
