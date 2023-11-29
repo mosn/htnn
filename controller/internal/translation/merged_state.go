@@ -4,10 +4,9 @@ import (
 	"encoding/json"
 	"sort"
 
-	"mosn.io/moe/pkg/filtermanager"
-
 	mosniov1 "mosn.io/moe/controller/api/v1"
 	"mosn.io/moe/controller/internal/model"
+	"mosn.io/moe/pkg/filtermanager"
 )
 
 // mergedState does the following:

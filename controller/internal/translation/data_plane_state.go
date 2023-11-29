@@ -6,7 +6,6 @@ import (
 	"net"
 	"strings"
 
-	istioapi "istio.io/api/networking/v1beta1"
 	istiov1b1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -29,7 +28,7 @@ type routePolicy struct {
 	Policies []*mosniov1.HTTPFilterPolicy
 }
 
-func genRouteId(id *types.NamespacedName, r *istioapi.HTTPRoute, order int) string {
+func genRouteId(id *types.NamespacedName, order int) string {
 	return id.String() + "_" + fmt.Sprintf("%d", order)
 }
 
@@ -75,8 +74,8 @@ func toDataPlaneState(ctx *Ctx, state *InitState) error {
 		gws := state.VsToGateway[id]
 		spec := &vsp.VirtualService.Spec
 		routes := make(map[string]*routePolicy)
-		for i, r := range spec.Http {
-			routes[genRouteId(&id, r, i)] = &routePolicy{
+		for i := range spec.Http {
+			routes[genRouteId(&id, i)] = &routePolicy{
 				Policies: vsp.Policies,
 			}
 		}

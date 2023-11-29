@@ -73,7 +73,7 @@ func GenerateHostFilter(host *model.VirtualHost, config *filtermanager.FilterMan
 	v := map[string]interface{}{}
 	// This Marshal/Unmarshal trick works around the type check in MustNewStruct
 	data, _ := json.Marshal(config)
-	json.Unmarshal(data, &v)
+	_ = json.Unmarshal(data, &v)
 	return &istiov1a3.EnvoyFilter{
 		Spec: istioapi.EnvoyFilter{
 			ConfigPatches: []*istioapi.EnvoyFilter_EnvoyConfigObjectPatch{

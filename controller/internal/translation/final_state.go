@@ -20,8 +20,6 @@ func nameFromHost(host *model.VirtualHost) string {
 }
 
 // finalState is the end of the translation. We convert the state to EnvoyFilter and write it to k8s.
-type finalState struct {
-}
 
 var (
 	// FIXME: init current envoy filters when the controller starts
@@ -65,7 +63,7 @@ func toFinalState(ctx *Ctx, state *mergedState) error {
 		}
 	}
 	addOrUpdate, del := diffEnvoyFilters(efs)
-	return publishCustomResources(ctx, addOrUpdate, del)
+	return markAsRetryable(publishCustomResources(ctx, addOrUpdate, del))
 }
 
 func publishCustomResources(ctx *Ctx, addOrUpdate []*istiov1a3.EnvoyFilter, del []*istiov1a3.EnvoyFilter) error {
