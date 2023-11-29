@@ -1,0 +1,56 @@
+httpFilterPolicy:
+  - apiVersion: mosn.io/v1
+    kind: HTTPFilterPolicy
+    metadata:
+      name: policy
+      namespace: test
+    spec:
+      targetRef:
+        group: networking.istio.io
+        kind: VirtualService
+        name: httpbin
+      filters:
+        localReply:
+          config:
+            need: true
+            decode: true
+virtualService:
+  policy:
+    - apiVersion: networking.istio.io/v1beta1
+      kind: VirtualService
+      metadata:
+        name: httpbin
+        namespace: test
+      spec:
+        gateways:
+        - httpbin-gateway
+        hosts:
+        - "dev.httpbin.example.com"
+        http:
+        - match:
+          - uri:
+              prefix: /status
+          - uri:
+              prefix: /delay
+          route:
+          - destination:
+              host: httpbin
+              port:
+                number: 8000
+gateway:
+  httpbin:
+    - apiVersion: networking.istio.io/v1beta1
+      kind: Gateway
+      metadata:
+        name: httpbin-gateway
+        namespace: test
+      spec:
+        selector:
+          istio: ingressgateway
+        servers:
+        - hosts:
+          - "*.example.com"
+          port:
+            name: http
+            number: 80
+            protocol: HTTP
