@@ -34,6 +34,11 @@ import (
 	"mosn.io/moe/controller/internal/controller"
 )
 
+// Version is specified by build tag, in VERSION file
+var (
+	Version string = ""
+)
+
 var (
 	scheme   = runtime.NewScheme()
 	setupLog = ctrl.Log.WithName("setup")

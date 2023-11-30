@@ -22,6 +22,9 @@ CONTAINER_TOOL ?= docker
 SHELL = /usr/bin/env bash -o pipefail
 .SHELLFLAGS = -ec
 
+VERSION = $(shell cat ../VERSION)
+GIT_VERSION = $(shell git log -1 --pretty=format:%h)
+
 .PHONY: all
 all: build
 
@@ -61,7 +64,9 @@ test: manifests generate envtest ## Run tests.
 
 .PHONY: build
 build: manifests generate
-	go build -o bin/manager cmd/main.go
+	CGO_ENABLED=0 go build \
+		-ldflags "-B 0x$(shell head -c20 /dev/urandom|od -An -tx1|tr -d ' \n') -X main.Version=${VERSION}(${GIT_VERSION})" \
+		-o bin/manager cmd/main.go
 
 .PHONY: run
 run: manifests generate ## Run a controller from your host.
