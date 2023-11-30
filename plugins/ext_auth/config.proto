@@ -41,7 +41,7 @@ message HttpService {
 message AuthorizationRequest {
   // Sets a list of headers that will be included to the request to authorization service. Note that
   // client request of the same key will be overridden.
-  repeated api.v1.HeaderValue headers_to_add = 1;
+  repeated api.v1.HeaderValue headers_to_add = 1 [(validate.rules).repeated = {min_items: 1}];
 }
 
 message AuthorizationResponse {

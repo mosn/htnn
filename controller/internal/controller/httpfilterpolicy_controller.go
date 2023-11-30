@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	istiov1b1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -34,7 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	mosniov1 "mosn.io/moe/controller/api/v1"
-	"mosn.io/moe/controller/internal/ir"
+	"mosn.io/moe/controller/internal/translation"
 )
 
 // HTTPFilterPolicyReconciler reconciles a HTTPFilterPolicy object
@@ -65,9 +66,10 @@ func (r *HTTPFilterPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return ctrl.Result{}, fmt.Errorf("failed to list HTTPFilterPolicy: %v", err)
 	}
 
-	state := ir.NewInitState(&logger)
+	state := translation.NewInitState(&logger)
 
 	for _, policy := range policies.Items {
+		policy := policy
 		err := validateHTTPFilterPolicy(&policy)
 		if err != nil {
 			// TODO: mark the policy as invalid, and skip logging
@@ -88,11 +90,37 @@ func (r *HTTPFilterPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 
 			err = validateVirtualService(&virtualService)
 			if err != nil {
-				logger.Error(err, "invalid VirtualService", "name", virtualService.Name, "namespace", virtualService.Namespace)
+				logger.Info("unsupported VirtualService", "name", virtualService.Name, "namespace", virtualService.Namespace, "reason", err.Error())
 				continue
 			}
 
-			state.AddPolicyForVirtualService(&policy, &virtualService)
+			for _, gw := range virtualService.Spec.Gateways {
+				if gw == "mesh" {
+					logger.Info("skip unsupported mesh gateway", "name", virtualService.Name, "namespace", virtualService.Namespace)
+					continue
+				}
+				if strings.Contains(gw, "/") {
+					logger.Info("skip gateway from other namespace", "name", virtualService.Name, "namespace", virtualService.Namespace)
+					continue
+				}
+
+				var gateway istiov1b1.Gateway
+				err = r.Get(ctx, types.NamespacedName{Name: gw, Namespace: req.Namespace}, &gateway)
+				if err != nil {
+					if !apierrors.IsNotFound(err) {
+						return ctrl.Result{}, err
+					}
+					continue
+				}
+
+				err = validateGateway(&gateway)
+				if err != nil {
+					logger.Info("unsupported Gateway", "name", gateway.Name, "namespace", gateway.Namespace, "reason", err.Error())
+					continue
+				}
+
+				state.AddPolicyForVirtualService(&policy, &virtualService, &gateway)
+			}
 		}
 	}
 

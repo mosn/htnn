@@ -1,4 +1,4 @@
-package ir
+package translation
 
 import (
 	"context"
@@ -15,6 +15,9 @@ func (r *retryableError) Error() string {
 }
 
 func markAsRetryable(err error) error {
+	if err == nil {
+		return nil
+	}
 	return &retryableError{err: err}
 }
 

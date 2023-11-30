@@ -1,0 +1,76 @@
+httpFilterPolicy:
+  - apiVersion: mosn.io/v1
+    kind: HTTPFilterPolicy
+    metadata:
+      name: policy
+      namespace: default
+    spec:
+      targetRef:
+        group: networking.istio.io
+        kind: VirtualService
+        name: httpbin
+      filters:
+        animal:
+          config:
+            host_name: goldfish
+virtualService:
+  policy:
+    - apiVersion: networking.istio.io/v1beta1
+      kind: VirtualService
+      metadata:
+        name: httpbin
+        namespace: default
+      spec:
+        gateways:
+        - httpbin-gateway
+        - httpbin-test-gateway
+        hosts:
+        - httpbin.example.com
+        - httpbin.test.com
+        http:
+        - match:
+          - uri:
+              prefix: /status
+          - uri:
+              prefix: /delay
+          route:
+          - destination:
+              host: httpbin
+              port:
+                number: 8000
+gateway:
+  httpbin:
+    - apiVersion: networking.istio.io/v1beta1
+      kind: Gateway
+      metadata:
+        name: httpbin-gateway
+        namespace: default
+      spec:
+        selector:
+          istio: ingressgateway
+        servers:
+        - hosts:
+          - httpbin.example.com
+          port:
+            name: http
+            number: 80
+            protocol: HTTP
+    - apiVersion: networking.istio.io/v1beta1
+      kind: Gateway
+      metadata:
+        name: httpbin-test-gateway
+        namespace: default
+      spec:
+        selector:
+          istio: ingressgateway
+        servers:
+        - hosts:
+          - httpbin.test.com
+          port:
+            name: http
+            number: 8080
+            protocol: HTTP
+envoyFilter:
+- metadata:
+    name: htnn-h-default--httpbin443
+    namespace: istio-system

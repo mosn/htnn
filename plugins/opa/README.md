@@ -105,7 +105,7 @@ curl -i -X GET 127.0.0.1:10000/echo
 HTTP/1.1 200 OK
 ```
 
-If we try to make a request with different method, the request will fail:
+If we try to make a request with a different method, the request will fail:
 
 ```
 curl -i -X POST 127.0.0.1:10000/echo -d "AA"

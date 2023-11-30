@@ -2,6 +2,7 @@ package controller
 
 import (
 	"errors"
+	"strings"
 
 	"google.golang.org/protobuf/encoding/protojson"
 	istiov1b1 "istio.io/client-go/pkg/apis/networking/v1beta1"
@@ -38,6 +39,18 @@ func validateVirtualService(vs *istiov1b1.VirtualService) error {
 	// TODO: support delegate VirtualService
 	if len(vs.Spec.Hosts) == 0 {
 		return errors.New("Delegate VirtualService is not supported")
+	}
+	return nil
+}
+
+func validateGateway(gw *istiov1b1.Gateway) error {
+	// TODO: support it
+	for _, svr := range gw.Spec.Servers {
+		for _, host := range svr.Hosts {
+			if strings.ContainsRune(host, '/') {
+				return errors.New("Gateway has host with namespace is not supported")
+			}
+		}
 	}
 	return nil
 }
