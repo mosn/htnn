@@ -6,14 +6,25 @@ on:
   pull_request:
     branches: [ "main" ]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref == 'refs/heads/main' && github.run_number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
+    timeout-minutes: 10
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
 
     - name: Set up Go
       uses: actions/setup-go@v4
+
+    - name: binary-cache
+      uses: actions/cache@v3
+      with:
+        path: ./bin
+        key: ${{ runner.os }}-${{ hashFiles('./Makefile') }}
 
     - name: format go
       run: |

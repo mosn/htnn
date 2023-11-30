@@ -35,6 +35,10 @@ ifeq ($(IN_CI), true)
 	MOUNT_GOMOD_CACHE =
 endif
 
+LOCALBIN ?= $(shell pwd)/bin
+$(LOCALBIN):
+	@mkdir -p $(LOCALBIN)
+
 .PHONY: gen-proto
 gen-proto: build-dev-tools $(GO_TARGETS)
 # format the generated Go code so the `fmt-go` task can pass
@@ -113,20 +117,23 @@ build-dev-tools:
 
 .PHONY: lint-go
 lint-go:
-	go run github.com/golangci/golangci-lint/cmd/golangci-lint@latest run --config=.golangci.yml
-	pushd ./controller && go run github.com/golangci/golangci-lint/cmd/golangci-lint@latest run --config=../.golangci.yml && popd
+	test -x $(LOCALBIN)/golangci-lint || GOBIN=$(LOCALBIN) go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.51.2
+	$(LOCALBIN)/golangci-lint run --config=.golangci.yml
+	pushd ./controller && $(LOCALBIN)/golangci-lint run --config=../.golangci.yml && popd
 
 .PHONY: fmt-go
-fmt-go:
+fmt-go: $(LOCALBIN)
 	go mod tidy
 	pushd ./controller && go mod tidy && popd
-	go run github.com/rinchsan/gosimports/cmd/gosimports@v0.3.8 -w -local ${PROJECT_NAME} .
+	test -x $(LOCALBIN)/gosimports || GOBIN=$(LOCALBIN) go install github.com/rinchsan/gosimports/cmd/gosimports@v0.3.8
+	$(LOCALBIN)/gosimports -w -local ${PROJECT_NAME} .
 
 # Don't use `buf format` to format the protobuf files! Buf's code style is different from Envoy.
 # That will break lots of things.
 .PHONY: lint-proto
-lint-proto:
-	go run github.com/bufbuild/buf/cmd/buf@v1.28.1 lint
+lint-proto: $(LOCALBIN)
+	test -x $(LOCALBIN)/buf || GOBIN=$(LOCALBIN) go install github.com/bufbuild/buf/cmd/buf@v1.28.1
+	$(LOCALBIN)/buf lint
 
 .PHONY: lint-spell
 lint-spell: build-dev-tools
@@ -139,8 +146,9 @@ lint-spell-local:
 	codespell --skip '.git,.idea,test-envoy,go.mod,go.sum,*.svg' --check-filenames --check-hidden --ignore-words ./.ignore_words
 
 .PHONY: lint-editorconfig
-lint-editorconfig:
-	go run github.com/editorconfig-checker/editorconfig-checker/cmd/editorconfig-checker@2.7.2
+lint-editorconfig: $(LOCALBIN)
+	test -x $(LOCALBIN)/editorconfig-checker || GOBIN=$(LOCALBIN) go install github.com/editorconfig-checker/editorconfig-checker/cmd/editorconfig-checker@2.7.2
+	$(LOCALBIN)/editorconfig-checker
 
 .PHONY: lint
 lint: lint-go lint-proto lint-spell lint-editorconfig
