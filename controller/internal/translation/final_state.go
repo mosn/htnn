@@ -24,7 +24,7 @@ type FinalState struct {
 	EnvoyFilters map[string]*istiov1a3.EnvoyFilter
 }
 
-func toFinalState(ctx *Ctx, state *mergedState) (*FinalState, error) {
+func toFinalState(_ *Ctx, state *mergedState) (*FinalState, error) {
 	efs := istio.DefaultEnvoyFilters()
 	hosts := []*mergedHostPolicy{}
 	for _, host := range state.Hosts {

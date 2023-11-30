@@ -28,15 +28,10 @@ func mustUnmarshal(t *testing.T, fn string, out interface{}) {
 }
 
 type testInput struct {
+	// we use sigs.k8s.io/yaml which uses JSON under the hover
 	HTTPFilterPolicy []*mosniov1.HTTPFilterPolicy           `json:"httpFilterPolicy"`
 	VirtualService   map[string][]*istiov1b1.VirtualService `json:"virtualService"`
 	Gateway          map[string][]*istiov1b1.Gateway        `json:"gateway"`
-}
-
-type testOutput struct {
-	// we use sigs.k8s.io/yaml which uses JSON under the hover
-	ToUpdate []*istiov1a3.EnvoyFilter `json:"toUpdate,omitempty"`
-	ToDelete []*istiov1a3.EnvoyFilter `json:"toDelete,omitempty"`
 }
 
 func TestTranslate(t *testing.T) {

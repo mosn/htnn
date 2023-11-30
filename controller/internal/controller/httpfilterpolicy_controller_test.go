@@ -87,7 +87,6 @@ func TestVirtualServiceIndexer(t *testing.T) {
 		opt := opts[0].(*client.ListOptions)
 		assert.Equal(t, &client.ListOptions{
 			FieldSelector: fields.OneTermEqualSelector(vsi.IndexName(), "vs"),
-			Namespace:     "ns",
 		}, opt)
 
 		policy := cache[vsi.IndexName()]["vs"].(*mosniov1.HTTPFilterPolicy)

@@ -43,10 +43,7 @@ func toMergedState(ctx *Ctx, state *dataPlaneState) (*FinalState, error) {
 		// 2. If multiple polices configure the same plugin, the oldest one (based on creation timestamp) wins.
 		// 3. If there are multiple oldest polices, the one appearing first in alphabetical order by {namespace}/{name} wins.
 		mergedPolicy := host.Policies[0]
-		fmc, err := translateHTTPFilterPolicyToFilterManagerConfig(mergedPolicy)
-		if err != nil {
-			return nil, err
-		}
+		fmc := translateHTTPFilterPolicyToFilterManagerConfig(mergedPolicy)
 		mh.Policy = fmc
 		s.Hosts[name] = mh
 	}
@@ -54,7 +51,7 @@ func toMergedState(ctx *Ctx, state *dataPlaneState) (*FinalState, error) {
 	return toFinalState(ctx, s)
 }
 
-func translateHTTPFilterPolicyToFilterManagerConfig(policy *mosniov1.HTTPFilterPolicy) (*filtermanager.FilterManagerConfig, error) {
+func translateHTTPFilterPolicyToFilterManagerConfig(policy *mosniov1.HTTPFilterPolicy) *filtermanager.FilterManagerConfig {
 	fmc := &filtermanager.FilterManagerConfig{
 		Plugins: []*filtermanager.FilterConfig{},
 	}
@@ -71,5 +68,5 @@ func translateHTTPFilterPolicyToFilterManagerConfig(policy *mosniov1.HTTPFilterP
 	sort.Slice(fmc.Plugins, func(i, j int) bool {
 		return plugins.ComparePluginOrder(fmc.Plugins[i].Name, fmc.Plugins[j].Name)
 	})
-	return fmc, nil
+	return fmc
 }
