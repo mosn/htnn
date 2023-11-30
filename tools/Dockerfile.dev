@@ -1,7 +1,7 @@
-FROM golang:1.20-bullseye
+FROM --platform=$TARGETPLATFORM golang:1.20-bullseye
 
 # If this image is changed, tell @spacewander to push it.
-# Maybe we can push this image automatically by tag?
+# TODO: Maybe we can push this image automatically by tag?
 
 # This Docker image provides the command line tools which can't be managed by `go`
 

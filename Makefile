@@ -113,9 +113,12 @@ dev-tools:
 		docker pull ${DEV_TOOLS_IMAGE}; \
 	fi
 
+# `--network=host` is used to access GitHub. You might need to configure `docker buildx` to enable it.
+# See https://github.com/docker/buildx/issues/835#issuecomment-966496802
 .PHONY: build-dev-tools
 build-dev-tools:
-	docker build --network=host --build-arg GOPROXY=${GOPROXY} -t ${DEV_TOOLS_IMAGE} -f tools/Dockerfile.dev ./tools
+	docker buildx build --platform=linux/amd64,linux/arm64 \
+		--network=host --build-arg GOPROXY=${GOPROXY} -t ${DEV_TOOLS_IMAGE} --push -f tools/Dockerfile.dev ./tools
 
 # For lint-go/fmt-go: we don't cover examples/dev_your_plugin which is just an example
 
