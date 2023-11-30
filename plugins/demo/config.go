@@ -22,6 +22,23 @@ type plugin struct {
 	plugins.PluginMethodDefaultImpl
 }
 
+// Type returns type of the plugin, default to TypeGeneral
+func (p *plugin) Type() plugins.PluginType {
+	// If a plugin doesn't claim its type, it will have type general.
+	return plugins.TypeGeneral
+}
+
+// Order returns the order of the plugin, default to OrderPositionUnspecified
+func (p *plugin) Order() plugins.PluginOrder {
+	// If a plugin doesn't claim its order, it will be put into OrderPositionUnspecified group.
+	// The order of plugins in the group is decided by the operation. For plugins which have
+	// same operation, they are sorted by alphabetical order.
+	return plugins.PluginOrder{
+		Position:  plugins.OrderPositionUnspecified,
+		Operation: plugins.OrderOperationNop,
+	}
+}
+
 // Each plugin need to implement the two methods below
 
 // ConfigFactory returns api.ConfigFactory's implementation used during request processing

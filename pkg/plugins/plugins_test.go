@@ -2,6 +2,7 @@ package plugins
 
 import (
 	"errors"
+	"sort"
 	"testing"
 
 	"github.com/agiledragon/gomonkey/v2"
@@ -96,4 +97,62 @@ func TestMerge(t *testing.T) {
 	cp = NewPluginConfigParser(&Merger{})
 	res = cp.Merge("parent", "child")
 	assert.Equal(t, "parent", res)
+}
+
+type pluginOrderWrapper struct {
+	Plugin
+
+	order PluginOrder
+}
+
+func (p *pluginOrderWrapper) Order() PluginOrder {
+	return p.order
+}
+
+func TestComparePluginOrder(t *testing.T) {
+	plugin := &MockPlugin{}
+
+	pluginOrders := map[string]PluginOrder{
+		"authz_first": {
+			Position:  OrderPositionAuthz,
+			Operation: OrderOperationInsertFirst,
+		},
+		"authz_second": {
+			Position: OrderPositionAuthz,
+		},
+		"authz_third": {
+			Position: OrderPositionAuthz,
+		},
+		"authz_last": {
+			Position:  OrderPositionAuthz,
+			Operation: OrderOperationInsertLast,
+		},
+		"authn": {
+			Position: OrderPositionAuthn,
+		},
+	}
+	for name, po := range pluginOrders {
+		RegisterHttpPlugin(name, &pluginOrderWrapper{
+			Plugin: plugin,
+			order:  po,
+		})
+	}
+
+	plugins := []string{
+		"authn",
+		"authz_third",
+		"authz_last",
+		"authz_second",
+		"authz_first",
+	}
+	sort.Slice(plugins, func(i, j int) bool {
+		return ComparePluginOrder(plugins[i], plugins[j])
+	})
+	assert.Equal(t, []string{
+		"authn",
+		"authz_first",
+		"authz_second",
+		"authz_third",
+		"authz_last",
+	}, plugins)
 }

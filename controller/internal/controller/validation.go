@@ -21,6 +21,7 @@ func validateHTTPFilterPolicy(policy *mosniov1.HTTPFilterPolicy) error {
 	for name, filter := range policy.Spec.Filters {
 		p := plugins.LoadHttpPlugin(name)
 		if p == nil {
+			// reject unknown filter in CP, ignore unknown filter in DP
 			return errors.New("unknown http filter: " + name)
 		}
 		conf := p.Config()

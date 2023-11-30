@@ -22,6 +22,16 @@ type plugin struct {
 	plugins.PluginMethodDefaultImpl
 }
 
+func (p *plugin) Type() plugins.PluginType {
+	return plugins.TypeAuthz
+}
+
+func (p *plugin) Order() plugins.PluginOrder {
+	return plugins.PluginOrder{
+		Position: plugins.OrderPositionAuthz,
+	}
+}
+
 func (p *plugin) ConfigFactory() api.FilterConfigFactory {
 	return configFactory
 }

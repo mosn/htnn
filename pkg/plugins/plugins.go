@@ -82,6 +82,42 @@ func (cp *PluginConfigParser) Parse(any interface{}, callbacks api.ConfigCallbac
 // PluginMethodDefaultImpl provides reasonable implementation for optional methods
 type PluginMethodDefaultImpl struct{}
 
+func (p *PluginMethodDefaultImpl) Type() PluginType {
+	return TypeGeneral
+}
+
+func (p *PluginMethodDefaultImpl) Order() PluginOrder {
+	return PluginOrder{
+		Position:  OrderPositionUnspecified,
+		Operation: OrderOperationNop,
+	}
+}
+
 func (p *PluginMethodDefaultImpl) Merge(parent interface{}, child interface{}) interface{} {
 	return child
+}
+
+var (
+	nameToOrder     = map[string]PluginOrder{}
+	nameToOrderInit = sync.Once{}
+)
+
+// The caller should ganrantee the a, b are valid plugin name.
+func ComparePluginOrder(a, b string) bool {
+	nameToOrderInit.Do(func() {
+		IterateHttpPlugin(func(key string, value Plugin) bool {
+			nameToOrder[key] = value.Order()
+			return true
+		})
+	})
+
+	aOrder := nameToOrder[a]
+	bOrder := nameToOrder[b]
+	if aOrder.Position != bOrder.Position {
+		return aOrder.Position < bOrder.Position
+	}
+	if aOrder.Operation != bOrder.Operation {
+		return aOrder.Operation < bOrder.Operation
+	}
+	return a < b
 }
