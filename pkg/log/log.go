@@ -20,3 +20,7 @@ func initDefaultLogger() logr.Logger {
 	log = zapr.NewLogger(zapLog)
 	return log
 }
+
+func SetLogger(logger logr.Logger) {
+	DefaultLogger = logger
+}
