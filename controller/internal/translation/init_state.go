@@ -55,21 +55,12 @@ func (s *InitState) AddPolicyForVirtualService(policy *mosniov1.HTTPFilterPolicy
 	s.VsToGateway[nn] = append(gws, gw.DeepCopy())
 }
 
-func (s *InitState) Process(original_ctx context.Context) error {
+func (s *InitState) Process(original_ctx context.Context) (*FinalState, error) {
 	// Process chain:
 	// InitState -> DataPlaneState -> MergedState -> FinalState
 	ctx := &Ctx{
 		Context: original_ctx,
 		logger:  s.logger,
 	}
-	err := toDataPlaneState(ctx, s)
-	if err != nil {
-		if _, ok := err.(*retryableError); ok {
-			return err
-		}
-		s.logger.Error(err, "failed to process state")
-		// TODO: report the status to the original policy
-	}
-
-	return nil
+	return toDataPlaneState(ctx, s)
 }

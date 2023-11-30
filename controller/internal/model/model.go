@@ -12,3 +12,7 @@ type VirtualHost struct {
 	NsName  *types.NamespacedName
 	Name    string
 }
+
+type GoPluginConfig struct {
+	Config interface{} `json:"config"`
+}

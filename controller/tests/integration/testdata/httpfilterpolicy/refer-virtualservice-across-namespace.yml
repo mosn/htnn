@@ -1,0 +1,34 @@
+- apiVersion: mosn.io/v1
+  kind: HTTPFilterPolicy
+  metadata:
+    name: policy
+    namespace: istio-system
+  spec:
+    targetRef:
+      group: networking.istio.io
+      kind: VirtualService
+      name: vs
+      namespace: default
+    filters:
+      demo:
+        config:
+          host_name: goldfish
+- apiVersion: networking.istio.io/v1beta1
+  kind: VirtualService
+  metadata:
+    name: vs
+    namespace: default
+  spec:
+    gateways:
+    - default
+    hosts:
+    - default.local
+    http:
+    - match:
+      - uri:
+          prefix: /delay
+      route:
+      - destination:
+          host: httpbin
+          port:
+            number: 8000

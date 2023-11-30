@@ -8,10 +8,10 @@ require (
 	github.com/onsi/ginkgo/v2 v2.13.2
 	github.com/onsi/gomega v1.30.0
 	github.com/stretchr/testify v1.8.4
-	golang.org/x/exp v0.0.0-20231127185646-65229373498e
 	google.golang.org/protobuf v1.31.0
 	istio.io/api v1.20.0
 	istio.io/client-go v1.20.0
+	k8s.io/api v0.28.4
 	k8s.io/apimachinery v0.28.4
 	k8s.io/client-go v0.28.4
 	mosn.io/moe v0.1.0
@@ -22,6 +22,8 @@ require (
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
+	github.com/casbin/casbin/v2 v2.79.0 // indirect
+	github.com/casbin/govaluate v1.1.0 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/cncf/xds/go v0.0.0-20231016030527-8bd2eac9fb4a // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
@@ -44,6 +46,7 @@ require (
 	github.com/google/pprof v0.0.0-20210720184732-4bb14d4b1be1 // indirect
 	github.com/google/uuid v1.3.1 // indirect
 	github.com/imdario/mergo v0.3.16 // indirect
+	github.com/jellydator/ttlcache/v3 v3.1.0 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
@@ -60,8 +63,10 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.26.0 // indirect
+	golang.org/x/exp v0.0.0-20231127185646-65229373498e // indirect
 	golang.org/x/net v0.19.0 // indirect
 	golang.org/x/oauth2 v0.13.0 // indirect
+	golang.org/x/sync v0.5.0 // indirect
 	golang.org/x/sys v0.15.0 // indirect
 	golang.org/x/term v0.15.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
@@ -75,7 +80,6 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/api v0.28.4 // indirect
 	k8s.io/apiextensions-apiserver v0.28.3 // indirect
 	k8s.io/component-base v0.28.3 // indirect
 	k8s.io/klog/v2 v2.100.1 // indirect

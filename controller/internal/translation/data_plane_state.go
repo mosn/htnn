@@ -1,7 +1,6 @@
 package translation
 
 import (
-	"errors"
 	"fmt"
 	"net"
 	"strings"
@@ -66,7 +65,7 @@ func buildVirtualHost(host string, gws []*istiov1b1.Gateway) *model.VirtualHost 
 	return nil
 }
 
-func toDataPlaneState(ctx *Ctx, state *InitState) error {
+func toDataPlaneState(ctx *Ctx, state *InitState) (*FinalState, error) {
 	s := &dataPlaneState{
 		Hosts: make(map[string]*hostPolicy),
 	}
@@ -82,9 +81,10 @@ func toDataPlaneState(ctx *Ctx, state *InitState) error {
 		for _, hostName := range spec.Hosts {
 			vh := buildVirtualHost(hostName, gws)
 			if vh == nil {
-				err := errors.New("can not build virtual host")
-				ctx.logger.Error(err, "failed to build virtual host", "hostname", hostName, "virtualservice", id, "gateways", gws)
-				return err
+				// maybe a host from an unsupported gateway which is referenced as one of the Hosts
+				ctx.logger.Info("virtual host not found, skipped", "hostname", hostName,
+					"virtualservice", id, "gateways", gws)
+				continue
 			}
 			vh.NsName = &id
 			policy := &hostPolicy{

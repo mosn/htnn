@@ -33,7 +33,7 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 					},
 					Filters: map[string]runtime.RawExtension{
 						"animal": {
-							Raw: []byte(`{"pet":"cat"}`),
+							Raw: []byte(`{"config":{"pet":"cat"}}`),
 						},
 					},
 				},

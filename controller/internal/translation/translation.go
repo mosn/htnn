@@ -6,21 +6,6 @@ import (
 	"github.com/go-logr/logr"
 )
 
-type retryableError struct {
-	err error
-}
-
-func (r *retryableError) Error() string {
-	return r.err.Error()
-}
-
-func markAsRetryable(err error) error {
-	if err == nil {
-		return nil
-	}
-	return &retryableError{err: err}
-}
-
 type Ctx struct {
 	context.Context
 

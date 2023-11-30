@@ -1,14 +1,18 @@
 package controller
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 
 	"google.golang.org/protobuf/encoding/protojson"
 	istiov1b1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 
 	mosniov1 "mosn.io/moe/controller/api/v1"
+	"mosn.io/moe/controller/internal/model"
 	"mosn.io/moe/pkg/plugins"
+	_ "mosn.io/moe/plugins" // register plugins
 )
 
 func validateHTTPFilterPolicy(policy *mosniov1.HTTPFilterPolicy) error {
@@ -24,13 +28,18 @@ func validateHTTPFilterPolicy(policy *mosniov1.HTTPFilterPolicy) error {
 			// reject unknown filter in CP, ignore unknown filter in DP
 			return errors.New("unknown http filter: " + name)
 		}
-		conf := p.Config()
-		if err := protojson.Unmarshal(filter.Raw, conf); err != nil {
+		cfg := &model.GoPluginConfig{}
+		if err := json.Unmarshal(filter.Raw, cfg); err != nil {
 			return err
+		}
+		data, _ := json.Marshal(cfg.Config)
+		conf := p.Config()
+		if err := protojson.Unmarshal(data, conf); err != nil {
+			return fmt.Errorf("failed to unmarshal for filter %s: %w", name, err)
 		}
 
 		if err := conf.Validate(); err != nil {
-			return err
+			return fmt.Errorf("invalid config for filter %s: %w", name, err)
 		}
 	}
 	return nil
