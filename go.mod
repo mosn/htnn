@@ -15,6 +15,7 @@ require (
 	github.com/jellydator/ttlcache/v3 v3.1.0
 	github.com/stretchr/testify v1.8.4
 	go.uber.org/zap v1.26.0
+	golang.org/x/exp v0.0.0-20231127185646-65229373498e
 	google.golang.org/grpc v1.59.0
 	google.golang.org/protobuf v1.31.0
 )
