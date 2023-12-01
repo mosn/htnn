@@ -219,15 +219,15 @@ admin:
 `
 )
 
-type Boostrap struct {
+type Bootstrap struct {
 }
 
 func WriteBoostrapConfig(cfgFile *os.File) error {
-	tmpl, err := template.New("boostrap").Parse(boostrapTemplate)
+	tmpl, err := template.New("bootstrap").Parse(boostrapTemplate)
 	if err != nil {
 		return err
 	}
 	// TODO: design a group APIs and break down the config file.
 	// So that people can register their paths or http filters, like test-nginx.
-	return tmpl.Execute(cfgFile, &Boostrap{})
+	return tmpl.Execute(cfgFile, &Bootstrap{})
 }

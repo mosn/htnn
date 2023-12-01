@@ -30,7 +30,7 @@ jobs:
       run: |
         make fmt-go
         if !git diff --exit-code; then
-          echo "Files are not well formatted"
+          echo "Files are not well formatted. Please run 'make fmt-go' and commit changes."
           exit 1
         fi
 
@@ -38,7 +38,7 @@ jobs:
       run: |
         make gen-proto
         if !git diff --exit-code; then
-          echo "Generated files are not up-to-date"
+          echo "Generated files are not up-to-date. Please run 'make gen-proto' and commit changes."
           exit 1
         fi
 
@@ -49,7 +49,11 @@ jobs:
       run: make lint-proto
 
     - name: lint spell
-      run: make lint-spell
+      run: |
+        if ! make lint-spell; then
+          echo "Typo detected. Please run 'make fix-spell', edit the detected files and commit changes."
+          exit 1
+        fi
 
     - name: lint editorconfig
       run: |
