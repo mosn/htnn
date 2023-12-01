@@ -10,8 +10,8 @@ BUILD_IMAGE     ?= golang:1.20-bullseye
 # Use docker inspect --format='{{index .RepoDigests 0}}' envoyproxy/envoy:contrib-debug-dev
 # to get the sha256 ID
 PROXY_IMAGE     ?= envoyproxy/envoy@sha256:1fa13772ad01292fdbd73541717ef1a65fcdb2350bf13c173bddb10bf1f36c7c
-# local build image doesn't have RepoDigests, use timestamp as tag to distinguish different images
-DEV_TOOLS_IMAGE ?= moe-dev-tools:2023-10-23
+# We may need to use timestamp if we need to update the image in one PR
+DEV_TOOLS_IMAGE ?= ghcr.io/mosn/htnn-dev-tools:2023-10-23
 
 MAJOR_VERSION   = $(shell cat VERSION)
 GIT_VERSION     = $(shell git log -1 --pretty=format:%h)
@@ -40,7 +40,7 @@ $(LOCALBIN):
 	@mkdir -p $(LOCALBIN)
 
 .PHONY: gen-proto
-gen-proto: build-dev-tools $(GO_TARGETS)
+gen-proto: dev-tools $(GO_TARGETS)
 # format the generated Go code so the `fmt-go` task can pass
 %.pb.go: %.proto
 	docker run --rm -v $(PWD):/go/src/${PROJECT_NAME} --user $(shell id -u) -w /go/src/${PROJECT_NAME} \
@@ -107,11 +107,18 @@ run-demo:
 		${PROXY_IMAGE} \
 		envoy -c /etc/demo.yaml --log-level debug
 
+.PHONY: dev-tools
+dev-tools:
+	@if ! docker images ${DEV_TOOLS_IMAGE} | grep dev-tools > /dev/null; then \
+		docker pull ${DEV_TOOLS_IMAGE}; \
+	fi
+
+# `--network=host` is used to access GitHub. You might need to configure `docker buildx` to enable it.
+# See https://github.com/docker/buildx/issues/835#issuecomment-966496802
 .PHONY: build-dev-tools
 build-dev-tools:
-	@if ! docker images ${DEV_TOOLS_IMAGE} | grep dev-tools > /dev/null; then \
-		docker build --network=host --build-arg GOPROXY=${GOPROXY} -t ${DEV_TOOLS_IMAGE} -f tools/Dockerfile.dev ./tools; \
-	fi
+	docker buildx build --platform=linux/amd64,linux/arm64 \
+		--network=host --build-arg GOPROXY=${GOPROXY} -t ${DEV_TOOLS_IMAGE} --push -f tools/Dockerfile.dev ./tools
 
 # For lint-go/fmt-go: we don't cover examples/dev_your_plugin which is just an example
 
@@ -136,7 +143,7 @@ lint-proto: $(LOCALBIN)
 	$(LOCALBIN)/buf lint
 
 .PHONY: lint-spell
-lint-spell: build-dev-tools
+lint-spell: dev-tools
 	docker run --rm -v $(PWD):/go/src/${PROJECT_NAME} -w /go/src/${PROJECT_NAME} \
 		${DEV_TOOLS_IMAGE} \
 		make lint-spell-local
