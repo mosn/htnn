@@ -13,7 +13,7 @@ PROXY_IMAGE     ?= envoyproxy/envoy@sha256:1fa13772ad01292fdbd73541717ef1a65fcdb
 # We may need to use timestamp if we need to update the image in one PR
 DEV_TOOLS_IMAGE ?= ghcr.io/mosn/htnn-dev-tools:2023-10-23
 
-MAJOR_VERSION   = $(shell cat VERSION)
+VERSION   = $(shell cat VERSION)
 GIT_VERSION     = $(shell git log -1 --pretty=format:%h)
 
 # Define a recursive wildcard function
@@ -61,7 +61,7 @@ unit-test:
 .PHONY: build-test-so-local
 build-test-so-local:
 	CGO_ENABLED=1 go build -tags so \
-		-ldflags "-B 0x$(shell head -c20 /dev/urandom|od -An -tx1|tr -d ' \n') -X main.Version=${MAJOR_VERSION}(${GIT_VERSION})" \
+		-ldflags "-B 0x$(shell head -c20 /dev/urandom|od -An -tx1|tr -d ' \n') -X main.Version=${VERSION}(${GIT_VERSION})" \
 		--buildmode=c-shared \
 		-v -o plugins/tests/integration/${TARGET_SO} \
 		${PROJECT_NAME}/plugins/tests/integration/libgolang
@@ -87,7 +87,7 @@ plugins-integration-test:
 .PHONY: build-so-local
 build-so-local:
 	CGO_ENABLED=1 go build -tags so \
-		-ldflags "-B 0x$(shell head -c20 /dev/urandom|od -An -tx1|tr -d ' \n') -X main.Version=${MAJOR_VERSION}(${GIT_VERSION})" \
+		-ldflags "-B 0x$(shell head -c20 /dev/urandom|od -An -tx1|tr -d ' \n') -X main.Version=${VERSION}(${GIT_VERSION})" \
 		--buildmode=c-shared \
 		-v -o ${TARGET_SO} \
 		${PROJECT_NAME}/cmd/libgolang
