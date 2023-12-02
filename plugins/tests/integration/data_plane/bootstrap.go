@@ -1,3 +1,12 @@
+package data_plane
+
+import (
+	"os"
+	"text/template"
+)
+
+const (
+	boostrapTemplate = `
 node:
   id: id
   cluster: cluster
@@ -206,3 +215,19 @@ static_resources:
 admin:
   address:
     socket_address: { address: 0.0.0.0, port_value: 9998 }
+
+`
+)
+
+type Bootstrap struct {
+}
+
+func WriteBoostrapConfig(cfgFile *os.File) error {
+	tmpl, err := template.New("bootstrap").Parse(boostrapTemplate)
+	if err != nil {
+		return err
+	}
+	// TODO: design a group APIs and break down the config file.
+	// So that people can register their paths or http filters, like test-nginx.
+	return tmpl.Execute(cfgFile, &Bootstrap{})
+}

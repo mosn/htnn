@@ -61,6 +61,18 @@ func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 		return nil, err
 	}
 
+	cfgFilename := "envoy.yaml"
+	cfgFile, err := os.Create(filepath.Join(dir, cfgFilename))
+	if err != nil {
+		return nil, err
+	}
+
+	err = WriteBoostrapConfig(cfgFile)
+	cfgFile.Close()
+	if err != nil {
+		return nil, err
+	}
+
 	envoyCmd := "envoy -c /etc/envoy.yaml"
 	if opt.LogLevel != "" {
 		envoyCmd += " -l " + opt.LogLevel
@@ -100,8 +112,7 @@ func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 		" --network " + networkName +
 		" --user " + currentUser.Uid +
 		" --rm -t -v " +
-		projectRoot +
-		"/plugins/tests/integration/data_plane/envoy.yaml:/etc/envoy.yaml -v " +
+		cfgFile.Name() + ":/etc/envoy.yaml -v " +
 		projectRoot +
 		"/plugins/tests/integration/libgolang.so:/etc/libgolang.so" +
 		" -v /tmp:/tmp" +

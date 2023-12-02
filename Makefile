@@ -148,9 +148,20 @@ lint-spell: dev-tools
 		${DEV_TOOLS_IMAGE} \
 		make lint-spell-local
 
+CODESPELL = codespell --skip '.git,.idea,test-envoy,go.mod,go.sum,*.svg' --check-filenames --check-hidden --ignore-words ./.ignore_words
 .PHONY: lint-spell-local
 lint-spell-local:
-	codespell --skip '.git,.idea,test-envoy,go.mod,go.sum,*.svg' --check-filenames --check-hidden --ignore-words ./.ignore_words
+	$(CODESPELL)
+
+.PHONY: fix-spell
+fix-spell: dev-tools
+	docker run --rm -v $(PWD):/go/src/${PROJECT_NAME} -w /go/src/${PROJECT_NAME} \
+		${DEV_TOOLS_IMAGE} \
+		make fix-spell-local
+
+.PHONY: fix-spell-local
+fix-spell-local:
+	$(CODESPELL) -w
 
 .PHONY: lint-editorconfig
 lint-editorconfig: $(LOCALBIN)
