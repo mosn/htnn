@@ -222,33 +222,27 @@ func (dp *DataPlane) Stop() {
 }
 
 func (dp *DataPlane) Head(path string, header http.Header) (*http.Response, error) {
-	req, err := http.NewRequest("GET", "http://localhost:10000"+path, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header = header
-	return dp.do(req)
+	return dp.do("HEAD", path, header, nil)
 }
 
 func (dp *DataPlane) Get(path string, header http.Header) (*http.Response, error) {
-	req, err := http.NewRequest("GET", "http://localhost:10000"+path, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header = header
-	return dp.do(req)
+	return dp.do("GET", path, header, nil)
 }
 
 func (dp *DataPlane) Post(path string, header http.Header, body io.Reader) (*http.Response, error) {
-	req, err := http.NewRequest("POST", "http://localhost:10000"+path, body)
+	return dp.do("POST", path, header, body)
+}
+
+func (dp *DataPlane) Put(path string, header http.Header, body io.Reader) (*http.Response, error) {
+	return dp.do("PUT", path, header, body)
+}
+
+func (dp *DataPlane) do(method string, path string, header http.Header, body io.Reader) (*http.Response, error) {
+	req, err := http.NewRequest(method, "http://localhost:10000"+path, body)
 	if err != nil {
 		return nil, err
 	}
 	req.Header = header
-	return dp.do(req)
-}
-
-func (dp *DataPlane) do(req *http.Request) (*http.Response, error) {
 	tr := &http.Transport{DialContext: func(ctx context.Context, proto, addr string) (conn net.Conn, err error) {
 		return net.DialTimeout("tcp", ":10000", 1*time.Second)
 	}}

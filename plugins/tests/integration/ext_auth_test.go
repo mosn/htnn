@@ -57,6 +57,26 @@ func TestExtAuth(t *testing.T) {
 				assert.Equal(t, 401, resp.StatusCode)
 			},
 		},
+		{
+			name: "with body",
+			config: control_plane.NewSinglePluinConfig("ext_auth", map[string]interface{}{
+				"http_service": map[string]interface{}{
+					"url":               "http://127.0.0.1:10001/ext_auth",
+					"with_request_body": true,
+				},
+			}),
+			run: func(t *testing.T) {
+				hdr := http.Header{}
+				body := strings.NewReader("any")
+				resp, _ := dp.Post("/echo", hdr, body)
+				assert.Equal(t, 403, resp.StatusCode)
+				assert.Equal(t, "any", resp.Header.Get("body"))
+				emptyBody := strings.NewReader("")
+				resp, _ = dp.Post("/echo", hdr, emptyBody)
+				assert.Equal(t, 403, resp.StatusCode)
+				assert.Equal(t, "", resp.Header.Get("body"))
+			},
+		},
 	}
 
 	for _, tt := range tests {

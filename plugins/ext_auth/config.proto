@@ -36,6 +36,9 @@ message HttpService {
   // Sets the HTTP status that is returned to the client when the authorization server
   // returns an error or cannot be reached. The default status is HTTP 403 Forbidden.
   api.v1.StatusCode status_on_error = 5;
+
+  // Buffer the client request body and send it within the authorization request.
+  bool with_request_body = 6;
 }
 
 message AuthorizationRequest {

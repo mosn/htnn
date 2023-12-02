@@ -9,7 +9,7 @@ type DecodeWholeRequestFilter interface {
 	// headers: the request header
 	// data: the whole request body, nil if the request doesn't have body
 	// trailers: TODO, just a placeholder
-	DecodeRequest(headers api.RequestHeaderMap, data api.BufferInstance, trailers api.RequestTrailerMap) ResultAction
+	DecodeRequest(headers RequestHeaderMap, data BufferInstance, trailers RequestTrailerMap) ResultAction
 }
 
 type EncodeWholeResponseFilter interface {
@@ -17,7 +17,7 @@ type EncodeWholeResponseFilter interface {
 	// headers: the response header
 	// data: the whole response body, nil if the response doesn't have body
 	// trailers: TODO, just a placeholder
-	EncodeResponse(headers api.ResponseHeaderMap, data api.BufferInstance, trailers api.ResponseTrailerMap) ResultAction
+	EncodeResponse(headers ResponseHeaderMap, data BufferInstance, trailers ResponseTrailerMap) ResultAction
 }
 
 // Filter represents a collection of callbacks in which Envoy will call your Go code.

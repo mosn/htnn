@@ -39,15 +39,19 @@ LOCALBIN ?= $(shell pwd)/bin
 $(LOCALBIN):
 	@mkdir -p $(LOCALBIN)
 
+.PHONY: install-go-fmtter
+install-go-fmtter: $(LOCALBIN)
+	test -x $(LOCALBIN)/gosimports || GOBIN=$(LOCALBIN) go install github.com/rinchsan/gosimports/cmd/gosimports@v0.3.8
+
 .PHONY: gen-proto
-gen-proto: dev-tools $(GO_TARGETS)
+gen-proto: dev-tools install-go-fmtter $(GO_TARGETS)
 # format the generated Go code so the `fmt-go` task can pass
 %.pb.go: %.proto
 	docker run --rm -v $(PWD):/go/src/${PROJECT_NAME} --user $(shell id -u) -w /go/src/${PROJECT_NAME} \
 		${DEV_TOOLS_IMAGE} \
 		protoc --proto_path=. --go_opt="paths=source_relative" --go_out=. --validate_out="lang=go,paths=source_relative:." \
 			-I ../../protoc-gen-validate $<
-	go run github.com/rinchsan/gosimports/cmd/gosimports@v0.3.8 -w -local ${PROJECT_NAME} $@
+	$(LOCALBIN)/gosimports -w -local ${PROJECT_NAME} $@
 
 # We don't run the controller's unit test in this task. Because the controller is considered as a
 # separate component.
@@ -129,10 +133,9 @@ lint-go:
 	pushd ./controller && $(LOCALBIN)/golangci-lint run --config=../.golangci.yml && popd
 
 .PHONY: fmt-go
-fmt-go: $(LOCALBIN)
+fmt-go: install-go-fmtter
 	go mod tidy
 	pushd ./controller && go mod tidy && popd
-	test -x $(LOCALBIN)/gosimports || GOBIN=$(LOCALBIN) go install github.com/rinchsan/gosimports/cmd/gosimports@v0.3.8
 	$(LOCALBIN)/gosimports -w -local ${PROJECT_NAME} .
 
 # Don't use `buf format` to format the protobuf files! Buf's code style is different from Envoy.
@@ -177,3 +180,7 @@ fmt: fmt-go
 .PHONY: verify-example
 verify-example:
 	cd ./examples/dev_your_plugin && ./verify.sh
+
+.PHONY: start-service
+start-service:
+	cd ./ci/ && docker-compose up -d

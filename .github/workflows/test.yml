@@ -50,7 +50,7 @@ jobs:
 
     - name: Set up services
       run: |
-        cd ./ci/ && docker-compose up -d
+        make start-service
 
     - name: Build
       run: make build-test-so
