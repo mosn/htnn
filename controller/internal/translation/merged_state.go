@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"sort"
 
+	"k8s.io/apimachinery/pkg/runtime"
+
 	mosniov1 "mosn.io/moe/controller/api/v1"
 	"mosn.io/moe/controller/internal/model"
 	"mosn.io/moe/pkg/filtermanager"
@@ -22,27 +24,65 @@ type mergedHostPolicy struct {
 	VirtualHost *model.VirtualHost
 	Routes      map[string]*mergedRoutePolicy
 	Policy      *filtermanager.FilterManagerConfig
+	Info        *Info
 }
 
 type mergedRoutePolicy struct {
 	Policy *filtermanager.FilterManagerConfig
 }
 
+func toNsName(policy *mosniov1.HTTPFilterPolicy) string {
+	return policy.Namespace + "/" + policy.Name
+}
+
+// highest priority policy will be first
+func sortHttpFilterPolicy(policies []*mosniov1.HTTPFilterPolicy) {
+	// use Slice instead of SliceStable because each policy has unique namespace/name
+	sort.Slice(policies, func(i, j int) bool {
+		if policies[i].CreationTimestamp == policies[j].CreationTimestamp {
+			return toNsName(policies[i]) < toNsName(policies[j])
+		}
+		return policies[i].CreationTimestamp.Before(&policies[j].CreationTimestamp)
+	})
+}
+
 func toMergedState(ctx *Ctx, state *dataPlaneState) (*FinalState, error) {
 	s := &mergedState{
 		Hosts: make(map[string]*mergedHostPolicy),
 	}
+	// According to the https://gateway-api.sigs.k8s.io/geps/gep-713/,
+	// 1. A Policy targeting a more specific scope wins over a policy targeting a lesser specific scope.
+	// 2. If multiple polices configure the same plugin, the oldest one (based on creation timestamp) wins.
+	// 3. If there are multiple oldest polices, the one appearing first in alphabetical order by {namespace}/{name} wins.
 	for name, host := range state.Hosts {
 		mh := &mergedHostPolicy{
 			VirtualHost: host.VirtualHost,
 			Routes:      make(map[string]*mergedRoutePolicy),
+			Info: &Info{
+				HTTPFilterPolicies: []string{},
+			},
 		}
-		// FIXME: implement merge policy
-		// According to the https://gateway-api.sigs.k8s.io/geps/gep-713/,
-		// 1. A Policy targeting a more specific scope wins over a policy targeting a lesser specific scope.
-		// 2. If multiple polices configure the same plugin, the oldest one (based on creation timestamp) wins.
-		// 3. If there are multiple oldest polices, the one appearing first in alphabetical order by {namespace}/{name} wins.
-		mergedPolicy := host.Policies[0]
+
+		sortHttpFilterPolicy(host.Policies)
+		mergedPolicy := &mosniov1.HTTPFilterPolicy{
+			Spec: mosniov1.HTTPFilterPolicySpec{
+				Filters: make(map[string]runtime.RawExtension),
+			},
+		}
+		for _, policy := range host.Policies {
+			used := false
+			for name, filter := range policy.Spec.Filters {
+				if _, ok := mergedPolicy.Spec.Filters[name]; !ok {
+					mergedPolicy.Spec.Filters[name] = filter
+					used = true
+				}
+			}
+
+			if used {
+				mh.Info.HTTPFilterPolicies = append(mh.Info.HTTPFilterPolicies, toNsName(policy))
+			}
+		}
+
 		fmc := translateHTTPFilterPolicyToFilterManagerConfig(mergedPolicy)
 		mh.Policy = fmc
 		s.Hosts[name] = mh

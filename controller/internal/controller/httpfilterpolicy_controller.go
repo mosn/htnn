@@ -288,9 +288,9 @@ func (r *HTTPFilterPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return controller.Complete(r)
 }
 
-func findAffectedObjects(ctx context.Context, reader client.Reader, obj client.Object, name string, idx string) []reconcile.Request {
+func findAffectedObjects(ctx context.Context, reader client.Reader, obj client.Object, kind string, idx string) []reconcile.Request {
 	logger := log.FromContext(ctx)
-	logger.Info("Target changed", "name", name, "namespace", obj.GetNamespace(), "name", obj.GetName())
+	logger.Info("Target changed", "kind", kind, "namespace", obj.GetNamespace(), "name", obj.GetName())
 
 	policies := &mosniov1.HTTPFilterPolicyList{}
 	listOps := &client.ListOptions{
@@ -313,6 +313,10 @@ func findAffectedObjects(ctx context.Context, reader client.Reader, obj client.O
 		}
 	}
 
-	logger.Info("Target changed, trigger reconciliation", "name", name, "requests", requests)
+	if len(requests) > 0 {
+		logger.Info("Target changed, trigger reconciliation", "kind", kind, "requests", requests)
+		// As we do full regeneration, we only need to reconcile one HTTPFilterPolicy
+		return []reconcile.Request{requests[0]}
+	}
 	return requests
 }

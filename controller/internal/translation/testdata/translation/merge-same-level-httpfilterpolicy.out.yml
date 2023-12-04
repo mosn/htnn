@@ -1,6 +1,6 @@
 - metadata:
     annotations:
-      htnn.mosn.io/info: '{"httpfilterpolicies":["test/policy"]}'
+      htnn.mosn.io/info: '{"httpfilterpolicies":["test/opolicy","test/policy"]}'
     creationTimestamp: null
     name: htnn-h-test--httpbin
   spec:
@@ -9,7 +9,7 @@
       match:
         routeConfiguration:
           vhost:
-            name: dev.httpbin.example.com:80
+            name: '*.httpbin.example.com:80'
       patch:
         operation: MERGE
         value:
@@ -22,6 +22,9 @@
                     '@type': type.googleapis.com/xds.type.v3.TypedStruct
                     value:
                       plugins:
+                      - config:
+                          pet: cat
+                        name: animal
                       - config:
                           decode: true
                           need: true

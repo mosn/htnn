@@ -10,6 +10,10 @@ import (
 	"mosn.io/moe/controller/internal/model"
 )
 
+const (
+	AnnotationInfo = "htnn.mosn.io/info"
+)
+
 func nameFromHost(host *model.VirtualHost) string {
 	// We use the NsName as the EnvoyFilter name because the host name may contain invalid characters.
 	// This design also make it easier to reference the original CR with the EnvoyFilter.
@@ -39,6 +43,9 @@ func toFinalState(_ *Ctx, state *mergedState) (*FinalState, error) {
 		ef := istio.GenerateHostFilter(host.VirtualHost, host.Policy)
 		name := nameFromHost(host.VirtualHost)
 		ef.SetName(name)
+		ef.SetAnnotations(map[string]string{
+			AnnotationInfo: host.Info.String(),
+		})
 
 		if curr, ok := efs[name]; ok {
 			curr.Spec.ConfigPatches = append(curr.Spec.ConfigPatches, ef.Spec.ConfigPatches...)
