@@ -18,7 +18,7 @@ func (c *Ctx) Logger() *logr.Logger {
 }
 
 type Info struct {
-	// HTTPFilterPolicies stores the HTTPFilterPolicy which are used to generated the EnvoyFilter.
+	// HTTPFilterPolicies indicates what HTTPFilterPolicies are used to generated the EnvoyFilter.
 	HTTPFilterPolicies []string `json:"httpfilterpolicies"`
 }
 
