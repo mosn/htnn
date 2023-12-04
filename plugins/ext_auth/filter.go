@@ -2,6 +2,7 @@ package ext_auth
 
 import (
 	"bytes"
+	"io"
 	"net/http"
 	"net/url"
 
@@ -25,7 +26,7 @@ type filter struct {
 	config    *config
 }
 
-func (f *filter) check(headers api.RequestHeaderMap) api.ResultAction {
+func (f *filter) check(headers api.RequestHeaderMap, data api.BufferInstance) api.ResultAction {
 	hs := f.config.GetHttpService()
 	uri := hs.GetUrl()
 	path, err := url.JoinPath(uri, headers.Path())
@@ -49,6 +50,10 @@ func (f *filter) check(headers api.RequestHeaderMap) api.ResultAction {
 		// Envoy doesn't support adding multiple same name headers here,
 		// so we don't support it until it's needed
 		req.Header.Set(h.Key, h.Value)
+	}
+
+	if data != nil {
+		req.Body = io.NopCloser(bytes.NewReader(data.Bytes()))
 	}
 
 	rsp, err := f.config.client.Do(req)
@@ -92,5 +97,12 @@ func (f *filter) check(headers api.RequestHeaderMap) api.ResultAction {
 }
 
 func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {
-	return f.check(headers)
+	if f.config.GetHttpService().GetWithRequestBody() {
+		return api.WaitAllData
+	}
+	return f.check(headers, nil)
+}
+
+func (f *filter) DecodeRequest(headers api.RequestHeaderMap, data api.BufferInstance, trailers api.RequestTrailerMap) api.ResultAction {
+	return f.check(headers, data)
 }

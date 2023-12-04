@@ -138,7 +138,16 @@ static_resources:
                               source_code:
                                 inline_string: |
                                   function envoy_on_request(handle)
+                                    local always_wrap_body = true
+                                    local body = handle:body(always_wrap_body)
+                                    local size = body:length()
+                                    local data = ""
+                                    if size > 0 then
+                                      data = body:getBytes(0, size)
+                                    end
+
                                     local resp_headers = {[":status"] = "200"}
+                                    resp_headers["body"] = data
                                     local headers = handle:headers()
                                     if headers:get("authorization") ~= "Basic amFjazIwMjE6MTIzNDU2" then
                                       resp_headers[":status"] = "403"

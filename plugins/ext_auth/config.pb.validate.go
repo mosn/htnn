@@ -327,6 +327,8 @@ func (m *HttpService) validate(all bool) error {
 
 	// no validation rules for StatusOnError
 
+	// no validation rules for WithRequestBody
+
 	if len(errors) > 0 {
 		return HttpServiceMultiError(errors)
 	}
