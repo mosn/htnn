@@ -20,7 +20,7 @@ import (
 	"flag"
 	"os"
 
-	istioscheme "istio.io/client-go/pkg/clientset/versioned/scheme" // for istio scheme
+	istioscheme "istio.io/client-go/pkg/clientset/versioned/scheme"
 	"k8s.io/apimachinery/pkg/runtime"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
@@ -46,10 +46,10 @@ var (
 
 func init() {
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-	utilruntime.Must(istioscheme.AddToScheme(scheme))
-
 	utilruntime.Must(mosniov1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
+
+	utilruntime.Must(istioscheme.AddToScheme(scheme))
 }
 
 func main() {

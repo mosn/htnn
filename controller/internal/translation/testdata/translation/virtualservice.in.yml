@@ -70,7 +70,3 @@ gateway:
             name: http
             number: 8080
             protocol: HTTP
-envoyFilter:
-- metadata:
-    name: htnn-h-default--httpbin443
-    namespace: istio-system

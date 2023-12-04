@@ -28,7 +28,7 @@ type mergedRoutePolicy struct {
 	Policy *filtermanager.FilterManagerConfig
 }
 
-func toMergedState(ctx *Ctx, state *dataPlaneState) error {
+func toMergedState(ctx *Ctx, state *dataPlaneState) (*FinalState, error) {
 	s := &mergedState{
 		Hosts: make(map[string]*mergedHostPolicy),
 	}
@@ -43,10 +43,7 @@ func toMergedState(ctx *Ctx, state *dataPlaneState) error {
 		// 2. If multiple polices configure the same plugin, the oldest one (based on creation timestamp) wins.
 		// 3. If there are multiple oldest polices, the one appearing first in alphabetical order by {namespace}/{name} wins.
 		mergedPolicy := host.Policies[0]
-		fmc, err := translateHTTPFilterPolicyToFilterManagerConfig(mergedPolicy)
-		if err != nil {
-			return err
-		}
+		fmc := translateHTTPFilterPolicyToFilterManagerConfig(mergedPolicy)
 		mh.Policy = fmc
 		s.Hosts[name] = mh
 	}
@@ -54,21 +51,14 @@ func toMergedState(ctx *Ctx, state *dataPlaneState) error {
 	return toFinalState(ctx, s)
 }
 
-type goPluginConfig struct {
-	Config interface{} `json:"config"`
-}
-
-func translateHTTPFilterPolicyToFilterManagerConfig(policy *mosniov1.HTTPFilterPolicy) (*filtermanager.FilterManagerConfig, error) {
+func translateHTTPFilterPolicyToFilterManagerConfig(policy *mosniov1.HTTPFilterPolicy) *filtermanager.FilterManagerConfig {
 	fmc := &filtermanager.FilterManagerConfig{
 		Plugins: []*filtermanager.FilterConfig{},
 	}
 	for name, filter := range policy.Spec.Filters {
-		cfg := goPluginConfig{}
-		err := json.Unmarshal(filter.Raw, &cfg)
-		if err != nil {
-			// we validated the filter at the beginning, so theorily this should not happen
-			return nil, err
-		}
+		cfg := model.GoPluginConfig{}
+		// we validated the filter at the beginning, so theorily err should not happen
+		_ = json.Unmarshal(filter.Raw, &cfg)
 		fmc.Plugins = append(fmc.Plugins, &filtermanager.FilterConfig{
 			Name:   name,
 			Config: cfg.Config,
@@ -78,5 +68,5 @@ func translateHTTPFilterPolicyToFilterManagerConfig(policy *mosniov1.HTTPFilterP
 	sort.Slice(fmc.Plugins, func(i, j int) bool {
 		return plugins.ComparePluginOrder(fmc.Plugins[i].Name, fmc.Plugins[j].Name)
 	})
-	return fmc, nil
+	return fmc
 }

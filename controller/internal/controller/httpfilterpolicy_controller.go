@@ -21,6 +21,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/go-logr/logr"
+	"google.golang.org/protobuf/proto"
+	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	istiov1b1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/fields"
@@ -35,7 +38,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	mosniov1 "mosn.io/moe/controller/api/v1"
+	"mosn.io/moe/controller/internal/config"
 	"mosn.io/moe/controller/internal/translation"
+)
+
+const (
+	LabelCreatedBy = "htnn.mosn.io/created-by"
 )
 
 // HTTPFilterPolicyReconciler reconciles a HTTPFilterPolicy object
@@ -48,6 +56,8 @@ type HTTPFilterPolicyReconciler struct {
 //+kubebuilder:rbac:groups=mosn.io,resources=httpfilterpolicies/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=mosn.io,resources=httpfilterpolicies/finalizers,verbs=update
 //+kubebuilder:rbac:groups=networking.istio.io,resources=virtualservice,verbs=get;list;watch
+//+kubebuilder:rbac:groups=networking.istio.io,resources=envoyfilter,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=networking.istio.io,resources=envoyfilter/status,verbs=get
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -59,14 +69,36 @@ func (r *HTTPFilterPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	logger := log.FromContext(ctx)
 	logger.Info("reconcile") // req message is contained in the logger ctx
 
+	initState, err := r.policyToTranslationState(ctx, &logger, req)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if initState == nil {
+		return ctrl.Result{}, nil
+	}
+
+	finalState, err := initState.Process(ctx)
+	if err != nil {
+		logger.Error(err, "failed to process state")
+		// there is no retryable err during processing
+		return ctrl.Result{}, nil
+	}
+
+	err = r.translationStateToCustomResource(ctx, &logger, finalState)
+	return ctrl.Result{}, err
+}
+
+func (r *HTTPFilterPolicyReconciler) policyToTranslationState(ctx context.Context, logger *logr.Logger,
+	req ctrl.Request) (*translation.InitState, error) {
+
 	// For current implementation, let's rebuild the state each time to avoid complexity.
 	// The controller will use local cache when doing read operation.
 	var policies mosniov1.HTTPFilterPolicyList
 	if err := r.List(ctx, &policies, client.InNamespace(req.Namespace)); err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to list HTTPFilterPolicy: %v", err)
+		return nil, fmt.Errorf("failed to list HTTPFilterPolicy: %w", err)
 	}
 
-	state := translation.NewInitState(&logger)
+	initState := translation.NewInitState(logger)
 
 	for _, policy := range policies.Items {
 		policy := policy
@@ -80,10 +112,14 @@ func (r *HTTPFilterPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		ref := policy.Spec.TargetRef
 		if ref.Group == "networking.istio.io" && ref.Kind == "VirtualService" {
 			var virtualService istiov1b1.VirtualService
-			err := r.Get(ctx, types.NamespacedName{Name: string(ref.Name), Namespace: req.Namespace}, &virtualService)
+			nsName := types.NamespacedName{Name: string(ref.Name), Namespace: policy.Namespace}
+			if ref.Namespace != nil {
+				nsName.Namespace = string(*ref.Namespace)
+			}
+			err := r.Get(ctx, nsName, &virtualService)
 			if err != nil {
 				if !apierrors.IsNotFound(err) {
-					return ctrl.Result{}, err
+					return nil, fmt.Errorf("failed to get VirtualService: %w, NamespacedName: %v", err, nsName)
 				}
 				continue
 			}
@@ -105,10 +141,10 @@ func (r *HTTPFilterPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 				}
 
 				var gateway istiov1b1.Gateway
-				err = r.Get(ctx, types.NamespacedName{Name: gw, Namespace: req.Namespace}, &gateway)
+				err = r.Get(ctx, types.NamespacedName{Name: gw, Namespace: virtualService.Namespace}, &gateway)
 				if err != nil {
 					if !apierrors.IsNotFound(err) {
-						return ctrl.Result{}, err
+						return nil, err
 					}
 					continue
 				}
@@ -119,17 +155,70 @@ func (r *HTTPFilterPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 					continue
 				}
 
-				state.AddPolicyForVirtualService(&policy, &virtualService, &gateway)
+				initState.AddPolicyForVirtualService(&policy, &virtualService, &gateway)
 			}
 		}
 	}
 
-	err := state.Process(ctx)
-	if err != nil {
-		return ctrl.Result{}, err
+	return initState, nil
+}
+
+func (r *HTTPFilterPolicyReconciler) translationStateToCustomResource(ctx context.Context, logger *logr.Logger,
+	finalState *translation.FinalState) error {
+
+	var envoyfilters istiov1a3.EnvoyFilterList
+	if err := r.List(ctx, &envoyfilters, client.MatchingLabels{LabelCreatedBy: "HTTPFilterPolicy"}); err != nil {
+		return fmt.Errorf("failed to list EnvoyFilter: %w", err)
 	}
 
-	return ctrl.Result{}, nil
+	for _, ef := range envoyfilters.Items {
+		if _, ok := finalState.EnvoyFilters[ef.Name]; !ok {
+			logger.Info("delete EnvoyFilter", "name", ef.Name, "namespace", ef.Namespace)
+			if err := r.Delete(ctx, ef); err != nil {
+				return fmt.Errorf("failed to delete EnvoyFilter: %w, namespacedName: %v",
+					err, types.NamespacedName{Name: ef.Name, Namespace: ef.Namespace})
+			}
+		}
+	}
+
+	for _, ef := range finalState.EnvoyFilters {
+		ef.Namespace = config.RootNamespace()
+
+		var envoyfilter istiov1a3.EnvoyFilter
+		nsName := types.NamespacedName{Name: ef.Name, Namespace: ef.Namespace}
+		err := r.Get(ctx, nsName, &envoyfilter)
+		if err != nil {
+			if !apierrors.IsNotFound(err) {
+				// If part of EnvoyFilters is already written, retry later is OK as we generate all EnvoyFilters in one reconcile.
+				return fmt.Errorf("failed to get EnvoyFilter: %w, namespacedName: %v", err, nsName)
+			}
+
+			logger.Info("create EnvoyFilter", "name", ef.Name, "namespace", ef.Namespace)
+
+			if ef.Labels == nil {
+				ef.Labels = map[string]string{}
+			}
+			ef.Labels[LabelCreatedBy] = "HTTPFilterPolicy"
+
+			if err = r.Create(ctx, ef); err != nil {
+				return fmt.Errorf("failed to create EnvoyFilter: %w, namespacedName: %v", err, nsName)
+			}
+
+		} else {
+			if proto.Equal(&envoyfilter.Spec, &ef.Spec) {
+				continue
+			}
+
+			logger.Info("update EnvoyFilter", "name", ef.Name, "namespace", ef.Namespace)
+			// Address metadata.resourceVersion: Invalid value: 0x0 error
+			ef.SetResourceVersion(envoyfilter.ResourceVersion)
+			if err = r.Update(ctx, ef); err != nil {
+				return fmt.Errorf("failed to update EnvoyFilter: %w, namespacedName: %v", err, nsName)
+			}
+		}
+	}
+
+	return nil
 }
 
 // CustomerResourceIndexer indexes the additional customer resource
@@ -182,6 +271,8 @@ func (r *HTTPFilterPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	controller := ctrl.NewControllerManagedBy(mgr).
 		For(&mosniov1.HTTPFilterPolicy{})
+		// We don't reconcile when the generated EnvoyFilter is modified.
+		// So that user can manually correct the EnvoyFilter, until something else is changed.
 
 	for _, idxer := range indexers {
 		controller.Watches(
@@ -192,6 +283,7 @@ func (r *HTTPFilterPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			),
 		)
 	}
+	// FIXME: deal with VirtualService/Gateway change
 
 	return controller.Complete(r)
 }
@@ -204,12 +296,11 @@ func findAffectedObjects(ctx context.Context, reader client.Reader, obj client.O
 	listOps := &client.ListOptions{
 		// Use the built index
 		FieldSelector: fields.OneTermEqualSelector(idx, obj.GetName()),
-		Namespace:     obj.GetNamespace(),
 	}
 	err := reader.List(ctx, policies, listOps)
 	if err != nil {
 		logger.Error(err, "failed to list HTTPFilterPolicy")
-		return []reconcile.Request{}
+		return nil
 	}
 
 	requests := make([]reconcile.Request, len(policies.Items))

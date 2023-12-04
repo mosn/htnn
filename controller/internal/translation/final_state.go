@@ -20,27 +20,11 @@ func nameFromHost(host *model.VirtualHost) string {
 }
 
 // finalState is the end of the translation. We convert the state to EnvoyFilter and write it to k8s.
-
-var (
-	// FIXME: init current envoy filters when the controller starts
-	currentEnvoyFilters = map[string]*istiov1a3.EnvoyFilter{}
-)
-
-func diffEnvoyFilters(efs map[string]*istiov1a3.EnvoyFilter) (addOrUpdate []*istiov1a3.EnvoyFilter, del []*istiov1a3.EnvoyFilter) {
-	for name, curr := range currentEnvoyFilters {
-		if _, ok := efs[name]; !ok {
-			del = append(del, curr)
-		}
-	}
-	for _, ef := range efs {
-		// Let k8s applies them
-		addOrUpdate = append(addOrUpdate, ef)
-	}
-	currentEnvoyFilters = efs
-	return
+type FinalState struct {
+	EnvoyFilters map[string]*istiov1a3.EnvoyFilter
 }
 
-func toFinalState(ctx *Ctx, state *mergedState) error {
+func toFinalState(_ *Ctx, state *mergedState) (*FinalState, error) {
 	efs := istio.DefaultEnvoyFilters()
 	hosts := []*mergedHostPolicy{}
 	for _, host := range state.Hosts {
@@ -62,11 +46,7 @@ func toFinalState(ctx *Ctx, state *mergedState) error {
 			efs[name] = ef
 		}
 	}
-	addOrUpdate, del := diffEnvoyFilters(efs)
-	return markAsRetryable(publishCustomResources(ctx, addOrUpdate, del))
-}
-
-func publishCustomResources(ctx *Ctx, addOrUpdate []*istiov1a3.EnvoyFilter, del []*istiov1a3.EnvoyFilter) error {
-	// write the delta to k8s
-	return nil
+	return &FinalState{
+		EnvoyFilters: efs,
+	}, nil
 }

@@ -1,11 +1,3 @@
-toDelete:
-- metadata:
-    creationTimestamp: null
-    name: htnn-h-default--httpbin443
-    namespace: istio-system
-  spec: {}
-  status: {}
-toUpdate:
 - metadata:
     creationTimestamp: null
     name: htnn-h-default--httpbin
