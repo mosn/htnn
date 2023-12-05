@@ -59,6 +59,10 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 		interval = time.Millisecond * 250
 	)
 
+	var (
+		DefaultVirtualService *istiov1b1.VirtualService
+	)
+
 	Context("When reconciling HTTPFilterPolicy", func() {
 		BeforeEach(func() {
 			var policies mosniov1.HTTPFilterPolicyList
@@ -94,6 +98,9 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 
 			for _, in := range input {
 				obj := mapToObj(in)
+				if obj.GetObjectKind().GroupVersionKind().Kind == "VirtualService" {
+					DefaultVirtualService = obj.(*istiov1b1.VirtualService)
+				}
 				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
 			}
 
@@ -136,6 +143,40 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 
 			// delete virtualservice referred by httpfilterpolicy
 			Expect(k8sClient.Delete(ctx, virtualService)).Should(Succeed())
+			Eventually(func() bool {
+				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
+					return false
+				}
+				return len(envoyfilters.Items) == 1
+			}, timeout, interval).Should(BeTrue())
+			Expect(envoyfilters.Items[0].Name).To(Equal("htnn-http-filter"))
+		})
+
+		It("deal with multi policies to one virtualservice", func() {
+			ctx := context.Background()
+			input := []map[string]interface{}{}
+			mustReadInput("multi-policies", &input)
+
+			for _, in := range input {
+				obj := mapToObj(in)
+				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
+			}
+
+			var envoyfilters istiov1a3.EnvoyFilterList
+			Eventually(func() bool {
+				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
+					return false
+				}
+				return len(envoyfilters.Items) == 2
+			}, timeout, interval).Should(BeTrue())
+
+			names := []string{}
+			for _, ef := range envoyfilters.Items {
+				names = append(names, ef.Name)
+			}
+			Expect(names).To(ConsistOf([]string{"htnn-http-filter", "htnn-h-default--default"}))
+
+			Expect(k8sClient.Delete(ctx, DefaultVirtualService)).Should(Succeed())
 			Eventually(func() bool {
 				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
 					return false
