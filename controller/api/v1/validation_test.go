@@ -1,4 +1,4 @@
-package controller
+package v1
 
 import (
 	"testing"
@@ -9,7 +9,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	mosniov1 "mosn.io/moe/controller/api/v1"
 	"mosn.io/moe/pkg/plugins"
 )
 
@@ -18,13 +17,13 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 
 	tests := []struct {
 		name   string
-		policy *mosniov1.HTTPFilterPolicy
+		policy *HTTPFilterPolicy
 		err    string
 	}{
 		{
 			name: "ok",
-			policy: &mosniov1.HTTPFilterPolicy{
-				Spec: mosniov1.HTTPFilterPolicySpec{
+			policy: &HTTPFilterPolicy{
+				Spec: HTTPFilterPolicySpec{
 					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
 						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
 							Group: "networking.istio.io",
@@ -41,8 +40,8 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 		},
 		{
 			name: "unknown",
-			policy: &mosniov1.HTTPFilterPolicy{
-				Spec: mosniov1.HTTPFilterPolicySpec{
+			policy: &HTTPFilterPolicy{
+				Spec: HTTPFilterPolicySpec{
 					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
 						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
 							Group: "networking.istio.io",
@@ -62,7 +61,7 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateHTTPFilterPolicy(tt.policy)
+			err := ValidateHTTPFilterPolicy(tt.policy)
 			if tt.err == "" {
 				assert.Nil(t, err)
 			} else {
@@ -89,7 +88,7 @@ func TestValidateVirtualService(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := validateVirtualService(tt.vs)
+			err := ValidateVirtualService(tt.vs)
 			if tt.err == "" {
 				assert.Nil(t, err)
 			} else {

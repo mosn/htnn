@@ -55,9 +55,9 @@ type HTTPFilterPolicyReconciler struct {
 //+kubebuilder:rbac:groups=mosn.io,resources=httpfilterpolicies,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=mosn.io,resources=httpfilterpolicies/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=mosn.io,resources=httpfilterpolicies/finalizers,verbs=update
-//+kubebuilder:rbac:groups=networking.istio.io,resources=virtualservice,verbs=get;list;watch
-//+kubebuilder:rbac:groups=networking.istio.io,resources=envoyfilter,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=networking.istio.io,resources=envoyfilter/status,verbs=get
+//+kubebuilder:rbac:groups=networking.istio.io,resources=virtualservices,verbs=get;list;watch
+//+kubebuilder:rbac:groups=networking.istio.io,resources=envoyfilters,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=networking.istio.io,resources=envoyfilters/status,verbs=get
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -102,7 +102,7 @@ func (r *HTTPFilterPolicyReconciler) policyToTranslationState(ctx context.Contex
 
 	for _, policy := range policies.Items {
 		policy := policy
-		err := validateHTTPFilterPolicy(&policy)
+		err := mosniov1.ValidateHTTPFilterPolicy(&policy)
 		if err != nil {
 			// TODO: mark the policy as invalid, and skip logging
 			logger.Error(err, "invalid HTTPFilterPolicy", "name", policy.Name, "namespace", policy.Namespace)
@@ -124,7 +124,7 @@ func (r *HTTPFilterPolicyReconciler) policyToTranslationState(ctx context.Contex
 				continue
 			}
 
-			err = validateVirtualService(&virtualService)
+			err = mosniov1.ValidateVirtualService(&virtualService)
 			if err != nil {
 				logger.Info("unsupported VirtualService", "name", virtualService.Name, "namespace", virtualService.Namespace, "reason", err.Error())
 				continue
@@ -149,7 +149,7 @@ func (r *HTTPFilterPolicyReconciler) policyToTranslationState(ctx context.Contex
 					continue
 				}
 
-				err = validateGateway(&gateway)
+				err = mosniov1.ValidateGateway(&gateway)
 				if err != nil {
 					logger.Info("unsupported Gateway", "name", gateway.Name, "namespace", gateway.Namespace, "reason", err.Error())
 					continue

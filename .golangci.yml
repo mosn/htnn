@@ -42,6 +42,7 @@ issues:
     - path: _test\.go
       linters:
         - errcheck
+        - gosec
         - unparam
     - path: tests/
       linters:

@@ -33,7 +33,7 @@ rules:
 - apiGroups:
   - networking.istio.io
   resources:
-  - envoyfilter
+  - envoyfilters
   verbs:
   - create
   - delete
@@ -45,13 +45,13 @@ rules:
 - apiGroups:
   - networking.istio.io
   resources:
-  - envoyfilter/status
+  - envoyfilters/status
   verbs:
   - get
 - apiGroups:
   - networking.istio.io
   resources:
-  - virtualservice
+  - virtualservices
   verbs:
   - get
   - list
