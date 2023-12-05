@@ -3,6 +3,7 @@
 package envoy
 
 import (
+	"bytes"
 	"log"
 	"net/http"
 	"strconv"
@@ -140,88 +141,93 @@ func (i *ResponseHeaderMap) Status() (int, bool) {
 
 var _ api.ResponseHeaderMap = (*ResponseHeaderMap)(nil)
 
-type DataBuffer struct {
-	buffer []byte
+type dataBuffer struct {
+	buffer *bytes.Buffer
 }
 
-// TODO: implement methods below
-
-func (db *DataBuffer) Write(p []byte) (int, error) {
-	return len(p), nil
+func (db *dataBuffer) Write(p []byte) (int, error) {
+	return db.buffer.Write(p)
 }
 
-func (db *DataBuffer) WriteString(s string) (int, error) {
-	return len(s), nil
+func (db *dataBuffer) WriteString(s string) (int, error) {
+	return db.buffer.WriteString(s)
 }
 
-func (db *DataBuffer) WriteByte(b byte) error {
-	return nil
+func (db *dataBuffer) WriteByte(b byte) error {
+	return db.buffer.WriteByte(b)
 }
 
-func (db *DataBuffer) WriteUint16(u uint16) error {
-	return nil
+func (b *dataBuffer) WriteUint16(p uint16) error {
+	s := strconv.FormatUint(uint64(p), 10)
+	_, err := b.WriteString(s)
+	return err
 }
 
-func (db *DataBuffer) WriteUint32(u uint32) error {
-	return nil
+func (b *dataBuffer) WriteUint32(p uint32) error {
+	s := strconv.FormatUint(uint64(p), 10)
+	_, err := b.WriteString(s)
+	return err
 }
 
-func (db *DataBuffer) WriteUint64(u uint64) error {
-	return nil
+func (b *dataBuffer) WriteUint64(p uint64) error {
+	s := strconv.FormatUint(p, 10)
+	_, err := b.WriteString(s)
+	return err
 }
 
-func (db *DataBuffer) Bytes() []byte {
-	return db.buffer
+func (db *dataBuffer) Bytes() []byte {
+	return db.buffer.Bytes()
 }
 
-func (db *DataBuffer) Drain(offset int) {
+func (db *dataBuffer) Drain(offset int) {
+	db.buffer.Next(offset)
 }
 
-func (db *DataBuffer) Len() int {
-	return len(db.buffer)
+func (db *dataBuffer) Len() int {
+	return db.buffer.Len()
 }
 
-func (db *DataBuffer) Reset() {
-	db.buffer = nil
+func (db *dataBuffer) Reset() {
+	db.buffer.Reset()
 }
 
-func (db *DataBuffer) String() string {
-	return string(db.buffer)
+func (db *dataBuffer) String() string {
+	return db.buffer.String()
 }
 
-func (db *DataBuffer) Append(data []byte) error {
-	db.buffer = append(db.buffer, data...)
-	return nil
+func (db *dataBuffer) Append(data []byte) error {
+	_, err := db.buffer.Write(data)
+	return err
 }
 
 func NewBufferInstance(b []byte) *BufferInstance {
 	return &BufferInstance{
-		DataBuffer: DataBuffer{
-			buffer: b,
+		dataBuffer: dataBuffer{
+			buffer: bytes.NewBuffer(b),
 		},
 	}
 }
 
-var _ api.DataBufferBase = (*DataBuffer)(nil)
+var _ api.DataBufferBase = (*dataBuffer)(nil)
 
 type BufferInstance struct {
-	DataBuffer
+	dataBuffer
 }
 
 var _ api.BufferInstance = (*BufferInstance)(nil)
 
 func (bi *BufferInstance) Set(data []byte) error {
-	bi.buffer = data
+	bi.buffer = bytes.NewBuffer(data)
 	return nil
 }
 
 func (bi *BufferInstance) SetString(s string) error {
-	bi.buffer = []byte(s)
+	bi.buffer = bytes.NewBufferString(s)
 	return nil
 }
 
 func (bi *BufferInstance) Prepend(data []byte) error {
-	bi.buffer = append(data, bi.buffer...)
+	bi.buffer = bytes.NewBuffer(append(data, bi.buffer.Bytes()...))
 	return nil
 }
 
@@ -280,6 +286,8 @@ type StreamInfo struct {
 	dynamicMetadata api.DynamicMetadata
 }
 
+// use gomonkey to mock the methods below when writing unit test
+
 func (i *StreamInfo) GetRouteName() string {
 	return ""
 }
@@ -313,11 +321,11 @@ func (i *StreamInfo) SetDynamicMetadata(data api.DynamicMetadata) {
 }
 
 func (i *StreamInfo) DownstreamLocalAddress() string {
-	return ""
+	return "0.0.0.0:10000"
 }
 
 func (i *StreamInfo) DownstreamRemoteAddress() string {
-	return ""
+	return "183.128.130.43:54321"
 }
 
 func (i *StreamInfo) UpstreamLocalAddress() (string, bool) {
