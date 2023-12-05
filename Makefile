@@ -85,7 +85,7 @@ plugins-integration-test:
 		docker pull ${PROXY_IMAGE}; \
 	fi
 	$(foreach PKG, $(shell go list ./plugins/tests/integration/...), \
-		go test ${TEST_OPTION} ${PKG} || exit 1; \
+		go test -v ${PKG} || exit 1; \
 	)
 
 .PHONY: build-so-local

@@ -4,10 +4,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"mosn.io/moe/pkg/filtermanager"
 	"mosn.io/moe/plugins/tests/integration/control_plane"
 	"mosn.io/moe/plugins/tests/integration/data_plane"
+	"mosn.io/moe/plugins/tests/integration/helper"
 )
 
 func TestOpa(t *testing.T) {
@@ -18,7 +20,7 @@ func TestOpa(t *testing.T) {
 	}
 	defer dp.Stop()
 
-	waitServiceUp(t, ":8181",
+	helper.WaitServiceUp(t, ":8181",
 		"OPA service is unavailble. Please run `docker-compose up opa` under ci/ and ensure it is started")
 
 	tests := []struct {
@@ -36,7 +38,7 @@ func TestOpa(t *testing.T) {
 			}),
 			run: func(t *testing.T) {
 				resp, err := dp.Get("/echo", nil)
-				assert.Nil(t, err)
+				require.Nil(t, err)
 				assert.Equal(t, 200, resp.StatusCode)
 				resp, _ = dp.Get("/x", nil)
 				assert.Equal(t, 403, resp.StatusCode)
@@ -46,7 +48,7 @@ func TestOpa(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			controlPlane.UseGoPluginConfig(tt.config)
+			controlPlane.UseGoPluginConfig(tt.config, dp)
 			tt.run(t)
 		})
 	}

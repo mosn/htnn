@@ -3,6 +3,7 @@ package control_plane
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -30,6 +31,7 @@ import (
 	"mosn.io/moe/pkg/filtermanager"
 	"mosn.io/moe/pkg/log"
 	"mosn.io/moe/pkg/proto"
+	"mosn.io/moe/plugins/tests/integration/data_plane"
 )
 
 var (
@@ -87,6 +89,31 @@ func (cp *ControlPlane) Start() {
 	}
 }
 
+func eventually(waitFor time.Duration, tick time.Duration, condition func() bool) error {
+	ch := make(chan bool, 1)
+
+	timer := time.NewTimer(waitFor)
+	defer timer.Stop()
+
+	ticker := time.NewTicker(tick)
+	defer ticker.Stop()
+
+	for tick := ticker.C; ; {
+		select {
+		case <-timer.C:
+			return errors.New("Condition never satisfied")
+		case <-tick:
+			tick = nil
+			go func() { ch <- condition() }()
+		case v := <-ch:
+			if v {
+				return nil
+			}
+			tick = ticker.C
+		}
+	}
+}
+
 type Resources map[resource.Type][]types.Resource
 
 func (cp *ControlPlane) updateConfig(res Resources) {
@@ -97,7 +124,17 @@ func (cp *ControlPlane) updateConfig(res Resources) {
 	}
 
 	cp.version++
-	IDs := cp.snapshotCache.GetStatusKeys()
+	var IDs []string
+	// wait for DP to connect CP
+	err = eventually(10*time.Second, 10*time.Millisecond, func() bool {
+		IDs = cp.snapshotCache.GetStatusKeys()
+		return len(IDs) > 0
+	})
+	if err != nil {
+		logger.Error(err, "failed to wait for DP to connect CP")
+		return
+	}
+
 	for _, id := range IDs {
 		logger.Info("dispatch config", "snapshot", snapshot, "id", id)
 		err = cp.snapshotCache.SetSnapshot(context.Background(), id, snapshot)
@@ -106,12 +143,9 @@ func (cp *ControlPlane) updateConfig(res Resources) {
 			return
 		}
 	}
-
-	// wait for DP to use the configuration
-	time.Sleep(1 * time.Second)
 }
 
-func (cp *ControlPlane) UseGoPluginConfig(config *filtermanager.FilterManagerConfig) {
+func (cp *ControlPlane) UseGoPluginConfig(config *filtermanager.FilterManagerConfig, dp *data_plane.DataPlane) {
 	cp.updateConfig(Resources{
 		resource.RouteType: []types.Resource{
 			&route.RouteConfiguration{
@@ -152,6 +186,11 @@ func (cp *ControlPlane) UseGoPluginConfig(config *filtermanager.FilterManagerCon
 				},
 			},
 		},
+	})
+
+	// wait for DP to use the configuration
+	eventually(1*time.Second, 50*time.Millisecond, func() bool {
+		return dp.Configured()
 	})
 }
 

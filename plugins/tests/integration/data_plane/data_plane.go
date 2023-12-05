@@ -12,12 +12,14 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 
 	"mosn.io/moe/pkg/log"
+	"mosn.io/moe/plugins/tests/integration/helper"
 )
 
 var (
@@ -32,6 +34,8 @@ type DataPlane struct {
 	t    *testing.T
 	opt  *Option
 	done chan error
+
+	configured atomic.Bool
 }
 
 type Option struct {
@@ -42,7 +46,7 @@ type Option struct {
 func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 	if opt == nil {
 		opt = &Option{
-			LogLevel:      "debug",
+			LogLevel:      "info",
 			CheckErrorLog: true,
 		}
 	}
@@ -74,6 +78,7 @@ func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 	}
 
 	envoyCmd := "envoy -c /etc/envoy.yaml"
+	envoyValidateCmd := envoyCmd + " --mode validate -l critical"
 	if opt.LogLevel != "" {
 		envoyCmd += " -l " + opt.LogLevel
 	}
@@ -117,11 +122,21 @@ func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 		"/plugins/tests/integration/libgolang.so:/etc/libgolang.so" +
 		" -v /tmp:/tmp" +
 		" -p 10000:10000 -p 9998:9998 " + hostAddr + " " +
-		image + " " + envoyCmd
+		image
+
+	validateCmd := cmdline + " " + envoyValidateCmd
+	cmds := strings.Fields(validateCmd)
+	out, err := exec.Command(cmds[0], cmds[1:]...).CombinedOutput()
+	if err != nil {
+		logger.Info("bad envoy bootstrap configuration", "output", string(out))
+		return nil, err
+	}
+
+	cmdline = cmdline + " " + envoyCmd
 
 	logger.Info("run cmd", "cmdline", cmdline)
 
-	cmds := strings.Fields(cmdline)
+	cmds = strings.Fields(cmdline)
 	cmd := exec.Command(cmds[0], cmds[1:]...)
 
 	stdout, err := os.Create(filepath.Join(dir, "stdout"))
@@ -148,7 +163,7 @@ func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 		go func() { done <- cmd.Wait() }()
 	}()
 
-	time.Sleep(5 * time.Second) // TODO: detect when the Envoy is ready via readiness request
+	helper.WaitServiceUp(t, ":10000", "failed to start data plane")
 
 	select {
 	case err := <-done:
@@ -229,12 +244,20 @@ func (dp *DataPlane) Get(path string, header http.Header) (*http.Response, error
 	return dp.do("GET", path, header, nil)
 }
 
+func (dp *DataPlane) Delete(path string, header http.Header) (*http.Response, error) {
+	return dp.do("DELETE", path, header, nil)
+}
+
 func (dp *DataPlane) Post(path string, header http.Header, body io.Reader) (*http.Response, error) {
 	return dp.do("POST", path, header, body)
 }
 
 func (dp *DataPlane) Put(path string, header http.Header, body io.Reader) (*http.Response, error) {
 	return dp.do("PUT", path, header, body)
+}
+
+func (dp *DataPlane) Patch(path string, header http.Header, body io.Reader) (*http.Response, error) {
+	return dp.do("PATCH", path, header, body)
 }
 
 func (dp *DataPlane) do(method string, path string, header http.Header, body io.Reader) (*http.Response, error) {
@@ -250,4 +273,16 @@ func (dp *DataPlane) do(method string, path string, header http.Header, body io.
 	client := &http.Client{Transport: tr, Timeout: 10 * time.Second}
 	resp, err := client.Do(req)
 	return resp, err
+}
+
+func (dp *DataPlane) Configured() bool {
+	if dp.configured.Load() {
+		return true
+	}
+	_, err := dp.Head("/echo", nil)
+	if err == nil {
+		dp.configured.Store(true)
+		return true
+	}
+	return false
 }
