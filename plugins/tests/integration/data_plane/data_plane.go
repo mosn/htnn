@@ -3,6 +3,7 @@ package data_plane
 import (
 	"bufio"
 	"context"
+	"crypto/md5"
 	"io"
 	"net"
 	"net/http"
@@ -12,7 +13,6 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -27,6 +27,8 @@ var (
 
 	testRootDirName = "test-envoy"
 	containerName   = "run_envoy_for_test"
+
+	validationCache = map[[16]byte]struct{}{}
 )
 
 type DataPlane struct {
@@ -34,8 +36,6 @@ type DataPlane struct {
 	t    *testing.T
 	opt  *Option
 	done chan error
-
-	configured atomic.Bool
 }
 
 type Option struct {
@@ -124,19 +124,25 @@ func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 		" -p 10000:10000 -p 9998:9998 " + hostAddr + " " +
 		image
 
-	validateCmd := cmdline + " " + envoyValidateCmd
-	cmds := strings.Fields(validateCmd)
-	out, err := exec.Command(cmds[0], cmds[1:]...).CombinedOutput()
-	if err != nil {
-		logger.Info("bad envoy bootstrap configuration", "output", string(out))
-		return nil, err
+	content, _ := os.ReadFile(cfgFile.Name())
+	digest := md5.Sum(content)
+	if _, ok := validationCache[digest]; !ok {
+		validateCmd := cmdline + " " + envoyValidateCmd
+		cmds := strings.Fields(validateCmd)
+		out, err := exec.Command(cmds[0], cmds[1:]...).CombinedOutput()
+		if err != nil {
+			logger.Info("bad envoy bootstrap configuration", "output", string(out))
+			return nil, err
+		}
+
+		validationCache[digest] = struct{}{}
 	}
 
 	cmdline = cmdline + " " + envoyCmd
 
 	logger.Info("run cmd", "cmdline", cmdline)
 
-	cmds = strings.Fields(cmdline)
+	cmds := strings.Fields(cmdline)
 	cmd := exec.Command(cmds[0], cmds[1:]...)
 
 	stdout, err := os.Create(filepath.Join(dir, "stdout"))
@@ -276,12 +282,8 @@ func (dp *DataPlane) do(method string, path string, header http.Header, body io.
 }
 
 func (dp *DataPlane) Configured() bool {
-	if dp.configured.Load() {
-		return true
-	}
-	_, err := dp.Head("/echo", nil)
+	_, err := dp.Head("/echo?detect_if_the_rds_takes_effect", nil)
 	if err == nil {
-		dp.configured.Store(true)
 		return true
 	}
 	return false
