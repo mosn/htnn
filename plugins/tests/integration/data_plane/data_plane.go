@@ -283,8 +283,5 @@ func (dp *DataPlane) do(method string, path string, header http.Header, body io.
 
 func (dp *DataPlane) Configured() bool {
 	_, err := dp.Head("/echo?detect_if_the_rds_takes_effect", nil)
-	if err == nil {
-		return true
-	}
-	return false
+	return err == nil
 }
