@@ -66,6 +66,8 @@ spec:
         args:
         - --leader-elect
         image: controller:latest
+        # During development, use `make deploy-image` to update image
+        imagePullPolicy: IfNotPresent
         name: manager
         securityContext:
           allowPrivilegeEscalation: false
