@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"mosn.io/moe/pkg/filtermanager"
 	"mosn.io/moe/plugins/tests/integration/control_plane"
@@ -47,9 +48,9 @@ func TestDemo(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			controlPlane.UseGoPluginConfig(tt.config)
+			controlPlane.UseGoPluginConfig(tt.config, dp)
 			resp, err := dp.Get("/echo", nil)
-			assert.Nil(t, err)
+			require.Nil(t, err)
 			tt.expect(t, resp)
 		})
 	}

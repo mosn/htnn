@@ -3,6 +3,7 @@ package data_plane
 import (
 	"bufio"
 	"context"
+	"crypto/md5"
 	"io"
 	"net"
 	"net/http"
@@ -18,6 +19,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"mosn.io/moe/pkg/log"
+	"mosn.io/moe/plugins/tests/integration/helper"
 )
 
 var (
@@ -25,6 +27,8 @@ var (
 
 	testRootDirName = "test-envoy"
 	containerName   = "run_envoy_for_test"
+
+	validationCache = map[[16]byte]struct{}{}
 )
 
 type DataPlane struct {
@@ -42,7 +46,7 @@ type Option struct {
 func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 	if opt == nil {
 		opt = &Option{
-			LogLevel:      "debug",
+			LogLevel:      "info",
 			CheckErrorLog: true,
 		}
 	}
@@ -74,6 +78,7 @@ func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 	}
 
 	envoyCmd := "envoy -c /etc/envoy.yaml"
+	envoyValidateCmd := envoyCmd + " --mode validate -l critical"
 	if opt.LogLevel != "" {
 		envoyCmd += " -l " + opt.LogLevel
 	}
@@ -117,7 +122,23 @@ func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 		"/plugins/tests/integration/libgolang.so:/etc/libgolang.so" +
 		" -v /tmp:/tmp" +
 		" -p 10000:10000 -p 9998:9998 " + hostAddr + " " +
-		image + " " + envoyCmd
+		image
+
+	content, _ := os.ReadFile(cfgFile.Name())
+	digest := md5.Sum(content)
+	if _, ok := validationCache[digest]; !ok {
+		validateCmd := cmdline + " " + envoyValidateCmd
+		cmds := strings.Fields(validateCmd)
+		out, err := exec.Command(cmds[0], cmds[1:]...).CombinedOutput()
+		if err != nil {
+			logger.Info("bad envoy bootstrap configuration", "output", string(out))
+			return nil, err
+		}
+
+		validationCache[digest] = struct{}{}
+	}
+
+	cmdline = cmdline + " " + envoyCmd
 
 	logger.Info("run cmd", "cmdline", cmdline)
 
@@ -148,7 +169,7 @@ func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 		go func() { done <- cmd.Wait() }()
 	}()
 
-	time.Sleep(5 * time.Second) // TODO: detect when the Envoy is ready via readiness request
+	helper.WaitServiceUp(t, ":10000", "failed to start data plane")
 
 	select {
 	case err := <-done:
@@ -229,12 +250,20 @@ func (dp *DataPlane) Get(path string, header http.Header) (*http.Response, error
 	return dp.do("GET", path, header, nil)
 }
 
+func (dp *DataPlane) Delete(path string, header http.Header) (*http.Response, error) {
+	return dp.do("DELETE", path, header, nil)
+}
+
 func (dp *DataPlane) Post(path string, header http.Header, body io.Reader) (*http.Response, error) {
 	return dp.do("POST", path, header, body)
 }
 
 func (dp *DataPlane) Put(path string, header http.Header, body io.Reader) (*http.Response, error) {
 	return dp.do("PUT", path, header, body)
+}
+
+func (dp *DataPlane) Patch(path string, header http.Header, body io.Reader) (*http.Response, error) {
+	return dp.do("PATCH", path, header, body)
 }
 
 func (dp *DataPlane) do(method string, path string, header http.Header, body io.Reader) (*http.Response, error) {
@@ -250,4 +279,9 @@ func (dp *DataPlane) do(method string, path string, header http.Header, body io.
 	client := &http.Client{Transport: tr, Timeout: 10 * time.Second}
 	resp, err := client.Do(req)
 	return resp, err
+}
+
+func (dp *DataPlane) Configured() bool {
+	_, err := dp.Head("/echo?detect_if_the_rds_takes_effect", nil)
+	return err == nil
 }

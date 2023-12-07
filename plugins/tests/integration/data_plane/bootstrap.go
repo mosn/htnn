@@ -1,8 +1,11 @@
 package data_plane
 
 import (
+	"bytes"
 	"os"
 	"text/template"
+
+	"gopkg.in/yaml.v3"
 )
 
 const (
@@ -231,6 +234,26 @@ admin:
 type Bootstrap struct {
 }
 
+type cfgFileWrapper struct {
+	*os.File
+}
+
+func (c *cfgFileWrapper) Write(p []byte) (n int, err error) {
+	var obj interface{}
+	// convert tab to space according to Go's default tabsize
+	p = bytes.ReplaceAll(p, []byte("\t"), []byte("    "))
+	// check if the input is valid yaml
+	err = yaml.Unmarshal(p, &obj)
+	if err != nil {
+		return
+	}
+	res, err := yaml.Marshal(obj)
+	if err != nil {
+		return
+	}
+	return c.File.Write(res)
+}
+
 func WriteBoostrapConfig(cfgFile *os.File) error {
 	tmpl, err := template.New("bootstrap").Parse(boostrapTemplate)
 	if err != nil {
@@ -238,5 +261,5 @@ func WriteBoostrapConfig(cfgFile *os.File) error {
 	}
 	// TODO: design a group APIs and break down the config file.
 	// So that people can register their paths or http filters, like test-nginx.
-	return tmpl.Execute(cfgFile, &Bootstrap{})
+	return tmpl.Execute(&cfgFileWrapper{cfgFile}, &Bootstrap{})
 }

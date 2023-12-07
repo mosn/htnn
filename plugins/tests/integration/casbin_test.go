@@ -6,10 +6,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"mosn.io/moe/pkg/filtermanager"
 	"mosn.io/moe/plugins/tests/integration/control_plane"
 	"mosn.io/moe/plugins/tests/integration/data_plane"
+	"mosn.io/moe/plugins/tests/integration/helper"
 )
 
 func TestCasbin(t *testing.T) {
@@ -36,19 +38,19 @@ e = some(where (p.eft == allow))
 [matchers]
 m = (g(r.sub, p.sub) || keyMatch(r.sub, p.sub)) && keyMatch(r.obj, p.obj) && keyMatch(r.act, p.act)
 `
-	modelFile := writeTempFile(model)
+	modelFile := helper.WriteTempFile(model)
 	policy := `
 p, *, /, POST
 p, admin, *, POST
 g, alice, admin
 `
-	policyFile := writeTempFile(policy)
+	policyFile := helper.WriteTempFile(policy)
 	policy2 := `
 p, *, /, POST
 p, admin, *, POST
 g, bob, admin
 `
-	policyFile2 := writeTempFile(policy2)
+	policyFile2 := helper.WriteTempFile(policy2)
 	tests := []struct {
 		name   string
 		config *filtermanager.FilterManagerConfig
@@ -88,11 +90,11 @@ g, bob, admin
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			controlPlane.UseGoPluginConfig(tt.config)
+			controlPlane.UseGoPluginConfig(tt.config, dp)
 			hdr := http.Header{}
 			hdr.Set("customer", "alice")
 			resp, err := dp.Post("/echo", hdr, strings.NewReader("any"))
-			assert.Nil(t, err)
+			require.Nil(t, err)
 			tt.expect(t, resp)
 		})
 	}
