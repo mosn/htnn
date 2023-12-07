@@ -33,6 +33,7 @@ virtualService:
               prefix: /status
           - uri:
               prefix: /delay
+          name: policy
           route:
           - destination:
               host: httpbin

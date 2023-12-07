@@ -104,6 +104,8 @@ func main() {
 			setupLog.Error(err, "unable to create webhook", "webhook", "HTTPFilterPolicy")
 			os.Exit(1)
 		}
+
+		mosniov1.RegisterVirtualServiceWebhook(mgr)
 	}
 	//+kubebuilder:scaffold:builder
 

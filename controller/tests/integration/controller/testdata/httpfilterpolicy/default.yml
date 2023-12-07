@@ -12,6 +12,7 @@
     - match:
       - uri:
           prefix: /
+      name: default
       route:
       - destination:
           host: default

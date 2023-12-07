@@ -44,6 +44,12 @@ func ValidateHTTPFilterPolicy(policy *HTTPFilterPolicy) error {
 }
 
 func ValidateVirtualService(vs *istiov1b1.VirtualService) error {
+	for _, httpRoute := range vs.Spec.Http {
+		if httpRoute.Name == "" {
+			return errors.New("route name is empty")
+		}
+	}
+
 	// TODO: support delegate VirtualService
 	if len(vs.Spec.Hosts) == 0 {
 		return errors.New("Delegate VirtualService is not supported")

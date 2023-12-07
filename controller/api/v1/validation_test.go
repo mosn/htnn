@@ -78,6 +78,19 @@ func TestValidateVirtualService(t *testing.T) {
 		err  string
 	}{
 		{
+			name: "empty route name not allowed",
+			err:  "route name is empty",
+			vs: &istiov1b1.VirtualService{
+				Spec: istioapi.VirtualService{
+					Http: []*istioapi.HTTPRoute{
+						{
+							Route: []*istioapi.HTTPRouteDestination{},
+						},
+					},
+				},
+			},
+		},
+		{
 			name: "delegate not supported",
 			err:  "not supported",
 			vs: &istiov1b1.VirtualService{
