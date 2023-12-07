@@ -27,6 +27,7 @@
     - match:
       - uri:
           prefix: /delay
+      name: default/vs
       route:
       - destination:
           host: httpbin
