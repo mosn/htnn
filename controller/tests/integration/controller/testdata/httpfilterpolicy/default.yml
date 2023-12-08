@@ -1,3 +1,4 @@
+# This configuration is shared across different tests and should only contain minimal fields
 - apiVersion: networking.istio.io/v1beta1
   kind: VirtualService
   metadata:

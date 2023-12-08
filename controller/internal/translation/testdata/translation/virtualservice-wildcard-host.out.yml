@@ -5,11 +5,13 @@
     name: htnn-h-test--httpbin
   spec:
     configPatches:
-    - applyTo: VIRTUAL_HOST
+    - applyTo: HTTP_ROUTE
       match:
         routeConfiguration:
           vhost:
             name: '*.httpbin.example.com:80'
+            route:
+              name: policy
       patch:
         operation: MERGE
         value:

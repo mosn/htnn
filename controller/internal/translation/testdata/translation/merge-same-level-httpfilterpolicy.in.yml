@@ -1,4 +1,43 @@
+gateway:
+- apiVersion: networking.istio.io/v1beta1
+  kind: Gateway
+  metadata:
+    name: httpbin-gateway
+    namespace: test
+  spec:
+    selector:
+      istio: ingressgateway
+    servers:
+    - hosts:
+      - "*.httpbin.example.com"
+      port:
+        name: http
+        number: 80
+        protocol: HTTP
+virtualService:
+  httpbin-gateway:
+  - apiVersion: networking.istio.io/v1beta1
+    kind: VirtualService
+    metadata:
+      name: httpbin
+      namespace: test
+    spec:
+      gateways:
+      - httpbin-gateway
+      hosts:
+      - "*.httpbin.example.com"
+      http:
+      - match:
+        - uri:
+            prefix: /status
+        name: test/httpbin
+        route:
+        - destination:
+            host: httpbin
+            port:
+              number: 8000
 httpFilterPolicy:
+  httpbin:
   - apiVersion: mosn.io/v1
     kind: HTTPFilterPolicy
     metadata:
@@ -46,84 +85,3 @@ httpFilterPolicy:
         animal:
           config:
             pet: bird
-virtualService:
-  a:
-    - apiVersion: networking.istio.io/v1beta1
-      kind: VirtualService
-      metadata:
-        name: httpbin
-        namespace: test
-      spec:
-        gateways:
-        - httpbin-gateway
-        hosts:
-        - "*.httpbin.example.com"
-        http:
-        - match:
-          - uri:
-              prefix: /status
-          name: test/httpbin
-          route:
-          - destination:
-              host: httpbin
-              port:
-                number: 8000
-  opolicy:
-    - apiVersion: networking.istio.io/v1beta1
-      kind: VirtualService
-      metadata:
-        name: httpbin
-        namespace: test
-      spec:
-        gateways:
-        - httpbin-gateway
-        hosts:
-        - "*.httpbin.example.com"
-        http:
-        - match:
-          - uri:
-              prefix: /status
-          name: test/httpbin
-          route:
-          - destination:
-              host: httpbin
-              port:
-                number: 8000
-  policy:
-    - apiVersion: networking.istio.io/v1beta1
-      kind: VirtualService
-      metadata:
-        name: httpbin
-        namespace: test
-      spec:
-        gateways:
-        - httpbin-gateway
-        hosts:
-        - "*.httpbin.example.com"
-        http:
-        - match:
-          - uri:
-              prefix: /status
-          name: test/httpbin
-          route:
-          - destination:
-              host: httpbin
-              port:
-                number: 8000
-gateway:
-  httpbin:
-    - apiVersion: networking.istio.io/v1beta1
-      kind: Gateway
-      metadata:
-        name: httpbin-gateway
-        namespace: test
-      spec:
-        selector:
-          istio: ingressgateway
-        servers:
-        - hosts:
-          - "*.httpbin.example.com"
-          port:
-            name: http
-            number: 80
-            protocol: HTTP

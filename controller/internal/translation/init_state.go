@@ -12,7 +12,7 @@ import (
 
 type VirtualServicePolicies struct {
 	VirtualService *istiov1b1.VirtualService
-	Policies       []*mosniov1.HTTPFilterPolicy
+	RoutePolicies  map[string][]*HTTPFilterPolicyWrapper
 }
 
 // InitState is the beginning of our translation.
@@ -41,12 +41,26 @@ func (s *InitState) AddPolicyForVirtualService(policy *mosniov1.HTTPFilterPolicy
 	if !ok {
 		vsp = &VirtualServicePolicies{
 			VirtualService: vs.DeepCopy(),
-			Policies:       make([]*mosniov1.HTTPFilterPolicy, 0),
+			RoutePolicies:  map[string][]*HTTPFilterPolicyWrapper{},
 		}
 		s.VirtualServices[nn] = vsp
 	}
 
-	vsp.Policies = append(vsp.Policies, policy.DeepCopy())
+	if policy.Spec.TargetRef.SectionName == nil {
+		for _, httpRoute := range vs.Spec.Http {
+			routeName := httpRoute.Name
+			vsp.RoutePolicies[routeName] = append(vsp.RoutePolicies[routeName], &HTTPFilterPolicyWrapper{
+				HTTPFilterPolicy: policy.DeepCopy(),
+				scope:            PolicyScopeHost,
+			})
+		}
+	} else {
+		routeName := string(*policy.Spec.TargetRef.SectionName)
+		vsp.RoutePolicies[routeName] = append(vsp.RoutePolicies[routeName], &HTTPFilterPolicyWrapper{
+			HTTPFilterPolicy: policy.DeepCopy(),
+			scope:            PolicyScopeRoute,
+		})
+	}
 
 	gws, ok := s.VsToGateway[nn]
 	if !ok {

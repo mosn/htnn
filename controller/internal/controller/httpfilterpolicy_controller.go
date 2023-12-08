@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/go-logr/logr"
 	"google.golang.org/protobuf/proto"
@@ -39,6 +40,7 @@ import (
 
 	mosniov1 "mosn.io/moe/controller/api/v1"
 	"mosn.io/moe/controller/internal/config"
+	"mosn.io/moe/controller/internal/k8s"
 	"mosn.io/moe/controller/internal/translation"
 )
 
@@ -50,12 +52,15 @@ const (
 type HTTPFilterPolicyReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
+
+	istioGatewayIndexer *IstioGatewayIndexer
 }
 
 //+kubebuilder:rbac:groups=mosn.io,resources=httpfilterpolicies,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=mosn.io,resources=httpfilterpolicies/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=mosn.io,resources=httpfilterpolicies/finalizers,verbs=update
 //+kubebuilder:rbac:groups=networking.istio.io,resources=virtualservices,verbs=get;list;watch;update;patch
+//+kubebuilder:rbac:groups=networking.istio.io,resources=gateways,verbs=get;list;watch
 //+kubebuilder:rbac:groups=networking.istio.io,resources=envoyfilters,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=networking.istio.io,resources=envoyfilters/status,verbs=get
 
@@ -99,6 +104,7 @@ func (r *HTTPFilterPolicyReconciler) policyToTranslationState(ctx context.Contex
 	}
 
 	initState := translation.NewInitState(logger)
+	istioGwIdx := map[string][]*mosniov1.HTTPFilterPolicy{}
 
 	for _, policy := range policies.Items {
 		policy := policy
@@ -121,6 +127,8 @@ func (r *HTTPFilterPolicyReconciler) policyToTranslationState(ctx context.Contex
 				if !apierrors.IsNotFound(err) {
 					return nil, fmt.Errorf("failed to get VirtualService: %w, NamespacedName: %v", err, nsName)
 				}
+
+				logger.Info("VirtualService not found", "name", virtualService.Name, "namespace", virtualService.Namespace)
 				continue
 			}
 
@@ -128,6 +136,23 @@ func (r *HTTPFilterPolicyReconciler) policyToTranslationState(ctx context.Contex
 			if err != nil {
 				logger.Info("unsupported VirtualService", "name", virtualService.Name, "namespace", virtualService.Namespace, "reason", err.Error())
 				continue
+			}
+
+			if policy.Spec.TargetRef.SectionName != nil {
+				found := false
+				name := string(*policy.Spec.TargetRef.SectionName)
+				for _, section := range virtualService.Spec.Http {
+					if section.Name == name {
+						found = true
+						break
+					}
+				}
+
+				if !found {
+					logger.Info("skip HTTPFilterPolicy, route not found", "name", policy.Name, "namespace", policy.Namespace, "route", name)
+					// TODO: policy implementation should record a resolvedRefs or similar Condition in the Policy's status
+					continue
+				}
 			}
 
 			for _, gw := range virtualService.Spec.Gateways {
@@ -156,10 +181,18 @@ func (r *HTTPFilterPolicyReconciler) policyToTranslationState(ctx context.Contex
 				}
 
 				initState.AddPolicyForVirtualService(&policy, &virtualService, &gateway)
+
+				key := k8s.GetObjectKey(&gateway.ObjectMeta)
+				if _, ok := istioGwIdx[key]; !ok {
+					istioGwIdx[key] = []*mosniov1.HTTPFilterPolicy{}
+				}
+				istioGwIdx[key] = append(istioGwIdx[key], &policy)
 			}
 		}
 	}
 
+	// only update index when the processing is successful
+	r.istioGatewayIndexer.UpdateIndex(istioGwIdx)
 	return initState, nil
 }
 
@@ -183,6 +216,10 @@ func (r *HTTPFilterPolicyReconciler) translationStateToCustomResource(ctx contex
 
 	for _, ef := range finalState.EnvoyFilters {
 		ef.Namespace = config.RootNamespace()
+		if ef.Labels == nil {
+			ef.Labels = map[string]string{}
+		}
+		ef.Labels[LabelCreatedBy] = "HTTPFilterPolicy"
 
 		var envoyfilter istiov1a3.EnvoyFilter
 		nsName := types.NamespacedName{Name: ef.Name, Namespace: ef.Namespace}
@@ -194,11 +231,6 @@ func (r *HTTPFilterPolicyReconciler) translationStateToCustomResource(ctx contex
 			}
 
 			logger.Info("create EnvoyFilter", "name", ef.Name, "namespace", ef.Namespace)
-
-			if ef.Labels == nil {
-				ef.Labels = map[string]string{}
-			}
-			ef.Labels[LabelCreatedBy] = "HTTPFilterPolicy"
 
 			if err = r.Create(ctx, ef); err != nil {
 				return fmt.Errorf("failed to create EnvoyFilter: %w, namespacedName: %v", err, nsName)
@@ -225,8 +257,7 @@ func (r *HTTPFilterPolicyReconciler) translationStateToCustomResource(ctx contex
 // according to the reconciled customer resource
 type CustomerResourceIndexer interface {
 	CustomerResource() client.Object
-	IndexName() string
-	Index(rawObj client.Object) []string
+	RegisterIndexer(ctx context.Context, mgr ctrl.Manager) error
 	FindAffectedObjects(ctx context.Context, obj client.Object) []reconcile.Request
 }
 
@@ -250,42 +281,12 @@ func (v *VirtualServiceIndexer) Index(rawObj client.Object) []string {
 	return []string{string(po.Spec.TargetRef.Name)}
 }
 
-func (v *VirtualServiceIndexer) FindAffectedObjects(ctx context.Context, obj client.Object) []reconcile.Request {
-	return findAffectedObjects(ctx, v.r, obj, "VirtualService", v.IndexName())
+func (v *VirtualServiceIndexer) RegisterIndexer(ctx context.Context, mgr ctrl.Manager) error {
+	return mgr.GetFieldIndexer().IndexField(ctx, &mosniov1.HTTPFilterPolicy{}, v.IndexName(), v.Index)
 }
 
-// SetupWithManager sets up the controller with the Manager.
-func (r *HTTPFilterPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	ctx := context.Background()
-	indexers := []CustomerResourceIndexer{
-		&VirtualServiceIndexer{
-			r: r,
-		},
-	}
-	// IndexField is called per HTTPFilterPolicy
-	for _, idxer := range indexers {
-		if err := mgr.GetFieldIndexer().IndexField(ctx, &mosniov1.HTTPFilterPolicy{}, idxer.IndexName(), idxer.Index); err != nil {
-			return err
-		}
-	}
-
-	controller := ctrl.NewControllerManagedBy(mgr).
-		For(&mosniov1.HTTPFilterPolicy{})
-		// We don't reconcile when the generated EnvoyFilter is modified.
-		// So that user can manually correct the EnvoyFilter, until something else is changed.
-
-	for _, idxer := range indexers {
-		controller.Watches(
-			idxer.CustomerResource(),
-			handler.EnqueueRequestsFromMapFunc(idxer.FindAffectedObjects),
-			builder.WithPredicates(
-				predicate.GenerationChangedPredicate{},
-			),
-		)
-	}
-	// FIXME: deal with VirtualService/Gateway change
-
-	return controller.Complete(r)
+func (v *VirtualServiceIndexer) FindAffectedObjects(ctx context.Context, obj client.Object) []reconcile.Request {
+	return findAffectedObjects(ctx, v.r, obj, "VirtualService", v.IndexName())
 }
 
 func findAffectedObjects(ctx context.Context, reader client.Reader, obj client.Object, kind string, idx string) []reconcile.Request {
@@ -319,4 +320,89 @@ func findAffectedObjects(ctx context.Context, reader client.Reader, obj client.O
 		return []reconcile.Request{requests[0]}
 	}
 	return requests
+}
+
+type IstioGatewayIndexer struct {
+	r client.Reader
+
+	lock  sync.RWMutex
+	index map[string][]*mosniov1.HTTPFilterPolicy
+}
+
+func (v *IstioGatewayIndexer) CustomerResource() client.Object {
+	return &istiov1b1.Gateway{}
+}
+
+func (v *IstioGatewayIndexer) RegisterIndexer(ctx context.Context, mgr ctrl.Manager) error {
+	return nil
+}
+
+func (v *IstioGatewayIndexer) UpdateIndex(idx map[string][]*mosniov1.HTTPFilterPolicy) {
+	v.lock.Lock()
+	v.index = idx
+	v.lock.Unlock()
+}
+
+func (v *IstioGatewayIndexer) FindAffectedObjects(ctx context.Context, obj client.Object) []reconcile.Request {
+	logger := log.FromContext(ctx)
+	logger.Info("Target changed", "kind", "IstioGateway", "namespace", obj.GetNamespace(), "name", obj.GetName())
+
+	gw := obj.(*istiov1b1.Gateway)
+	v.lock.RLock()
+	policies, ok := v.index[k8s.GetObjectKey(&gw.ObjectMeta)]
+	v.lock.RUnlock()
+	if !ok {
+		return nil
+	}
+
+	requests := make([]reconcile.Request, len(policies))
+	for i, policy := range policies {
+		request := reconcile.Request{
+			NamespacedName: types.NamespacedName{
+				Name:      policy.GetName(),
+				Namespace: policy.GetNamespace(),
+			},
+		}
+		requests[i] = request
+	}
+	logger.Info("Target changed, trigger reconciliation", "kind", "IstioGateway", "requests", requests)
+	return []reconcile.Request{requests[0]}
+}
+
+// SetupWithManager sets up the controller with the Manager.
+func (r *HTTPFilterPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
+	ctx := context.Background()
+	istioGatewayIndexer := &IstioGatewayIndexer{
+		r: r,
+	}
+	r.istioGatewayIndexer = istioGatewayIndexer
+	indexers := []CustomerResourceIndexer{
+		&VirtualServiceIndexer{
+			r: r,
+		},
+		istioGatewayIndexer,
+	}
+	// IndexField is called per HTTPFilterPolicy
+	for _, idxer := range indexers {
+		if err := idxer.RegisterIndexer(ctx, mgr); err != nil {
+			return err
+		}
+	}
+
+	controller := ctrl.NewControllerManagedBy(mgr).
+		For(&mosniov1.HTTPFilterPolicy{})
+		// We don't reconcile when the generated EnvoyFilter is modified.
+		// So that user can manually correct the EnvoyFilter, until something else is changed.
+
+	for _, idxer := range indexers {
+		controller.Watches(
+			idxer.CustomerResource(),
+			handler.EnqueueRequestsFromMapFunc(idxer.FindAffectedObjects),
+			builder.WithPredicates(
+				predicate.GenerationChangedPredicate{},
+			),
+		)
+	}
+
+	return controller.Complete(r)
 }

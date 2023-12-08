@@ -41,6 +41,8 @@ func (r *VirtualServiceWebhook) Default() {
 			// If you need to refer to it, you need to specify the name by yourself.
 			httpRoute.Name = fmt.Sprintf("%s/%s", r.Namespace, r.Name)
 		}
+		// If the name is specified by user, the same route name should not be used in different VirtualServices
+		// which share the same host.
 	}
 }
 

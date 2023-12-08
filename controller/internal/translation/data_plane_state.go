@@ -8,7 +8,6 @@ import (
 	istiov1b1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	"k8s.io/apimachinery/pkg/types"
 
-	mosniov1 "mosn.io/moe/controller/api/v1"
 	"mosn.io/moe/controller/internal/model"
 )
 
@@ -20,15 +19,11 @@ type dataPlaneState struct {
 type hostPolicy struct {
 	VirtualHost *model.VirtualHost
 	Routes      map[string]*routePolicy
-	Policies    []*mosniov1.HTTPFilterPolicy
 }
 
 type routePolicy struct {
-	Policies []*mosniov1.HTTPFilterPolicy
-}
-
-func genRouteId(id *types.NamespacedName, order int) string {
-	return id.String() + "_" + fmt.Sprintf("%d", order)
+	NsName   *types.NamespacedName
+	Policies []*HTTPFilterPolicyWrapper
 }
 
 func hostMatch(gwHost string, host string) bool {
@@ -70,12 +65,14 @@ func toDataPlaneState(ctx *Ctx, state *InitState) (*FinalState, error) {
 		Hosts: make(map[string]*hostPolicy),
 	}
 	for id, vsp := range state.VirtualServices {
+		id := id
 		gws := state.VsToGateway[id]
 		spec := &vsp.VirtualService.Spec
 		routes := make(map[string]*routePolicy)
-		for i := range spec.Http {
-			routes[genRouteId(&id, i)] = &routePolicy{
-				Policies: vsp.Policies,
+		for name, policies := range vsp.RoutePolicies {
+			routes[name] = &routePolicy{
+				Policies: policies,
+				NsName:   &id,
 			}
 		}
 		for _, hostName := range spec.Hosts {
@@ -86,18 +83,20 @@ func toDataPlaneState(ctx *Ctx, state *InitState) (*FinalState, error) {
 					"virtualservice", id, "gateways", gws)
 				continue
 			}
-			vh.NsName = &id
-			policy := &hostPolicy{
-				VirtualHost: vh,
-				Routes:      routes,
-				// It is possible that multiple VirtualServices share the same host but with different routes.
-				// In this case, the host is considered a match condition but not a parent of routes.
-				// So it is unreasonable to set host level policy to such VirtualServices. We don't
-				// support this case (VirtualServices share same host & Host level policy attached) for now.
-				// If people want to add policy to the route under the host, use route level policy instead.
-				Policies: vsp.Policies,
+			if host, ok := s.Hosts[vh.Name]; ok {
+				// TODO: add route name collision detection
+				// Currently, it is the webhook or the user configuration to guarantee the same route
+				// name won't be used in different VirtualServices that share the same host.
+				for routeName, policy := range routes {
+					host.Routes[routeName] = policy
+				}
+			} else {
+				policy := &hostPolicy{
+					VirtualHost: vh,
+					Routes:      routes,
+				}
+				s.Hosts[vh.Name] = policy
 			}
-			s.Hosts[vh.Name] = policy
 		}
 	}
 
