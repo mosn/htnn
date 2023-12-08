@@ -59,21 +59,21 @@ generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and
 
 .PHONY: test
 test: manifests generate envtest ## Run tests.
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test -gcflags="all=-N -l" -race -v \
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test -gcflags="all=-N -l" -race \
 		./... -coverprofile cover.out
 
 ##@ Build
 
 .PHONY: build
 build: manifests generate
-	CGO_ENABLED=0 go build \
+	CGO_ENABLED=0 go build -tags ctrl \
 		-ldflags "-B 0x$(shell head -c20 /dev/urandom|od -An -tx1|tr -d ' \n') -X main.Version=${VERSION}(${GIT_VERSION})" \
 		-o bin/manager cmd/main.go
 
 .PHONY: run
 run: manifests generate ## Run a controller from your host.
 	export ENABLE_WEBHOOKS=$(ENABLE_WEBHOOKS)
-	go run ./cmd/main.go
+	go run -tags ctrl ./cmd/main.go
 
 # If you wish to build the manager image targeting other platforms you can use the --platform flag.
 # (i.e. docker build --platform linux/arm64). However, you must enable docker buildKit for it.
