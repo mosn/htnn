@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -115,7 +116,13 @@ func (r *HTTPFilterPolicyReconciler) policyToTranslationState(ctx context.Contex
 			nsName := types.NamespacedName{Name: string(ref.Name), Namespace: policy.Namespace}
 			if ref.Namespace != nil {
 				nsName.Namespace = string(*ref.Namespace)
+				if nsName.Namespace != policy.Namespace {
+					err := errors.New("namespace in TargetRef doesn't match HTTPFilterPolicy's namespace")
+					logger.Error(err, "invalid HTTPFilterPolicy", "name", policy.Name, "namespace", policy.Namespace)
+					continue
+				}
 			}
+
 			err := r.Get(ctx, nsName, &virtualService)
 			if err != nil {
 				if !apierrors.IsNotFound(err) {
