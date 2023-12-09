@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/go-logr/logr"
 	"google.golang.org/protobuf/proto"
@@ -39,6 +40,7 @@ import (
 
 	mosniov1 "mosn.io/moe/controller/api/v1"
 	"mosn.io/moe/controller/internal/config"
+	"mosn.io/moe/controller/internal/metrics"
 	"mosn.io/moe/controller/internal/translation"
 )
 
@@ -77,7 +79,10 @@ func (r *HTTPFilterPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return ctrl.Result{}, nil
 	}
 
+	start := time.Now()
 	finalState, err := initState.Process(ctx)
+	processDurationInSecs := time.Since(start).Seconds()
+	metrics.HFPTranslateDurationObserver.Observe(processDurationInSecs)
 	if err != nil {
 		logger.Error(err, "failed to process state")
 		// there is no retryable err during processing

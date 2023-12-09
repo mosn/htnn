@@ -17,7 +17,6 @@ var (
 )
 
 func bindFlags(fs *flag.FlagSet) {
-	// TODO: unitfy flag style
 	fs.StringVar(&enc, "log-encoder", "console", "Log encoding (one of 'json' or 'console', default to 'console')")
 }
 
