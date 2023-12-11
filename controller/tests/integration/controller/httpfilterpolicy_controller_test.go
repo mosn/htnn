@@ -13,7 +13,9 @@ import (
 	istioapi "istio.io/api/networking/v1alpha3"
 	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	istiov1b1 "istio.io/client-go/pkg/apis/networking/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/yaml"
 
 	mosniov1 "mosn.io/moe/controller/api/v1"
@@ -59,12 +61,39 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 		interval = time.Millisecond * 250
 	)
 
+	Context("When validating HTTPFilterPolicy", func() {
+		It("deal with invalid crd", func() {
+			ctx := context.Background()
+			input := []map[string]interface{}{}
+			mustReadInput("invalid-httpfilterpolicy", &input)
+
+			for _, in := range input {
+				obj := mapToObj(in)
+				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
+			}
+
+			var policies mosniov1.HTTPFilterPolicyList
+			var cs []metav1.Condition
+			Eventually(func() bool {
+				if err := k8sClient.List(ctx, &policies); err != nil {
+					return false
+				}
+				p := policies.Items[0]
+				cs = p.Status.Conditions
+				return len(cs) == 1
+			}, timeout, interval).Should(BeTrue())
+			Expect(cs[0].Type).To(Equal(string(gwapiv1a2.PolicyConditionAccepted)))
+			Expect(cs[0].Reason).To(Equal(string(gwapiv1a2.PolicyReasonInvalid)))
+			Expect(policies.Items[0].IsValid()).To(BeFalse())
+		})
+	})
+
 	var (
 		DefaultVirtualService *istiov1b1.VirtualService
 		DefaultIstioGateway   *istiov1b1.Gateway
 	)
 
-	Context("When reconciling HTTPFilterPolicy", func() {
+	Context("When reconciling HTTPFilterPolicy with VirtualService", func() {
 		BeforeEach(func() {
 			var policies mosniov1.HTTPFilterPolicyList
 			if err := k8sClient.List(ctx, &policies); err == nil {
@@ -145,6 +174,19 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 			}
 			Expect(names).To(ConsistOf([]string{"htnn-http-filter", "htnn-h-default--vs"}))
 
+			var policies mosniov1.HTTPFilterPolicyList
+			Eventually(func() bool {
+				if err := k8sClient.List(ctx, &policies); err != nil {
+					return false
+				}
+				return len(policies.Items) > 0
+			}, timeout, interval).Should(BeTrue())
+
+			policy := policies.Items[0]
+			Expect(len(policy.Status.Conditions) > 0).To(BeTrue())
+			cond := policy.Status.Conditions[0]
+			Expect(cond.Reason).To(Equal(string(gwapiv1a2.PolicyReasonAccepted)))
+
 			host := virtualService.Spec.Hosts[0]
 			virtualService.Spec.Hosts[0] = "no-gateway-match-it.com"
 			err := k8sClient.Update(ctx, virtualService)
@@ -176,6 +218,18 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 				return len(envoyfilters.Items) == 1
 			}, timeout, interval).Should(BeTrue())
 			Expect(envoyfilters.Items[0].Name).To(Equal("htnn-http-filter"))
+
+			Eventually(func() bool {
+				if err := k8sClient.List(ctx, &policies); err != nil {
+					return false
+				}
+				if len(policies.Items) == 0 {
+					return false
+				}
+				policy = policies.Items[0]
+				cond = policy.Status.Conditions[0]
+				return cond.Reason == string(gwapiv1a2.PolicyReasonTargetNotFound)
+			}, timeout, interval).Should(BeTrue())
 		})
 
 		It("deal with virtualservice when the istio gateway changed", func() {
@@ -372,6 +426,27 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 				names = append(names, ef.Name)
 			}
 			Expect(names).To(ConsistOf([]string{"htnn-http-filter", "htnn-h-default--default"}))
+
+			var policies mosniov1.HTTPFilterPolicyList
+			Eventually(func() bool {
+				if err := k8sClient.List(ctx, &policies); err != nil {
+					return false
+				}
+				if len(policies.Items) != 2 {
+					return false
+				}
+
+				for _, policy := range policies.Items {
+					if len(policy.Status.Conditions) == 0 {
+						continue
+					}
+					cond := policy.Status.Conditions[0]
+					if cond.Reason == string(gwapiv1a2.PolicyReasonTargetNotFound) {
+						return true
+					}
+				}
+				return false
+			}, timeout, interval).Should(BeTrue())
 		})
 
 		It("deal with virtualservice via route name", func() {

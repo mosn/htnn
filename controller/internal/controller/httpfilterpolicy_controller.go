@@ -38,6 +38,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	mosniov1 "mosn.io/moe/controller/api/v1"
 	"mosn.io/moe/controller/internal/config"
@@ -73,9 +74,10 @@ type HTTPFilterPolicyReconciler struct {
 func (r *HTTPFilterPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	// the controller is run with MaxConcurrentReconciles == 1, so we don't need to worry about concurrent access.
 	logger := log.FromContext(ctx)
-	logger.Info("reconcile") // req message is contained in the logger ctx
+	logger.Info("reconcile")
 
-	initState, err := r.policyToTranslationState(ctx, &logger, req)
+	var policies mosniov1.HTTPFilterPolicyList
+	initState, err := r.policyToTranslationState(ctx, &logger, &policies)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -91,31 +93,39 @@ func (r *HTTPFilterPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	}
 
 	err = r.translationStateToCustomResource(ctx, &logger, finalState)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	err = r.updatePolicies(ctx, &policies)
 	return ctrl.Result{}, err
 }
 
 func (r *HTTPFilterPolicyReconciler) policyToTranslationState(ctx context.Context, logger *logr.Logger,
-	req ctrl.Request) (*translation.InitState, error) {
+	policies *mosniov1.HTTPFilterPolicyList) (*translation.InitState, error) {
 
 	// For current implementation, let's rebuild the state each time to avoid complexity.
 	// The controller will use local cache when doing read operation.
-	var policies mosniov1.HTTPFilterPolicyList
-	if err := r.List(ctx, &policies, client.InNamespace(req.Namespace)); err != nil {
+	if err := r.List(ctx, policies); err != nil {
 		return nil, fmt.Errorf("failed to list HTTPFilterPolicy: %w", err)
 	}
 
 	initState := translation.NewInitState(logger)
 	istioGwIdx := map[string][]*mosniov1.HTTPFilterPolicy{}
 
-	for _, policy := range policies.Items {
-		policy := policy
-		err := mosniov1.ValidateHTTPFilterPolicy(&policy)
+	for i := range policies.Items {
+		policy := &policies.Items[i]
+		err := mosniov1.ValidateHTTPFilterPolicy(policy)
 		if err != nil {
-			// TODO: mark the policy as invalid, and skip logging
-			logger.Error(err, "invalid HTTPFilterPolicy", "name", policy.Name, "namespace", policy.Namespace)
+			if policy.IsValid() {
+				logger.Error(err, "invalid HTTPFilterPolicy", "name", policy.Name, "namespace", policy.Namespace)
+				// mark the policy as invalid, and skip logging
+				policy.SetAccepted(gwapiv1a2.PolicyReasonInvalid, err.Error())
+			}
 			continue
 		}
 
+		accepted := false
 		ref := policy.Spec.TargetRef
 		if ref.Group == "networking.istio.io" && ref.Kind == "VirtualService" {
 			var virtualService istiov1b1.VirtualService
@@ -123,8 +133,11 @@ func (r *HTTPFilterPolicyReconciler) policyToTranslationState(ctx context.Contex
 			if ref.Namespace != nil {
 				nsName.Namespace = string(*ref.Namespace)
 				if nsName.Namespace != policy.Namespace {
-					err := errors.New("namespace in TargetRef doesn't match HTTPFilterPolicy's namespace")
-					logger.Error(err, "invalid HTTPFilterPolicy", "name", policy.Name, "namespace", policy.Namespace)
+					if policy.IsValid() {
+						err := errors.New("namespace in TargetRef doesn't match HTTPFilterPolicy's namespace")
+						logger.Error(err, "invalid HTTPFilterPolicy", "name", policy.Name, "namespace", policy.Namespace)
+						policy.SetAccepted(gwapiv1a2.PolicyReasonInvalid, err.Error())
+					}
 					continue
 				}
 			}
@@ -135,13 +148,15 @@ func (r *HTTPFilterPolicyReconciler) policyToTranslationState(ctx context.Contex
 					return nil, fmt.Errorf("failed to get VirtualService: %w, NamespacedName: %v", err, nsName)
 				}
 
-				logger.Info("VirtualService not found", "name", virtualService.Name, "namespace", virtualService.Namespace)
+				policy.SetAccepted(gwapiv1a2.PolicyReasonTargetNotFound)
 				continue
 			}
 
 			err = mosniov1.ValidateVirtualService(&virtualService)
 			if err != nil {
 				logger.Info("unsupported VirtualService", "name", virtualService.Name, "namespace", virtualService.Namespace, "reason", err.Error())
+				// treat invalid target resource as not found
+				policy.SetAccepted(gwapiv1a2.PolicyReasonTargetNotFound, err.Error())
 				continue
 			}
 
@@ -156,8 +171,7 @@ func (r *HTTPFilterPolicyReconciler) policyToTranslationState(ctx context.Contex
 				}
 
 				if !found {
-					logger.Info("skip HTTPFilterPolicy, route not found", "name", policy.Name, "namespace", policy.Namespace, "route", name)
-					// TODO: policy implementation should record a resolvedRefs or similar Condition in the Policy's status
+					policy.SetAccepted(gwapiv1a2.PolicyReasonTargetNotFound)
 					continue
 				}
 			}
@@ -178,6 +192,8 @@ func (r *HTTPFilterPolicyReconciler) policyToTranslationState(ctx context.Contex
 					if !apierrors.IsNotFound(err) {
 						return nil, err
 					}
+					logger.Info("gateway not found", "gateway", gw,
+						"name", virtualService.Name, "namespace", virtualService.Namespace)
 					continue
 				}
 
@@ -187,14 +203,22 @@ func (r *HTTPFilterPolicyReconciler) policyToTranslationState(ctx context.Contex
 					continue
 				}
 
-				initState.AddPolicyForVirtualService(&policy, &virtualService, &gateway)
+				initState.AddPolicyForVirtualService(policy, &virtualService, &gateway)
 
 				key := k8s.GetObjectKey(&gateway.ObjectMeta)
 				if _, ok := istioGwIdx[key]; !ok {
 					istioGwIdx[key] = []*mosniov1.HTTPFilterPolicy{}
 				}
-				istioGwIdx[key] = append(istioGwIdx[key], &policy)
+				istioGwIdx[key] = append(istioGwIdx[key], policy)
+
+				accepted = true
 			}
+		}
+
+		if accepted {
+			policy.SetAccepted(gwapiv1a2.PolicyReasonAccepted)
+		} else {
+			policy.SetAccepted(gwapiv1a2.PolicyReasonTargetNotFound, "invalid target resource")
 		}
 	}
 
@@ -257,6 +281,24 @@ func (r *HTTPFilterPolicyReconciler) translationStateToCustomResource(ctx contex
 		}
 	}
 
+	return nil
+}
+
+func (r *HTTPFilterPolicyReconciler) updatePolicies(ctx context.Context,
+	policies *mosniov1.HTTPFilterPolicyList) error {
+
+	for i := range policies.Items {
+		policy := &policies.Items[i]
+		// track changed status will be a little faster than iterating policies
+		// but make code much complex
+		if !policy.Status.IsChanged() {
+			continue
+		}
+		if err := r.Status().Update(ctx, policy); err != nil {
+			return fmt.Errorf("failed to update HTTPFilterPolicy status: %w, namespacedName: %v",
+				err, types.NamespacedName{Name: policy.Name, Namespace: policy.Namespace})
+		}
+	}
 	return nil
 }
 

@@ -6,6 +6,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	istioapi "istio.io/api/networking/v1beta1"
 	istiov1b1 "istio.io/client-go/pkg/apis/networking/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
@@ -14,6 +15,7 @@ import (
 
 func TestValidateHTTPFilterPolicy(t *testing.T) {
 	plugins.RegisterHttpPlugin("animal", &plugins.MockPlugin{})
+	namespace := gwapiv1a2.Namespace("ns")
 
 	tests := []struct {
 		name   string
@@ -56,6 +58,24 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 				},
 			},
 			err: "unknown http filter: property",
+		},
+		{
+			name: "cross namespace",
+			policy: &HTTPFilterPolicy{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "namespace",
+				},
+				Spec: HTTPFilterPolicySpec{
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Namespace: &namespace,
+							Group:     "networking.istio.io",
+							Kind:      "VirtualService",
+						},
+					},
+				},
+			},
+			err: "namespace in TargetRef doesn't match HTTPFilterPolicy's namespace",
 		},
 	}
 

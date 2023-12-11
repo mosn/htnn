@@ -1,0 +1,14 @@
+- apiVersion: mosn.io/v1
+  kind: HTTPFilterPolicy
+  metadata:
+    name: policy
+    namespace: default
+  spec:
+    targetRef:
+      group: networking.istio.io
+      kind: VirtualService
+      name: vs
+    filters:
+      unknown:
+        config:
+          host_name: goldfish
