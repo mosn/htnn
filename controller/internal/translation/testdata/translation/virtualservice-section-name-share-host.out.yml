@@ -1,8 +1,8 @@
 - metadata:
     annotations:
-      htnn.mosn.io/info: '{"httpfilterpolicies":["default/delay"]}'
+      htnn.mosn.io/info: '{"httpfilterpolicies":["default/delay","default/policy"]}'
     creationTimestamp: null
-    name: htnn-h-default--delay
+    name: htnn-h-httpbin.example.com
   spec:
     configPatches:
     - applyTo: HTTP_ROUTE
@@ -27,14 +27,6 @@
                       - config:
                           pet: cat
                         name: animal
-  status: {}
-- metadata:
-    annotations:
-      htnn.mosn.io/info: '{"httpfilterpolicies":["default/policy"]}'
-    creationTimestamp: null
-    name: htnn-h-default--policy
-  spec:
-    configPatches:
     - applyTo: HTTP_ROUTE
       match:
         routeConfiguration:

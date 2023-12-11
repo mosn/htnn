@@ -36,14 +36,15 @@ func hostMatch(gwHost string, host string) bool {
 	return false
 }
 
-func buildVirtualHost(host string, gws []*istiov1b1.Gateway) *model.VirtualHost {
+func buildVirtualHosts(host string, gws []*istiov1b1.Gateway) []*model.VirtualHost {
+	vhs := make([]*model.VirtualHost, 0)
 	for _, gw := range gws {
 		for _, svr := range gw.Spec.Servers {
 			port := svr.Port.Number
 			for _, h := range svr.Hosts {
 				if hostMatch(h, host) {
 					name := net.JoinHostPort(host, fmt.Sprintf("%d", port))
-					return &model.VirtualHost{
+					vhs = append(vhs, &model.VirtualHost{
 						Gateway: &model.Gateway{
 							NsName: &types.NamespacedName{
 								Namespace: gw.Namespace,
@@ -52,12 +53,12 @@ func buildVirtualHost(host string, gws []*istiov1b1.Gateway) *model.VirtualHost 
 							Port: port,
 						},
 						Name: name,
-					}
+					})
 				}
 			}
 		}
 	}
-	return nil
+	return vhs
 }
 
 func toDataPlaneState(ctx *Ctx, state *InitState) (*FinalState, error) {
@@ -76,26 +77,28 @@ func toDataPlaneState(ctx *Ctx, state *InitState) (*FinalState, error) {
 			}
 		}
 		for _, hostName := range spec.Hosts {
-			vh := buildVirtualHost(hostName, gws)
-			if vh == nil {
+			vhs := buildVirtualHosts(hostName, gws)
+			if len(vhs) == 0 {
 				// maybe a host from an unsupported gateway which is referenced as one of the Hosts
 				ctx.logger.Info("virtual host not found, skipped", "hostname", hostName,
 					"virtualservice", id, "gateways", gws)
 				continue
 			}
-			if host, ok := s.Hosts[vh.Name]; ok {
-				// TODO: add route name collision detection
-				// Currently, it is the webhook or the user configuration to guarantee the same route
-				// name won't be used in different VirtualServices that share the same host.
-				for routeName, policy := range routes {
-					host.Routes[routeName] = policy
+			for _, vh := range vhs {
+				if host, ok := s.Hosts[vh.Name]; ok {
+					// TODO: add route name collision detection
+					// Currently, it is the webhook or the user configuration to guarantee the same route
+					// name won't be used in different VirtualServices that share the same host.
+					for routeName, policy := range routes {
+						host.Routes[routeName] = policy
+					}
+				} else {
+					policy := &hostPolicy{
+						VirtualHost: vh,
+						Routes:      routes,
+					}
+					s.Hosts[vh.Name] = policy
 				}
-			} else {
-				policy := &hostPolicy{
-					VirtualHost: vh,
-					Routes:      routes,
-				}
-				s.Hosts[vh.Name] = policy
 			}
 		}
 	}
