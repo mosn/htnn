@@ -3,13 +3,13 @@ gateway:
   kind: Gateway
   metadata:
     name: httpbin-gateway
-    namespace: test
+    namespace: default
   spec:
     selector:
       istio: ingressgateway
     servers:
     - hosts:
-      - "*.example.com"
+      - httpbin.example.com
       port:
         name: http
         number: 80
@@ -20,19 +20,26 @@ virtualService:
       kind: VirtualService
       metadata:
         name: httpbin
-        namespace: test
+        namespace: default
       spec:
         gateways:
         - httpbin-gateway
         hosts:
-        - "dev.httpbin.example.com"
+        - httpbin.example.com
         http:
         - match:
           - uri:
               prefix: /status
+          name: policy
+          route:
+          - destination:
+              host: httpbin
+              port:
+                number: 8000
+        - match:
           - uri:
               prefix: /delay
-          name: policy
+          name: delay
           route:
           - destination:
               host: httpbin
@@ -44,14 +51,14 @@ httpFilterPolicy:
     kind: HTTPFilterPolicy
     metadata:
       name: policy
-      namespace: test
+      namespace: default
     spec:
       targetRef:
         group: networking.istio.io
         kind: VirtualService
         name: httpbin
+        sectionName: delay
       filters:
-        localReply:
+        animal:
           config:
-            need: true
-            decode: true
+            pet: goldfish

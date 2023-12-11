@@ -1,17 +1,17 @@
 - metadata:
     annotations:
-      htnn.mosn.io/info: '{"httpfilterpolicies":["test/policy"]}'
+      htnn.mosn.io/info: '{"httpfilterpolicies":["default/policy"]}'
     creationTimestamp: null
-    name: htnn-h-test--httpbin
+    name: htnn-h-default--httpbin
   spec:
     configPatches:
     - applyTo: HTTP_ROUTE
       match:
         routeConfiguration:
           vhost:
-            name: dev.httpbin.example.com:80
+            name: httpbin.example.com:80
             route:
-              name: policy
+              name: delay
       patch:
         operation: MERGE
         value:
@@ -25,7 +25,6 @@
                     value:
                       plugins:
                       - config:
-                          decode: true
-                          need: true
-                        name: localReply
+                          pet: goldfish
+                        name: animal
   status: {}

@@ -5,6 +5,7 @@ import (
 	"sort"
 
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 
 	mosniov1 "mosn.io/moe/controller/api/v1"
 	"mosn.io/moe/controller/internal/model"
@@ -22,69 +23,85 @@ type mergedState struct {
 
 type mergedHostPolicy struct {
 	VirtualHost *model.VirtualHost
-	Routes      map[string]*mergedRoutePolicy
-	Policy      *filtermanager.FilterManagerConfig
-	Info        *Info
+	Routes      map[string]*mergedPolicy
 }
 
-type mergedRoutePolicy struct {
-	Policy *filtermanager.FilterManagerConfig
+type mergedPolicy struct {
+	Config *filtermanager.FilterManagerConfig
+	Info   *Info
+	NsName *types.NamespacedName
 }
 
-func toNsName(policy *mosniov1.HTTPFilterPolicy) string {
+func toNsName(policy *HTTPFilterPolicyWrapper) string {
 	return policy.Namespace + "/" + policy.Name
 }
 
-// highest priority policy will be first
-func sortHttpFilterPolicy(policies []*mosniov1.HTTPFilterPolicy) {
+// Highest priority policy will be first.
+// According to the https://gateway-api.sigs.k8s.io/geps/gep-713/,
+// 1. A Policy targeting a more specific scope wins over a policy targeting a lesser specific scope.
+// 2. If multiple polices configure the same plugin, the oldest one (based on creation timestamp) wins.
+// 3. If there are multiple oldest polices, the one appearing first in alphabetical order by {namespace}/{name} wins.
+func sortHttpFilterPolicy(policies []*HTTPFilterPolicyWrapper) {
 	// use Slice instead of SliceStable because each policy has unique namespace/name
 	sort.Slice(policies, func(i, j int) bool {
-		if policies[i].CreationTimestamp == policies[j].CreationTimestamp {
-			return toNsName(policies[i]) < toNsName(policies[j])
+		if policies[i].scope != policies[j].scope {
+			return policies[i].scope < policies[j].scope
 		}
-		return policies[i].CreationTimestamp.Before(&policies[j].CreationTimestamp)
+		if policies[i].CreationTimestamp != policies[j].CreationTimestamp {
+			return policies[i].CreationTimestamp.Before(&policies[j].CreationTimestamp)
+		}
+		return toNsName(policies[i]) < toNsName(policies[j])
 	})
+}
+
+func toMergedPolicy(rp *routePolicy) *mergedPolicy {
+	policies := rp.Policies
+	sortHttpFilterPolicy(policies)
+
+	info := &Info{
+		HTTPFilterPolicies: []string{},
+	}
+	p := &mosniov1.HTTPFilterPolicy{
+		Spec: mosniov1.HTTPFilterPolicySpec{
+			Filters: make(map[string]runtime.RawExtension),
+		},
+	}
+	for _, policy := range policies {
+		used := false
+		for name, filter := range policy.Spec.Filters {
+			if _, ok := p.Spec.Filters[name]; !ok {
+				p.Spec.Filters[name] = filter
+				used = true
+			}
+		}
+
+		if used {
+			info.HTTPFilterPolicies = append(info.HTTPFilterPolicies, toNsName(policy))
+		}
+	}
+
+	fmc := translateHTTPFilterPolicyToFilterManagerConfig(p)
+	return &mergedPolicy{
+		Config: fmc,
+		Info:   info,
+		NsName: rp.NsName,
+	}
 }
 
 func toMergedState(ctx *Ctx, state *dataPlaneState) (*FinalState, error) {
 	s := &mergedState{
 		Hosts: make(map[string]*mergedHostPolicy),
 	}
-	// According to the https://gateway-api.sigs.k8s.io/geps/gep-713/,
-	// 1. A Policy targeting a more specific scope wins over a policy targeting a lesser specific scope.
-	// 2. If multiple polices configure the same plugin, the oldest one (based on creation timestamp) wins.
-	// 3. If there are multiple oldest polices, the one appearing first in alphabetical order by {namespace}/{name} wins.
 	for name, host := range state.Hosts {
 		mh := &mergedHostPolicy{
 			VirtualHost: host.VirtualHost,
-			Routes:      make(map[string]*mergedRoutePolicy),
-			Info: &Info{
-				HTTPFilterPolicies: []string{},
-			},
+			Routes:      make(map[string]*mergedPolicy),
 		}
 
-		sortHttpFilterPolicy(host.Policies)
-		mergedPolicy := &mosniov1.HTTPFilterPolicy{
-			Spec: mosniov1.HTTPFilterPolicySpec{
-				Filters: make(map[string]runtime.RawExtension),
-			},
-		}
-		for _, policy := range host.Policies {
-			used := false
-			for name, filter := range policy.Spec.Filters {
-				if _, ok := mergedPolicy.Spec.Filters[name]; !ok {
-					mergedPolicy.Spec.Filters[name] = filter
-					used = true
-				}
-			}
-
-			if used {
-				mh.Info.HTTPFilterPolicies = append(mh.Info.HTTPFilterPolicies, toNsName(policy))
-			}
+		for routeName, route := range host.Routes {
+			mh.Routes[routeName] = toMergedPolicy(route)
 		}
 
-		fmc := translateHTTPFilterPolicyToFilterManagerConfig(mergedPolicy)
-		mh.Policy = fmc
 		s.Hosts[name] = mh
 	}
 
