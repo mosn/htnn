@@ -12,7 +12,7 @@ By default, the controller writes its log to stderr, in the format below:
 
 Most of the logs in the reconciliation will contain the `reconcileID` field, so we can use it as the trace ID for each reconciliation.
 
-If you prefer a JSON format log, you can pass `--log-encoder json` argument when starting the controller. Now the log will look like this:
+If you prefer a JSON format log, you can pass `--log-encoder json` option when starting the controller. Now the log will look like this:
 
 ```
 {"level":"info","ts":"2023-12-09T11:47:26.863+0800","msg":"reconcile","controller":"httpfilterpolicy","controllerGroup":"mosn.io","controllerKind":"HTTPFilterPolicy","HTTPFilterPolicy":{"name":"policy","namespace":"default"},"namespace":"default","name":"policy","reconcileID":"3120c72c-68ba-4e8b-b661-f68ac1fda49b"}
@@ -20,7 +20,9 @@ If you prefer a JSON format log, you can pass `--log-encoder json` argument when
 
 ## Metrics
 
-By default, the controller exposes metrics via `http://127.0.0.1:10080/metrics`, in the Prometheus format:
+By default, the controller exposes metrics via `http://0.0.0.0:10080/metrics`, which can be changed by passing `--metrics-bind-address $another_addr` option (for example, `--metrics-bind-address :11080`) when starting the controller.
+
+The metrics is in the Prometheus format:
 
 ```
 ...
