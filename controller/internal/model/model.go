@@ -1,6 +1,8 @@
 package model
 
-import "k8s.io/apimachinery/pkg/types"
+import (
+	"k8s.io/apimachinery/pkg/types"
+)
 
 type Gateway struct {
 	NsName *types.NamespacedName
@@ -9,7 +11,6 @@ type Gateway struct {
 
 type VirtualHost struct {
 	Gateway *Gateway
-	NsName  *types.NamespacedName
 	Name    string
 }
 

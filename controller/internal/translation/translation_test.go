@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 
@@ -29,9 +30,9 @@ func mustUnmarshal(t *testing.T, fn string, out interface{}) {
 
 type testInput struct {
 	// we use sigs.k8s.io/yaml which uses JSON under the hover
-	HTTPFilterPolicy []*mosniov1.HTTPFilterPolicy           `json:"httpFilterPolicy"`
-	VirtualService   map[string][]*istiov1b1.VirtualService `json:"virtualService"`
-	Gateway          map[string][]*istiov1b1.Gateway        `json:"gateway"`
+	HTTPFilterPolicy map[string][]*mosniov1.HTTPFilterPolicy `json:"httpFilterPolicy"`
+	VirtualService   map[string][]*istiov1b1.VirtualService  `json:"virtualService"`
+	Gateway          []*istiov1b1.Gateway                    `json:"gateway"`
 }
 
 func TestTranslate(t *testing.T) {
@@ -47,14 +48,14 @@ func TestTranslate(t *testing.T) {
 			s := NewInitState(nil)
 
 			// set up resources
-			for _, httpFilterPolicy := range input.HTTPFilterPolicy {
-				vss := input.VirtualService[httpFilterPolicy.Name]
+			for _, gw := range input.Gateway {
+				vss := input.VirtualService[gw.Name]
 				for _, vs := range vss {
-					gws := input.Gateway[vs.Name]
-					for _, gw := range gws {
+					hfps := input.HTTPFilterPolicy[vs.Name]
+					for _, hfp := range hfps {
 						// fulfill default fields
-						if httpFilterPolicy.Namespace == "" {
-							httpFilterPolicy.SetNamespace("default")
+						if hfp.Namespace == "" {
+							hfp.SetNamespace("default")
 						}
 						if vs.Namespace == "" {
 							vs.SetNamespace("default")
@@ -62,7 +63,7 @@ func TestTranslate(t *testing.T) {
 						if gw.Namespace == "" {
 							gw.SetNamespace("default")
 						}
-						s.AddPolicyForVirtualService(httpFilterPolicy, vs, gw)
+						s.AddPolicyForVirtualService(hfp, vs, gw)
 					}
 				}
 			}
@@ -87,6 +88,9 @@ func TestTranslate(t *testing.T) {
 			for _, ef := range fs.EnvoyFilters {
 				out = append(out, ef)
 			}
+			sort.Slice(out, func(i, j int) bool {
+				return out[i].Name < out[j].Name
+			})
 			d, _ := yaml.Marshal(out)
 			actual := string(d)
 

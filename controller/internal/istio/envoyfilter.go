@@ -76,22 +76,29 @@ func DefaultEnvoyFilters() map[string]*istiov1a3.EnvoyFilter {
 	return efs
 }
 
-func GenerateHostFilter(host *model.VirtualHost, config *filtermanager.FilterManagerConfig) *istiov1a3.EnvoyFilter {
+func GenerateRouteFilter(host *model.VirtualHost, route string, config *filtermanager.FilterManagerConfig) *istiov1a3.EnvoyFilter {
 	v := map[string]interface{}{}
 	// This Marshal/Unmarshal trick works around the type check in MustNewStruct
 	data, _ := json.Marshal(config)
 	_ = json.Unmarshal(data, &v)
+
+	applyTo := istioapi.EnvoyFilter_HTTP_ROUTE
+	vhost := &istioapi.EnvoyFilter_RouteConfigurationMatch_VirtualHostMatch{
+		Name: host.Name,
+		Route: &istioapi.EnvoyFilter_RouteConfigurationMatch_RouteMatch{
+			Name: route,
+		},
+	}
+
 	return &istiov1a3.EnvoyFilter{
 		Spec: istioapi.EnvoyFilter{
 			ConfigPatches: []*istioapi.EnvoyFilter_EnvoyConfigObjectPatch{
 				{
-					ApplyTo: istioapi.EnvoyFilter_VIRTUAL_HOST,
+					ApplyTo: applyTo,
 					Match: &istioapi.EnvoyFilter_EnvoyConfigObjectMatch{
 						ObjectTypes: &istioapi.EnvoyFilter_EnvoyConfigObjectMatch_RouteConfiguration{
 							RouteConfiguration: &istioapi.EnvoyFilter_RouteConfigurationMatch{
-								Vhost: &istioapi.EnvoyFilter_RouteConfigurationMatch_VirtualHostMatch{
-									Name: host.Name,
-								},
+								Vhost: vhost,
 							},
 						},
 					},

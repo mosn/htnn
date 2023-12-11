@@ -56,6 +56,7 @@ type HTTPFilterPolicyStatus struct {
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
+//+kubebuilder:metadata:labels=gateway.networking.k8s.io/policy=direct
 
 // HTTPFilterPolicy is the Schema for the httpfilterpolicies API
 type HTTPFilterPolicy struct {

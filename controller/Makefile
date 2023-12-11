@@ -131,6 +131,8 @@ undeploy: ## Undeploy controller from the K8s cluster specified in ~/.kube/confi
 
 ## Location to install dependencies to
 LOCALBIN ?= $(shell pwd)/bin
+# Remember to remove tools downloaded into bin directory manually before updating them.
+# If they need to be updated frequently, we can consider to store them in the `Dockerfile.dev`.
 $(LOCALBIN):
 	mkdir -p $(LOCALBIN)
 

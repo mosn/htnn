@@ -3,13 +3,13 @@ gateway:
   kind: Gateway
   metadata:
     name: httpbin-gateway
-    namespace: test
+    namespace: default
   spec:
     selector:
       istio: ingressgateway
     servers:
     - hosts:
-      - "*.example.com"
+      - httpbin.example.com
       port:
         name: http
         number: 80
@@ -20,19 +20,26 @@ virtualService:
       kind: VirtualService
       metadata:
         name: httpbin
-        namespace: test
+        namespace: default
       spec:
         gateways:
         - httpbin-gateway
         hosts:
-        - "dev.httpbin.example.com"
+        - httpbin.example.com
         http:
         - match:
           - uri:
-              prefix: /status
+              prefix: /
+          name: host
+          route:
+          - destination:
+              host: httpbin
+              port:
+                number: 8000
+        - match:
           - uri:
-              prefix: /delay
-          name: policy
+              prefix: /route
+          name: route
           route:
           - destination:
               host: httpbin
@@ -43,15 +50,30 @@ httpFilterPolicy:
   - apiVersion: mosn.io/v1
     kind: HTTPFilterPolicy
     metadata:
-      name: policy
-      namespace: test
+      name: policy-route
+      namespace: default
+    spec:
+      targetRef:
+        group: networking.istio.io
+        kind: VirtualService
+        name: httpbin
+        sectionName: route
+      filters:
+        animal:
+          config:
+            pet: goldfish
+  - apiVersion: mosn.io/v1
+    kind: HTTPFilterPolicy
+    metadata:
+      # If these two policies are in the same level, policy-host is prior to policy-route
+      name: policy-host
+      namespace: default
     spec:
       targetRef:
         group: networking.istio.io
         kind: VirtualService
         name: httpbin
       filters:
-        localReply:
+        animal:
           config:
-            need: true
-            decode: true
+            pet: cat

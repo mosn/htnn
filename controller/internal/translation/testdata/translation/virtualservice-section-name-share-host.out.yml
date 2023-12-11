@@ -1,8 +1,8 @@
 - metadata:
     annotations:
-      htnn.mosn.io/info: '{"httpfilterpolicies":["default/policy"]}'
+      htnn.mosn.io/info: '{"httpfilterpolicies":["default/delay"]}'
     creationTimestamp: null
-    name: htnn-h-default--httpbin
+    name: htnn-h-default--delay
   spec:
     configPatches:
     - applyTo: HTTP_ROUTE
@@ -11,7 +11,7 @@
           vhost:
             name: httpbin.example.com:80
             route:
-              name: policy
+              name: route-delay
       patch:
         operation: MERGE
         value:
@@ -25,15 +25,23 @@
                     value:
                       plugins:
                       - config:
-                          host_name: goldfish
+                          pet: cat
                         name: animal
+  status: {}
+- metadata:
+    annotations:
+      htnn.mosn.io/info: '{"httpfilterpolicies":["default/policy"]}'
+    creationTimestamp: null
+    name: htnn-h-default--policy
+  spec:
+    configPatches:
     - applyTo: HTTP_ROUTE
       match:
         routeConfiguration:
           vhost:
-            name: httpbin.test.com:8080
+            name: httpbin.example.com:80
             route:
-              name: policy
+              name: route-policy
       patch:
         operation: MERGE
         value:
@@ -47,6 +55,6 @@
                     value:
                       plugins:
                       - config:
-                          host_name: goldfish
+                          pet: goldfish
                         name: animal
   status: {}

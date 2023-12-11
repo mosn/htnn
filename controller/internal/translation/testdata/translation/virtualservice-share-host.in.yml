@@ -14,74 +14,59 @@ gateway:
         name: http
         number: 80
         protocol: HTTP
-- apiVersion: networking.istio.io/v1beta1
-  kind: Gateway
-  metadata:
-    name: httpbin-test-gateway
-    namespace: default
-  spec:
-    selector:
-      istio: ingressgateway
-    servers:
-    - hosts:
-      - httpbin.test.com
-      port:
-        name: http
-        number: 8080
-        protocol: HTTP
 virtualService:
   httpbin-gateway:
     - apiVersion: networking.istio.io/v1beta1
       kind: VirtualService
       metadata:
-        name: httpbin
+        name: policy
         namespace: default
       spec:
         gateways:
         - httpbin-gateway
-        - httpbin-test-gateway
         hosts:
         - httpbin.example.com
-        - httpbin.test.com
         http:
         - match:
           - uri:
               prefix: /status
-          - uri:
-              prefix: /delay
-          name: policy
+          name: route-policy
           route:
           - destination:
               host: httpbin
               port:
                 number: 8000
-  httpbin-test-gateway:
     - apiVersion: networking.istio.io/v1beta1
       kind: VirtualService
       metadata:
-        name: httpbin
+        name: delay
         namespace: default
       spec:
         gateways:
         - httpbin-gateway
-        - httpbin-test-gateway
         hosts:
         - httpbin.example.com
-        - httpbin.test.com
         http:
         - match:
           - uri:
-              prefix: /status
-          - uri:
               prefix: /delay
-          name: policy
+          name: route-delay
+          route:
+          - destination:
+              host: httpbin
+              port:
+                number: 8000
+        - match:
+          - uri:
+              prefix: /
+          name: route-any
           route:
           - destination:
               host: httpbin
               port:
                 number: 8000
 httpFilterPolicy:
-  httpbin:
+  policy:
   - apiVersion: mosn.io/v1
     kind: HTTPFilterPolicy
     metadata:
@@ -91,8 +76,23 @@ httpFilterPolicy:
       targetRef:
         group: networking.istio.io
         kind: VirtualService
+        name: policy
+      filters:
+        animal:
+          config:
+            pet: goldfish
+  delay:
+  - apiVersion: mosn.io/v1
+    kind: HTTPFilterPolicy
+    metadata:
+      name: delay
+      namespace: default
+    spec:
+      targetRef:
+        group: networking.istio.io
+        kind: VirtualService
         name: httpbin
       filters:
         animal:
           config:
-            host_name: goldfish
+            pet: cat

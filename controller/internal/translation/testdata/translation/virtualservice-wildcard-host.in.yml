@@ -1,24 +1,21 @@
-httpFilterPolicy:
-  - apiVersion: mosn.io/v1
-    kind: HTTPFilterPolicy
-    metadata:
-      name: policy
-      namespace: test
-    spec:
-      targetRef:
-        group: networking.istio.io
-        kind: VirtualService
-        name: httpbin
-      filters:
-        localReply:
-          config:
-            need: true
-            decode: true
-        animal:
-          config:
-            pet: dog
+gateway:
+- apiVersion: networking.istio.io/v1beta1
+  kind: Gateway
+  metadata:
+    name: httpbin-gateway
+    namespace: test
+  spec:
+    selector:
+      istio: ingressgateway
+    servers:
+    - hosts:
+      - "*.httpbin.example.com"
+      port:
+        name: http
+        number: 80
+        protocol: HTTP
 virtualService:
-  policy:
+  httpbin-gateway:
     - apiVersion: networking.istio.io/v1beta1
       kind: VirtualService
       metadata:
@@ -41,20 +38,23 @@ virtualService:
               host: httpbin
               port:
                 number: 8000
-gateway:
+httpFilterPolicy:
   httpbin:
-    - apiVersion: networking.istio.io/v1beta1
-      kind: Gateway
-      metadata:
-        name: httpbin-gateway
-        namespace: test
-      spec:
-        selector:
-          istio: ingressgateway
-        servers:
-        - hosts:
-          - "*.httpbin.example.com"
-          port:
-            name: http
-            number: 80
-            protocol: HTTP
+  - apiVersion: mosn.io/v1
+    kind: HTTPFilterPolicy
+    metadata:
+      name: policy
+      namespace: test
+    spec:
+      targetRef:
+        group: networking.istio.io
+        kind: VirtualService
+        name: httpbin
+      filters:
+        localReply:
+          config:
+            need: true
+            decode: true
+        animal:
+          config:
+            pet: dog
