@@ -2,7 +2,7 @@
     annotations:
       htnn.mosn.io/info: '{"httpfilterpolicies":["test/policy"]}'
     creationTimestamp: null
-    name: htnn-h-test--httpbin
+    name: htnn-h--httpbin.example.com
   spec:
     configPatches:
     - applyTo: HTTP_ROUTE
