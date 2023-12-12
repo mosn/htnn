@@ -17,6 +17,8 @@ limitations under the License.
 package v1
 
 import (
+	"time"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -52,6 +54,8 @@ type HTTPFilterPolicyStatus struct {
 	// +listType=map
 	// +listMapKey=type
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
+
+	changed bool
 }
 
 //+kubebuilder:object:root=true
@@ -65,6 +69,48 @@ type HTTPFilterPolicy struct {
 
 	Spec   HTTPFilterPolicySpec   `json:"spec,omitempty"`
 	Status HTTPFilterPolicyStatus `json:"status,omitempty"`
+}
+
+func (p *HTTPFilterPolicy) SetAccepted(reason gwapiv1a2.PolicyConditionReason, msg ...string) {
+	c := metav1.Condition{
+		Type:               string(gwapiv1a2.PolicyConditionAccepted),
+		Reason:             string(reason),
+		LastTransitionTime: metav1.NewTime(time.Now()),
+	}
+	switch reason {
+	case gwapiv1a2.PolicyReasonAccepted:
+		c.Status = metav1.ConditionTrue
+		c.Message = "The policy has been accepted"
+	case gwapiv1a2.PolicyReasonInvalid:
+		c.Status = metav1.ConditionFalse
+		c.Message = msg[0]
+	case gwapiv1a2.PolicyReasonTargetNotFound:
+		c.Status = metav1.ConditionFalse
+		if len(msg) > 0 {
+			c.Message = msg[0]
+		} else {
+			c.Message = "The policy targets non-existent resource"
+		}
+	}
+	conds, changed := addOrUpdateCondition(p.Status.Conditions, c)
+	p.Status.Conditions = conds
+
+	if changed {
+		p.Status.changed = true
+	}
+}
+
+func (p *HTTPFilterPolicy) IsValid() bool {
+	for _, cond := range p.Status.Conditions {
+		if cond.Type == string(gwapiv1a2.PolicyConditionAccepted) && cond.Reason == string(gwapiv1a2.PolicyReasonInvalid) {
+			return false
+		}
+	}
+	return true
+}
+
+func (s *HTTPFilterPolicyStatus) IsChanged() bool {
+	return s.changed
 }
 
 //+kubebuilder:object:root=true
