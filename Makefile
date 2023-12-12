@@ -1,3 +1,17 @@
+# Copyright The HTNN Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 SHELL = /bin/bash
 OS = $(shell uname)
 IN_CI ?=
@@ -147,6 +161,18 @@ lint-proto: $(LOCALBIN)
 	test -x $(LOCALBIN)/buf || GOBIN=$(LOCALBIN) go install github.com/bufbuild/buf/cmd/buf@v1.28.1
 	$(LOCALBIN)/buf lint
 
+.PHONY: install-license-checker
+install-license-checker: $(LOCALBIN)
+	test -x $(LOCALBIN)/license-checker || GOBIN=$(LOCALBIN) go install github.com/apache/skywalking-eyes/cmd/license-eye@v0.5.0
+
+.PHONY: lint-license
+lint-license: install-license-checker
+	$(LOCALBIN)/license-eye header check
+
+.PHONY: fix-license
+fix-license: install-license-checker
+	$(LOCALBIN)/license-eye header fix
+
 .PHONY: lint-spell
 lint-spell: dev-tools
 	docker run --rm -v $(PWD):/go/src/${PROJECT_NAME} -w /go/src/${PROJECT_NAME} \
@@ -174,7 +200,7 @@ lint-editorconfig: $(LOCALBIN)
 	$(LOCALBIN)/editorconfig-checker
 
 .PHONY: lint
-lint: lint-go lint-proto lint-spell lint-editorconfig
+lint: lint-go lint-proto lint-license lint-spell lint-editorconfig
 
 .PHONY: fmt
 fmt: fmt-go

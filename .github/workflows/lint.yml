@@ -55,6 +55,13 @@ jobs:
           exit 1
         fi
 
+    - name: lint license
+      run: |
+        if ! make lint-license; then
+          echo "Files without license detected. Please run 'make fix-license', edit the detected files and commit changes."
+          exit 1
+        fi
+
     - name: lint editorconfig
       run: |
         # See https://editorconfig.org/ to know how to support editorconfig in your editor
