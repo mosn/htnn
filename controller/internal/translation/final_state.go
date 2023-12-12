@@ -3,24 +3,34 @@ package translation
 import (
 	"fmt"
 	"sort"
+	"strings"
 
 	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 
 	"mosn.io/moe/controller/internal/istio"
+	"mosn.io/moe/controller/internal/model"
 )
 
 const (
 	AnnotationInfo = "htnn.mosn.io/info"
 )
 
-func envoyFilterName(route *mergedPolicy) string {
-	// We use the NsName as the EnvoyFilter name because the host name may contain invalid characters.
-	// This design also make it easier to reference the original CR with the EnvoyFilter.
-	// As a result, when a VirtualService or something else has multiple hosts, we hold them in the
-	// same EnvoyFilter.
+// We use the domain as the EnvoyFilter's name, so that:
+// 1. We can easily find per domain rules.
+// 2. Match the EnvoyFilter model which uses domain + routeName as the key.
+// 3. Allow merging the same route configuration into virtual host level.
+// There are also some drawbacks. For example, a domain shared by hundreds of VirtualServices will
+// cause one big EnvoyFilter. Let's see if it's a problem.
+func envoyFilterName(vhost *model.VirtualHost) string {
+	// Strip the port number. We don't need to create two EnvoyFilters for :80 and :443.
+	domain := strings.Split(vhost.Name, ":")[0]
+	if strings.HasPrefix(domain, "*.") {
+		// '*' is not allowed in EnvoyFilter name. And '.' can only be used after alphanumeric characters.
+		// So we replace the '*.' with '-'.
+		domain = "-" + domain[2:]
+	}
 	// The `htnn-h` means the HTNN's HTTPFilterPolicy.
-	// The namespace & name may be overlapped, so we use `--` as separator to reduce the chance.
-	return fmt.Sprintf("htnn-h-%s--%s", route.NsName.Namespace, route.NsName.Name)
+	return fmt.Sprintf("htnn-h-%s", domain)
 }
 
 // finalState is the end of the translation. We convert the state to EnvoyFilter and write it to k8s.
@@ -39,7 +49,7 @@ func toFinalState(_ *Ctx, state *mergedState) (*FinalState, error) {
 	for _, host := range state.Hosts {
 		for routeName, route := range host.Routes {
 			ef := istio.GenerateRouteFilter(host.VirtualHost, routeName, route.Config)
-			name := envoyFilterName(route)
+			name := envoyFilterName(host.VirtualHost)
 			ef.SetName(name)
 
 			efList = append(efList, &envoyFilterWrapper{

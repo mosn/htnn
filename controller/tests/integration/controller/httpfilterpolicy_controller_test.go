@@ -136,14 +136,14 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 			for _, ef := range envoyfilters.Items {
 				Expect(ef.Namespace).To(Equal("istio-system"))
 				names = append(names, ef.Name)
-				if ef.Name == "htnn-h-default--vs" {
+				if ef.Name == "htnn-h-default.local" {
 					Expect(len(ef.Spec.ConfigPatches)).To(Equal(1))
 					cp := ef.Spec.ConfigPatches[0]
 					Expect(cp.ApplyTo).To(Equal(istioapi.EnvoyFilter_HTTP_ROUTE))
 					Expect(cp.Match.GetRouteConfiguration().GetVhost().Name).To(Equal("default.local:8888"))
 				}
 			}
-			Expect(names).To(ConsistOf([]string{"htnn-http-filter", "htnn-h-default--vs"}))
+			Expect(names).To(ConsistOf([]string{"htnn-http-filter", "htnn-h-default.local"}))
 
 			host := virtualService.Spec.Hosts[0]
 			virtualService.Spec.Hosts[0] = "no-gateway-match-it.com"
@@ -199,7 +199,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 			for _, ef := range envoyfilters.Items {
 				names = append(names, ef.Name)
 			}
-			Expect(names).To(ConsistOf([]string{"htnn-http-filter", "htnn-h-default--vs"}))
+			Expect(names).To(ConsistOf([]string{"htnn-http-filter", "htnn-h-default.local"}))
 
 			DefaultIstioGateway.Spec.Servers[0].Port.Number = 8889
 			err := k8sClient.Update(ctx, DefaultIstioGateway)
@@ -210,7 +210,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 				}
 				name := ""
 				for _, ef := range envoyfilters.Items {
-					if ef.Name == "htnn-h-default--vs" {
+					if ef.Name == "htnn-h-default.local" {
 						name = ef.Spec.ConfigPatches[0].Match.GetRouteConfiguration().GetVhost().GetName()
 					}
 				}
@@ -250,7 +250,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 			for _, ef := range envoyfilters.Items {
 				names = append(names, ef.Name)
 			}
-			Expect(names).To(ConsistOf([]string{"htnn-http-filter", "htnn-h-default--default"}))
+			Expect(names).To(ConsistOf([]string{"htnn-http-filter", "htnn-h-default.local"}))
 
 			Expect(k8sClient.Delete(ctx, DefaultVirtualService)).Should(Succeed())
 			Eventually(func() bool {
@@ -278,7 +278,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 					return false
 				}
 				for _, ef := range envoyfilters.Items {
-					if ef.Name == "htnn-h-default--vs" {
+					if ef.Name == "htnn-h-default.local" {
 						return true
 					}
 				}
@@ -293,7 +293,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 					Expect(len(ef.Spec.ConfigPatches) > 0).Should(BeTrue())
 				}
 			}
-			Expect(names).To(ConsistOf([]string{"htnn-http-filter", "htnn-h-default--vs", "not-from-htnn"}))
+			Expect(names).To(ConsistOf([]string{"htnn-http-filter", "htnn-h-default.local", "not-from-htnn"}))
 		})
 
 		/*
@@ -371,7 +371,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 			for _, ef := range envoyfilters.Items {
 				names = append(names, ef.Name)
 			}
-			Expect(names).To(ConsistOf([]string{"htnn-http-filter", "htnn-h-default--default"}))
+			Expect(names).To(ConsistOf([]string{"htnn-http-filter", "htnn-h-default.local"}))
 		})
 
 		It("deal with virtualservice via route name", func() {
@@ -400,14 +400,14 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 			for _, ef := range envoyfilters.Items {
 				Expect(ef.Namespace).To(Equal("istio-system"))
 				names = append(names, ef.Name)
-				if ef.Name == "htnn-h-default--vs" {
+				if ef.Name == "htnn-h-default.local" {
 					Expect(len(ef.Spec.ConfigPatches)).To(Equal(1))
 					cp := ef.Spec.ConfigPatches[0]
 					Expect(cp.ApplyTo).To(Equal(istioapi.EnvoyFilter_HTTP_ROUTE))
 					Expect(cp.Match.GetRouteConfiguration().GetVhost().GetRoute().GetName()).To(Equal("route"))
 				}
 			}
-			Expect(names).To(ConsistOf([]string{"htnn-http-filter", "htnn-h-default--vs"}))
+			Expect(names).To(ConsistOf([]string{"htnn-http-filter", "htnn-h-default.local"}))
 
 			name := virtualService.Spec.Http[1].Name
 			virtualService.Spec.Http[1].Name = "not-match"
