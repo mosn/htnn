@@ -6,6 +6,7 @@ package log
 import (
 	"flag"
 	"fmt"
+	"os"
 
 	"github.com/go-logr/zapr"
 	"go.uber.org/zap"
@@ -16,14 +17,17 @@ var (
 	enc string
 )
 
-func bindFlags(fs *flag.FlagSet) {
-	// TODO: unitfy flag style
-	fs.StringVar(&enc, "log-encoder", "console", "Log encoding (one of 'json' or 'console', default to 'console')")
-}
-
 func init() {
-	bindFlags(flag.CommandLine)
-	flag.Parse()
+	flag.CommandLine.StringVar(&enc, "log-encoder", "console", "Log encoding (one of 'json' or 'console', default to 'console')")
+
+	// A minimal parser to work around flag package can be parsed only once.
+	if len(os.Args) > 2 {
+		for i, arg := range os.Args[1 : len(os.Args)-1] {
+			if arg == "--log-encoder" {
+				enc = os.Args[i+2]
+			}
+		}
+	}
 
 	cfg := zap.NewProductionConfig()
 	cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder

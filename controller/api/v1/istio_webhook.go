@@ -40,6 +40,9 @@ func (r *VirtualServiceWebhook) Default() {
 			// The generated name is designed not be referred by Policy's SectionName.
 			// If you need to refer to it, you need to specify the name by yourself.
 			httpRoute.Name = fmt.Sprintf("%s/%s", r.Namespace, r.Name)
+			// We don't encode the Kind into the generated name, as we think sane user won't create
+			// VirtualService and HTTPRoute with the same name in the same namespace for the same host.
+			// Choosing one is enough.
 		}
 		// If the name is specified by user, the same route name should not be used in different VirtualServices
 		// which share the same host.

@@ -16,6 +16,13 @@ import (
 
 func ValidateHTTPFilterPolicy(policy *HTTPFilterPolicy) error {
 	ref := policy.Spec.TargetRef
+	if ref.Namespace != nil {
+		namespace := string(*ref.Namespace)
+		if namespace != policy.Namespace {
+			return errors.New("namespace in TargetRef doesn't match HTTPFilterPolicy's namespace")
+		}
+	}
+
 	if ref.Group != "networking.istio.io" || ref.Kind != "VirtualService" {
 		// relax this restriction once we support more
 		return errors.New("unsupported targetRef.group or targetRef.kind")
