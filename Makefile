@@ -163,7 +163,7 @@ lint-proto: $(LOCALBIN)
 
 .PHONY: install-license-checker
 install-license-checker: $(LOCALBIN)
-	test -x $(LOCALBIN)/license-checker || GOBIN=$(LOCALBIN) go install github.com/apache/skywalking-eyes/cmd/license-eye@v0.5.0
+	test -x $(LOCALBIN)/license-eye || GOBIN=$(LOCALBIN) go install github.com/apache/skywalking-eyes/cmd/license-eye@v0.5.0
 
 .PHONY: lint-license
 lint-license: install-license-checker
