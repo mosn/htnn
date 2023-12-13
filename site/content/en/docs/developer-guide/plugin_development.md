@@ -1,10 +1,14 @@
-# Plugin development
+---
+title: Plugin development
+description: How to develop a plugin
+weight: 10
+---
 
 ## How to write a plugin
 
 1. Create a directory under `./plugins/`.
 2. Think about the configuration and write down it into `./plugins/$your_plugin/config.proto`. Then run `make gen-proto`.
-3. Finish the plugin. Don't forget to write tests. You can take `./plugins/demo` as the example.
+3. Finish the plugin. Don't forget to write tests. You can take `./plugins/demo` as an example.
 4. Add the doc of the plugin in the `./plugins/$your_plugin/README.md`.
 5. Add your plugin's package into `./plugins/plugins.go`. Run `make build-so`. Now the plugin is compiled into `libgolang.so`.
 6. Add integration test in the `./plugins/tests/integration/`. For how to run the integration test, please read `./plugins/tests/integration/README.md`.
@@ -23,7 +27,7 @@ Filter manager makes the features below possible:
 
 Assumed we have three plugins called `A`, `B` and `C`. They are configured in this order:
 
-```
+```yaml
 plugins:
 - name: A
   config:
@@ -48,12 +52,12 @@ When processing the request (Decode path), the calling order is `A -> B -> C`.
 When processing the response (Encode path), the calling order is `C -> B -> A`.
 When logging the request, the calling order is `A -> B -> C`.
 
-![filter manager](./asserts/images/filtermanager_main_path.jpg)
+![filter manager](/images/filtermanager_main_path.jpg)
 
-Note that this picture shows the main path. The execution path may have slightly difference. For example,
+Note that this picture shows the main path. The execution path may have slight differences. For example,
 
 * If the request doesn't have body, the `DecodeData` won't be called.
-* If the request is replied by Envoy before sending to the upstream, we will leave the Decode path and enter the Encode path.
+* If the request is replied by Envoy before being sent to the upstream, we will leave the Decode path and enter the Encode path.
 For example, if the plugin B rejects the request with some custom headers, the Decode path is `A -> B` and the Encode path is `C -> B -> A`.
 The custom headers will be rewritten by the plugins. This behavior is equal to Envoy.
 
@@ -76,6 +80,6 @@ If `WaitAllData` is returned, we will:
 3. execute the `DecodeRequest` of this plugin
 4. back to the original path, continue to execute the `DecodeHeaders` of the next plugin
 
-![filter manager, with DecodeWholeRequestFilter, buffer the whole request](./asserts/images/filtermanager_sub_path.jpg)
+![filter manager, with DecodeWholeRequestFilter, buffer the whole request](/images/filtermanager_sub_path.jpg)
 
 The same process applies to Encode path, but in a slightly different way. Method `EncodeResponse` is called instead.

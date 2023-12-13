@@ -1,6 +1,8 @@
-# Observability
+---
+title: Observability
+---
 
-To operate the controller properly, it provides the observability below.
+To be operated properly, the controller provides the observability below.
 
 ## Log & Trace
 

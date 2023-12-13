@@ -12,13 +12,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# binaries
-libgolang.so
-bin/
-# test generated files
-*.out
-*.test
-test-envoy/
-# website
-site/resources/
-site/.hugo_build.lock
+SHELL = /bin/bash
+
+.PHONY: build
+build:
+	docker-compose build
+
+.PHONY: up
+up:
+	docker-compose up
+
+.PHONY: clean
+clean:
+	docker-compose rm

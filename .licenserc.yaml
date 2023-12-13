@@ -24,6 +24,7 @@ header:
     - '**/testdata/**'
     - '**/*.yaml'
     - '**/*.yml'
+    - '**/*.toml'
     # ignore generated file
     - '**/*.pb.go'
     - '**/*.pb.validate.go'
@@ -38,6 +39,9 @@ header:
     - '**/*.json'
     - 'VERSION'
     - '.ignore_words'
+    # files from other projects
+    - 'site/assets/**'
+    - 'site/layouts/**'
   comment: on-failure
   # remove below once skywalking-eyes v0.6.0 is released
   language:

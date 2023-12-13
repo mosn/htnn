@@ -1,8 +1,12 @@
+---
+title: OPA
+---
+
 ## Description
 
 This Plugin integrates with [Open Policy Agent (OPA)](https://www.openpolicyagent.org).
 
-## Attributes
+## Configuration
 
 | Name   | Type   | Required | Validation | Description |
 |--------|--------|----------|------------|-------------|

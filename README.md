@@ -14,7 +14,7 @@ To know how to use the Go plugins in a static configuration, you can read [./etc
 
 ### To develop Envoy Go plugins
 
-To know how to add plugins to this repo, you can read [./docs/plugin_development.md](./docs/plugin_development.md).
+To know how to add plugins to this repo, you can read [Plugin Development](./site/content/en/docs/developer-guide/plugin_development.md).
 
 To import Moe to your project and add your private plugin, you can take a look at the [example](./examples/dev_your_plugin).
 
