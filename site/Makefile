@@ -25,3 +25,7 @@ up:
 .PHONY: clean
 clean:
 	docker-compose rm
+
+.PHONY: publish
+publish:
+	docker run --rm -v $(PWD):/src --name docsy htnn-docsy -- hugo --minify --gc --baseURL https://moe.github.io/

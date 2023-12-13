@@ -6,12 +6,14 @@ weight: 10
 
 ## How to write a plugin
 
+Assumed you are at the root of this project.
+
 1. Create a directory under `./plugins/`.
 2. Think about the configuration and write down it into `./plugins/$your_plugin/config.proto`. Then run `make gen-proto`.
 3. Finish the plugin. Don't forget to write tests. You can take `./plugins/demo` as an example.
-4. Add the doc of the plugin in the `./plugins/$your_plugin/README.md`.
+4. Add the doc of the plugin in the `site/content/en/docs/reference/plugins/$your_plugin.md` and (optional) in other languages.
 5. Add your plugin's package into `./plugins/plugins.go`. Run `make build-so`. Now the plugin is compiled into `libgolang.so`.
-6. Add integration test in the `./plugins/tests/integration/`. For how to run the integration test, please read `./plugins/tests/integration/README.md`.
+6. Add integration test in the `./plugins/tests/integration/`. For how to run the integration test, please read `site/content/en/docs/developer-guide/plugin_integration_test_framework.md`.
 
 ## Filter manager
 
