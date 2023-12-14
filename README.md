@@ -23,3 +23,4 @@ To import Moe to your project and add your private plugin, you can take a look a
 **MOE** would not be possible without the valuable open-source work of projects in the community. We would like to extend a special thank-you to:
 
 - [Envoy](https://www.envoyproxy.io).
+- [Istio](https://istio.io).
