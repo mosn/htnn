@@ -12,14 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# binaries
-libgolang.so
-bin/
-# test generated files
-*.out
-*.test
-test-envoy/
-# website
-site/public/
-site/resources/
-site/.hugo_build.lock
+SHELL = /bin/bash
+
+.PHONY: build
+build:
+	docker-compose build
+
+.PHONY: up
+up:
+	docker-compose up
+
+.PHONY: clean
+clean:
+	docker-compose rm
+
+.PHONY: publish
+publish:
+	docker run --rm -v $(PWD):/src --name docsy htnn-docsy -- hugo --minify --gc --baseURL https://moe.github.io/

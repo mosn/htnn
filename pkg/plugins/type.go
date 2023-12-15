@@ -38,7 +38,7 @@ const (
 // In future, we can let the users to specify a global order or a relative order in some plugins.
 // Note that the order is strictly followed only when the plugins are run in DecodeHeaders and Log.
 // To know the details, please refer to:
-// https://github.com/mosn/moe/blob/main/docs/plugin_development.md
+// https://github.com/mosn/moe/blob/main/content/en/docs/developer-guide/plugin_development.md
 
 type PluginOrderPosition int
 

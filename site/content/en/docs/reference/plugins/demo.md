@@ -1,8 +1,12 @@
+---
+title: Demo
+---
+
 ## Description
 
 The `demo` plugin is used to show how to add a plugin to moe.
 
-## Attributes
+## Configuration
 
 | Name           | Type   | Required | Validation | Description                                                                        |
 | -------------- | ------ | -------- | ---------- | ---------------------------------------------------------------------------------- |

@@ -12,14 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# binaries
-libgolang.so
-bin/
-# test generated files
-*.out
-*.test
-test-envoy/
-# website
-site/public/
-site/resources/
-site/.hugo_build.lock
+# Use debian image for ARM64 support
+FROM floryn90/hugo:0.121.1-ext-debian
+
+RUN apt install -y --no-install-recommends git && \
+  git config --global --add safe.directory /src
