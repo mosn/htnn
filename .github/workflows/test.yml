@@ -55,7 +55,7 @@ jobs:
     - name: Test
       run: make plugins-integration-test
     - name: Upload logs
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       if: failure()
       with:
         # upload artifact can be found in https://github.com/mosn/moe/actions/runs/$id
