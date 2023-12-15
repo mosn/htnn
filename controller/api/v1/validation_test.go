@@ -125,10 +125,23 @@ func TestValidateVirtualService(t *testing.T) {
 			},
 		},
 		{
+			name: "only http route is supported",
+			err:  "only http route is supported",
+			vs: &istiov1b1.VirtualService{
+				Spec: istioapi.VirtualService{},
+			},
+		},
+		{
 			name: "delegate not supported",
 			err:  "not supported",
 			vs: &istiov1b1.VirtualService{
-				Spec: istioapi.VirtualService{},
+				Spec: istioapi.VirtualService{
+					Http: []*istioapi.HTTPRoute{
+						{
+							Name: "test",
+						},
+					},
+				},
 			},
 		},
 	}
