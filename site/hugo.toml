@@ -183,12 +183,12 @@ title = "HTNN"
 description = "HTNN Documentation"
 time_format_default = "Jan 2, 2006"
 
-[languages.zh-cn]
+[languages.zh-Hans]
 languageName = "简体中文"
 # The i18n category in docsy is incorrect, Simpilified Chinese is also used in Singapore.
 # zh-Hans is more standard than zh-cn.
 contentDir = "content/zh-Hans"
-[languages.zh-cn.params]
+[languages.zh-Hans.params]
 title = "HTNN"
 description = "HTNN文档"
 version_menu = "版本"
@@ -205,3 +205,6 @@ time_format_default = "2006年1月2日"
   [[module.imports]]
     path = "github.com/google/docsy"
     disable = false
+  [[module.mount]]
+    source = "i18n"
+    target = "i18n"
