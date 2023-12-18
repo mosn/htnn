@@ -1,3 +1,7 @@
+---
+title: Plugin Integration Test Framework
+---
+
 ## How to run test
 
 Assumed you are at the root of this project:

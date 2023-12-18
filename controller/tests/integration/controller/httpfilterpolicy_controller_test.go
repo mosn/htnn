@@ -1,3 +1,17 @@
+// Copyright The HTNN Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package integration
 
 import (
@@ -350,59 +364,30 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 			Expect(names).To(ConsistOf([]string{"htnn-http-filter", "htnn-h-default.local", "not-from-htnn"}))
 		})
 
-		/*
-			https://gateway-api.sigs.k8s.io/geps/gep-713/
-			> Direct Policy Attachment should only be used to target objects in the same namespace as the Policy object.
+		It("refer virtualservice across namespace", func() {
+			ctx := context.Background()
+			input := []map[string]interface{}{}
+			mustReadInput("refer-virtualservice-across-namespace", &input)
 
-			I think one day cross-namespace target will be supported (via ReferenceGrant or something else).
-			So let's keep this test case here.
+			for _, in := range input {
+				obj := mapToObj(in)
+				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
+			}
 
-			It("refer virtualservice across namespace", func() {
-				ctx := context.Background()
-				input := []map[string]interface{}{}
-				mustReadInput("refer-virtualservice-across-namespace", &input)
-
-				var virtualService *istiov1b1.VirtualService
-				for _, in := range input {
-					obj := mapToObj(in)
-					if obj.GetName() == "vs" {
-						virtualService = obj.(*istiov1b1.VirtualService)
-					}
-					Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
+			var policies mosniov1.HTTPFilterPolicyList
+			var cs []metav1.Condition
+			Eventually(func() bool {
+				if err := k8sClient.List(ctx, &policies); err != nil {
+					return false
 				}
-
-				var envoyfilters istiov1a3.EnvoyFilterList
-				Eventually(func() bool {
-					if err := k8sClient.List(ctx, &envoyfilters); err != nil {
-						return false
-					}
-					return len(envoyfilters.Items) == 2
-				}, timeout, interval).Should(BeTrue())
-
-				names := []string{}
-				for _, ef := range envoyfilters.Items {
-					Expect(ef.Namespace).To(Equal("istio-system"))
-					names = append(names, ef.Name)
-					if ef.Name == "htnn-h-default--vs" {
-						Expect(len(ef.Spec.ConfigPatches)).To(Equal(1))
-						cp := ef.Spec.ConfigPatches[0]
-						Expect(cp.ApplyTo).To(Equal(istioapi.EnvoyFilter_HTTP_ROUTE))
-						Expect(cp.Match.GetRouteConfiguration().GetVhost().Name).To(Equal("default.local:8888"))
-					}
-				}
-				Expect(names).To(ConsistOf([]string{"htnn-http-filter", "htnn-h-default--vs"}))
-
-				// delete virtualservice referred by httpfilterpolicy
-				Expect(k8sClient.Delete(ctx, virtualService)).Should(Succeed())
-				Eventually(func() bool {
-					if err := k8sClient.List(ctx, &envoyfilters); err != nil {
-						return false
-					}
-					return len(envoyfilters.Items) == 1
-				}, timeout, interval).Should(BeTrue())
-				Expect(envoyfilters.Items[0].Name).To(Equal("htnn-http-filter"))
-			})
-		*/
+				p := policies.Items[0]
+				cs = p.Status.Conditions
+				return len(cs) == 1
+			}, timeout, interval).Should(BeTrue())
+			Expect(cs[0].Type).To(Equal(string(gwapiv1a2.PolicyConditionAccepted)))
+			Expect(cs[0].Reason).To(Equal(string(gwapiv1a2.PolicyReasonInvalid)))
+			Expect(policies.Items[0].IsValid()).To(BeFalse())
+		})
 
 		It("route doesn't match", func() {
 			ctx := context.Background()

@@ -1,4 +1,6 @@
-# Common Type Definition
+---
+title: Type
+---
 
 This documentation describes type definitions used across different plugins. Definitions are listed in alphabetical order.
 
@@ -27,6 +29,5 @@ For example,
 {"prefix":"pre"}
 {"regex":"^Cache"}
 ```
-
 
 Note that when the StringMatcher is used to match header, the matching is case-insensitive.

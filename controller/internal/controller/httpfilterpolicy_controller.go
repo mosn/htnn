@@ -1,5 +1,5 @@
 /*
-Copyright 2023 The HTNN Authors.
+Copyright The HTNN Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -209,6 +209,12 @@ func (r *HTTPFilterPolicyReconciler) policyToTranslationState(ctx context.Contex
 				}
 
 				initState.AddPolicyForVirtualService(policy, &virtualService, &gateway)
+				// For reducing the write to K8S API server and reconciliation,
+				// we don't add `gateway.networking.k8s.io/PolicyAffected` to the affected resource.
+				// If people want to check whether the VirtualService/HTTPRoute is affected, they can
+				// check whether there is an EnvoyFilter named `httn-h-$host` (the `$host` is one of the resources' hosts).
+				// For wildcard host, the `*.` is converted to `-`. For example, `*.example.com` results in
+				// EnvoyFilter name `htnn-h--example.com`, and `www.example.com` results in `httn-h-www.example.com`.
 
 				key := k8s.GetObjectKey(&gateway.ObjectMeta)
 				if _, ok := istioGwIdx[key]; !ok {
