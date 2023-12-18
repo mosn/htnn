@@ -9,7 +9,7 @@ To be operated properly, the controller provides the observability below.
 By default, the controller writes its log to stderr, in the format below:
 
 ```
-2023-12-09T11:47:05.134+0800    info    reconcile       {"controller": "httpfilterpolicy", "controllerGroup": "mosn.io", "controllerKind": "HTTPFilterPolicy", "HTTPFilterPolicy": {"name":"policy","namespace":"default"}, "namespace": "default", "name": "policy", "reconcileID": "fd710b63-4416-4471-bb3d-5e081f03aa86"}
+2023-12-18T16:47:06.628+0800	info	reconcile	{"controller": "httpfilterpolicy", "namespace": "", "name": "httpfilterpolicies", "reconcileID": "8e74b3ab-e223-4e40-a568-81c8179f9c5a"}
 ```
 
 Most of the logs in the reconciliation will contain the `reconcileID` field, so we can use it as the trace ID for each reconciliation.
@@ -17,7 +17,7 @@ Most of the logs in the reconciliation will contain the `reconcileID` field, so 
 If you prefer a JSON format log, you can pass `--log-encoder json` option when starting the controller. Now the log will look like this:
 
 ```
-{"level":"info","ts":"2023-12-09T11:47:26.863+0800","msg":"reconcile","controller":"httpfilterpolicy","controllerGroup":"mosn.io","controllerKind":"HTTPFilterPolicy","HTTPFilterPolicy":{"name":"policy","namespace":"default"},"namespace":"default","name":"policy","reconcileID":"3120c72c-68ba-4e8b-b661-f68ac1fda49b"}
+{"level":"info","ts":"2023-12-18T16:49:16.634+0800","msg":"reconcile","controller":"httpfilterpolicy","namespace":"","name":"httpfilterpolicies","reconcileID":"55230dc9-b035-44e9-a2d7-3a84ecc4da50"}
 ```
 
 ## Metrics

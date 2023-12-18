@@ -28,6 +28,7 @@ import (
 	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	istiov1b1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/yaml"
@@ -76,6 +77,15 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 	)
 
 	Context("When validating HTTPFilterPolicy", func() {
+		BeforeEach(func() {
+			var policies mosniov1.HTTPFilterPolicyList
+			if err := k8sClient.List(ctx, &policies); err == nil {
+				for _, e := range policies.Items {
+					Expect(k8sClient.Delete(ctx, &e)).Should(Succeed())
+				}
+			}
+		})
+
 		It("deal with invalid crd", func() {
 			ctx := context.Background()
 			input := []map[string]interface{}{}
@@ -99,6 +109,44 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 			Expect(cs[0].Type).To(Equal(string(gwapiv1a2.PolicyConditionAccepted)))
 			Expect(cs[0].Reason).To(Equal(string(gwapiv1a2.PolicyReasonInvalid)))
 			Expect(policies.Items[0].IsValid()).To(BeFalse())
+		})
+
+		It("deal with valid crd", func() {
+			ctx := context.Background()
+			input := []map[string]interface{}{}
+			mustReadInput("valid-httpfilterpolicy", &input)
+
+			for _, in := range input {
+				obj := mapToObj(in)
+				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
+			}
+
+			var policies mosniov1.HTTPFilterPolicyList
+			var p *mosniov1.HTTPFilterPolicy
+			var cs []metav1.Condition
+			Eventually(func() bool {
+				if err := k8sClient.List(ctx, &policies); err != nil {
+					return false
+				}
+				p = &policies.Items[0]
+				cs = p.Status.Conditions
+				return len(cs) == 1
+			}, timeout, interval).Should(BeTrue())
+			Expect(cs[0].Type).To(Equal(string(gwapiv1a2.PolicyConditionAccepted)))
+			Expect(cs[0].Reason).To(Equal(string(gwapiv1a2.PolicyReasonTargetNotFound)))
+
+			// to invalid
+			base := client.MergeFrom(p.DeepCopy())
+			p.Spec.Filters["unknown"] = runtime.RawExtension{Raw: []byte(`{"config":"unknown"}`)}
+			Expect(k8sClient.Patch(ctx, p, base)).Should(Succeed())
+			Eventually(func() bool {
+				if err := k8sClient.List(ctx, &policies); err != nil {
+					return false
+				}
+				p := policies.Items[0]
+				cs = p.Status.Conditions
+				return cs[0].Reason == string(gwapiv1a2.PolicyReasonInvalid)
+			}, timeout, interval).Should(BeTrue())
 		})
 	})
 

@@ -114,7 +114,7 @@ func TestVirtualServiceIndexer(t *testing.T) {
 	reqs := vsi.FindAffectedObjects(ctx, vs)
 	assert.Equal(t, 1, len(reqs))
 	assert.Equal(t, types.NamespacedName{
-		Namespace: "ns",
-		Name:      "name",
+		Namespace: "",
+		Name:      "httpfilterpolicies",
 	}, reqs[0].NamespacedName)
 }
