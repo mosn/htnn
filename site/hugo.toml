@@ -99,7 +99,7 @@ github_repo = "https://github.com/mosn/moe"
 #github_project_repo = "https://github.com/google/docsy"
 
 # Specify a value here if your content directory is not in your repo's root directory
-github_subdir = ""
+github_subdir = "site"
 
 # Uncomment this if your GitHub repo does not have "main" as the default branch,
 # or specify a new value if you want to reference another branch in your GitHub links
@@ -127,7 +127,7 @@ navbar_translucent_over_cover_disable = false
 # Enable to show the side bar menu in its compact state.
 sidebar_menu_compact = true
 # Show expand/collapse icon for sidebar sections
-sidebar_menu_foldable = false
+sidebar_menu_foldable = true
 # Set to true to hide the sidebar search box (the top nav search box will still be displayed if search is enabled)
 sidebar_search_disable = true
 
@@ -183,12 +183,12 @@ title = "HTNN"
 description = "HTNN Documentation"
 time_format_default = "Jan 2, 2006"
 
-[languages.zh-Hans]
+[languages.zh-hans]
 languageName = "简体中文"
 # The i18n category in docsy is incorrect, Simpilified Chinese is also used in Singapore.
-# zh-Hans is more standard than zh-cn.
-contentDir = "content/zh-Hans"
-[languages.zh-Hans.params]
+# zh-hans is more standard than zh-cn.
+contentDir = "content/zh-hans"
+[languages.zh-hans.params]
 title = "HTNN"
 description = "HTNN文档"
 version_menu = "版本"
