@@ -24,7 +24,7 @@ If you prefer a JSON format log, you can pass `--log-encoder json` option when s
 
 By default, the controller exposes metrics via `http://0.0.0.0:10080/metrics`, which can be changed by passing `--metrics-bind-address $another_addr` option (for example, `--metrics-bind-address :11080`) when starting the controller.
 
-The metrics is in the Prometheus format:
+The metrics are in the Prometheus format:
 
 ```
 ...
@@ -66,3 +66,7 @@ It's recommended to watch the metrics below:
 , and the metrics provided by htnn:
 
 * `htnn_translate_duration_seconds_bucket` records the translation part of the reconciliation. A reconciliation can be divided into three parts: building resources from the local cache, translation, and writing to k8s API server. This histogram tracks the time spent in translation.
+
+## Profile
+
+By default, the controller enables [pprof](http://golang.org/pkg/net/http/pprof/) via `http://127.0.0.1:10082/debug/pprof`, which can be changed by passing `--pprof-bind-address $another_addr` option (for example, `--pprof-bind-address 127.0.0.1:11082`) when starting the controller. Passing `--pprof-bind-address 0` can disable the pprof.
