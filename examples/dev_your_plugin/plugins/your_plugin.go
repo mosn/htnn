@@ -41,10 +41,6 @@ func (p *plugin) Config() plugins.PluginConfig {
 	return &Config{}
 }
 
-func (c *Config) Init(cb api.ConfigCallbackHandler) error {
-	return nil
-}
-
 func configFactory(c interface{}) api.FilterFactory {
 	return func(callbacks api.FilterCallbackHandler) api.Filter {
 		return &filter{

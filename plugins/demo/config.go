@@ -53,7 +53,7 @@ func (p *plugin) Order() plugins.PluginOrder {
 	}
 }
 
-// Each plugin need to implement the two methods below
+// Each Go plugin need to implement the two methods below
 
 // ConfigFactory returns api.ConfigFactory's implementation used during request processing
 func (p *plugin) ConfigFactory() api.FilterConfigFactory {
@@ -74,7 +74,8 @@ type config struct {
 }
 
 // Init allows the initialization of non-generated fields during configuration processing.
-// This function is run in Envoy's main thread, so it doesn't block the request processing.
+// This method is run in Envoy's main thread, so it doesn't block the request processing.
+// This method is optional.
 func (c *config) Init(cb api.ConfigCallbackHandler) error {
 	c.client = http.DefaultClient
 	return nil

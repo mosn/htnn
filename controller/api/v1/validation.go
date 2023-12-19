@@ -25,7 +25,6 @@ import (
 
 	"mosn.io/moe/controller/internal/model"
 	"mosn.io/moe/pkg/plugins"
-	_ "mosn.io/moe/plugins" // register plugins
 )
 
 func ValidateHTTPFilterPolicy(policy *HTTPFilterPolicy) error {
@@ -47,7 +46,7 @@ func ValidateHTTPFilterPolicy(policy *HTTPFilterPolicy) error {
 			// reject unknown filter in CP, ignore unknown filter in DP
 			return errors.New("unknown http filter: " + name)
 		}
-		cfg := &model.GoPluginConfig{}
+		cfg := &model.PluginConfigWrapper{}
 		if err := json.Unmarshal(filter.Raw, cfg); err != nil {
 			return err
 		}

@@ -38,6 +38,7 @@ const (
 func envoyFilterName(vhost *model.VirtualHost) string {
 	// Strip the port number. We don't need to create two EnvoyFilters for :80 and :443.
 	domain := strings.Split(vhost.Name, ":")[0]
+	// We join the host & port in toDataPlaneState so the domain is not nil
 	if strings.HasPrefix(domain, "*.") {
 		// '*' is not allowed in EnvoyFilter name. And '.' can only be used after alphanumeric characters.
 		// So we replace the '*.' with '-'.
@@ -60,6 +61,7 @@ type envoyFilterWrapper struct {
 func toFinalState(_ *Ctx, state *mergedState) (*FinalState, error) {
 	efs := istio.DefaultEnvoyFilters()
 	efList := []*envoyFilterWrapper{}
+
 	for _, host := range state.Hosts {
 		for routeName, route := range host.Routes {
 			ef := istio.GenerateRouteFilter(host.VirtualHost, routeName, route.Config)
@@ -74,7 +76,7 @@ func toFinalState(_ *Ctx, state *mergedState) (*FinalState, error) {
 	}
 
 	// Merge EnvoyFilters with same name. The number of EnvoyFilters is equal to the number of
-	// configured VirtualServices.
+	// configured domains.
 	efws := map[string]*envoyFilterWrapper{}
 	for _, ef := range efList {
 		name := ef.GetName()
@@ -87,9 +89,11 @@ func toFinalState(_ *Ctx, state *mergedState) (*FinalState, error) {
 	}
 
 	for name, ef := range efws {
-		ef.SetAnnotations(map[string]string{
-			AnnotationInfo: ef.info.String(),
-		})
+		if ef.info != nil {
+			ef.SetAnnotations(map[string]string{
+				AnnotationInfo: ef.info.String(),
+			})
+		}
 		// Sort here to avoid EnvoyFilter change caused by the order of ConfigPatch.
 		// Each ConfigPatch should have a unique (vhost, routeName).
 		sort.Slice(ef.Spec.ConfigPatches, func(i, j int) bool {
