@@ -1,0 +1,18 @@
+name: "Ask Question"
+description: Ask a question about usage or features
+body:
+  - type: textarea
+    id: question
+    attributes:
+      description: Describe the question.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      description: Show the environment related to the question.
+      value: |
+        - HTNN version:
+        - Istio version (`istioctl version`):
+    validations:
+      required: true
