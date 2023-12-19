@@ -120,33 +120,35 @@ func (r *HTTPFilterPolicyReconciler) policyToTranslationState(ctx context.Contex
 
 	for i := range policies.Items {
 		policy := &policies.Items[i]
-		err := mosniov1.ValidateHTTPFilterPolicy(policy)
-		if err != nil {
-			if policy.IsValid() {
+		ref := policy.Spec.TargetRef
+		nsName := types.NamespacedName{Name: string(ref.Name), Namespace: policy.Namespace}
+
+		// defensive code in case the webhook doesn't work
+		if policy.IsChanged() {
+			err := mosniov1.ValidateHTTPFilterPolicy(policy)
+			if err != nil {
 				logger.Error(err, "invalid HTTPFilterPolicy", "name", policy.Name, "namespace", policy.Namespace)
-				// mark the policy as invalid, and skip logging
+				// mark the policy as invalid
 				policy.SetAccepted(gwapiv1a2.PolicyReasonInvalid, err.Error())
+				continue
 			}
+			if ref.Namespace != nil {
+				nsName.Namespace = string(*ref.Namespace)
+				if nsName.Namespace != policy.Namespace {
+					err := errors.New("namespace in TargetRef doesn't match HTTPFilterPolicy's namespace")
+					logger.Error(err, "invalid HTTPFilterPolicy", "name", policy.Name, "namespace", policy.Namespace)
+					policy.SetAccepted(gwapiv1a2.PolicyReasonInvalid, err.Error())
+					continue
+				}
+			}
+		}
+		if !policy.IsValid() {
 			continue
 		}
 
 		accepted := false
-		ref := policy.Spec.TargetRef
 		if ref.Group == "networking.istio.io" && ref.Kind == "VirtualService" {
 			var virtualService istiov1b1.VirtualService
-			nsName := types.NamespacedName{Name: string(ref.Name), Namespace: policy.Namespace}
-			if ref.Namespace != nil {
-				nsName.Namespace = string(*ref.Namespace)
-				if nsName.Namespace != policy.Namespace {
-					if policy.IsValid() {
-						err := errors.New("namespace in TargetRef doesn't match HTTPFilterPolicy's namespace")
-						logger.Error(err, "invalid HTTPFilterPolicy", "name", policy.Name, "namespace", policy.Namespace)
-						policy.SetAccepted(gwapiv1a2.PolicyReasonInvalid, err.Error())
-					}
-					continue
-				}
-			}
-
 			err := r.Get(ctx, nsName, &virtualService)
 			if err != nil {
 				if !apierrors.IsNotFound(err) {
@@ -305,7 +307,8 @@ func (r *HTTPFilterPolicyReconciler) updatePolicies(ctx context.Context,
 		if !policy.Status.IsChanged() {
 			continue
 		}
-		if err := r.Status().Update(ctx, policy); err != nil {
+		// Update operation will change the original object in cache, so we need to deepcopy it.
+		if err := r.Status().Update(ctx, policy.DeepCopy()); err != nil {
 			return fmt.Errorf("failed to update HTTPFilterPolicy status: %w, namespacedName: %v",
 				err, types.NamespacedName{Name: policy.Name, Namespace: policy.Namespace})
 		}
@@ -351,7 +354,6 @@ func (v *VirtualServiceIndexer) FindAffectedObjects(ctx context.Context, obj cli
 
 func findAffectedObjects(ctx context.Context, reader client.Reader, obj client.Object, kind string, idx string) []reconcile.Request {
 	logger := log.FromContext(ctx)
-	logger.Info("Target changed", "kind", kind, "namespace", obj.GetNamespace(), "name", obj.GetName())
 
 	policies := &mosniov1.HTTPFilterPolicyList{}
 	listOps := &client.ListOptions{
@@ -375,9 +377,10 @@ func findAffectedObjects(ctx context.Context, reader client.Reader, obj client.O
 	}
 
 	if len(requests) > 0 {
-		logger.Info("Target changed, trigger reconciliation", "kind", kind, "requests", requests)
+		logger.Info("Target changed, trigger reconciliation", "kind", kind,
+			"namespace", obj.GetNamespace(), "name", obj.GetName(), "requests", requests)
 		// As we do full regeneration, we only need to reconcile one HTTPFilterPolicy
-		return []reconcile.Request{requests[0]}
+		return triggerReconciliation()
 	}
 	return requests
 }
@@ -405,7 +408,6 @@ func (v *IstioGatewayIndexer) UpdateIndex(idx map[string][]*mosniov1.HTTPFilterP
 
 func (v *IstioGatewayIndexer) FindAffectedObjects(ctx context.Context, obj client.Object) []reconcile.Request {
 	logger := log.FromContext(ctx)
-	logger.Info("Target changed", "kind", "IstioGateway", "namespace", obj.GetNamespace(), "name", obj.GetName())
 
 	gw := obj.(*istiov1b1.Gateway)
 	v.lock.RLock()
@@ -425,8 +427,19 @@ func (v *IstioGatewayIndexer) FindAffectedObjects(ctx context.Context, obj clien
 		}
 		requests[i] = request
 	}
-	logger.Info("Target changed, trigger reconciliation", "kind", "IstioGateway", "requests", requests)
-	return []reconcile.Request{requests[0]}
+	logger.Info("Target changed, trigger reconciliation", "kind", "IstioGateway",
+		"namespace", obj.GetNamespace(), "name", obj.GetName(), "requests", requests)
+	return triggerReconciliation()
+}
+
+var (
+	reconcileReqPlaceholder = []reconcile.Request{{NamespacedName: types.NamespacedName{
+		Name: "httpfilterpolicies", // just a placeholder
+	}}}
+)
+
+func triggerReconciliation() []reconcile.Request {
+	return reconcileReqPlaceholder
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -450,7 +463,16 @@ func (r *HTTPFilterPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 
 	controller := ctrl.NewControllerManagedBy(mgr).
-		For(&mosniov1.HTTPFilterPolicy{})
+		Named("httpfilterpolicy").
+		Watches(
+			&mosniov1.HTTPFilterPolicy{},
+			handler.EnqueueRequestsFromMapFunc(func(_ context.Context, _ client.Object) []reconcile.Request {
+				return triggerReconciliation()
+			}),
+			builder.WithPredicates(
+				predicate.GenerationChangedPredicate{},
+			),
+		)
 		// We don't reconcile when the generated EnvoyFilter is modified.
 		// So that user can manually correct the EnvoyFilter, until something else is changed.
 

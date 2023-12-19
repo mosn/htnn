@@ -71,11 +71,25 @@ type HTTPFilterPolicy struct {
 	Status HTTPFilterPolicyStatus `json:"status,omitempty"`
 }
 
+func (p *HTTPFilterPolicy) IsChanged() bool {
+	if len(p.Status.Conditions) == 0 {
+		// newly created
+		return true
+	}
+	for _, cond := range p.Status.Conditions {
+		if cond.ObservedGeneration != p.Generation {
+			return true
+		}
+	}
+	return false
+}
+
 func (p *HTTPFilterPolicy) SetAccepted(reason gwapiv1a2.PolicyConditionReason, msg ...string) {
 	c := metav1.Condition{
 		Type:               string(gwapiv1a2.PolicyConditionAccepted),
 		Reason:             string(reason),
 		LastTransitionTime: metav1.NewTime(time.Now()),
+		ObservedGeneration: p.Generation,
 	}
 	switch reason {
 	case gwapiv1a2.PolicyReasonAccepted:
