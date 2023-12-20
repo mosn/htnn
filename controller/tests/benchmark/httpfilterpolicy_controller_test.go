@@ -19,6 +19,7 @@ package benchmark
 import (
 	"context"
 	"fmt"
+	"os"
 	"runtime"
 	"strconv"
 	"time"
@@ -36,9 +37,31 @@ import (
 )
 
 const (
-	timeout  = time.Second * 60
 	interval = time.Second * 1
 )
+
+var (
+	timeout time.Duration
+	scale   int
+)
+
+func init() {
+	s := os.Getenv("BENCHMARK_SCALE")
+	if s == "" {
+		scale = 2500
+	} else {
+		var err error
+		scale, err = strconv.Atoi(s)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	timeout = 5 * time.Second * time.Duration(scale/100)
+	if timeout < 10*time.Second {
+		timeout = 10 * time.Second
+	}
+}
 
 func createEventually(ctx context.Context, obj client.Object) {
 	Eventually(func() bool {
@@ -79,7 +102,6 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 			input := []map[string]interface{}{}
 			mustReadInput("httpfilterpolicy", &input)
 
-			times := 500
 			var virtualService *istiov1b1.VirtualService
 			var policy *mosniov1.HTTPFilterPolicy
 
@@ -95,7 +117,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 				}
 			}
 
-			for i := 0; i < times; i++ {
+			for i := 0; i < scale; i++ {
 				go func(i int) {
 					defer GinkgoRecover()
 
@@ -144,7 +166,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 				if err := k8sClient.List(ctx, &virtualservices); err != nil {
 					return false
 				}
-				return len(virtualservices.Items) == times
+				return len(virtualservices.Items) == scale
 			}, timeout, interval).Should(BeTrue())
 			var policies mosniov1.HTTPFilterPolicyList
 			Eventually(func() bool {
@@ -152,7 +174,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 					return false
 				}
 
-				if len(policies.Items) < times*3 {
+				if len(policies.Items) < scale*3 {
 					return false
 				}
 				for _, policy := range policies.Items {
@@ -166,13 +188,13 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 				return true
 			}, timeout, interval).Should(BeTrue())
 
-			num := 50
+			num := 10
 			start := time.Now()
 			for i := 0; i < num; i++ {
 				httpFilterPolicyReconciler.Reconcile(ctx, controllerruntime.Request{
 					NamespacedName: types.NamespacedName{Namespace: "", Name: "httpfilterpolicy"}})
 			}
-			fmt.Println("Benchmark with 500 VirtualServices (each has two routes), 1500 HTTPFilterPolicies")
+			fmt.Printf("Benchmark with %d VirtualServices (each has two routes), %d HTTPFilterPolicies\n", scale, 3*scale)
 			fmt.Printf("Average: %+v\n", time.Since(start)/time.Duration(num))
 
 			var memStats runtime.MemStats
