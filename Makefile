@@ -147,11 +147,13 @@ lint-go:
 	test -x $(LOCALBIN)/golangci-lint || GOBIN=$(LOCALBIN) go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.51.2
 	$(LOCALBIN)/golangci-lint run --config=.golangci.yml
 	pushd ./controller && $(LOCALBIN)/golangci-lint run --config=../.golangci.yml && popd
+	pushd ./tools && $(LOCALBIN)/golangci-lint run --config=../.golangci.yml && popd
 
 .PHONY: fmt-go
 fmt-go: install-go-fmtter
 	go mod tidy
 	pushd ./controller && go mod tidy && popd
+	pushd ./tools && go mod tidy && popd
 	$(LOCALBIN)/gosimports -w -local ${PROJECT_NAME} .
 
 # Don't use `buf format` to format the protobuf files! Buf's code style is different from Envoy.
@@ -199,8 +201,13 @@ lint-editorconfig: $(LOCALBIN)
 	test -x $(LOCALBIN)/editorconfig-checker || GOBIN=$(LOCALBIN) go install github.com/editorconfig-checker/editorconfig-checker/cmd/editorconfig-checker@2.7.2
 	$(LOCALBIN)/editorconfig-checker
 
+
+.PHONY: lint-remain
+lint-remain:
+	go run tools/cmd/linter/main.go
+
 .PHONY: lint
-lint: lint-go lint-proto lint-license lint-spell lint-editorconfig
+lint: lint-go lint-proto lint-license lint-spell lint-editorconfig lint-remain
 
 .PHONY: fmt
 fmt: fmt-go
