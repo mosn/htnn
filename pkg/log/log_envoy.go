@@ -24,10 +24,16 @@ import (
 	"mosn.io/moe/pkg/filtermanager/api"
 )
 
+func ptrstr(s string) *string {
+	return &s
+}
+
 func init() {
 	// Name of this file guarantees that SetLogger runs after DefaultLogger init.
 	SetLogger(DefaultLogger.WithSink(&EnvoyLogSink{
-		Formatter: funcr.NewFormatter(funcr.Options{}),
+		Formatter: funcr.NewFormatter(funcr.Options{
+			LogInfoLevel: ptrstr(""),
+		}),
 	}))
 }
 
