@@ -37,12 +37,12 @@ func lint_site() error {
 		if err != nil {
 			return err
 		}
-		if strings.ToLower(path) != path {
-			return fmt.Errorf("name %s should be in lowercase", path)
-		}
 		if info.IsDir() {
 			if path == "content" {
 				return nil
+			}
+			if strings.ToLower(path) != path {
+				return fmt.Errorf("name %s should be in lowercase", path)
 			}
 			// check index
 			if _, err := os.Stat(filepath.Join(path, "_index.md")); err != nil {
@@ -63,6 +63,10 @@ func lint_site() error {
 		ext := filepath.Ext(path)
 		if ext != ".html" && ext != ".md" {
 			return fmt.Errorf("file %s has unexpected extension", path)
+		}
+
+		if strings.ToLower(path) != path {
+			return fmt.Errorf("name %s should be in lowercase", path)
 		}
 
 		if ext == ".md" {
