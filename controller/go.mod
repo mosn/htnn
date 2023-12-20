@@ -24,7 +24,7 @@ require (
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/casbin/casbin/v2 v2.79.0 // indirect
+	github.com/casbin/casbin/v2 v2.80.0 // indirect
 	github.com/casbin/govaluate v1.1.0 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
 	github.com/cncf/xds/go v0.0.0-20231016030527-8bd2eac9fb4a // indirect
