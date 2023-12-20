@@ -16,5 +16,6 @@ spec:
   filters:
     opa:
       config:
-        url: http://opa:8181
-        policy: test
+        remote:
+          url: http://opa:8181
+          policy: test

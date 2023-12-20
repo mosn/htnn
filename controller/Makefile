@@ -75,6 +75,10 @@ test: manifests generate envtest ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test -gcflags="all=-N -l" -race \
 		./... -coverprofile cover.out
 
+.PHONY: benchmark
+benchmark: manifests generate envtest ## Run benchmarks
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test -tags bench -v ./tests/benchmark/...
+
 ##@ Build
 
 .PHONY: build
