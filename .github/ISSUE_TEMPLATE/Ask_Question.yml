@@ -4,15 +4,16 @@ body:
   - type: textarea
     id: question
     attributes:
+      label: question
       description: Describe the question.
     validations:
       required: true
   - type: textarea
     id: environment
     attributes:
+      label: environment
       description: Show the environment related to the question.
       value: |
         - HTNN version:
-        - Istio version (`istioctl version`):
     validations:
       required: true
