@@ -21,4 +21,5 @@
               stat_prefix: http_local_rate_limiter
               token_bucket:
                 fill_interval: 10s
+                max_tokens: 100
   status: {}
