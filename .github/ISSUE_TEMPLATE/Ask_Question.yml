@@ -4,14 +4,14 @@ body:
   - type: textarea
     id: question
     attributes:
-      label: question
+      label: Description
       description: Describe the question.
     validations:
       required: true
   - type: textarea
     id: environment
     attributes:
-      label: environment
+      label: Environment
       description: Show the environment related to the question.
       value: |
         - HTNN version:
