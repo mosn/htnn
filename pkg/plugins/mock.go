@@ -37,7 +37,3 @@ func (m *MockPlugin) Merge(parent interface{}, child interface{}) interface{} {
 type MockPluginConfig struct {
 	Config
 }
-
-func (m *MockPluginConfig) Init(cb api.ConfigCallbackHandler) error {
-	return nil
-}

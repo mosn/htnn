@@ -48,6 +48,7 @@ static_resources:
                       "@type": type.googleapis.com/envoy.extensions.access_loggers.stream.v3.StdoutAccessLog
                 http_filters:
                   - name: envoy.filters.http.golang
+                    disabled: true
                     typed_config:
                       "@type": type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.Config
                       library_id: fm

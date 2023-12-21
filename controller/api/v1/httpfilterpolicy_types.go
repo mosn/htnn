@@ -97,7 +97,11 @@ func (p *HTTPFilterPolicy) SetAccepted(reason gwapiv1a2.PolicyConditionReason, m
 		c.Message = "The policy has been accepted"
 	case gwapiv1a2.PolicyReasonInvalid:
 		c.Status = metav1.ConditionFalse
-		c.Message = msg[0]
+		if len(msg) > 0 {
+			c.Message = msg[0]
+		} else {
+			c.Message = "The policy is invalid"
+		}
 	case gwapiv1a2.PolicyReasonTargetNotFound:
 		c.Status = metav1.ConditionFalse
 		if len(msg) > 0 {

@@ -23,10 +23,6 @@ import (
 	"mosn.io/moe/pkg/plugins"
 )
 
-func (c *Config) Init(cb api.ConfigCallbackHandler) error {
-	return nil
-}
-
 type basePlugin struct {
 }
 

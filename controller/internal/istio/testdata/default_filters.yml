@@ -13,12 +13,81 @@
               subFilter:
                 name: envoy.filters.http.router
       patch:
-        operation: INSERT_BEFORE
+        operation: INSERT_FIRST
         value:
+          disabled: true
           name: envoy.filters.http.golang
           typed_config:
             '@type': type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.Config
             library_id: fm
             library_path: /etc/libgolang.so
             plugin_name: fm
+    - applyTo: HTTP_FILTER
+      match:
+        context: GATEWAY
+        listener:
+          filterChain:
+            filter:
+              name: envoy.filters.network.http_connection_manager
+              subFilter:
+                name: envoy.filters.http.golang
+      patch:
+        operation: INSERT_BEFORE
+        value:
+          disabled: true
+          name: envoy.filters.http.first
+          typed_config:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
+            stat_prefix: http_local_rate_limiter
+    - applyTo: HTTP_FILTER
+      match:
+        context: GATEWAY
+        listener:
+          filterChain:
+            filter:
+              name: envoy.filters.network.http_connection_manager
+              subFilter:
+                name: envoy.filters.http.golang
+      patch:
+        operation: INSERT_BEFORE
+        value:
+          disabled: true
+          name: envoy.filters.http.local_ratelimit1
+          typed_config:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
+            stat_prefix: http_local_rate_limiter
+    - applyTo: HTTP_FILTER
+      match:
+        context: GATEWAY
+        listener:
+          filterChain:
+            filter:
+              name: envoy.filters.network.http_connection_manager
+              subFilter:
+                name: envoy.filters.http.router
+      patch:
+        operation: INSERT_BEFORE
+        value:
+          disabled: true
+          name: envoy.filters.http.local_ratelimit2
+          typed_config:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
+            stat_prefix: http_local_rate_limiter
+    - applyTo: HTTP_FILTER
+      match:
+        context: GATEWAY
+        listener:
+          filterChain:
+            filter:
+              name: envoy.filters.network.http_connection_manager
+              subFilter:
+                name: envoy.filters.http.router
+      patch:
+        operation: INSERT_BEFORE
+        value:
+          disabled: true
+          name: envoy.filters.http.last
+          typed_config:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
+            stat_prefix: http_local_rate_limiter
   status: {}

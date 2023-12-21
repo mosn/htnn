@@ -66,7 +66,7 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 					},
 					Filters: map[string]runtime.RawExtension{
 						"property": {
-							Raw: []byte(`{"pet":"cat"}`),
+							Raw: []byte(`{"config":{"pet":"cat"}}`),
 						},
 					},
 				},
@@ -90,6 +90,25 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 				},
 			},
 			err: "namespace in TargetRef doesn't match HTTPFilterPolicy's namespace",
+		},
+		{
+			name: "bad configuration",
+			policy: &HTTPFilterPolicy{
+				Spec: HTTPFilterPolicySpec{
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: "networking.istio.io",
+							Kind:  "VirtualService",
+						},
+					},
+					Filters: map[string]runtime.RawExtension{
+						"local_ratelimit": {
+							Raw: []byte(`{"config":{}}`),
+						},
+					},
+				},
+			},
+			err: "invalid LocalRateLimit.StatPrefix: value length must be at least 1 runes",
 		},
 	}
 

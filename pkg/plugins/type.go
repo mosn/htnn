@@ -26,7 +26,7 @@ const (
 	TypeSecurity      PluginType = iota // Plugins like WAF, request validation, etc.
 	TypeAuthn                           // Plugins do authentication
 	TypeAuthz                           // Plugins do authorization
-	TypeTraffic                         // Plugins do traffic control
+	TypeTraffic                         // Plugins do traffic control, like rate limit, circuit breaker, etc.
 	TypeTransform                       // Plugins do request/response transform
 	TypeObservibility                   // Plugins do observibility
 	TypeGeneral
@@ -57,10 +57,10 @@ const (
 	// Stats plugins are expected to be called only in the Log phase
 	OrderPositionStats
 
+	// Istio's extensions goes here
+
 	// Last position. It's reserved for C++ plugins.
 	OrderPositionPost
-
-	// Istio's extensions goes here
 )
 
 type PluginOrderOperation int
@@ -80,7 +80,6 @@ type PluginOrder struct {
 
 type Plugin interface {
 	Config() PluginConfig
-	ConfigFactory() api.FilterConfigFactory
 
 	// Optional methods
 	Type() PluginType
@@ -91,5 +90,21 @@ type Plugin interface {
 type PluginConfig interface {
 	ProtoReflect() protoreflect.Message
 	Validate() error
+}
+
+type Initer interface {
 	Init(cb api.ConfigCallbackHandler) error
+}
+
+type NativePlugin interface {
+	Plugin
+
+	RouteConfigTypeURL() string
+	DefaultHTTPFilterConfig() map[string]interface{}
+}
+
+type GoPlugin interface {
+	Plugin
+
+	ConfigFactory() api.FilterConfigFactory
 }

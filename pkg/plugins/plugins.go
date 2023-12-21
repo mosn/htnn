@@ -36,9 +36,11 @@ func RegisterHttpPlugin(name string, plugin Plugin) {
 	}
 
 	logger.Info("register plugin", "name", name)
-	filtermanager.RegisterHttpFilterConfigFactoryAndParser(name,
-		plugin.ConfigFactory(),
-		NewPluginConfigParser(plugin))
+	if goPlugin, ok := plugin.(GoPlugin); ok {
+		filtermanager.RegisterHttpFilterConfigFactoryAndParser(name,
+			goPlugin.ConfigFactory(),
+			NewPluginConfigParser(goPlugin))
+	}
 
 	httpPlugins.Store(name, plugin)
 }
@@ -58,12 +60,12 @@ func IterateHttpPlugin(f func(key string, value Plugin) bool) {
 }
 
 type PluginConfigParser struct {
-	Plugin
+	GoPlugin
 }
 
-func NewPluginConfigParser(parser Plugin) *PluginConfigParser {
+func NewPluginConfigParser(parser GoPlugin) *PluginConfigParser {
 	return &PluginConfigParser{
-		Plugin: parser,
+		GoPlugin: parser,
 	}
 }
 
@@ -86,9 +88,11 @@ func (cp *PluginConfigParser) Parse(any interface{}, callbacks api.ConfigCallbac
 		return nil, err
 	}
 
-	err = conf.Init(callbacks)
-	if err != nil {
-		return nil, err
+	if initer, ok := conf.(Initer); ok {
+		err = initer.Init(callbacks)
+		if err != nil {
+			return nil, err
+		}
 	}
 	return conf, nil
 }
