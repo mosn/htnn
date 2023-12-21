@@ -16,10 +16,8 @@ package integration
 
 import (
 	"context"
-	"encoding/json"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -34,6 +32,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	mosniov1 "mosn.io/moe/controller/api/v1"
+	"mosn.io/moe/controller/tests/pkg"
 )
 
 func mustReadInput(fn string, out interface{}) {
@@ -41,32 +40,6 @@ func mustReadInput(fn string, out interface{}) {
 	input, err := os.ReadFile(fn)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(yaml.UnmarshalStrict(input, out, yaml.DisallowUnknownFields)).To(Succeed())
-}
-
-func mapToObj(in map[string]interface{}) client.Object {
-	var out client.Object
-	data, _ := json.Marshal(in)
-	group := in["apiVersion"].(string)
-	if strings.HasPrefix(group, "networking.istio.io") {
-		switch in["kind"] {
-		case "VirtualService":
-			out = &istiov1b1.VirtualService{}
-		case "Gateway":
-			out = &istiov1b1.Gateway{}
-		case "EnvoyFilter":
-			out = &istiov1a3.EnvoyFilter{}
-		}
-	} else if strings.HasPrefix(group, "mosn.io") {
-		switch in["kind"] {
-		case "HTTPFilterPolicy":
-			out = &mosniov1.HTTPFilterPolicy{}
-		}
-	}
-	if out == nil {
-		panic("unknown crd")
-	}
-	json.Unmarshal(data, out)
-	return out
 }
 
 var _ = Describe("HTTPFilterPolicy controller", func() {
@@ -92,7 +65,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 			mustReadInput("invalid-httpfilterpolicy", &input)
 
 			for _, in := range input {
-				obj := mapToObj(in)
+				obj := pkg.MapToObj(in)
 				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
 			}
 
@@ -117,7 +90,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 			mustReadInput("valid-httpfilterpolicy", &input)
 
 			for _, in := range input {
-				obj := mapToObj(in)
+				obj := pkg.MapToObj(in)
 				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
 			}
 
@@ -189,7 +162,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 			mustReadInput("default", &input)
 
 			for _, in := range input {
-				obj := mapToObj(in)
+				obj := pkg.MapToObj(in)
 				gvk := obj.GetObjectKind().GroupVersionKind()
 				if gvk.Kind == "VirtualService" {
 					DefaultVirtualService = obj.(*istiov1b1.VirtualService)
@@ -208,7 +181,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 
 			var virtualService *istiov1b1.VirtualService
 			for _, in := range input {
-				obj := mapToObj(in)
+				obj := pkg.MapToObj(in)
 				if obj.GetName() == "vs" {
 					virtualService = obj.(*istiov1b1.VirtualService)
 				}
@@ -299,7 +272,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 			input := []map[string]interface{}{}
 			mustReadInput("virtualservice", &input)
 			for _, in := range input {
-				obj := mapToObj(in)
+				obj := pkg.MapToObj(in)
 				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
 			}
 
@@ -350,7 +323,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 			mustReadInput("multi-policies", &input)
 
 			for _, in := range input {
-				obj := mapToObj(in)
+				obj := pkg.MapToObj(in)
 				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
 			}
 
@@ -384,7 +357,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 			mustReadInput("diff-envoyfilters", &input)
 
 			for _, in := range input {
-				obj := mapToObj(in)
+				obj := pkg.MapToObj(in)
 				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
 			}
 
@@ -418,7 +391,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 			mustReadInput("refer-virtualservice-across-namespace", &input)
 
 			for _, in := range input {
-				obj := mapToObj(in)
+				obj := pkg.MapToObj(in)
 				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
 			}
 
@@ -442,7 +415,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 			input := []map[string]interface{}{}
 			mustReadInput("virtualservice-match-but-route-not", &input)
 			for _, in := range input {
-				obj := mapToObj(in)
+				obj := pkg.MapToObj(in)
 				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
 			}
 
@@ -489,7 +462,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 
 			var virtualService *istiov1b1.VirtualService
 			for _, in := range input {
-				obj := mapToObj(in)
+				obj := pkg.MapToObj(in)
 				if obj.GetName() == "vs" {
 					virtualService = obj.(*istiov1b1.VirtualService)
 				}

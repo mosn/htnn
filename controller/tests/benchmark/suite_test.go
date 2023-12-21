@@ -1,3 +1,5 @@
+//go:build bench
+
 /*
 Copyright The HTNN Authors.
 
@@ -14,11 +16,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package integration
+package benchmark
 
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
@@ -36,14 +39,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
+	"sigs.k8s.io/yaml"
 
 	mosniov1 "mosn.io/moe/controller/api/v1"
 	"mosn.io/moe/controller/internal/config"
 	"mosn.io/moe/controller/internal/controller"
 )
-
-// These tests use Ginkgo (BDD-style Go testing framework). Refer to
-// http://onsi.github.io/ginkgo/ to learn more about Ginkgo.
 
 var cfg *rest.Config
 var k8sClient client.Client
@@ -51,11 +53,20 @@ var testEnv *envtest.Environment
 var ctx context.Context
 var cancel context.CancelFunc
 var clientset *kubernetes.Clientset
+var k8sManager manager.Manager
+var httpFilterPolicyReconciler *controller.HTTPFilterPolicyReconciler
 
-func TestControllers(t *testing.T) {
+func mustReadInput(fn string, out interface{}) {
+	fn = filepath.Join("testdata", fn+".yml")
+	input, err := os.ReadFile(fn)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(yaml.UnmarshalStrict(input, out, yaml.DisallowUnknownFields)).To(Succeed())
+}
+
+func TestBenchmark(t *testing.T) {
 	RegisterFailHandler(Fail)
 
-	RunSpecs(t, "Controller Suite")
+	RunSpecs(t, "Benchmark Suite")
 }
 
 var _ = BeforeSuite(func() {
@@ -65,8 +76,8 @@ var _ = BeforeSuite(func() {
 	By("bootstrapping test environment")
 	testEnv = &envtest.Environment{
 		CRDDirectoryPaths: []string{
-			filepath.Join("..", "..", "..", "config", "crd", "bases"),
-			filepath.Join("..", "..", "testdata", "crd"),
+			filepath.Join("..", "..", "config", "crd", "bases"),
+			filepath.Join("..", "testdata", "crd"),
 		},
 		ErrorIfCRDPathMissing: true,
 
@@ -75,7 +86,7 @@ var _ = BeforeSuite(func() {
 		// default path defined in controller-runtime which is /usr/local/kubebuilder/.
 		// Note that you must have the required binaries setup under the bin directory to perform
 		// the tests directly. When we run make test it will be setup and used automatically.
-		BinaryAssetsDirectory: filepath.Join("..", "..", "bin", "k8s",
+		BinaryAssetsDirectory: filepath.Join("bin", "k8s",
 			fmt.Sprintf("1.28.3-%s-%s", runtime.GOOS, runtime.GOARCH)),
 	}
 
@@ -107,21 +118,21 @@ var _ = BeforeSuite(func() {
 	_, err = clientset.CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
-	k8sManager, err := ctrl.NewManager(cfg, ctrl.Options{
+	k8sManager, err = ctrl.NewManager(cfg, ctrl.Options{
 		Scheme: scheme.Scheme,
 	})
 	Expect(err).ToNot(HaveOccurred())
 
-	err = (&controller.HTTPFilterPolicyReconciler{
+	httpFilterPolicyReconciler = &controller.HTTPFilterPolicyReconciler{
 		Client: k8sManager.GetClient(),
 		Scheme: k8sManager.GetScheme(),
-	}).SetupWithManager(k8sManager)
+	}
+	err = httpFilterPolicyReconciler.SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
 	go func() {
 		defer GinkgoRecover()
-		err = k8sManager.Start(ctx)
-		Expect(err).ToNot(HaveOccurred(), "failed to run manager")
+		Expect(k8sManager.Start(ctx)).ToNot(HaveOccurred(), "failed to run manager")
 	}()
 
 })

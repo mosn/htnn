@@ -97,6 +97,10 @@ func (r *HTTPFilterPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return ctrl.Result{}, nil
 	}
 
+	// In my experience, writing to K8S API server is probably the slowest part.
+	// We can add a configured concurrency to write to API server in parallel, if
+	// the performance is not good. Note that the API server probably has rate limit.
+
 	err = r.translationStateToCustomResource(ctx, &logger, finalState)
 	if err != nil {
 		return ctrl.Result{}, err
