@@ -116,13 +116,14 @@ func toMergedPolicy(rp *routePolicy) *mergedPolicy {
 		}
 	}
 
-	v := map[string]interface{}{}
-	// This Marshal/Unmarshal trick works around the type check in MustNewStruct
-	data, _ := json.Marshal(goFilterManager)
-	_ = json.Unmarshal(data, &v)
+	config := map[string]interface{}{}
+	if len(goFilterManager.Plugins) > 0 {
+		v := map[string]interface{}{}
+		// This Marshal/Unmarshal trick works around the type check in MustNewStruct
+		data, _ := json.Marshal(goFilterManager)
+		_ = json.Unmarshal(data, &v)
 
-	config := map[string]interface{}{
-		"envoy.filters.http.golang": map[string]interface{}{
+		config["envoy.filters.http.golang"] = map[string]interface{}{
 			"@type": "type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.ConfigsPerRoute",
 			"plugins_config": map[string]interface{}{
 				"fm": map[string]interface{}{
@@ -132,7 +133,7 @@ func toMergedPolicy(rp *routePolicy) *mergedPolicy {
 					},
 				},
 			},
-		},
+		}
 	}
 
 	for _, filter := range nativeFilters {
