@@ -16,6 +16,7 @@ package translation
 
 import (
 	"encoding/json"
+	"fmt"
 	"sort"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -41,7 +42,7 @@ type mergedHostPolicy struct {
 }
 
 type mergedPolicy struct {
-	Config *filtermanager.FilterManagerConfig
+	Config map[string]interface{}
 	Info   *Info
 	NsName *types.NamespacedName
 }
@@ -95,17 +96,68 @@ func toMergedPolicy(rp *routePolicy) *mergedPolicy {
 	}
 
 	fmc := translateHTTPFilterPolicyToFilterManagerConfig(p)
+	nativeFilters := []*filtermanager.FilterConfig{}
+	goFilterManager := &filtermanager.FilterManagerConfig{
+		Plugins: []*filtermanager.FilterConfig{},
+	}
+	for _, plugin := range fmc.Plugins {
+		name := plugin.Name
+		url := ""
+		cppPlugin, ok := plugins.LoadHttpPlugin(name).(plugins.NativePlugin)
+		if ok {
+			url = cppPlugin.RouteConfigTypeURL()
+		}
+		if !ok {
+			goFilterManager.Plugins = append(goFilterManager.Plugins, plugin)
+		} else {
+			m := plugin.Config.(map[string]interface{})
+			m["@type"] = url
+			nativeFilters = append(nativeFilters, plugin)
+		}
+	}
+
+	v := map[string]interface{}{}
+	// This Marshal/Unmarshal trick works around the type check in MustNewStruct
+	data, _ := json.Marshal(goFilterManager)
+	_ = json.Unmarshal(data, &v)
+
+	config := map[string]interface{}{
+		"envoy.filters.http.golang": map[string]interface{}{
+			"@type": "type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.ConfigsPerRoute",
+			"plugins_config": map[string]interface{}{
+				"fm": map[string]interface{}{
+					"config": map[string]interface{}{
+						"@type": "type.googleapis.com/xds.type.v3.TypedStruct",
+						"value": v,
+					},
+				},
+			},
+		},
+	}
+
+	for _, filter := range nativeFilters {
+		name := fmt.Sprintf("envoy.filters.http.%s", filter.Name)
+		config[name] = filter.Config
+	}
+
 	return &mergedPolicy{
-		Config: fmc,
+		Config: config,
 		Info:   info,
 		NsName: rp.NsName,
 	}
+}
+
+func sortPlugins(ps []*filtermanager.FilterConfig) {
+	sort.Slice(ps, func(i, j int) bool {
+		return plugins.ComparePluginOrder(ps[i].Name, ps[j].Name)
+	})
 }
 
 func toMergedState(ctx *Ctx, state *dataPlaneState) (*FinalState, error) {
 	s := &mergedState{
 		Hosts: make(map[string]*mergedHostPolicy),
 	}
+
 	for name, host := range state.Hosts {
 		mh := &mergedHostPolicy{
 			VirtualHost: host.VirtualHost,
@@ -113,7 +165,8 @@ func toMergedState(ctx *Ctx, state *dataPlaneState) (*FinalState, error) {
 		}
 
 		for routeName, route := range host.Routes {
-			mh.Routes[routeName] = toMergedPolicy(route)
+			mergedPolicy := toMergedPolicy(route)
+			mh.Routes[routeName] = mergedPolicy
 		}
 
 		s.Hosts[name] = mh
@@ -127,7 +180,7 @@ func translateHTTPFilterPolicyToFilterManagerConfig(policy *mosniov1.HTTPFilterP
 		Plugins: []*filtermanager.FilterConfig{},
 	}
 	for name, filter := range policy.Spec.Filters {
-		cfg := model.GoPluginConfig{}
+		cfg := model.PluginConfigWrapper{}
 		// we validated the filter at the beginning, so theorily err should not happen
 		_ = json.Unmarshal(filter.Raw, &cfg)
 		fmc.Plugins = append(fmc.Plugins, &filtermanager.FilterConfig{
@@ -136,8 +189,6 @@ func translateHTTPFilterPolicyToFilterManagerConfig(policy *mosniov1.HTTPFilterP
 		})
 	}
 
-	sort.Slice(fmc.Plugins, func(i, j int) bool {
-		return plugins.ComparePluginOrder(fmc.Plugins[i].Name, fmc.Plugins[j].Name)
-	})
+	sortPlugins(fmc.Plugins)
 	return fmc
 }

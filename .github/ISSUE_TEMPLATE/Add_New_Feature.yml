@@ -4,18 +4,21 @@ body:
   - type: textarea
     id: idea
     attributes:
+      label: new feature
       description: Describe the new feature you want to support clearly.
     validations:
       required: true
   - type: textarea
     id: scenes
     attributes:
+      label: use scenes
       description: Describe your use scenes (why need this feature).
     validations:
       required: true
   - type: textarea
     id: advice
     attributes:
+      label: advice
       description: Describe the advice or solution of this new feature.
     validations:
       required: true

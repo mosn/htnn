@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//     http://www.apache.org/licenses/LICENSE-2.0
+//	http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -12,22 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package model
+package plugins
 
 import (
-	"k8s.io/apimachinery/pkg/types"
+	_ "mosn.io/moe/controller/plugins/local_ratelimit"
+	_ "mosn.io/moe/plugins" // register Go plugins
 )
-
-type Gateway struct {
-	NsName *types.NamespacedName
-	Port   uint32
-}
-
-type VirtualHost struct {
-	Gateway *Gateway
-	Name    string
-}
-
-type PluginConfigWrapper struct {
-	Config interface{} `json:"config"`
-}

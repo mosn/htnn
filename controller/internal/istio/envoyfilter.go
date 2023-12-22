@@ -15,7 +15,7 @@
 package istio
 
 import (
-	"encoding/json"
+	"sort"
 
 	"google.golang.org/protobuf/types/known/structpb"
 	istioapi "istio.io/api/networking/v1alpha3"
@@ -24,11 +24,7 @@ import (
 
 	ctrlcfg "mosn.io/moe/controller/internal/config"
 	"mosn.io/moe/controller/internal/model"
-	"mosn.io/moe/pkg/filtermanager"
-)
-
-const (
-	DefaultHttpFilter = "htnn-http-filter"
+	"mosn.io/moe/pkg/plugins"
 )
 
 func MustNewStruct(fields map[string]interface{}) *structpb.Struct {
@@ -40,62 +36,130 @@ func MustNewStruct(fields map[string]interface{}) *structpb.Struct {
 	return st
 }
 
+const (
+	DefaultHttpFilter = "htnn-http-filter"
+)
+
+type configWrapper struct {
+	name   string
+	pre    bool
+	filter map[string]interface{}
+}
+
 func DefaultEnvoyFilters() map[string]*istiov1a3.EnvoyFilter {
 	efs := map[string]*istiov1a3.EnvoyFilter{}
-	efs[DefaultHttpFilter] = &istiov1a3.EnvoyFilter{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: DefaultHttpFilter,
-		},
-		Spec: istioapi.EnvoyFilter{
-			ConfigPatches: []*istioapi.EnvoyFilter_EnvoyConfigObjectPatch{
-				{
-					ApplyTo: istioapi.EnvoyFilter_HTTP_FILTER,
-					Match: &istioapi.EnvoyFilter_EnvoyConfigObjectMatch{
-						// As currently we only support Gateway cases, here we hardcode the context
-						// to default envoy filters. We don't need to do that for user-defined envoy
-						// filters. Because adding that will require a break change to remove it.
-						// And user-defined envoy filter won't apply to mesh because:
-						// 1. We don't support attaching policy to mesh.
-						// 2. Mesh configuration doesn't have Go HTTP filter.
-						Context: istioapi.EnvoyFilter_GATEWAY,
-						ObjectTypes: &istioapi.EnvoyFilter_EnvoyConfigObjectMatch_Listener{
-							Listener: &istioapi.EnvoyFilter_ListenerMatch{
-								FilterChain: &istioapi.EnvoyFilter_ListenerMatch_FilterChainMatch{
-									Filter: &istioapi.EnvoyFilter_ListenerMatch_FilterMatch{
-										Name: "envoy.filters.network.http_connection_manager",
-										SubFilter: &istioapi.EnvoyFilter_ListenerMatch_SubFilterMatch{
-											Name: "envoy.filters.http.router",
-										},
-									},
-								},
-							},
+
+	defaultMatch := &istioapi.EnvoyFilter_EnvoyConfigObjectMatch{
+		// As currently we only support Gateway cases, here we hardcode the context
+		// to default envoy filters. We don't need to do that for user-defined envoy
+		// filters. Because adding that will require a break change to remove it.
+		// And user-defined envoy filter won't apply to mesh because:
+		// 1. We don't support attaching policy to mesh.
+		// 2. Mesh configuration doesn't have Go HTTP filter.
+		Context: istioapi.EnvoyFilter_GATEWAY,
+		ObjectTypes: &istioapi.EnvoyFilter_EnvoyConfigObjectMatch_Listener{
+			Listener: &istioapi.EnvoyFilter_ListenerMatch{
+				FilterChain: &istioapi.EnvoyFilter_ListenerMatch_FilterChainMatch{
+					Filter: &istioapi.EnvoyFilter_ListenerMatch_FilterMatch{
+						Name: "envoy.filters.network.http_connection_manager",
+						SubFilter: &istioapi.EnvoyFilter_ListenerMatch_SubFilterMatch{
+							Name: "envoy.filters.http.router",
 						},
-					},
-					Patch: &istioapi.EnvoyFilter_Patch{
-						Operation: istioapi.EnvoyFilter_Patch_INSERT_BEFORE,
-						Value: MustNewStruct(map[string]interface{}{
-							"name": "envoy.filters.http.golang",
-							"typed_config": map[string]interface{}{
-								"@type":        "type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.Config",
-								"library_id":   "fm",
-								"library_path": ctrlcfg.GoSoPath(),
-								"plugin_name":  "fm",
-							},
-						}),
 					},
 				},
 			},
 		},
 	}
+	patches := []*istioapi.EnvoyFilter_EnvoyConfigObjectPatch{}
+	patches = append(patches, &istioapi.EnvoyFilter_EnvoyConfigObjectPatch{
+		ApplyTo: istioapi.EnvoyFilter_HTTP_FILTER,
+		Match:   defaultMatch,
+		Patch: &istioapi.EnvoyFilter_Patch{
+			Operation: istioapi.EnvoyFilter_Patch_INSERT_FIRST,
+			Value: MustNewStruct(map[string]interface{}{
+				"disabled": true,
+				"name":     "envoy.filters.http.golang",
+				"typed_config": map[string]interface{}{
+					"@type":        "type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.Config",
+					"library_id":   "fm",
+					"library_path": ctrlcfg.GoSoPath(),
+					"plugin_name":  "fm",
+				},
+			}),
+		},
+	})
+	// Native filters can only be used before/after Go plugins.
+
+	configs := []*configWrapper{}
+	plugins.IterateHttpPlugin(func(key string, value plugins.Plugin) bool {
+		nativePlugin, ok := value.(plugins.NativePlugin)
+		if !ok {
+			return true
+		}
+
+		filter := nativePlugin.DefaultHTTPFilterConfig()
+		filter["disabled"] = true
+		configs = append(configs, &configWrapper{
+			name:   key,
+			pre:    nativePlugin.Order().Position == plugins.OrderPositionPre,
+			filter: filter,
+		})
+		return true
+	})
+
+	sort.Slice(configs, func(i, j int) bool {
+		return plugins.ComparePluginOrder(configs[i].name, configs[j].name)
+	})
+	for _, config := range configs {
+		filter := config.filter
+		if config.pre {
+			patches = append(patches, &istioapi.EnvoyFilter_EnvoyConfigObjectPatch{
+				ApplyTo: istioapi.EnvoyFilter_HTTP_FILTER,
+				Match: &istioapi.EnvoyFilter_EnvoyConfigObjectMatch{
+					Context: istioapi.EnvoyFilter_GATEWAY,
+					ObjectTypes: &istioapi.EnvoyFilter_EnvoyConfigObjectMatch_Listener{
+						Listener: &istioapi.EnvoyFilter_ListenerMatch{
+							FilterChain: &istioapi.EnvoyFilter_ListenerMatch_FilterChainMatch{
+								Filter: &istioapi.EnvoyFilter_ListenerMatch_FilterMatch{
+									Name: "envoy.filters.network.http_connection_manager",
+									SubFilter: &istioapi.EnvoyFilter_ListenerMatch_SubFilterMatch{
+										Name: "envoy.filters.http.golang",
+									},
+								},
+							},
+						},
+					},
+				},
+				Patch: &istioapi.EnvoyFilter_Patch{
+					Operation: istioapi.EnvoyFilter_Patch_INSERT_BEFORE,
+					Value:     MustNewStruct(filter),
+				},
+			})
+		} else {
+			patches = append(patches, &istioapi.EnvoyFilter_EnvoyConfigObjectPatch{
+				ApplyTo: istioapi.EnvoyFilter_HTTP_FILTER,
+				Match:   defaultMatch,
+				Patch: &istioapi.EnvoyFilter_Patch{
+					Operation: istioapi.EnvoyFilter_Patch_INSERT_BEFORE,
+					Value:     MustNewStruct(filter),
+				},
+			})
+		}
+	}
+
+	efs[DefaultHttpFilter] = &istiov1a3.EnvoyFilter{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: DefaultHttpFilter,
+		},
+		Spec: istioapi.EnvoyFilter{
+			ConfigPatches: patches,
+		},
+	}
+
 	return efs
 }
 
-func GenerateRouteFilter(host *model.VirtualHost, route string, config *filtermanager.FilterManagerConfig) *istiov1a3.EnvoyFilter {
-	v := map[string]interface{}{}
-	// This Marshal/Unmarshal trick works around the type check in MustNewStruct
-	data, _ := json.Marshal(config)
-	_ = json.Unmarshal(data, &v)
-
+func GenerateRouteFilter(host *model.VirtualHost, route string, config map[string]interface{}) *istiov1a3.EnvoyFilter {
 	applyTo := istioapi.EnvoyFilter_HTTP_ROUTE
 	vhost := &istioapi.EnvoyFilter_RouteConfigurationMatch_VirtualHostMatch{
 		Name: host.Name,
@@ -119,19 +183,7 @@ func GenerateRouteFilter(host *model.VirtualHost, route string, config *filterma
 					Patch: &istioapi.EnvoyFilter_Patch{
 						Operation: istioapi.EnvoyFilter_Patch_MERGE,
 						Value: MustNewStruct(map[string]interface{}{
-							"typed_per_filter_config": map[string]interface{}{
-								"envoy.filters.http.golang": map[string]interface{}{
-									"@type": "type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.ConfigsPerRoute",
-									"plugins_config": map[string]interface{}{
-										"fm": map[string]interface{}{
-											"config": map[string]interface{}{
-												"@type": "type.googleapis.com/xds.type.v3.TypedStruct",
-												"value": v,
-											},
-										},
-									},
-								},
-							},
+							"typed_per_filter_config": config,
 						}),
 					},
 				},

@@ -1,0 +1,88 @@
+gateway:
+- apiVersion: networking.istio.io/v1beta1
+  kind: Gateway
+  metadata:
+    name: httpbin-gateway
+    namespace: default
+  spec:
+    selector:
+      istio: ingressgateway
+    servers:
+    - hosts:
+      - httpbin.example.com
+      port:
+        name: http
+        number: 80
+        protocol: HTTP
+virtualService:
+  httpbin-gateway:
+    - apiVersion: networking.istio.io/v1beta1
+      kind: VirtualService
+      metadata:
+        name: httpbin
+        namespace: default
+      spec:
+        gateways:
+        - httpbin-gateway
+        hosts:
+        - httpbin.example.com
+        http:
+        - match:
+          - uri:
+              prefix: /status
+          name: policy
+          route:
+          - destination:
+              host: httpbin
+              port:
+                number: 8000
+httpFilterPolicy:
+  httpbin:
+  - apiVersion: mosn.io/v1
+    kind: HTTPFilterPolicy
+    metadata:
+      name: policy
+      namespace: default
+    spec:
+      targetRef:
+        group: networking.istio.io
+        kind: VirtualService
+        name: httpbin
+        sectionName: policy
+      filters:
+        local_ratelimit:
+          config:
+            stat_prefix: http_local_rate_limiter
+            token_bucket:
+              max_tokens: 10000
+              tokens_per_fill: 1000
+              fill_interval: 1s
+            filter_enabled:
+              default_value:
+                numerator: 100
+                denominator: HUNDRED
+            filter_enforced:
+              default_value:
+                numerator: 100
+                denominator: HUNDRED
+        opa:
+          config:
+            remote:
+              url: "http://x.local"
+              policy: "data"
+  - apiVersion: mosn.io/v1
+    kind: HTTPFilterPolicy
+    metadata:
+      name: overridden
+      namespace: default
+    spec:
+      targetRef:
+        group: networking.istio.io
+        kind: VirtualService
+        name: httpbin
+      filters:
+        local_ratelimit:
+          config:
+            stat_prefix: http_local_rate_limiter
+            token_bucket:
+              fill_interval: 10s

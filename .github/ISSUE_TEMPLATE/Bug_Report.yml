@@ -4,6 +4,7 @@ body:
   - type: textarea
     id: describe
     attributes:
+      label: bug
       description: A clear and concise description of what the bug is.
     validations:
       required: true
@@ -24,19 +25,23 @@ body:
   - type: textarea
     id: steps
     attributes:
+      label: steps to reproduce
       description: Steps to reproduce
     validations:
       required: true
   - type: textarea
     id: minimal-case
     attributes:
-      description: Minimal yet complete reproducer code (or GitHub URL to code)
+      label: reproducible code
+      description: Minimal yet complete reproducible code (or GitHub URL to code)
     validations:
       required: false
   - type: textarea
     id: environment
     attributes:
+      label: environment
       description: Show the environment related to the report.
       value: |
         - HTNN version:
-        - Istio version (`istioctl version`):
+    validations:
+      required: true

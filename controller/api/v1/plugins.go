@@ -12,22 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package model
+package v1
 
 import (
-	"k8s.io/apimachinery/pkg/types"
+	_ "mosn.io/moe/controller/plugins" // register plugins
 )
-
-type Gateway struct {
-	NsName *types.NamespacedName
-	Port   uint32
-}
-
-type VirtualHost struct {
-	Gateway *Gateway
-	Name    string
-}
-
-type PluginConfigWrapper struct {
-	Config interface{} `json:"config"`
-}

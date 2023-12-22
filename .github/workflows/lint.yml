@@ -66,3 +66,7 @@ jobs:
       run: |
         # See https://editorconfig.org/ to know how to support editorconfig in your editor
         make lint-editorconfig
+
+    - name: lint remain
+      run: |
+        make lint-remain

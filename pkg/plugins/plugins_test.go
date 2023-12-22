@@ -67,7 +67,7 @@ func TestParse(t *testing.T) {
 			checker: func(t *testing.T, cp *PluginConfigParser) func() {
 				conf := &MockPluginConfig{}
 				patches := gomonkey.ApplyMethodReturn(conf, "Validate", errors.New("ouch"))
-				patches.ApplyMethodReturn(cp.Plugin, "Config", conf)
+				patches.ApplyMethodReturn(cp.GoPlugin, "Config", conf)
 				return func() {
 					patches.Reset()
 				}

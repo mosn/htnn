@@ -29,7 +29,7 @@ var (
 	logger = log.DefaultLogger.WithName("proto")
 )
 
-// Functions below are copied from istio, under Apache License
+// MessageToAnyXX below are copied from istio, under Apache License
 
 func MessageToAnyWithError(msg proto.Message) (*anypb.Any, error) {
 	if msg == nil {
