@@ -5,7 +5,7 @@ go 1.20
 require (
 	github.com/agiledragon/gomonkey/v2 v2.11.0
 	github.com/envoyproxy/go-control-plane v0.11.2-0.20231019082134-6e4589f570e1 // version used by istio 1.20
-	github.com/go-logr/logr v1.3.1-0.20231219211847-5d88f52f7c0b
+	github.com/go-logr/logr v1.4.1
 	github.com/onsi/ginkgo/v2 v2.13.2
 	github.com/onsi/gomega v1.30.0
 	github.com/prometheus/client_golang v1.17.0
