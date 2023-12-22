@@ -6,11 +6,18 @@ title: Demo
 
 The `demo` plugin is used to show how to add a plugin to moe.
 
+## Attribute
+
+|       |             |
+| ----- | ----------- |
+| Type  | General     |
+| Order | Unspecified |
+
 ## Configuration
 
-| Name           | Type   | Required | Validation | Description                                                                        |
-| -------------- | ------ | -------- | ---------- | ---------------------------------------------------------------------------------- |
-| host_name      | string | True     |  min_len: 1|  The request header name which will contain `hello, ...` greeting to the upstream   |
+| Name      | Type   | Required | Validation | Description                                                                      |
+| --------- | ------ | -------- | ---------- | -------------------------------------------------------------------------------- |
+| host_name | string | True     | min_len: 1 | The request header name which will contain `hello, ...` greeting to the upstream |
 
 ## Usage
 

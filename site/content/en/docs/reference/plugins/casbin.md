@@ -6,10 +6,17 @@ title: Casbin
 
 This Plugin embeds the powerful and efficient open-source access control library [casbin](https://casbin.org/docs/overview) that supports various access control models for enforcing authorization across the board.
 
+## Attribute
+
+|       |       |
+| ----- | ----- |
+| Type  | Authz |
+| Order | Authz |
+
 ## Configuration
 
 | Name  | Type  | Required | Validation | Description |
-|-------|-------|----------|------------|-------------|
+| ----- | ----- | -------- | ---------- | ----------- |
 | rule  | Rule  | True     |            |             |
 | token | Token | True     |            |             |
 
@@ -17,7 +24,7 @@ This Plugin embeds the powerful and efficient open-source access control library
 ### Rule
 
 | Name   | Type   | Required | Validation | Description                                                                                               |
-|--------|--------|----------|------------|-----------------------------------------------------------------------------------------------------------|
+| ------ | ------ | -------- | ---------- | --------------------------------------------------------------------------------------------------------- |
 | model  | string | True     | min_len: 1 | The path to Casbin model file, see https://casbin.org/docs/model-storage#load-model-from-conf-file        |
 | policy | string | True     | min_len: 1 | The path to Casbin policy file, see https://casbin.org/docs/policy-storage#loading-policy-from-a-csv-file |
 
@@ -25,7 +32,7 @@ This Plugin embeds the powerful and efficient open-source access control library
 
 
 | Name   | Type   | Required | Validation | Description                                                                                         |
-|--------|--------|----------|------------|-----------------------------------------------------------------------------------------------------|
+| ------ | ------ | -------- | ---------- | --------------------------------------------------------------------------------------------------- |
 | source | enum   | False    | [header]   | Where to find the token, default to `header`: fetch token from the configured request header `name` |
 | name   | string | True     | min_len: 1 | The name of the token                                                                               |
 

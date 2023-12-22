@@ -15,6 +15,53 @@ Assumed you are at the root of this project.
 5. Add your plugin's package into `./plugins/plugins.go`. Run `make build-so`. Now the plugin is compiled into `libgolang.so`.
 6. Add integration test in the `./plugins/tests/integration/`. For how to run the integration test, please read `site/content/en/docs/developer-guide/plugin_integration_test_framework.md`.
 
+### Plugin types
+
+Each plugin should belong to one type. You can specify the plugin's type in its `Type` method. Here are the types:
+
+* Security: Plugins like WAF, request validation, etc.
+* Authn: Plugins do authentication
+* Authz: Plugins do authorization
+* Traffic: Plugins do traffic control
+* Transform: Plugins do request/response transform
+* Observability: Plugins do observability
+* General: Else plugins
+
+### Plugin order
+
+We define a fixed order for each plugin.
+The order is combined into two parts: the order group and the operation. The order of plugins is first compared by its group.
+Then the order of plugins in the group is decided by the operation.
+For plugins which have the same operation, they are sorted by alphabetical order.
+
+Here are the order group (sorted from first to last):
+
+* Pre: First position. It's reserved for Native plugins.
+
+Now goes the Go plugins:
+
+* Access
+* Authn
+* Authz
+* Traffic
+* Transform
+* Unspecified
+* BeforeUpstream
+* Stats
+
+End of the Go plugins.
+
+* Istio's extensions go here
+* Post: Last position. It's reserved for Native plugins.
+
+There are three kinds of operation: `OrderOperationInsertFirst `, `OrderOperationInsertLast` and `OrderOperationNop`. Each kind means `First`, `Last` and `Middle`.
+
+You can specify the plugin's type in its `Order` method.
+If a plugin doesn't claim its order, it will be put into `OrderPositionUnspecified` group, with the operation `OrderOperationNop`.
+
+If you want to configure a plugin in different positions, you can define the plugin as the base class,
+and register its derived classes. Please check [this](https://github.com/mosn/moe/blob/main/pkg/plugins/plugins_test.go) for the example.
+
 ## Filter manager
 
 The MOE project introduces filter manager between the Envoy Go filter and the Go Plugins.

@@ -28,7 +28,7 @@ const (
 	TypeAuthz                           // Plugins do authorization
 	TypeTraffic                         // Plugins do traffic control, like rate limit, circuit breaker, etc.
 	TypeTransform                       // Plugins do request/response transform
-	TypeObservibility                   // Plugins do observibility
+	TypeObservability                   // Plugins do observability
 	TypeGeneral
 )
 
@@ -43,7 +43,7 @@ const (
 type PluginOrderPosition int
 
 const (
-	OrderPositionPre PluginOrderPosition = iota // First position. It's reserved for C++ plugins.
+	OrderPositionPre PluginOrderPosition = iota // First position. It's reserved for Native plugins.
 
 	// Now goes the Go plugins
 	OrderPositionAccess
@@ -54,12 +54,12 @@ const (
 	OrderPositionUnspecified
 	OrderPositionBeforeUpstream
 
-	// Stats plugins are expected to be called only in the Log phase
+	// Stats plugins are expected to be called mainly in the Log phase
 	OrderPositionStats
 
-	// Istio's extensions goes here
+	// Istio's extensions go here
 
-	// Last position. It's reserved for C++ plugins.
+	// Last position. It's reserved for Native plugins.
 	OrderPositionPost
 )
 
