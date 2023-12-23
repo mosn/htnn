@@ -49,3 +49,7 @@ header:
       extensions:
         - ".proto"
       comment_style_id: DoubleSlash
+    Open Policy Agent:
+      extensions:
+        - ".rego"
+      comment_style_id: Hashtag
