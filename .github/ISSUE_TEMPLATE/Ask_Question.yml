@@ -7,7 +7,7 @@ body:
       label: Description
       description: Describe the question.
     validations:
-      required: true
+      required: false
   - type: textarea
     id: environment
     attributes:
