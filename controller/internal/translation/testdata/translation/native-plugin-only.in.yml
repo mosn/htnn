@@ -1,0 +1,57 @@
+gateway:
+- apiVersion: networking.istio.io/v1beta1
+  kind: Gateway
+  metadata:
+    name: gateway
+    namespace: default
+  spec:
+    selector:
+      istio: ingressgateway
+    servers:
+    - hosts:
+      - example.com
+      port:
+        name: http
+        number: 80
+        protocol: HTTP
+virtualService:
+  gateway:
+    - apiVersion: networking.istio.io/v1beta1
+      kind: VirtualService
+      metadata:
+        name: vs
+        namespace: default
+      spec:
+        gateways:
+        - gateway
+        hosts:
+        - example.com
+        http:
+        - match:
+          - uri:
+              prefix: /
+          name: policy
+          route:
+          - destination:
+              host: api
+              port:
+                number: 8000
+httpFilterPolicy:
+  vs:
+  - apiVersion: mosn.io/v1
+    kind: HTTPFilterPolicy
+    metadata:
+      name: policy
+      namespace: default
+    spec:
+      targetRef:
+        group: networking.istio.io
+        kind: VirtualService
+        name: vs
+      filters:
+        local_ratelimit:
+          config:
+            stat_prefix: http_local_rate_limiter
+            token_bucket:
+              fill_interval: 10s
+              max_tokens: 100

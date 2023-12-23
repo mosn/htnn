@@ -1,0 +1,25 @@
+- metadata:
+    annotations:
+      htnn.mosn.io/info: '{"httpfilterpolicies":["default/policy"]}'
+    creationTimestamp: null
+    name: htnn-h-example.com
+  spec:
+    configPatches:
+    - applyTo: HTTP_ROUTE
+      match:
+        routeConfiguration:
+          vhost:
+            name: example.com:80
+            route:
+              name: policy
+      patch:
+        operation: MERGE
+        value:
+          typed_per_filter_config:
+            envoy.filters.http.local_ratelimit:
+              '@type': type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
+              stat_prefix: http_local_rate_limiter
+              token_bucket:
+                fill_interval: 10s
+                max_tokens: 100
+  status: {}
