@@ -53,16 +53,20 @@ type DataPlane struct {
 }
 
 type Option struct {
-	LogLevel      string
-	CheckErrorLog bool
+	LogLevel        string
+	NoErrorLogCheck bool
+	Bootstrap       *bootstrap
 }
 
 func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 	if opt == nil {
-		opt = &Option{
-			LogLevel:      "info",
-			CheckErrorLog: true,
-		}
+		opt = &Option{}
+	}
+	if opt.LogLevel == "" {
+		opt.LogLevel = "info"
+	}
+	if opt.Bootstrap == nil {
+		opt.Bootstrap = Bootstrap()
 	}
 
 	dp := &DataPlane{
@@ -85,7 +89,7 @@ func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 		return nil, err
 	}
 
-	err = WriteBoostrapConfig(cfgFile)
+	err = opt.Bootstrap.WriteTo(cfgFile)
 	cfgFile.Close()
 	if err != nil {
 		return nil, err
@@ -239,7 +243,7 @@ func (dp *DataPlane) Stop() {
 	logger.Info("envoy stopped")
 
 	f := dp.cmd.Stdout.(*os.File)
-	if dp.opt.CheckErrorLog {
+	if !dp.opt.NoErrorLogCheck {
 		f.Seek(0, 0)
 		sc := bufio.NewScanner(f)
 		for sc.Scan() {
