@@ -4,6 +4,10 @@ title: Type
 
 This documentation describes type definitions used across different plugins. Definitions are listed in alphabetical order.
 
+## Duration
+
+A string represents the time duration. The string should end with `s`, which means the number of seconds. For example, `10s` and `0.1s`.
+
 ## HeaderValue
 
 A `key` / `value` pair, like `{"key":"Accept-Encoding", "value": "gzip"}`.
