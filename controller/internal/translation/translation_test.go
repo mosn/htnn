@@ -16,6 +16,7 @@ package translation
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sort"
@@ -61,7 +62,6 @@ func TestTranslate(t *testing.T) {
 	require.NoError(t, err)
 
 	for _, inputFile := range inputFiles {
-		inputFile := inputFile
 		t.Run(testName(inputFile), func(t *testing.T) {
 			input := &testInput{}
 			mustUnmarshal(t, inputFile, input)
@@ -165,8 +165,8 @@ func TestPlugins(t *testing.T) {
 	}
 
 	for _, inputFile := range inputFiles {
-		inputFile := inputFile
-		t.Run(testName(inputFile), func(t *testing.T) {
+		name := testName(inputFile)
+		t.Run(name, func(t *testing.T) {
 			var hfp mosniov1.HTTPFilterPolicy
 			mustUnmarshal(t, inputFile, &hfp)
 
@@ -177,6 +177,7 @@ func TestPlugins(t *testing.T) {
 			require.NoError(t, err)
 
 			defaultEnvoyFilters := istio.DefaultEnvoyFilters()
+			expPlugin := fmt.Sprintf("envoy.filters.http.%s", name)
 			for name := range defaultEnvoyFilters {
 				for _, ef := range fs.EnvoyFilters {
 					if ef.Name == name {
@@ -185,7 +186,7 @@ func TestPlugins(t *testing.T) {
 							for _, cp := range ef.Spec.ConfigPatches {
 								st := cp.Patch.Value
 								name := st.AsMap()["name"].(string)
-								if name != "envoy.filters.http.golang" {
+								if name == expPlugin {
 									kept = append(kept, cp)
 								}
 							}

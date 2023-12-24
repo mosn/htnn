@@ -15,6 +15,7 @@
 package istio
 
 import (
+	"fmt"
 	"sort"
 
 	"google.golang.org/protobuf/types/known/structpb"
@@ -98,6 +99,7 @@ func DefaultEnvoyFilters() map[string]*istiov1a3.EnvoyFilter {
 		}
 
 		filter := nativePlugin.DefaultHTTPFilterConfig()
+		filter["name"] = fmt.Sprintf("envoy.filters.http.%s", key)
 		filter["disabled"] = true
 		configs = append(configs, &configWrapper{
 			name:   key,

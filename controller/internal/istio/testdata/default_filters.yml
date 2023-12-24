@@ -52,7 +52,7 @@
         operation: INSERT_BEFORE
         value:
           disabled: true
-          name: envoy.filters.http.local_ratelimit1
+          name: envoy.filters.http.pre
           typed_config:
             '@type': type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
             stat_prefix: http_local_rate_limiter
@@ -69,7 +69,7 @@
         operation: INSERT_BEFORE
         value:
           disabled: true
-          name: envoy.filters.http.local_ratelimit2
+          name: envoy.filters.http.post
           typed_config:
             '@type': type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
             stat_prefix: http_local_rate_limiter

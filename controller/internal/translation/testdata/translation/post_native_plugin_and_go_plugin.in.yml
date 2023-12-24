@@ -1,0 +1,63 @@
+istioGateway:
+- apiVersion: networking.istio.io/v1beta1
+  kind: Gateway
+  metadata:
+    name: httpbin-gateway
+    namespace: default
+  spec:
+    selector:
+      istio: ingressgateway
+    servers:
+    - hosts:
+      - httpbin.example.com
+      port:
+        name: http
+        number: 80
+        protocol: HTTP
+virtualService:
+  httpbin-gateway:
+    - apiVersion: networking.istio.io/v1beta1
+      kind: VirtualService
+      metadata:
+        name: httpbin
+        namespace: default
+      spec:
+        gateways:
+        - httpbin-gateway
+        hosts:
+        - httpbin.example.com
+        http:
+        - match:
+          - uri:
+              prefix: /status
+          name: policy
+          route:
+          - destination:
+              host: httpbin
+              port:
+                number: 8000
+httpFilterPolicy:
+  httpbin:
+  - apiVersion: mosn.io/v1
+    kind: HTTPFilterPolicy
+    metadata:
+      name: policy
+      namespace: default
+    spec:
+      targetRef:
+        group: networking.istio.io
+        kind: VirtualService
+        name: httpbin
+        sectionName: policy
+      filters:
+        post_lua:
+          config:
+            source_code:
+              inline_string: |
+                function envoy_on_request(handle)
+                end
+        opa:
+          config:
+            remote:
+              url: "http://x.local"
+              policy: "data"

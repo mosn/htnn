@@ -1,0 +1,22 @@
+apiVersion: mosn.io/v1
+kind: HTTPFilterPolicy
+metadata:
+  name: policy
+  namespace: default
+spec:
+  targetRef:
+    group: networking.istio.io
+    kind: VirtualService
+    name: default
+  filters:
+    pre_lua:
+      config:
+        source_code:
+          inline_string: |
+            function envoy_on_request(handle)
+              local headers = handle:headers()
+              headers:add("code", "inline_code_from_hello")
+            end
+            function envoy_on_response(response_handle)
+              response_handle:headers():add("header_key_1", "header_value_1")
+            end
