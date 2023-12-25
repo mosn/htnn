@@ -108,8 +108,9 @@ var _ = BeforeSuite(func() {
 			Port:    webhookInstallOptions.LocalServingPort,
 			CertDir: webhookInstallOptions.LocalServingCertDir,
 		}),
-		LeaderElection: false,
-		Metrics:        metricsserver.Options{BindAddress: "0"},
+		LeaderElection:         false,
+		Metrics:                metricsserver.Options{BindAddress: "0"},
+		HealthProbeBindAddress: "0",
 	})
 	Expect(err).NotTo(HaveOccurred())
 
