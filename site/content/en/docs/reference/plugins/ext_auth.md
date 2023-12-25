@@ -6,6 +6,13 @@ title: Ext Auth
 
 This Plugin sends an authorization request to an authorization service to check if the client request is authorized or not.
 
+## Attribute
+
+|       |       |
+| ----- | ----- |
+| Type  | Authz |
+| Order | Authz |
+
 ## Configuration
 
 | Name         | Type        | Required | Validation | Description |

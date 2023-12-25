@@ -6,6 +6,13 @@ title: OPA
 
 This Plugin integrates with [Open Policy Agent (OPA)](https://www.openpolicyagent.org).
 
+## Attribute
+
+|       |       |
+| ----- | ----- |
+| Type  | Authz |
+| Order | Authz |
+
 ## Configuration
 
 | Name   | Type   | Required | Validation | Description |
