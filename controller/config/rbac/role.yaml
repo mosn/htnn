@@ -5,6 +5,22 @@ metadata:
   name: manager-role
 rules:
 - apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - gateway
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - gateway.networking.k8s.io
+  resources:
+  - httproute
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
   - mosn.io
   resources:
   - httpfilterpolicies
