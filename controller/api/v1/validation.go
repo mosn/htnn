@@ -36,10 +36,16 @@ func ValidateHTTPFilterPolicy(policy *HTTPFilterPolicy) error {
 		}
 	}
 
-	if ref.Group != "networking.istio.io" || ref.Kind != "VirtualService" {
-		// relax this restriction once we support more
+	validTarget := false
+	if ref.Group == "networking.istio.io" && ref.Kind == "VirtualService" {
+		validTarget = true
+	} else if ref.Group == "gateway.networking.k8s.io" && ref.Kind == "HTTPRoute" {
+		validTarget = true
+	}
+	if !validTarget {
 		return errors.New("unsupported targetRef.group or targetRef.kind")
 	}
+
 	for name, filter := range policy.Spec.Filters {
 		p := plugins.LoadHttpPlugin(name)
 		if p == nil {

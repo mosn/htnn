@@ -16,6 +16,7 @@ package translation
 
 import (
 	"fmt"
+	"net"
 	"sort"
 	"strings"
 
@@ -37,11 +38,16 @@ const (
 // cause one big EnvoyFilter. Let's see if it's a problem.
 func envoyFilterName(vhost *model.VirtualHost) string {
 	// Strip the port number. We don't need to create two EnvoyFilters for :80 and :443.
-	domain := strings.Split(vhost.Name, ":")[0]
+	domain, port, _ := net.SplitHostPort(vhost.Name)
 	// We join the host & port in toDataPlaneState so the domain is not nil
-	if strings.HasPrefix(domain, "*.") {
+
+	if domain == "*" {
+		// specific case for port-only HTTP policies
+		domain = port
+	} else if strings.HasPrefix(domain, "*.") {
 		// '*' is not allowed in EnvoyFilter name. And '.' can only be used after alphanumeric characters.
 		// So we replace the '*.' with '-'.
+		// The regex used for validation is '[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*'.
 		domain = "-" + domain[2:]
 	}
 	// The `htnn-h` means the HTNN's HTTPFilterPolicy.

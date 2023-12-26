@@ -1,0 +1,46 @@
+gateway:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    name: gateway
+  spec:
+    gatewayClassName: istio
+    listeners:
+    - name: htnn
+      port: 80
+      protocol: HTTP
+httproute:
+  gateway:
+    - apiVersion: gateway.networking.k8s.io/v1
+      kind: HTTPRoute
+      metadata:
+        name: http
+      spec:
+        parentRefs:
+        - name: gateway
+          namespace: default
+        rules:
+        - matches:
+          - path:
+              type: PathPrefix
+              value: /
+          backendRefs:
+          - name: http
+            port: 8000
+httpFilterPolicy:
+  http:
+  - apiVersion: mosn.io/v1
+    kind: HTTPFilterPolicy
+    metadata:
+      name: policy
+    spec:
+      targetRef:
+        group: networking.istio.io
+        kind: VirtualService
+        name: httpbin
+      filters:
+        local_ratelimit:
+          config:
+            stat_prefix: http_local_rate_limiter
+            token_bucket:
+              fill_interval: 10s
