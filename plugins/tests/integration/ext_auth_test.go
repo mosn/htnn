@@ -15,6 +15,7 @@
 package integration
 
 import (
+	_ "embed"
 	"net/http"
 	"strings"
 	"testing"
@@ -26,8 +27,15 @@ import (
 	"mosn.io/moe/plugins/tests/integration/data_plane"
 )
 
+var (
+	//go:embed ext_auth_route.yml
+	backendRoute string
+)
+
 func TestExtAuth(t *testing.T) {
-	dp, err := data_plane.StartDataPlane(t, nil)
+	dp, err := data_plane.StartDataPlane(t, &data_plane.Option{
+		Bootstrap: data_plane.Bootstrap().AddBackendRoute(backendRoute),
+	})
 	if err != nil {
 		t.Fatalf("failed to start data plane: %v", err)
 		return

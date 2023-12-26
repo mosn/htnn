@@ -11,7 +11,7 @@ require (
 	github.com/prometheus/client_golang v1.17.0
 	github.com/stretchr/testify v1.8.4
 	golang.org/x/exp v0.0.0-20231127185646-65229373498e
-	google.golang.org/protobuf v1.31.0
+	google.golang.org/protobuf v1.32.0
 	istio.io/api v1.20.1
 	istio.io/client-go v1.20.1
 	k8s.io/api v0.29.0

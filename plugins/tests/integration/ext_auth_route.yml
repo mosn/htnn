@@ -1,0 +1,31 @@
+match:
+  path_separated_prefix: /ext_auth
+direct_response:
+  status: 200
+  body:
+    inline_string: ""
+typed_per_filter_config:
+  envoy.filters.http.lua:
+    "@type": type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
+    source_code:
+      inline_string: |
+        function envoy_on_request(handle)
+          local always_wrap_body = true
+          local body = handle:body(always_wrap_body)
+          local size = body:length()
+          local data = ""
+          if size > 0 then
+            data = body:getBytes(0, size)
+          end
+
+          local resp_headers = {[":status"] = "200"}
+          resp_headers["body"] = data
+          local headers = handle:headers()
+          if headers:get("authorization") ~= "Basic amFjazIwMjE6MTIzNDU2" then
+            resp_headers[":status"] = "403"
+            resp_headers["reason"] = "not matched"
+          end
+          handle:respond(resp_headers)
+        end
+        function envoy_on_response(handle)
+        end
