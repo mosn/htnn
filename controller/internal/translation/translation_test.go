@@ -23,12 +23,14 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	istioapi "istio.io/api/networking/v1alpha3"
 	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	istiov1b1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	"sigs.k8s.io/yaml"
 
 	mosniov1 "mosn.io/moe/controller/api/v1"
 	"mosn.io/moe/controller/internal/istio"
+	"mosn.io/moe/controller/tests/pkg"
 )
 
 func testName(inputFile string) string {
@@ -114,6 +116,80 @@ func TestTranslate(t *testing.T) {
 			// google/go-cmp is not used here as it will compare unexported fields by default.
 			// Calling IgnoreUnexported for each types in istio object is too cubmersome so we
 			// just use string comparison here.
+			require.Equal(t, want, actual)
+		})
+	}
+}
+
+func TestPlugins(t *testing.T) {
+	inputFiles, err := filepath.Glob(filepath.Join("testdata", "plugins", "*.in.yml"))
+	require.NoError(t, err)
+
+	var vs *istiov1b1.VirtualService
+	var gw *istiov1b1.Gateway
+	input := []map[string]interface{}{}
+	mustUnmarshal(t, filepath.Join("testdata", "plugins", "default.yml"), &input)
+
+	for _, in := range input {
+		obj := pkg.MapToObj(in)
+		gvk := obj.GetObjectKind().GroupVersionKind()
+		if gvk.Kind == "VirtualService" {
+			vs = obj.(*istiov1b1.VirtualService)
+		} else if gvk.Group == "networking.istio.io" && gvk.Kind == "Gateway" {
+			gw = obj.(*istiov1b1.Gateway)
+		}
+	}
+
+	for _, inputFile := range inputFiles {
+		inputFile := inputFile
+		t.Run(testName(inputFile), func(t *testing.T) {
+			var hfp mosniov1.HTTPFilterPolicy
+			mustUnmarshal(t, inputFile, &hfp)
+
+			s := NewInitState(nil)
+			s.AddPolicyForVirtualService(&hfp, vs, gw)
+
+			fs, err := s.Process(context.Background())
+			require.NoError(t, err)
+
+			defaultEnvoyFilters := istio.DefaultEnvoyFilters()
+			for name := range defaultEnvoyFilters {
+				for _, ef := range fs.EnvoyFilters {
+					if ef.Name == name {
+						if ef.Name == "htnn-http-filter" {
+							kept := []*istioapi.EnvoyFilter_EnvoyConfigObjectPatch{}
+							for _, cp := range ef.Spec.ConfigPatches {
+								st := cp.Patch.Value
+								name := st.AsMap()["name"].(string)
+								if name != "envoy.filters.http.golang" {
+									kept = append(kept, cp)
+								}
+							}
+							ef.Spec.ConfigPatches = kept
+						} else {
+							delete(fs.EnvoyFilters, name)
+						}
+						break
+					}
+				}
+			}
+
+			var out []*istiov1a3.EnvoyFilter
+			for _, ef := range fs.EnvoyFilters {
+				// drop irrelevant fields
+				ef.Labels = nil
+				ef.Annotations = nil
+				out = append(out, ef)
+			}
+			sort.Slice(out, func(i, j int) bool {
+				return out[i].Name < out[j].Name
+			})
+			d, _ := yaml.Marshal(out)
+			actual := string(d)
+
+			outputFilePath := strings.ReplaceAll(inputFile, ".in.yml", ".out.yml")
+			d, _ = os.ReadFile(outputFilePath)
+			want := string(d)
 			require.Equal(t, want, actual)
 		})
 	}
