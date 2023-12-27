@@ -1,0 +1,32 @@
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: vs
+spec:
+  gateways:
+  - default
+  hosts:
+  - "default.local"
+  http:
+  - match:
+    - uri:
+        prefix: /
+    route:
+    - destination:
+        host: backend
+        port:
+          number: 8080
+---
+apiVersion: mosn.io/v1
+kind: HTTPFilterPolicy
+metadata:
+  name: policy
+spec:
+  targetRef:
+    group: networking.istio.io
+    kind: VirtualService
+    name: vs
+  filters:
+    demo:
+      config:
+        host_name: doraemon
