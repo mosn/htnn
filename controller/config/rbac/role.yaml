@@ -7,7 +7,7 @@ rules:
 - apiGroups:
   - gateway.networking.k8s.io
   resources:
-  - gateway
+  - gateways
   verbs:
   - get
   - list
@@ -15,7 +15,7 @@ rules:
 - apiGroups:
   - gateway.networking.k8s.io
   resources:
-  - httproute
+  - httproutes
   verbs:
   - get
   - list
