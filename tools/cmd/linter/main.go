@@ -26,23 +26,15 @@ import (
 
 // This tool does what the third party linters don't
 
-func lint_site() error {
+func lintSite() error {
 	// walk through directory
-	err := os.Chdir("./site")
-	if err != nil {
-		return err
-	}
-
-	return filepath.Walk("content", func(path string, info fs.FileInfo, err error) error {
+	return filepath.Walk(filepath.Join("site", "content"), func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 		if info.IsDir() {
-			if path == "content" {
+			if filepath.Base(path) == "content" {
 				return nil
-			}
-			if strings.ToLower(path) != path {
-				return fmt.Errorf("name %s should be in lowercase", path)
 			}
 			// check index
 			if _, err := os.Stat(filepath.Join(path, "_index.md")); err != nil {
@@ -63,10 +55,6 @@ func lint_site() error {
 		ext := filepath.Ext(path)
 		if ext != ".html" && ext != ".md" {
 			return fmt.Errorf("file %s has unexpected extension", path)
-		}
-
-		if strings.ToLower(path) != path {
-			return fmt.Errorf("name %s should be in lowercase", path)
 		}
 
 		if ext == ".md" {
@@ -100,9 +88,90 @@ func lint_site() error {
 	})
 }
 
+func lintFilename() error {
+	codeDir := []string{
+		"api",
+		"cmd",
+		"controller",
+		"etc",
+		"examples",
+		"pkg",
+		"plugins",
+		"tools",
+	}
+	for _, dir := range codeDir {
+		err := lintFilenameForCode(dir)
+		if err != nil {
+			return err
+		}
+	}
+	docDir := []string{
+		filepath.Join("site", "content"),
+	}
+	for _, dir := range docDir {
+		err := lintFilenameForDoc(dir)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func lintFilenameForCode(root string) error {
+	return filepath.Walk(root, func(path string, info fs.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		base := filepath.Base(path)
+		if base == "bin" {
+			return filepath.SkipDir
+		}
+		if strings.ContainsRune(base, '-') {
+			return fmt.Errorf("please use '_' instead of '-' in the code file name %s", path)
+		}
+		return nil
+	})
+}
+
+func lintFilenameForDoc(root string) error {
+	return filepath.Walk(root, func(path string, info fs.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if strings.ToLower(path) != path {
+			return fmt.Errorf("name %s should be in lowercase", path)
+		}
+
+		base := filepath.Base(path)
+		if info.IsDir() {
+			if strings.ContainsRune(base, '_') {
+				return fmt.Errorf("please use '-' instead of '_' in the doc directory name %s", path)
+			}
+		} else {
+			// file required by the doc site framework
+			if base == "search-index.md" {
+				return nil
+			}
+			// other files, use the same rule as the code file
+			if strings.ContainsRune(base, '-') {
+				return fmt.Errorf("please use '_' instead of '-' in the code file name %s", path)
+			}
+		}
+		return nil
+	})
+}
+
 func main() {
-	err := lint_site()
-	if err != nil {
-		panic(err)
+	type linter func() error
+	linters := []linter{
+		lintSite,
+		lintFilename,
+	}
+	for _, linter := range linters {
+		err := linter()
+		if err != nil {
+			panic(err)
+		}
 	}
 }
