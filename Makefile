@@ -75,7 +75,7 @@ gen-proto: dev-tools install-go-fmtter $(GO_TARGETS)
 # separate component.
 .PHONY: unit-test
 unit-test:
-	go test ${TEST_OPTION} $(shell go list ./... | grep -v tests/integration)
+	go test ${TEST_OPTION} $(shell go list ./... | grep -v tests/integration | grep -v ${PROJECT_NAME}/controller | grep -v ${PROJECT_NAME}/e2e)
 
 # We can't specify -race to `go build` because it seems that
 # race detector assumes that the executable is loaded around the 0 address. When loaded by the Envoy,
