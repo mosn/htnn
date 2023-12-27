@@ -219,18 +219,7 @@ func (r *HTTPFilterPolicyReconciler) resolveHTTPRoute(ctx context.Context, logge
 
 	accepted := false
 	for _, pr := range route.Status.Parents {
-		valid := false
-		for _, cond := range pr.Conditions {
-			if cond.Type == "Accepted" && cond.Status == "True" {
-				// Consider it is valid once the listener is attached
-				valid = true
-				break
-			}
-		}
-		if !valid {
-			continue
-		}
-
+		// Consider it is valid once the listener is attached
 		ref := pr.ParentRef
 		if ref.Group != nil && *ref.Group != gwapiv1.GroupName {
 			continue
@@ -417,6 +406,7 @@ type CustomerResourceIndexer interface {
 	CustomerResource() client.Object
 	RegisterIndexer(ctx context.Context, mgr ctrl.Manager) error
 	FindAffectedObjects(ctx context.Context, obj client.Object) []reconcile.Request
+	Predicate() predicate.Predicate
 }
 
 type VirtualServiceIndexer struct {
@@ -447,6 +437,10 @@ func (v *VirtualServiceIndexer) FindAffectedObjects(ctx context.Context, obj cli
 	return findAffectedObjects(ctx, v.r, obj, "VirtualService", v.IndexName())
 }
 
+func (v *VirtualServiceIndexer) Predicate() predicate.Predicate {
+	return predicate.GenerationChangedPredicate{}
+}
+
 type HTTPRouteIndexer struct {
 	r client.Reader
 }
@@ -473,6 +467,10 @@ func (v *HTTPRouteIndexer) RegisterIndexer(ctx context.Context, mgr ctrl.Manager
 
 func (v *HTTPRouteIndexer) FindAffectedObjects(ctx context.Context, obj client.Object) []reconcile.Request {
 	return findAffectedObjects(ctx, v.r, obj, "HTTPRoute", v.IndexName())
+}
+
+func (v *HTTPRouteIndexer) Predicate() predicate.Predicate {
+	return predicate.ResourceVersionChangedPredicate{}
 }
 
 func findAffectedObjects(ctx context.Context, reader client.Reader, obj client.Object, kind string, idx string) []reconcile.Request {
@@ -555,6 +553,10 @@ func (v *IstioGatewayIndexer) FindAffectedObjects(ctx context.Context, obj clien
 	return triggerReconciliation()
 }
 
+func (v *IstioGatewayIndexer) Predicate() predicate.Predicate {
+	return predicate.GenerationChangedPredicate{}
+}
+
 type K8sGatewayIndexer struct {
 	r client.Reader
 
@@ -600,6 +602,10 @@ func (v *K8sGatewayIndexer) FindAffectedObjects(ctx context.Context, obj client.
 	logger.Info("Target changed, trigger reconciliation", "kind", "K8sGateway",
 		"namespace", obj.GetNamespace(), "name", obj.GetName(), "requests", requests)
 	return triggerReconciliation()
+}
+
+func (v *K8sGatewayIndexer) Predicate() predicate.Predicate {
+	return predicate.GenerationChangedPredicate{}
 }
 
 var (
@@ -658,9 +664,7 @@ func (r *HTTPFilterPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		controller.Watches(
 			idxer.CustomerResource(),
 			handler.EnqueueRequestsFromMapFunc(idxer.FindAffectedObjects),
-			builder.WithPredicates(
-				predicate.GenerationChangedPredicate{},
-			),
+			builder.WithPredicates(idxer.Predicate()),
 		)
 	}
 

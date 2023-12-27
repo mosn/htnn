@@ -16,6 +16,7 @@ package integration
 
 import (
 	"context"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"time"
@@ -28,6 +29,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/yaml"
 
@@ -35,11 +37,43 @@ import (
 	"mosn.io/moe/controller/tests/pkg"
 )
 
-func mustReadInput(fn string, out interface{}) {
+func ptrstr(s string) *string {
+	return &s
+}
+
+func mustReadInput(fn string, out *[]map[string]interface{}) {
 	fn = filepath.Join("testdata", "httpfilterpolicy", fn+".yml")
 	input, err := os.ReadFile(fn)
 	Expect(err).NotTo(HaveOccurred())
 	Expect(yaml.UnmarshalStrict(input, out, yaml.DisallowUnknownFields)).To(Succeed())
+	// shuffle the input to detect bugs relative to the order
+	res := *out
+	rand.Shuffle(len(res), func(i, j int) {
+		res[i], res[j] = res[j], res[i]
+	})
+}
+
+func attachGateway(ctx context.Context, httpRoute *gwapiv1.HTTPRoute, gwName string) {
+	httpRoute.Status.Parents = []gwapiv1.RouteParentStatus{
+		{
+			ParentRef: gwapiv1.ParentReference{
+				Kind:  (*gwapiv1.Kind)(ptrstr("Gateway")),
+				Group: (*gwapiv1.Group)(ptrstr(gwapiv1.GroupName)),
+				Name:  (gwapiv1.ObjectName)(gwName),
+			},
+			ControllerName: "istio.io/gateway-controller",
+		},
+		{
+			ParentRef: gwapiv1.ParentReference{
+				Kind:      (*gwapiv1.Kind)(ptrstr("Gateway")),
+				Group:     (*gwapiv1.Group)(ptrstr(gwapiv1.GroupName)),
+				Name:      (gwapiv1.ObjectName)(gwName),
+				Namespace: (*gwapiv1.Namespace)(ptrstr("not-found")),
+			},
+			ControllerName: "istio.io/gateway-controller",
+		},
+	}
+	Expect(k8sClient.Status().Update(ctx, httpRoute)).Should(Succeed())
 }
 
 var _ = Describe("HTTPFilterPolicy controller", func() {
@@ -159,7 +193,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 			}
 
 			input := []map[string]interface{}{}
-			mustReadInput("default", &input)
+			mustReadInput("default_istio", &input)
 
 			for _, in := range input {
 				obj := pkg.MapToObj(in)
@@ -356,9 +390,20 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 			input := []map[string]interface{}{}
 			mustReadInput("diff-envoyfilters", &input)
 
+			// We create EnvoyFilter first, to avoid conflicting with the EnvoyFilter created by VirtualService
 			for _, in := range input {
 				obj := pkg.MapToObj(in)
-				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
+				gvk := obj.GetObjectKind().GroupVersionKind()
+				if gvk.Kind == "EnvoyFilter" {
+					Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
+				}
+			}
+			for _, in := range input {
+				obj := pkg.MapToObj(in)
+				gvk := obj.GetObjectKind().GroupVersionKind()
+				if gvk.Kind != "EnvoyFilter" {
+					Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
+				}
 			}
 
 			var envoyfilters istiov1a3.EnvoyFilterList
@@ -523,6 +568,205 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 			Expect(envoyfilters.Items[0].Name).To(Equal("htnn-http-filter"))
 		})
 
+	})
+
+	var (
+		DefaultK8sGateway *gwapiv1.Gateway
+	)
+
+	Context("When reconciling HTTPFilterPolicy with HTTPRoute", func() {
+		BeforeEach(func() {
+			var policies mosniov1.HTTPFilterPolicyList
+			if err := k8sClient.List(ctx, &policies); err == nil {
+				for _, e := range policies.Items {
+					Expect(k8sClient.Delete(ctx, &e)).Should(Succeed())
+				}
+			}
+
+			var httproutes gwapiv1.HTTPRouteList
+			if err := k8sClient.List(ctx, &httproutes); err == nil {
+				for _, e := range httproutes.Items {
+					Expect(k8sClient.Delete(ctx, &e)).Should(Succeed())
+				}
+			}
+
+			var gateways gwapiv1.GatewayList
+			if err := k8sClient.List(ctx, &gateways); err == nil {
+				for _, e := range gateways.Items {
+					Expect(k8sClient.Delete(ctx, &e)).Should(Succeed())
+				}
+			}
+
+			var envoyfilters istiov1a3.EnvoyFilterList
+			if err := k8sClient.List(ctx, &envoyfilters); err == nil {
+				for _, e := range envoyfilters.Items {
+					Expect(k8sClient.Delete(ctx, e)).Should(Succeed())
+				}
+			}
+
+			input := []map[string]interface{}{}
+			mustReadInput("default_gwapi", &input)
+
+			for _, in := range input {
+				obj := pkg.MapToObj(in)
+				gvk := obj.GetObjectKind().GroupVersionKind()
+				if gvk.Group == "gateway.networking.k8s.io" && gvk.Kind == "Gateway" {
+					DefaultK8sGateway = obj.(*gwapiv1.Gateway)
+				}
+				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
+			}
+
+		})
+
+		It("deal with httproute", func() {
+			ctx := context.Background()
+			input := []map[string]interface{}{}
+			mustReadInput("httproute", &input)
+
+			var httpRoute *gwapiv1.HTTPRoute
+			for _, in := range input {
+				obj := pkg.MapToObj(in)
+				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
+
+				if obj.GetName() == "hr" {
+					httpRoute = obj.(*gwapiv1.HTTPRoute)
+					attachGateway(ctx, httpRoute, DefaultK8sGateway.GetName())
+				}
+			}
+
+			var envoyfilters istiov1a3.EnvoyFilterList
+			Eventually(func() bool {
+				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
+					return false
+				}
+				return len(envoyfilters.Items) == 2
+			}, timeout, interval).Should(BeTrue())
+
+			names := []string{}
+			for _, ef := range envoyfilters.Items {
+				Expect(ef.Namespace).To(Equal("istio-system"))
+				names = append(names, ef.Name)
+				if ef.Name == "htnn-h-default.local" {
+					Expect(len(ef.Spec.ConfigPatches)).To(Equal(1))
+					cp := ef.Spec.ConfigPatches[0]
+					Expect(cp.ApplyTo).To(Equal(istioapi.EnvoyFilter_HTTP_ROUTE))
+					Expect(cp.Match.GetRouteConfiguration().GetVhost().Name).To(Equal("default.local:8888"))
+				}
+			}
+			Expect(names).To(ConsistOf([]string{"htnn-http-filter", "htnn-h-default.local"}))
+
+			var policies mosniov1.HTTPFilterPolicyList
+			Eventually(func() bool {
+				if err := k8sClient.List(ctx, &policies); err != nil {
+					return false
+				}
+				return len(policies.Items) > 0
+			}, timeout, interval).Should(BeTrue())
+
+			policy := policies.Items[0]
+			Expect(len(policy.Status.Conditions) > 0).To(BeTrue())
+			cond := policy.Status.Conditions[0]
+			Expect(cond.Reason).To(Equal(string(gwapiv1a2.PolicyReasonAccepted)))
+
+			host := httpRoute.Spec.Hostnames[0]
+			httpRoute.Spec.Hostnames[0] = "no-gateway-match-it.com"
+			err := k8sClient.Update(ctx, httpRoute)
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(func() bool {
+				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
+					return false
+				}
+				return len(envoyfilters.Items) == 1
+			}, timeout, interval).Should(BeTrue())
+			Expect(envoyfilters.Items[0].Name).To(Equal("htnn-http-filter"))
+
+			httpRoute.Spec.Hostnames[0] = host
+			err = k8sClient.Update(ctx, httpRoute)
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(func() bool {
+				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
+					return false
+				}
+				return len(envoyfilters.Items) == 2
+			}, timeout, interval).Should(BeTrue())
+
+			// delete httproute referred by httpfilterpolicy
+			Expect(k8sClient.Delete(ctx, httpRoute)).Should(Succeed())
+			Eventually(func() bool {
+				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
+					return false
+				}
+				return len(envoyfilters.Items) == 1
+			}, timeout, interval).Should(BeTrue())
+			Expect(envoyfilters.Items[0].Name).To(Equal("htnn-http-filter"))
+
+			Eventually(func() bool {
+				if err := k8sClient.List(ctx, &policies); err != nil {
+					return false
+				}
+				if len(policies.Items) == 0 {
+					return false
+				}
+				policy = policies.Items[0]
+				cond = policy.Status.Conditions[0]
+				return cond.Reason == string(gwapiv1a2.PolicyReasonTargetNotFound)
+			}, timeout, interval).Should(BeTrue())
+		})
+
+		It("deal with httproute when the k8s gateway changed", func() {
+			ctx := context.Background()
+			input := []map[string]interface{}{}
+			mustReadInput("httproute", &input)
+			for _, in := range input {
+				obj := pkg.MapToObj(in)
+				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
+
+				if obj.GetName() == "hr" {
+					httpRoute := obj.(*gwapiv1.HTTPRoute)
+					attachGateway(ctx, httpRoute, DefaultK8sGateway.GetName())
+				}
+			}
+
+			var envoyfilters istiov1a3.EnvoyFilterList
+			Eventually(func() bool {
+				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
+					return false
+				}
+				return len(envoyfilters.Items) == 2
+			}, timeout, interval).Should(BeTrue())
+
+			names := []string{}
+			for _, ef := range envoyfilters.Items {
+				names = append(names, ef.Name)
+			}
+			Expect(names).To(ConsistOf([]string{"htnn-http-filter", "htnn-h-default.local"}))
+
+			DefaultK8sGateway.Spec.Listeners[0].Port = 8889
+			err := k8sClient.Update(ctx, DefaultK8sGateway)
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(func() bool {
+				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
+					return false
+				}
+				name := ""
+				for _, ef := range envoyfilters.Items {
+					if ef.Name == "htnn-h-default.local" {
+						name = ef.Spec.ConfigPatches[0].Match.GetRouteConfiguration().GetVhost().GetName()
+					}
+				}
+				// the EnvoyFilter should be updated according to the new gateway
+				return name == "default.local:8889"
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(k8sClient.Delete(ctx, DefaultK8sGateway)).Should(Succeed())
+			Eventually(func() bool {
+				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
+					return false
+				}
+				return len(envoyfilters.Items) == 1
+			}, timeout, interval).Should(BeTrue())
+			Expect(envoyfilters.Items[0].Name).To(Equal("htnn-http-filter"))
+		})
 	})
 
 })
