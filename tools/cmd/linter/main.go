@@ -19,6 +19,7 @@ import (
 	"bytes"
 	"fmt"
 	"io/fs"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -88,16 +89,34 @@ func lintSite() error {
 	})
 }
 
+func contains(set []string, s string) bool {
+	targeted := false
+	for _, e := range set {
+		if s == e {
+			targeted = true
+			break
+		}
+	}
+	return targeted
+
+}
+
 func lintFilename() error {
-	codeDir := []string{
-		"api",
-		"cmd",
-		"controller",
-		"etc",
-		"examples",
-		"pkg",
-		"plugins",
-		"tools",
+	excludedDir := []string{
+		".git",
+		".github",
+		"site",
+	}
+	files, err := ioutil.ReadDir(".")
+	if err != nil {
+		return err
+	}
+
+	codeDir := []string{}
+	for _, file := range files {
+		if file.IsDir() && !contains(excludedDir, file.Name()) {
+			codeDir = append(codeDir, file.Name())
+		}
 	}
 	for _, dir := range codeDir {
 		err := lintFilenameForCode(dir)
@@ -127,7 +146,14 @@ func lintFilenameForCode(root string) error {
 		if base == "bin" {
 			return filepath.SkipDir
 		}
-		if strings.ContainsRune(base, '-') {
+
+		ext := filepath.Ext(path)
+		targeted := contains([]string{".go", ".proto", ".yaml", ".json", ".yml"}, ext)
+		if !targeted {
+			return nil
+		}
+
+		if base != "docker-compose.yml" && strings.ContainsRune(base, '-') {
 			return fmt.Errorf("please use '_' instead of '-' in the code file name %s", path)
 		}
 		return nil
