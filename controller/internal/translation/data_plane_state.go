@@ -114,17 +114,17 @@ func buildVirtualHostsWithK8sGw(host string, ls *gwapiv1.Listener, nsName *types
 	return vhs
 }
 
-func allowRoute(logger *logr.Logger, cond *gwapiv1.AllowedRoutes, route *gwapiv1.HTTPRoute, gwNsName *types.NamespacedName) bool {
+func allowRoute(logger *logr.Logger, cond *gwapiv1.AllowedRoutes, route *Route, gwNsName *types.NamespacedName) bool {
 	if cond == nil {
 		return true
 	}
 
 	matched := len(cond.Kinds) == 0
 	for _, kind := range cond.Kinds {
-		if kind.Group != nil && string(*kind.Group) != route.GroupVersionKind().Group {
+		if kind.Group != nil && string(*kind.Group) != route.GroupVersionKind.Group {
 			continue
 		}
-		if string(kind.Kind) != route.GroupVersionKind().Kind {
+		if string(kind.Kind) != route.GroupVersionKind.Kind {
 			continue
 		}
 
@@ -200,10 +200,9 @@ func toDataPlaneState(ctx *Ctx, state *InitState) (*FinalState, error) {
 		}
 	}
 
-	for id, route := range state.HTTPRoutePolicies {
+	for id, route := range state.RoutePolicies {
 		id := id // the copied id will be referenced by address later
-		gws := state.HrToGateway[id]
-		spec := &route.HTTPRoute.Spec
+		gws := state.RouteToGateway[id]
 		routes := make(map[string]*routePolicy)
 		for name, policies := range route.RoutePolicies {
 			routes[name] = &routePolicy{
@@ -219,7 +218,7 @@ func toDataPlaneState(ctx *Ctx, state *InitState) (*FinalState, error) {
 			for _, ls := range gw.Spec.Listeners {
 				ls := ls
 				matched := false
-				for _, ref := range route.HTTPRoute.Spec.ParentRefs {
+				for _, ref := range route.Route.ParentRefs {
 					if ref.Name != gwapiv1.ObjectName(gw.Name) {
 						continue
 					}
@@ -239,11 +238,11 @@ func toDataPlaneState(ctx *Ctx, state *InitState) (*FinalState, error) {
 					continue
 				}
 
-				if !allowRoute(ctx.logger, ls.AllowedRoutes, route.HTTPRoute, gwNsName) {
+				if !allowRoute(ctx.logger, ls.AllowedRoutes, route.Route, gwNsName) {
 					continue
 				}
 
-				for _, hostName := range spec.Hostnames {
+				for _, hostName := range route.Route.Hostnames {
 					vhs := buildVirtualHostsWithK8sGw(string(hostName), &ls, gwNsName)
 					if len(vhs) == 0 {
 						// It's acceptable to have an unmatched hostname, which is already

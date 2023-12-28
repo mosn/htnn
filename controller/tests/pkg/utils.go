@@ -22,6 +22,7 @@ import (
 	istiov1b1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	mosniov1 "mosn.io/moe/controller/api/v1"
 )
@@ -43,6 +44,8 @@ func MapToObj(in map[string]interface{}) client.Object {
 		switch in["kind"] {
 		case "HTTPRoute":
 			out = &gwapiv1.HTTPRoute{}
+		case "GRPCRoute":
+			out = &gwapiv1a2.GRPCRoute{}
 		case "Gateway":
 			out = &gwapiv1.Gateway{}
 		}

@@ -1,0 +1,59 @@
+gateway:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    name: gateway
+    namespace: istio-ingress
+  spec:
+    gatewayClassName: istio
+    listeners:
+    - name: 80
+      hostname: "*.exp.com"
+      port: 80
+      protocol: HTTP
+      allowedRoutes:
+        namespaces:
+          from: All
+    - name: sub
+      port: 1234
+      protocol: HTTPS
+      allowedRoutes:
+        namespaces:
+          from: All
+grpcroute:
+  gateway:
+    - apiVersion: gateway.networking.k8s.io/v1alpha2
+      kind: GRPCRoute
+      metadata:
+        name: grpc
+      spec:
+        parentRefs:
+        - name: gateway
+          namespace: default
+        - name: gateway
+          namespace: istio-ingress
+          port: 1234
+          sectionName: "sub"
+        hostnames: ["htnn.exp.com", "default.local"]
+        rules:
+        - matches:
+          - method:
+              service: foo.bar
+          backendRefs:
+          - name: backend
+            port: 8000
+httpFilterPolicy:
+  grpc:
+  - apiVersion: mosn.io/v1
+    kind: HTTPFilterPolicy
+    metadata:
+      name: policy
+    spec:
+      targetRef:
+        group: gateway.networking.k8s.io
+        kind: GRPCRoute
+        name: grpc
+      filters:
+        animal:
+          config:
+            host_name: goldfish

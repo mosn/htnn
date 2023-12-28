@@ -41,6 +41,8 @@ func ValidateHTTPFilterPolicy(policy *HTTPFilterPolicy) error {
 		validTarget = true
 	} else if ref.Group == "gateway.networking.k8s.io" && ref.Kind == "HTTPRoute" {
 		validTarget = true
+	} else if ref.Group == "gateway.networking.k8s.io" && ref.Kind == "GRPCRoute" {
+		validTarget = true
 	}
 	if !validTarget {
 		return errors.New("unsupported targetRef.group or targetRef.kind")

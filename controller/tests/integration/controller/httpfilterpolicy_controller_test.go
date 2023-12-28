@@ -53,8 +53,8 @@ func mustReadInput(fn string, out *[]map[string]interface{}) {
 	})
 }
 
-func attachGateway(ctx context.Context, httpRoute *gwapiv1.HTTPRoute, gwName string) {
-	httpRoute.Status.Parents = []gwapiv1.RouteParentStatus{
+func parentStatuses(gwName string) []gwapiv1.RouteParentStatus {
+	return []gwapiv1.RouteParentStatus{
 		{
 			ParentRef: gwapiv1.ParentReference{
 				Kind:  (*gwapiv1.Kind)(ptrstr("Gateway")),
@@ -73,7 +73,16 @@ func attachGateway(ctx context.Context, httpRoute *gwapiv1.HTTPRoute, gwName str
 			ControllerName: "istio.io/gateway-controller",
 		},
 	}
+}
+
+func attachHTTPRouteToGateway(ctx context.Context, httpRoute *gwapiv1.HTTPRoute, gwName string) {
+	httpRoute.Status.Parents = parentStatuses(gwName)
 	Expect(k8sClient.Status().Update(ctx, httpRoute)).Should(Succeed())
+}
+
+func attachGRPCRouteToGateway(ctx context.Context, route *gwapiv1a2.GRPCRoute, gwName string) {
+	route.Status.Parents = parentStatuses(gwName)
+	Expect(k8sClient.Status().Update(ctx, route)).Should(Succeed())
 }
 
 var _ = Describe("HTTPFilterPolicy controller", func() {
@@ -630,7 +639,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 
 				if obj.GetName() == "hr" {
 					httpRoute = obj.(*gwapiv1.HTTPRoute)
-					attachGateway(ctx, httpRoute, DefaultK8sGateway.GetName())
+					attachHTTPRouteToGateway(ctx, httpRoute, DefaultK8sGateway.GetName())
 				}
 			}
 
@@ -723,7 +732,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 
 				if obj.GetName() == "hr" {
 					httpRoute := obj.(*gwapiv1.HTTPRoute)
-					attachGateway(ctx, httpRoute, DefaultK8sGateway.GetName())
+					attachHTTPRouteToGateway(ctx, httpRoute, DefaultK8sGateway.GetName())
 				}
 			}
 
@@ -767,6 +776,157 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 			}, timeout, interval).Should(BeTrue())
 			Expect(envoyfilters.Items[0].Name).To(Equal("htnn-http-filter"))
 		})
+	})
+
+	Context("When reconciling HTTPFilterPolicy with GRPCRoute", func() {
+		BeforeEach(func() {
+			var policies mosniov1.HTTPFilterPolicyList
+			if err := k8sClient.List(ctx, &policies); err == nil {
+				for _, e := range policies.Items {
+					Expect(k8sClient.Delete(ctx, &e)).Should(Succeed())
+				}
+			}
+
+			var routes gwapiv1a2.GRPCRouteList
+			if err := k8sClient.List(ctx, &routes); err == nil {
+				for _, e := range routes.Items {
+					Expect(k8sClient.Delete(ctx, &e)).Should(Succeed())
+				}
+			}
+
+			// also clean up HTTPRoute which is shipped by default_gwapi
+			var httproutes gwapiv1.HTTPRouteList
+			if err := k8sClient.List(ctx, &httproutes); err == nil {
+				for _, e := range httproutes.Items {
+					Expect(k8sClient.Delete(ctx, &e)).Should(Succeed())
+				}
+			}
+
+			var gateways gwapiv1.GatewayList
+			if err := k8sClient.List(ctx, &gateways); err == nil {
+				for _, e := range gateways.Items {
+					Expect(k8sClient.Delete(ctx, &e)).Should(Succeed())
+				}
+			}
+
+			var envoyfilters istiov1a3.EnvoyFilterList
+			if err := k8sClient.List(ctx, &envoyfilters); err == nil {
+				for _, e := range envoyfilters.Items {
+					Expect(k8sClient.Delete(ctx, e)).Should(Succeed())
+				}
+			}
+
+			input := []map[string]interface{}{}
+			mustReadInput("default_gwapi", &input)
+
+			for _, in := range input {
+				obj := pkg.MapToObj(in)
+				gvk := obj.GetObjectKind().GroupVersionKind()
+				if gvk.Group == "gateway.networking.k8s.io" && gvk.Kind == "Gateway" {
+					DefaultK8sGateway = obj.(*gwapiv1.Gateway)
+				}
+				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
+			}
+
+		})
+
+		It("deal with grpcroute", func() {
+			ctx := context.Background()
+			input := []map[string]interface{}{}
+			mustReadInput("grpcroute", &input)
+
+			var route *gwapiv1a2.GRPCRoute
+			for _, in := range input {
+				obj := pkg.MapToObj(in)
+				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
+
+				if obj.GetName() == "route" {
+					route = obj.(*gwapiv1a2.GRPCRoute)
+					attachGRPCRouteToGateway(ctx, route, DefaultK8sGateway.GetName())
+				}
+			}
+
+			var envoyfilters istiov1a3.EnvoyFilterList
+			Eventually(func() bool {
+				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
+					return false
+				}
+				return len(envoyfilters.Items) == 2
+			}, timeout, interval).Should(BeTrue())
+
+			names := []string{}
+			for _, ef := range envoyfilters.Items {
+				Expect(ef.Namespace).To(Equal("istio-system"))
+				names = append(names, ef.Name)
+				if ef.Name == "htnn-h-default.local" {
+					Expect(len(ef.Spec.ConfigPatches)).To(Equal(1))
+					cp := ef.Spec.ConfigPatches[0]
+					Expect(cp.ApplyTo).To(Equal(istioapi.EnvoyFilter_HTTP_ROUTE))
+					Expect(cp.Match.GetRouteConfiguration().GetVhost().Name).To(Equal("default.local:8888"))
+				}
+			}
+			Expect(names).To(ConsistOf([]string{"htnn-http-filter", "htnn-h-default.local"}))
+
+			var policies mosniov1.HTTPFilterPolicyList
+			Eventually(func() bool {
+				if err := k8sClient.List(ctx, &policies); err != nil {
+					return false
+				}
+				return len(policies.Items) > 0
+			}, timeout, interval).Should(BeTrue())
+
+			policy := policies.Items[0]
+			Expect(len(policy.Status.Conditions) > 0).To(BeTrue())
+			cond := policy.Status.Conditions[0]
+			Expect(cond.Reason).To(Equal(string(gwapiv1a2.PolicyReasonAccepted)))
+
+			host := route.Spec.Hostnames[0]
+			route.Spec.Hostnames[0] = "no-gateway-match-it.com"
+			err := k8sClient.Update(ctx, route)
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(func() bool {
+				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
+					return false
+				}
+				return len(envoyfilters.Items) == 1
+			}, timeout, interval).Should(BeTrue())
+			Expect(envoyfilters.Items[0].Name).To(Equal("htnn-http-filter"))
+
+			route.Spec.Hostnames[0] = host
+			err = k8sClient.Update(ctx, route)
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(func() bool {
+				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
+					return false
+				}
+				return len(envoyfilters.Items) == 2
+			}, timeout, interval).Should(BeTrue())
+
+			// delete grpcroute referred by httpfilterpolicy
+			Expect(k8sClient.Delete(ctx, route)).Should(Succeed())
+			Eventually(func() bool {
+				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
+					return false
+				}
+				return len(envoyfilters.Items) == 1
+			}, timeout, interval).Should(BeTrue())
+			Expect(envoyfilters.Items[0].Name).To(Equal("htnn-http-filter"))
+
+			Eventually(func() bool {
+				if err := k8sClient.List(ctx, &policies); err != nil {
+					return false
+				}
+				if len(policies.Items) == 0 {
+					return false
+				}
+				policy = policies.Items[0]
+				cond = policy.Status.Conditions[0]
+				return cond.Reason == string(gwapiv1a2.PolicyReasonTargetNotFound)
+			}, timeout, interval).Should(BeTrue())
+		})
+
+		// no need to test this case, because the our k8s gateway trigger doesn't care about the route type
+		//It("deal with grpcroute when the k8s gateway changed", ...
 	})
 
 })

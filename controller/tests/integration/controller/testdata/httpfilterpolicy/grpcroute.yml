@@ -1,0 +1,33 @@
+- apiVersion: mosn.io/v1
+  kind: HTTPFilterPolicy
+  metadata:
+    name: policy
+    namespace: default
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: GRPCRoute
+      name: route
+    filters:
+      demo:
+        config:
+          host_name: goldfish
+- apiVersion: gateway.networking.k8s.io/v1alpha2
+  kind: GRPCRoute
+  metadata:
+    name: route
+    namespace: default
+  spec:
+    parentRefs:
+    - name: default
+      namespace: istio-ingress
+    - name: default
+    hostnames:
+      - default.local
+    rules:
+    - matches:
+      - method:
+          service: foo.bar
+      backendRefs:
+      - name: default
+        port: 8000

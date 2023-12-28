@@ -73,6 +73,24 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 			},
 		},
 		{
+			name: "ok, GRPCRoute",
+			policy: &HTTPFilterPolicy{
+				Spec: HTTPFilterPolicySpec{
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: "gateway.networking.k8s.io",
+							Kind:  "GRPCRoute",
+						},
+					},
+					Filters: map[string]runtime.RawExtension{
+						"animal": {
+							Raw: []byte(`{"config":{"pet":"cat"}}`),
+						},
+					},
+				},
+			},
+		},
+		{
 			name: "unknown",
 			policy: &HTTPFilterPolicy{
 				Spec: HTTPFilterPolicySpec{

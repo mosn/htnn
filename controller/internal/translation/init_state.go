@@ -20,8 +20,10 @@ import (
 
 	"github.com/go-logr/logr"
 	istiov1b1 "istio.io/client-go/pkg/apis/networking/v1beta1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	mosniov1 "mosn.io/moe/controller/api/v1"
 )
@@ -31,9 +33,14 @@ type VirtualServicePolicies struct {
 	RoutePolicies  map[string][]*HTTPFilterPolicyWrapper
 }
 
-type HTTPRoutePolicies struct {
-	HTTPRoute     *gwapiv1.HTTPRoute
+type RoutePolicies struct {
+	Route         *Route
 	RoutePolicies map[string][]*HTTPFilterPolicyWrapper
+}
+
+type RouteKey struct {
+	types.NamespacedName
+	Kind string
 }
 
 // InitState is the beginning of our translation.
@@ -41,8 +48,8 @@ type InitState struct {
 	VirtualServicePolicies map[types.NamespacedName]*VirtualServicePolicies
 	VsToGateway            map[types.NamespacedName][]*istiov1b1.Gateway
 
-	HTTPRoutePolicies map[types.NamespacedName]*HTTPRoutePolicies
-	HrToGateway       map[types.NamespacedName][]*gwapiv1.Gateway
+	RoutePolicies  map[RouteKey]*RoutePolicies
+	RouteToGateway map[RouteKey][]*gwapiv1.Gateway
 
 	logger *logr.Logger
 }
@@ -52,8 +59,8 @@ func NewInitState(logger *logr.Logger) *InitState {
 		VirtualServicePolicies: make(map[types.NamespacedName]*VirtualServicePolicies),
 		VsToGateway:            make(map[types.NamespacedName][]*istiov1b1.Gateway),
 
-		HTTPRoutePolicies: make(map[types.NamespacedName]*HTTPRoutePolicies),
-		HrToGateway:       make(map[types.NamespacedName][]*gwapiv1.Gateway),
+		RoutePolicies:  make(map[RouteKey]*RoutePolicies),
+		RouteToGateway: make(map[RouteKey][]*gwapiv1.Gateway),
 
 		logger: logger,
 	}
@@ -97,40 +104,101 @@ func (s *InitState) AddPolicyForVirtualService(policy *mosniov1.HTTPFilterPolicy
 	s.VsToGateway[nn] = append(gws, gw.DeepCopy())
 }
 
-func (s *InitState) AddPolicyForHTTPRoute(policy *mosniov1.HTTPFilterPolicy, route *gwapiv1.HTTPRoute, gw *gwapiv1.Gateway) {
+type Route struct {
+	Namespace        string
+	Name             string
+	GroupVersionKind schema.GroupVersionKind
+	Labels           map[string]string
+
+	ParentRefs []gwapiv1.ParentReference
+	Hostnames  []gwapiv1.Hostname
+
+	SectionNames []string
+}
+
+func routeFromHTTPRoute(route *gwapiv1.HTTPRoute, sectionNames []string) *Route {
+	hostnames := route.Spec.Hostnames
+	if len(hostnames) == 0 {
+		// This is how Istio handles empty Hostnames
+		hostnames = []gwapiv1.Hostname{"*"}
+	}
+	// We don't use DeepCopy for the route wrapper. So far the fields here should all be read-only.
+	return &Route{
+		Namespace:        route.Namespace,
+		GroupVersionKind: route.GroupVersionKind(),
+		Labels:           route.Labels,
+		ParentRefs:       route.Spec.ParentRefs,
+		Hostnames:        hostnames,
+		SectionNames:     sectionNames,
+	}
+}
+
+func routeFromGRPCRoute(route *gwapiv1a2.GRPCRoute, sectionNames []string) *Route {
+	hostnames := route.Spec.Hostnames
+	if len(hostnames) == 0 {
+		hostnames = []gwapiv1.Hostname{"*"}
+	}
+	return &Route{
+		Namespace:        route.Namespace,
+		GroupVersionKind: route.GroupVersionKind(),
+		Labels:           route.Labels,
+		ParentRefs:       route.Spec.ParentRefs,
+		Hostnames:        hostnames,
+		SectionNames:     sectionNames,
+	}
+}
+
+func (s *InitState) addPolicyForRoute(policy *mosniov1.HTTPFilterPolicy, route *Route, gw *gwapiv1.Gateway) {
 	nn := types.NamespacedName{
 		Namespace: route.Namespace,
 		Name:      route.Name,
 	}
-
-	hp, ok := s.HTTPRoutePolicies[nn]
-	if !ok {
-		route := route.DeepCopy()
-		if len(route.Spec.Hostnames) == 0 {
-			// This is how Istio handles empty Hostnames
-			route.Spec.Hostnames = []gwapiv1.Hostname{"*"}
-		}
-
-		hp = &HTTPRoutePolicies{
-			HTTPRoute:     route,
-			RoutePolicies: map[string][]*HTTPFilterPolicyWrapper{},
-		}
-		s.HTTPRoutePolicies[nn] = hp
+	key := RouteKey{
+		NamespacedName: nn,
+		Kind:           route.GroupVersionKind.Kind,
 	}
 
-	for i := range route.Spec.Rules {
-		name := fmt.Sprintf("%s.%s.%d", route.Namespace, route.Name, i)
+	hp, ok := s.RoutePolicies[key]
+	if !ok {
+		hp = &RoutePolicies{
+			Route:         route,
+			RoutePolicies: map[string][]*HTTPFilterPolicyWrapper{},
+		}
+		s.RoutePolicies[key] = hp
+	}
+
+	for _, name := range route.SectionNames {
 		hp.RoutePolicies[name] = append(hp.RoutePolicies[name], &HTTPFilterPolicyWrapper{
 			HTTPFilterPolicy: policy.DeepCopy(),
 			scope:            PolicyScopeHost,
 		})
 	}
 
-	gws, ok := s.HrToGateway[nn]
+	gws, ok := s.RouteToGateway[key]
 	if !ok {
 		gws = make([]*gwapiv1.Gateway, 0)
 	}
-	s.HrToGateway[nn] = append(gws, gw.DeepCopy())
+	s.RouteToGateway[key] = append(gws, gw.DeepCopy())
+}
+
+func (s *InitState) AddPolicyForHTTPRoute(policy *mosniov1.HTTPFilterPolicy, route *gwapiv1.HTTPRoute, gw *gwapiv1.Gateway) {
+	sectionNames := make([]string, len(route.Spec.Rules))
+	for i := range route.Spec.Rules {
+		name := fmt.Sprintf("%s.%s.%d", route.Namespace, route.Name, i)
+		sectionNames[i] = name
+	}
+	r := routeFromHTTPRoute(route, sectionNames)
+	s.addPolicyForRoute(policy, r, gw)
+}
+
+func (s *InitState) AddPolicyForGRPCRoute(policy *mosniov1.HTTPFilterPolicy, route *gwapiv1a2.GRPCRoute, gw *gwapiv1.Gateway) {
+	sectionNames := make([]string, len(route.Spec.Rules))
+	for i := range route.Spec.Rules {
+		name := fmt.Sprintf("%s.%s.%d", route.Namespace, route.Name, i)
+		sectionNames[i] = name
+	}
+	r := routeFromGRPCRoute(route, sectionNames)
+	s.addPolicyForRoute(policy, r, gw)
 }
 
 func (s *InitState) Process(original_ctx context.Context) (*FinalState, error) {

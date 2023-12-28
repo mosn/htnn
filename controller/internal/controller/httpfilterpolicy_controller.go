@@ -68,6 +68,7 @@ type HTTPFilterPolicyReconciler struct {
 //+kubebuilder:rbac:groups=networking.istio.io,resources=virtualservices,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=networking.istio.io,resources=gateways,verbs=get;list;watch
 //+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=httproutes,verbs=get;list;watch
+//+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=grpcroutes,verbs=get;list;watch
 //+kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=gateways,verbs=get;list;watch
 //+kubebuilder:rbac:groups=networking.istio.io,resources=envoyfilters,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=networking.istio.io,resources=envoyfilters/status,verbs=get
@@ -201,24 +202,88 @@ func (r *HTTPFilterPolicyReconciler) resolveVirtualService(ctx context.Context, 
 	return accepted, nil
 }
 
-func (r *HTTPFilterPolicyReconciler) resolveHTTPRoute(ctx context.Context, logger *logr.Logger,
-	policy *mosniov1.HTTPFilterPolicy, initState *translation.InitState, gwIdx map[string][]*mosniov1.HTTPFilterPolicy) (bool, error) {
+type Route struct {
+	http *gwapiv1.HTTPRoute
+	grpc *gwapiv1a2.GRPCRoute
+}
+
+func NewRoute(isHTTP bool, cli client.Reader, ctx context.Context, nsName types.NamespacedName) (*Route, error) {
+	kind := "HTTPRoute"
+	if !isHTTP {
+		kind = "GRPCRoute"
+	}
+
+	var hr gwapiv1.HTTPRoute
+	var gr gwapiv1a2.GRPCRoute
+	var err error
+	if isHTTP {
+		err = cli.Get(ctx, nsName, &hr)
+	} else {
+		err = cli.Get(ctx, nsName, &gr)
+	}
+	if err != nil {
+		if !apierrors.IsNotFound(err) {
+			return nil, fmt.Errorf("failed to get %s: %w, NamespacedName: %v", kind, err, nsName)
+		}
+
+		return nil, nil
+	}
+
+	r := &Route{}
+	if isHTTP {
+		r.http = &hr
+	} else {
+		r.grpc = &gr
+	}
+	return r, nil
+}
+
+func (r *Route) Namespace() string {
+	if r.http != nil {
+		return r.http.Namespace
+	}
+	return r.grpc.Namespace
+}
+
+func (r *Route) Name() string {
+	if r.http != nil {
+		return r.http.Name
+	}
+	return r.grpc.Name
+}
+
+func (r *Route) Parents() []gwapiv1a2.RouteParentStatus {
+	if r.http != nil {
+		return r.http.Status.Parents
+	}
+	return r.grpc.Status.Parents
+}
+
+func (r *Route) Unwrap() interface{} {
+	if r.http != nil {
+		return r.http
+	}
+	return r.grpc
+}
+
+func (r *HTTPFilterPolicyReconciler) resolveRoute(ctx context.Context, logger *logr.Logger,
+	policy *mosniov1.HTTPFilterPolicy, initState *translation.InitState,
+	gwIdx map[string][]*mosniov1.HTTPFilterPolicy, isHTTP bool) (bool, error) {
 
 	ref := policy.Spec.TargetRef
 	nsName := types.NamespacedName{Name: string(ref.Name), Namespace: policy.Namespace}
-	var route gwapiv1.HTTPRoute
-	err := r.Get(ctx, nsName, &route)
-	if err != nil {
-		if !apierrors.IsNotFound(err) {
-			return false, fmt.Errorf("failed to get HTTPRoute: %w, NamespacedName: %v", err, nsName)
-		}
 
+	route, err := NewRoute(isHTTP, r, ctx, nsName)
+	if err != nil {
+		return false, err
+	}
+	if route == nil {
 		policy.SetAccepted(gwapiv1a2.PolicyReasonTargetNotFound)
 		return false, nil
 	}
 
 	accepted := false
-	for _, pr := range route.Status.Parents {
+	for _, pr := range route.Parents() {
 		// Consider it is valid once the listener is attached
 		ref := pr.ParentRef
 		if ref.Group != nil && *ref.Group != gwapiv1.GroupName {
@@ -228,7 +293,7 @@ func (r *HTTPFilterPolicyReconciler) resolveHTTPRoute(ctx context.Context, logge
 			continue
 		}
 
-		ns := route.Namespace
+		ns := route.Namespace()
 		if ref.Namespace != nil {
 			ns = string(*ref.Namespace)
 		}
@@ -239,14 +304,20 @@ func (r *HTTPFilterPolicyReconciler) resolveHTTPRoute(ctx context.Context, logge
 				return false, err
 			}
 			logger.Info("gateway not found", "gateway", ref,
-				"name", route.Name, "namespace", route.Namespace)
+				"name", route.Name(), "namespace", route.Namespace())
 			continue
 		}
 
 		// The CRD status only tells us which gateways are referenced & how many attached routes per listener.
-		// But we don't know which listerner is referenced by a specific HTTPRoute.
+		// But we don't know which listerner is referenced by a specific xRoute.
 		// So we have to keep the whole gateway and filter the listener by ourselves.
-		initState.AddPolicyForHTTPRoute(policy, &route, &gateway)
+		r := route.Unwrap()
+		switch x := r.(type) {
+		case *gwapiv1.HTTPRoute:
+			initState.AddPolicyForHTTPRoute(policy, x, &gateway)
+		case *gwapiv1a2.GRPCRoute:
+			initState.AddPolicyForGRPCRoute(policy, x, &gateway)
+		}
 
 		key := k8s.GetObjectKey(&gateway.ObjectMeta)
 		if _, ok := gwIdx[key]; !ok {
@@ -305,7 +376,9 @@ func (r *HTTPFilterPolicyReconciler) policyToTranslationState(ctx context.Contex
 		if ref.Group == "networking.istio.io" && ref.Kind == "VirtualService" {
 			accepted, err = r.resolveVirtualService(ctx, logger, policy, initState, istioGwIdx)
 		} else if ref.Group == "gateway.networking.k8s.io" && ref.Kind == "HTTPRoute" {
-			accepted, err = r.resolveHTTPRoute(ctx, logger, policy, initState, k8sGwIdx)
+			accepted, err = r.resolveRoute(ctx, logger, policy, initState, k8sGwIdx, true)
+		} else if ref.Group == "gateway.networking.k8s.io" && ref.Kind == "GRPCRoute" {
+			accepted, err = r.resolveRoute(ctx, logger, policy, initState, k8sGwIdx, false)
 		}
 		if err != nil {
 			return nil, err
@@ -470,6 +543,38 @@ func (v *HTTPRouteIndexer) FindAffectedObjects(ctx context.Context, obj client.O
 }
 
 func (v *HTTPRouteIndexer) Predicate() predicate.Predicate {
+	return predicate.ResourceVersionChangedPredicate{}
+}
+
+type GRPCRouteIndexer struct {
+	r client.Reader
+}
+
+func (v *GRPCRouteIndexer) CustomerResource() client.Object {
+	return &gwapiv1a2.GRPCRoute{}
+}
+
+func (v *GRPCRouteIndexer) IndexName() string {
+	return "spec.targetRef.kind.GRPCRoute"
+}
+
+func (v *GRPCRouteIndexer) Index(rawObj client.Object) []string {
+	po := rawObj.(*mosniov1.HTTPFilterPolicy)
+	if po.Spec.TargetRef.Group != gwapiv1.GroupName || po.Spec.TargetRef.Kind != "GRPCRoute" {
+		return []string{}
+	}
+	return []string{string(po.Spec.TargetRef.Name)}
+}
+
+func (v *GRPCRouteIndexer) RegisterIndexer(ctx context.Context, mgr ctrl.Manager) error {
+	return mgr.GetFieldIndexer().IndexField(ctx, &mosniov1.HTTPFilterPolicy{}, v.IndexName(), v.Index)
+}
+
+func (v *GRPCRouteIndexer) FindAffectedObjects(ctx context.Context, obj client.Object) []reconcile.Request {
+	return findAffectedObjects(ctx, v.r, obj, "GRPCRoute", v.IndexName())
+}
+
+func (v *GRPCRouteIndexer) Predicate() predicate.Predicate {
 	return predicate.ResourceVersionChangedPredicate{}
 }
 

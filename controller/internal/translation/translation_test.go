@@ -27,6 +27,7 @@ import (
 	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	istiov1b1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/yaml"
 
 	mosniov1 "mosn.io/moe/controller/api/v1"
@@ -52,8 +53,9 @@ type testInput struct {
 	VirtualService map[string][]*istiov1b1.VirtualService `json:"virtualService"`
 	IstioGateway   []*istiov1b1.Gateway                   `json:"istioGateway"`
 
-	HTTPRoute map[string][]*gwapiv1.HTTPRoute `json:"httpRoute"`
-	Gateway   []*gwapiv1.Gateway              `json:"gateway"`
+	GRPCRoute map[string][]*gwapiv1a2.GRPCRoute `json:"grpcRoute"`
+	HTTPRoute map[string][]*gwapiv1.HTTPRoute   `json:"httpRoute"`
+	Gateway   []*gwapiv1.Gateway                `json:"gateway"`
 }
 
 func TestTranslate(t *testing.T) {
@@ -70,38 +72,55 @@ func TestTranslate(t *testing.T) {
 
 			// set up resources
 			for _, gw := range input.Gateway {
-				hrs := input.HTTPRoute[gw.Name]
-				for _, hr := range hrs {
-					hfps := input.HTTPFilterPolicy[hr.Name]
-					for _, hfp := range hfps {
-						// fulfill default fields
-						if hfp.Namespace == "" {
-							hfp.SetNamespace("default")
-						}
+				// fulfill default fields
+				if gw.Namespace == "" {
+					gw.SetNamespace("default")
+				}
+				hrs, found := input.HTTPRoute[gw.Name]
+				if found {
+					for _, hr := range hrs {
 						if hr.Namespace == "" {
 							hr.SetNamespace("default")
 						}
-						if gw.Namespace == "" {
-							gw.SetNamespace("default")
+						hfps := input.HTTPFilterPolicy[hr.Name]
+						for _, hfp := range hfps {
+							if hfp.Namespace == "" {
+								hfp.SetNamespace("default")
+							}
+							s.AddPolicyForHTTPRoute(hfp, hr, gw)
 						}
-						s.AddPolicyForHTTPRoute(hfp, hr, gw)
+					}
+				}
+				grs, found := input.GRPCRoute[gw.Name]
+				if found {
+					for _, gr := range grs {
+						if gr.Namespace == "" {
+							gr.SetNamespace("default")
+						}
+						hfps := input.HTTPFilterPolicy[gr.Name]
+						for _, hfp := range hfps {
+							if hfp.Namespace == "" {
+								hfp.SetNamespace("default")
+							}
+							s.AddPolicyForGRPCRoute(hfp, gr, gw)
+						}
 					}
 				}
 			}
 			for _, gw := range input.IstioGateway {
+				// fulfill default fields
+				if gw.Namespace == "" {
+					gw.SetNamespace("default")
+				}
 				vss := input.VirtualService[gw.Name]
 				for _, vs := range vss {
+					if vs.Namespace == "" {
+						vs.SetNamespace("default")
+					}
 					hfps := input.HTTPFilterPolicy[vs.Name]
 					for _, hfp := range hfps {
-						// fulfill default fields
 						if hfp.Namespace == "" {
 							hfp.SetNamespace("default")
-						}
-						if vs.Namespace == "" {
-							vs.SetNamespace("default")
-						}
-						if gw.Namespace == "" {
-							gw.SetNamespace("default")
 						}
 						s.AddPolicyForVirtualService(hfp, vs, gw)
 					}
