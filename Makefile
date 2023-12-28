@@ -225,7 +225,7 @@ KIND ?= $(LOCALBIN)/kind
 .PHONY: kubectl
 kubectl: $(LOCALBIN)
 	@test -x $(KUBECTL) || \
-		KUBECTL_VERSION=v$(MIN_K8S_VERSION) LOCATION=$(KUBECTL) ./ci/k8s.sh install-kubectl
+		KUBECTL_VERSION=v$(MIN_K8S_VERSION) LOCATION=$(KUBECTL) ./e2e/k8s.sh install-kubectl
 
 .PHONY: kind
 kind: $(LOCALBIN)
@@ -233,7 +233,10 @@ kind: $(LOCALBIN)
 
 .PHONY: create-cluster
 create-cluster: kind
-	$(KIND) create cluster --name htnn --config ci/kind_config.yml --image kindest/node:v$(MIN_K8S_VERSION)
+	$(KIND) create cluster --name htnn --image kindest/node:v$(MIN_K8S_VERSION)
+# remove below once istio ships gateway api CRD by default
+	$(KUBECTL) apply -f controller/tests/testdata/crd/gateway.networking.k8s.io_gateways.yaml
+	$(KUBECTL) apply -f controller/tests/testdata/crd/gateway.networking.k8s.io_httproutes.yaml
 
 .PHONY: delete-cluster
 delete-cluster: kind
@@ -241,18 +244,19 @@ delete-cluster: kind
 
 .PHONY: e2e-docker-build
 e2e-docker-build:
+	docker build -t htnn/e2e-dp:0.1.0 -f e2e/Dockerfile .
+	$(KIND) load docker-image htnn/e2e-dp:0.1.0 --name htnn
 	cd controller/ && make docker-build
 
 .PHONY: deploy-istio
 deploy-istio:
-	ISTIO_VERSION=1.20.0 ./ci/istio.sh install
-	kubectl wait --timeout=5m -n istio-system deployment/istio-ingressgateway --for=condition=Available
-	kubectl patch -n istio-system deployment/istio-ingressgateway --patch-file ci/data_plane_patch.yml
+	ISTIO_VERSION=1.20.0 ./e2e/istio.sh install
+	$(KUBECTL) wait --timeout=5m -n istio-system deployment/istio-ingressgateway --for=condition=Available
 
 .PHONY: deploy-cert-manager
 deploy-cert-manager:
 	$(KUBECTL) apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.3/cert-manager.yaml
-	kubectl wait --timeout=5m -n cert-manager deployment/cert-manager-cainjector --for=condition=Available
+	$(KUBECTL) wait --timeout=5m -n cert-manager deployment/cert-manager-cainjector --for=condition=Available
 
 .PHONY: deploy-dependencies
 deploy-dependencies: deploy-istio deploy-cert-manager
@@ -260,7 +264,11 @@ deploy-dependencies: deploy-istio deploy-cert-manager
 .PHONY: deploy-controller
 deploy-controller: kubectl
 	cd controller/ && KIND=$(KIND) KIND_OPTION="-n htnn" KUBECTL=$(KUBECTL) make deploy
-	kubectl wait --timeout=5m -n controller-system deployment/controller-controller-manager --for=condition=Available
+	$(KUBECTL) wait --timeout=5m -n controller-system deployment/controller-controller-manager --for=condition=Available
+
+.PHONY: undeploy-controller
+undeploy-controller: kubectl
+	cd controller/ && KUBECTL=$(KUBECTL) make undeploy
 
 .PHONY: run-e2e
 run-e2e:

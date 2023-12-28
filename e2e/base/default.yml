@@ -20,6 +20,18 @@ spec:
       number: 18000
       protocol: HTTP
 ---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: default
+spec:
+  gatewayClassName: istio
+  listeners:
+  - name: default
+    hostname: "default.local"
+    port: 18001
+    protocol: HTTP
+---
 apiVersion: v1
 kind: Service
 metadata:

@@ -31,6 +31,11 @@ install() {
     fi
     istioctl version
     istioctl install --set profile=default -y
+    istioctl manifest apply  --set .values.global.proxy.image="htnn/e2e-dp:0.1.0" -y
+}
+
+uninstall() {
+    istioctl uninstall --purge -y
 }
 
 opt=$1

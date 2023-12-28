@@ -15,11 +15,7 @@
 package tests
 
 import (
-	"context"
-	"net"
-	"net/http"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -29,11 +25,7 @@ import (
 func init() {
 	suite.Register(suite.Test{
 		Run: func(t *testing.T, suite *suite.Suite) {
-			tr := &http.Transport{DialContext: func(ctx context.Context, proto, addr string) (conn net.Conn, err error) {
-				return net.DialTimeout("tcp", ":18000", 1*time.Second)
-			}}
-			client := &http.Client{Transport: tr, Timeout: 10 * time.Second}
-			rsp, err := client.Get("http://default.local:18000/echo")
+			rsp, err := suite.Get("/echo", nil)
 			require.NoError(t, err)
 			req, _, err := suite.Capture(rsp)
 			require.NoError(t, err)
