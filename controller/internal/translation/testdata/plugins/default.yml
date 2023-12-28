@@ -13,7 +13,7 @@
     - match:
       - uri:
           prefix: /
-      name: default
+      name: default/default
       route:
       - destination:
           host: default
@@ -30,5 +30,5 @@
       - default.local
       port:
         name: http
-        number: 8888
+        number: 80
         protocol: HTTP
