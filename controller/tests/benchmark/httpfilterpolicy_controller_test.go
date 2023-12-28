@@ -22,6 +22,7 @@ import (
 	"os"
 	"runtime"
 	"strconv"
+	"sync"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -72,6 +73,43 @@ func createEventually(ctx context.Context, obj client.Object) {
 	}, timeout, interval).Should(BeTrue())
 }
 
+func createResource(ctx context.Context, policy *mosniov1.HTTPFilterPolicy, virtualService *istiov1b1.VirtualService, i int) {
+	id := strconv.Itoa(i)
+	policy = policy.DeepCopy()
+
+	tr := gwapiv1a2.PolicyTargetReferenceWithSectionName{
+		PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+			Group: "networking.istio.io",
+			Kind:  "VirtualService",
+			Name:  gwapiv1a2.ObjectName("vs-" + id),
+		},
+	}
+	name := gwapiv1a2.SectionName("route")
+	trRoute := gwapiv1a2.PolicyTargetReferenceWithSectionName{
+		PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+			Group: "networking.istio.io",
+			Kind:  "VirtualService",
+			Name:  gwapiv1a2.ObjectName("vs-" + id),
+		},
+		SectionName: &name,
+	}
+
+	policy.Name = "policy-" + id + "-host"
+	policy.Spec.TargetRef = tr
+	createEventually(ctx, policy.DeepCopy())
+	policy.Name = "policy-" + id + "-route"
+	policy.Spec.TargetRef = trRoute
+	createEventually(ctx, policy.DeepCopy())
+
+	vs := virtualService.DeepCopy()
+	vs.Name = "vs-" + id
+	host := vs.Spec.Hosts[0]
+	vs.Spec.Hosts[0] = id + "." + host
+	route := vs.Spec.Http[0]
+	route.Name = "default/vs-" + id
+	createEventually(ctx, vs)
+}
+
 var _ = Describe("HTTPFilterPolicy controller", func() {
 	BeforeEach(func() {
 		var policies mosniov1.HTTPFilterPolicyList
@@ -117,49 +155,41 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 				}
 			}
 
-			for i := 0; i < scale; i++ {
-				go func(i int) {
-					defer GinkgoRecover()
-
-					id := strconv.Itoa(i)
-					policy := policy.DeepCopy()
-
-					tr := gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
-							Group: "networking.istio.io",
-							Kind:  "VirtualService",
-							Name:  gwapiv1a2.ObjectName("vs-" + id),
-						},
-					}
-					name := gwapiv1a2.SectionName("route")
-					trRoute := gwapiv1a2.PolicyTargetReferenceWithSectionName{
-						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
-							Group: "networking.istio.io",
-							Kind:  "VirtualService",
-							Name:  gwapiv1a2.ObjectName("vs-" + id),
-						},
-						SectionName: &name,
-					}
-
-					policy.Name = "policy-" + id + "-host"
-					policy.Spec.TargetRef = tr
-					createEventually(ctx, policy.DeepCopy())
-					policy.Name = "policy-" + id + "-same-level"
-					policy.Spec.TargetRef = tr
-					createEventually(ctx, policy.DeepCopy())
-					policy.Name = "policy-" + id + "-route"
-					policy.Spec.TargetRef = trRoute
-					createEventually(ctx, policy.DeepCopy())
-
-					vs := virtualService.DeepCopy()
-					vs.Name = "vs-" + id
-					host := vs.Spec.Hosts[0]
-					vs.Spec.Hosts[0] = id + "." + host
-					route := vs.Spec.Http[0]
-					route.Name = "default/vs-" + id
-					createEventually(ctx, vs)
-				}(i)
+			if scale < 1000 {
+				wg := sync.WaitGroup{}
+				wg.Add(scale)
+				for i := 0; i < scale; i++ {
+					go func(i int) {
+						defer GinkgoRecover()
+						defer wg.Done()
+						createResource(ctx, policy, virtualService, i)
+					}(i)
+				}
+				wg.Wait()
+			} else {
+				wg := sync.WaitGroup{}
+				size := 50
+				if scale%size == 0 {
+					wg.Add(scale / size)
+				} else {
+					wg.Add(scale/size + 1)
+				}
+				for i := 0; i < scale; i += size {
+					go func(i int) {
+						defer GinkgoRecover()
+						defer wg.Done()
+						for j := i; j < i+size && j < scale; j++ {
+							createResource(ctx, policy, virtualService, j)
+						}
+					}(i)
+				}
+				wg.Wait()
 			}
+
+			go func() {
+				defer GinkgoRecover()
+				Expect(k8sManager.Start(ctx)).ToNot(HaveOccurred(), "failed to run manager")
+			}()
 
 			var virtualservices istiov1b1.VirtualServiceList
 			Eventually(func() bool {
@@ -174,7 +204,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 					return false
 				}
 
-				if len(policies.Items) < scale*3 {
+				if len(policies.Items) < scale*2 {
 					return false
 				}
 				for _, policy := range policies.Items {
@@ -188,18 +218,43 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 				return true
 			}, timeout, interval).Should(BeTrue())
 
+			var memStats runtime.MemStats
+			runtime.ReadMemStats(&memStats)
+			peakMemAlloc := memStats.Alloc
+
+			stop := make(chan struct{})
+			go func() {
+				defer GinkgoRecover()
+				ticker := time.Tick(1 * time.Second)
+				for {
+					select {
+					case <-stop:
+						return
+					case <-ticker:
+						runtime.ReadMemStats(&memStats)
+						if memStats.Alloc > peakMemAlloc {
+							peakMemAlloc = memStats.Alloc
+						}
+					}
+				}
+			}()
+
 			num := 10
 			start := time.Now()
 			for i := 0; i < num; i++ {
 				httpFilterPolicyReconciler.Reconcile(ctx, controllerruntime.Request{
 					NamespacedName: types.NamespacedName{Namespace: "", Name: "httpfilterpolicy"}})
 			}
-			fmt.Printf("Benchmark with %d VirtualServices (each has two routes), %d HTTPFilterPolicies\n", scale, 3*scale)
+			fmt.Printf("Benchmark with %d VirtualServices (each has two routes), %d HTTPFilterPolicies\n", scale, 2*scale)
 			fmt.Printf("Average: %+v\n", time.Since(start)/time.Duration(num))
 
-			var memStats runtime.MemStats
+			close(stop)
+
 			runtime.ReadMemStats(&memStats)
-			fmt.Printf("Allocated memory: %d MB\n", memStats.Alloc/1024/1024)
+			if memStats.Alloc > peakMemAlloc {
+				peakMemAlloc = memStats.Alloc
+			}
+			fmt.Printf("Allocated memory: %d MB\n", peakMemAlloc/1024/1024)
 		})
 	})
 })

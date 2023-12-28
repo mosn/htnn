@@ -135,12 +135,6 @@ var _ = BeforeSuite(func() {
 	}
 	err = httpFilterPolicyReconciler.SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
-
-	go func() {
-		defer GinkgoRecover()
-		Expect(k8sManager.Start(ctx)).ToNot(HaveOccurred(), "failed to run manager")
-	}()
-
 })
 
 var _ = AfterSuite(func() {
