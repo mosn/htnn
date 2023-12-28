@@ -21,6 +21,7 @@ import (
 	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	istiov1b1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	mosniov1 "mosn.io/moe/controller/api/v1"
 )
@@ -37,6 +38,13 @@ func MapToObj(in map[string]interface{}) client.Object {
 			out = &istiov1b1.Gateway{}
 		case "EnvoyFilter":
 			out = &istiov1a3.EnvoyFilter{}
+		}
+	} else if strings.HasPrefix(group, "gateway.networking.k8s.io") {
+		switch in["kind"] {
+		case "HTTPRoute":
+			out = &gwapiv1.HTTPRoute{}
+		case "Gateway":
+			out = &gwapiv1.Gateway{}
 		}
 	} else if strings.HasPrefix(group, "mosn.io") {
 		switch in["kind"] {

@@ -37,13 +37,31 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 		err    string
 	}{
 		{
-			name: "ok",
+			name: "ok, VirtualService",
 			policy: &HTTPFilterPolicy{
 				Spec: HTTPFilterPolicySpec{
 					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
 						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
 							Group: "networking.istio.io",
 							Kind:  "VirtualService",
+						},
+					},
+					Filters: map[string]runtime.RawExtension{
+						"animal": {
+							Raw: []byte(`{"config":{"pet":"cat"}}`),
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "ok, HTTPRoute",
+			policy: &HTTPFilterPolicy{
+				Spec: HTTPFilterPolicySpec{
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: "gateway.networking.k8s.io",
+							Kind:  "HTTPRoute",
 						},
 					},
 					Filters: map[string]runtime.RawExtension{
