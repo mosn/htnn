@@ -96,7 +96,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 		It("deal with invalid crd", func() {
 			ctx := context.Background()
 			input := []map[string]interface{}{}
-			mustReadInput("invalid-httpfilterpolicy", &input)
+			mustReadInput("invalid_httpfilterpolicy", &input)
 
 			for _, in := range input {
 				obj := pkg.MapToObj(in)
@@ -121,7 +121,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 		It("deal with valid crd", func() {
 			ctx := context.Background()
 			input := []map[string]interface{}{}
-			mustReadInput("valid-httpfilterpolicy", &input)
+			mustReadInput("valid_httpfilterpolicy", &input)
 
 			for _, in := range input {
 				obj := pkg.MapToObj(in)
@@ -354,7 +354,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 		It("deal with multi policies to one virtualservice", func() {
 			ctx := context.Background()
 			input := []map[string]interface{}{}
-			mustReadInput("multi-policies", &input)
+			mustReadInput("multi_policies", &input)
 
 			for _, in := range input {
 				obj := pkg.MapToObj(in)
@@ -388,7 +388,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 		It("diff envoyfilters", func() {
 			ctx := context.Background()
 			input := []map[string]interface{}{}
-			mustReadInput("diff-envoyfilters", &input)
+			mustReadInput("diff_envoyfilters", &input)
 
 			// We create EnvoyFilter first, to avoid conflicting with the EnvoyFilter created by VirtualService
 			for _, in := range input {
@@ -433,7 +433,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 		It("refer virtualservice across namespace", func() {
 			ctx := context.Background()
 			input := []map[string]interface{}{}
-			mustReadInput("refer-virtualservice-across-namespace", &input)
+			mustReadInput("refer_virtualservice_across_namespace", &input)
 
 			for _, in := range input {
 				obj := pkg.MapToObj(in)
@@ -458,7 +458,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 		It("route doesn't match", func() {
 			ctx := context.Background()
 			input := []map[string]interface{}{}
-			mustReadInput("virtualservice-match-but-route-not", &input)
+			mustReadInput("virtualservice_match_but_route_not", &input)
 			for _, in := range input {
 				obj := pkg.MapToObj(in)
 				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
@@ -503,7 +503,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 		It("deal with virtualservice via route name", func() {
 			ctx := context.Background()
 			input := []map[string]interface{}{}
-			mustReadInput("virtualservice-via-route-name", &input)
+			mustReadInput("virtualservice_via_route_name", &input)
 
 			var virtualService *istiov1b1.VirtualService
 			for _, in := range input {
