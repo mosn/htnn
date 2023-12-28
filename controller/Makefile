@@ -77,7 +77,7 @@ test: manifests generate envtest ## Run tests.
 
 .PHONY: benchmark
 benchmark: manifests generate envtest ## Run benchmarks
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test -tags bench -v ./tests/benchmark/...
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test -tags benchmark -v ./tests/benchmark/...
 
 ##@ Build
 
