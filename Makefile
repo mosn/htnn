@@ -30,6 +30,8 @@ DEV_TOOLS_IMAGE ?= ghcr.io/mosn/htnn-dev-tools:2023-10-23
 VERSION   = $(shell cat VERSION)
 GIT_VERSION     = $(shell git log -1 --pretty=format:%h)
 
+MIN_K8S_VERSION = 1.25.11
+
 # Define a recursive wildcard function
 rwildcard=$(foreach d,$(wildcard $(addsuffix *,$(1))),$(call rwildcard,$d/,$(2))$(filter $(subst *,%,$(2)),$d))
 
@@ -73,7 +75,7 @@ gen-proto: dev-tools install-go-fmtter $(GO_TARGETS)
 # separate component.
 .PHONY: unit-test
 unit-test:
-	go test ${TEST_OPTION} $(shell go list ./... | grep -v tests/integration)
+	go test ${TEST_OPTION} $(shell go list ./... | grep -v tests/integration | grep -v ${PROJECT_NAME}/controller | grep -v ${PROJECT_NAME}/e2e)
 
 # We can't specify -race to `go build` because it seems that
 # race detector assumes that the executable is loaded around the 0 address. When loaded by the Envoy,
@@ -215,3 +217,54 @@ verify-example:
 .PHONY: start-service
 start-service:
 	cd ./ci/ && docker-compose up -d
+
+# E2E
+KUBECTL ?= $(LOCALBIN)/kubectl
+KIND ?= $(LOCALBIN)/kind
+
+.PHONY: kubectl
+kubectl: $(LOCALBIN)
+	@test -x $(KUBECTL) || \
+		KUBECTL_VERSION=v$(MIN_K8S_VERSION) LOCATION=$(KUBECTL) ./ci/k8s.sh install-kubectl
+
+.PHONY: kind
+kind: $(LOCALBIN)
+	@test -x $(KIND) || GOBIN=$(LOCALBIN) go install sigs.k8s.io/kind@v0.20.0
+
+.PHONY: create-cluster
+create-cluster: kind
+	$(KIND) create cluster --name htnn --config ci/kind_config.yml --image kindest/node:v$(MIN_K8S_VERSION)
+
+.PHONY: delete-cluster
+delete-cluster: kind
+	$(KIND) delete cluster --name htnn
+
+.PHONY: e2e-docker-build
+e2e-docker-build:
+	cd controller/ && make docker-build
+
+.PHONY: deploy-istio
+deploy-istio:
+	ISTIO_VERSION=1.20.0 ./ci/istio.sh install
+	kubectl wait --timeout=5m -n istio-system deployment/istio-ingressgateway --for=condition=Available
+	kubectl patch -n istio-system deployment/istio-ingressgateway --patch-file ci/data_plane_patch.yml
+
+.PHONY: deploy-cert-manager
+deploy-cert-manager:
+	$(KUBECTL) apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.3/cert-manager.yaml
+	kubectl wait --timeout=5m -n cert-manager deployment/cert-manager-cainjector --for=condition=Available
+
+.PHONY: deploy-dependencies
+deploy-dependencies: deploy-istio deploy-cert-manager
+
+.PHONY: deploy-controller
+deploy-controller: kubectl
+	cd controller/ && KIND=$(KIND) KIND_OPTION="-n htnn" KUBECTL=$(KUBECTL) make deploy
+	kubectl wait --timeout=5m -n controller-system deployment/controller-controller-manager --for=condition=Available
+
+.PHONY: run-e2e
+run-e2e:
+	cd e2e/ && PATH=$(LOCALBIN):$(PATH) go test -v .
+
+.PHONY: e2e
+e2e: build-so delete-cluster create-cluster deploy-dependencies e2e-docker-build deploy-controller run-e2e

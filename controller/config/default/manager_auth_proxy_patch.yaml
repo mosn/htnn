@@ -34,6 +34,7 @@ spec:
             memory: 64Mi
       - name: manager
         args:
-        - "--health-probe-bind-address=:10081"
         - "--metrics-bind-address=127.0.0.1:10080"
+        - "--health-probe-bind-address=:10081"
+        - "--pprof-bind-address=127.0.0.1:10082"
         - "--leader-elect"

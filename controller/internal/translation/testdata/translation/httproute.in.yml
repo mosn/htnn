@@ -59,9 +59,9 @@ httpFilterPolicy:
       name: policy
     spec:
       targetRef:
-        group: networking.istio.io
-        kind: VirtualService
-        name: httpbin
+        group: gateway.networking.k8s.io
+        kind: HTTPRoute
+        name: http
       filters:
         animal:
           config:
