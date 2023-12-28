@@ -26,10 +26,15 @@ message Remote {
     [(validate.rules).string = { ignore_empty: false, min_len: 1 }];
 }
 
+message Local {
+  string text = 1
+    [(validate.rules).string = { ignore_empty: false, min_len: 1 }];
+}
+
 message Config {
   oneof config_type {
     option (validate.required) = true;
     Remote remote = 1;
-    // TODO: allow OPA rule in local file/text
+    Local local = 2;
   }
 }

@@ -23,6 +23,7 @@ import (
 
 	"github.com/agiledragon/gomonkey/v2"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"mosn.io/moe/pkg/filtermanager/api"
 	"mosn.io/moe/plugins/tests/pkg/envoy"
@@ -109,6 +110,80 @@ func TestOpaRemote(t *testing.T) {
 				})
 			defer patches.Reset()
 
+			lr, ok := f.DecodeHeaders(hdr, true).(*api.LocalResponse)
+			if !ok {
+				assert.Equal(t, tt.status, 0)
+			} else {
+				assert.Equal(t, tt.status, lr.Code)
+			}
+		})
+	}
+}
+
+func TestOpaLocal(t *testing.T) {
+	cb := envoy.NewFilterCallbackHandler()
+	hdr := envoy.NewRequestHeaderMap(http.Header(map[string][]string{
+		":path": {"/?a=1&b&c=true&c=foo"},
+		"fruit": {"apple", "banana"},
+	}))
+
+	tests := []struct {
+		name   string
+		status int
+		text   string
+	}{
+		{
+			name: "happy path",
+			text: `default allow = true`,
+		},
+		{
+			name: "check input",
+			text: `import input.request
+				import future.keywords
+				default allow = false
+				allow {
+					request.method == "GET"
+					request.path == "/"
+					some "apple" in request.headers.fruit
+					some "true" in request.query.c
+				}`,
+		},
+		{
+			name: "reject",
+			text: `import input.request
+				import future.keywords
+				default allow = false
+				allow {
+					some true in request.query.c
+				}`,
+			status: 403,
+		},
+		{
+			name:   "bad result",
+			text:   `import input.request`,
+			status: 503,
+		},
+		{
+			name:   "no bool result",
+			text:   `default allow = "a"`,
+			status: 503,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &config{
+				Config: Config{
+					ConfigType: &Config_Local{
+						Local: &Local{
+							Text: "package test\n" + tt.text,
+						},
+					},
+				},
+			}
+			err := c.Init(nil)
+			require.NoError(t, err)
+			f := configFactory(c)(cb)
 			lr, ok := f.DecodeHeaders(hdr, true).(*api.LocalResponse)
 			if !ok {
 				assert.Equal(t, tt.status, 0)

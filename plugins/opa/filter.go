@@ -16,8 +16,11 @@ package opa
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"errors"
 
+	"github.com/open-policy-agent/opa/rego"
 	"mosn.io/moe/pkg/filtermanager/api"
 	"mosn.io/moe/pkg/request"
 )
@@ -39,7 +42,7 @@ type filter struct {
 	config    *config
 }
 
-var opaResponse struct {
+type opaResponse struct {
 	Result struct {
 		Allow bool `json:"allow"`
 	} `json:"result"`
@@ -67,33 +70,49 @@ func (f *filter) buildInput(header api.RequestHeaderMap) map[string]interface{} 
 }
 
 func (f *filter) isAllowed(input map[string]interface{}) (bool, error) {
-	params, err := json.Marshal(input)
-	if err != nil {
-		return false, err
-	}
-
 	remote := f.config.GetRemote()
-	// When parsing the config, we have already validated the remote is not nil
-	path := remote.GetUrl() + "/v1/data/" + remote.GetPolicy()
-	api.LogInfof("send request to opa: %s, param: %s", path, params)
-	resp, err := f.config.client.Post(path, "application/json", bytes.NewReader(params))
+	if remote != nil {
+		params, err := json.Marshal(input)
+		if err != nil {
+			return false, err
+		}
+
+		path := remote.GetUrl() + "/v1/data/" + remote.GetPolicy()
+		api.LogInfof("send request to opa: %s, param: %s", path, params)
+		resp, err := f.config.client.Post(path, "application/json", bytes.NewReader(params))
+		if err != nil {
+			return false, err
+		}
+		defer resp.Body.Close()
+
+		var opaResponse opaResponse
+		if err := json.NewDecoder(resp.Body).Decode(&opaResponse); err != nil {
+			return false, err
+		}
+
+		return opaResponse.Result.Allow, nil
+	}
+
+	ctx := context.TODO()
+	results, err := f.config.query.Eval(ctx, rego.EvalInput(input["input"]))
 	if err != nil {
 		return false, err
 	}
-	defer resp.Body.Close()
-
-	if err := json.NewDecoder(resp.Body).Decode(&opaResponse); err != nil {
-		return false, err
+	if len(results) == 0 {
+		return false, errors.New("result is missing in the response")
 	}
-
-	return opaResponse.Result.Allow, nil
+	result, ok := results[0].Bindings["allow"].(bool)
+	if !ok {
+		return false, errors.New("unexpected result type")
+	}
+	return result, nil
 }
 
 func (f *filter) DecodeHeaders(header api.RequestHeaderMap, endStream bool) api.ResultAction {
 	input := f.buildInput(header)
 	allow, err := f.isAllowed(input)
 	if err != nil {
-		api.LogErrorf("failed to call OPA server: %v", err)
+		api.LogErrorf("failed to do OPA auth: %v", err)
 		return &api.LocalResponse{Code: 503}
 	}
 

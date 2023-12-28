@@ -58,6 +58,27 @@ func TestOpa(t *testing.T) {
 				assert.Equal(t, 403, resp.StatusCode)
 			},
 		},
+		{
+			name: "local",
+			config: control_plane.NewSinglePluinConfig("opa", map[string]interface{}{
+				"local": map[string]string{
+					"text": `package test
+						import input.request
+						default allow = false
+						allow {
+							request.method == "GET"
+							startswith(request.path, "/echo")
+						}`,
+				},
+			}),
+			run: func(t *testing.T) {
+				resp, err := dp.Get("/echo", nil)
+				require.Nil(t, err)
+				assert.Equal(t, 200, resp.StatusCode)
+				resp, _ = dp.Get("/x", nil)
+				assert.Equal(t, 403, resp.StatusCode)
+			},
+		},
 	}
 
 	for _, tt := range tests {
