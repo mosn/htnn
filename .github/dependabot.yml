@@ -15,11 +15,6 @@ updates:
     schedule:
       interval: "daily"
       time: "06:00"
-  - package-ecosystem: "gomod"
-    directory: "/controller"
-    schedule:
-      interval: "daily"
-      time: "03:00"
   - package-ecosystem: github-actions
     directory: /
     schedule:
