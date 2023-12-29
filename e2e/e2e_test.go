@@ -21,7 +21,9 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	mosniov1 "mosn.io/moe/controller/api/v1"
 	"mosn.io/moe/e2e/pkg/suite"
 	_ "mosn.io/moe/e2e/tests" // import all tests
 )
@@ -43,6 +45,16 @@ func TestE2E(t *testing.T) {
 	err = istioscheme.AddToScheme(client.Scheme())
 	if err != nil {
 		t.Fatalf("Error adding Istio types to scheme: %v", err)
+	}
+
+	err = gwapiv1.AddToScheme(client.Scheme())
+	if err != nil {
+		t.Fatalf("Error adding k8s gateway API types to scheme: %v", err)
+	}
+
+	err = mosniov1.AddToScheme(client.Scheme())
+	if err != nil {
+		t.Fatalf("Error adding mosn types to scheme: %v", err)
 	}
 
 	st := suite.New(suite.Options{

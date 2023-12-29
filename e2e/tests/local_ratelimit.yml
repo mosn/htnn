@@ -4,8 +4,8 @@ metadata:
   name: policy
 spec:
   targetRef:
-    group: networking.istio.io
-    kind: VirtualService
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
     name: default
   filters:
     local_ratelimit:

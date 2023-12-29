@@ -34,6 +34,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/utils/roundtripper"
 
 	mosniov1 "mosn.io/moe/controller/api/v1"
@@ -69,7 +70,7 @@ func Register(test Test) {
 type Suite struct {
 	Opt Options
 
-	forwarder *exec.Cmd
+	forwarders []*exec.Cmd
 }
 
 type Options struct {
@@ -79,7 +80,8 @@ type Options struct {
 
 func New(opt Options) *Suite {
 	return &Suite{
-		Opt: opt,
+		Opt:        opt,
+		forwarders: []*exec.Cmd{},
 	}
 }
 
@@ -89,6 +91,15 @@ func (suite *Suite) Run(t *testing.T) {
 	defer suite.stopPortForward(t)
 	for _, test := range tests {
 		t.Run(test.Name, func(t *testing.T) {
+			defer func() {
+				if p := recover(); p != nil {
+					const size = 64 << 10
+					buf := make([]byte, size)
+					buf = buf[:runtime.Stack(buf, false)]
+					fmt.Printf("panic in test %s: %v\n%s", test.Name, p, buf)
+					t.Fail()
+				}
+			}()
 			suite.cleanup(t)
 			for _, manifest := range test.Manifests {
 				k8s.Prepare(t, suite.Opt.Client, manifest)
@@ -106,22 +117,26 @@ func (suite *Suite) Run(t *testing.T) {
 
 // We use port-forward so that both Linux and Mac can expose port in the same way
 func (suite *Suite) startPortForward(t *testing.T) {
-	cmdline := "../ci/port-forward.sh"
-	suite.forwarder = exec.Command(cmdline)
-	suite.forwarder.Stdout = os.Stdout
-	suite.forwarder.Stderr = os.Stderr
-	err := suite.forwarder.Start()
-	require.NoError(t, err)
+	cmdline := "./port-forward.sh"
+	dests := []string{"istio-ingressgateway", "k8s-gateway-api"}
+	for _, d := range dests {
+		forwarder := exec.Command(cmdline, d)
+		forwarder.Stdout = os.Stdout
+		forwarder.Stderr = os.Stderr
+		err := forwarder.Start()
+		require.NoError(t, err)
+		suite.forwarders = append(suite.forwarders, forwarder)
+	}
 	time.Sleep(2 * time.Second) // wait for port-forward to take effect
 	logger.Info("port-forward started")
 }
 
 func (suite *Suite) stopPortForward(t *testing.T) {
-	if suite.forwarder != nil {
-		err := suite.forwarder.Process.Signal(os.Interrupt)
+	for _, fwd := range suite.forwarders {
+		err := fwd.Process.Signal(os.Interrupt)
 		require.NoError(t, err)
-		logger.Info("port-forward stopped")
 	}
+	logger.Info("port-forward stopped")
 }
 
 func (suite *Suite) cleanup(t *testing.T) {
@@ -132,20 +147,28 @@ func (suite *Suite) cleanup(t *testing.T) {
 		Namespace: all,
 	}
 	var policies mosniov1.HTTPFilterPolicyList
-	if err := c.List(ctx, &policies, listOps); err == nil {
-		for i := range policies.Items {
-			e := policies.Items[i]
-			require.NoError(t, c.Delete(ctx, &e))
-			logger.Info("Deleted", "name", e.GetName(), "kind", e.GetObjectKind())
-		}
+	err := c.List(ctx, &policies, listOps)
+	require.NoError(t, err)
+	for _, e := range policies.Items {
+		// DeepCopy here is to satisfy the requirement of gosec
+		require.NoError(t, c.Delete(ctx, e.DeepCopy()))
+		logger.Info("Deleted", "name", e.GetName(), "kind", e.GetObjectKind())
+	}
+
+	var httproutes gwapiv1.HTTPRouteList
+	err = c.List(ctx, &httproutes, listOps)
+	require.NoError(t, err)
+	for _, e := range httproutes.Items {
+		require.NoError(t, c.Delete(ctx, e.DeepCopy()))
+		logger.Info("Deleted", "name", e.GetName(), "kind", e.GetObjectKind())
 	}
 
 	var virtualservices istiov1b1.VirtualServiceList
-	if err := c.List(ctx, &virtualservices); err == nil {
-		for _, e := range virtualservices.Items {
-			require.NoError(t, c.Delete(ctx, e))
-			logger.Info("Deleted", "name", e.GetName(), "kind", e.GetObjectKind())
-		}
+	err = c.List(ctx, &virtualservices, listOps)
+	require.NoError(t, err)
+	for _, e := range virtualservices.Items {
+		require.NoError(t, c.Delete(ctx, e))
+		logger.Info("Deleted", "name", e.GetName(), "kind", e.GetObjectKind())
 	}
 	// let HTNN to clean up EnvoyFilter
 }
@@ -175,13 +198,13 @@ func (suite *Suite) Patch(path string, header http.Header, body io.Reader) (*htt
 }
 
 func (suite *Suite) do(method string, path string, header http.Header, body io.Reader) (*http.Response, error) {
-	req, err := http.NewRequest(method, "http://default.local:18000"+path, body)
+	req, err := http.NewRequest(method, "http://default.local:18001"+path, body)
 	if err != nil {
 		return nil, err
 	}
 	req.Header = header
 	tr := &http.Transport{DialContext: func(ctx context.Context, proto, addr string) (conn net.Conn, err error) {
-		return net.DialTimeout("tcp", ":18000", 1*time.Second)
+		return net.DialTimeout("tcp", ":18001", 1*time.Second)
 	}}
 
 	client := &http.Client{Transport: tr, Timeout: 10 * time.Second}
@@ -196,6 +219,10 @@ func (suite *Suite) Capture(resp *http.Response) (*roundtripper.CapturedRequest,
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, nil, err
+	}
+
+	if resp.StatusCode != 200 {
+		return nil, nil, fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
 
 	if resp.Header.Get("Content-type") == "application/json" {

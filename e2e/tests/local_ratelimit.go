@@ -25,7 +25,7 @@ import (
 
 func init() {
 	suite.Register(suite.Test{
-		Manifests: []string{"base/virtualservice.yml"},
+		Manifests: []string{"base/httproute.yml"},
 		Run: func(t *testing.T, suite *suite.Suite) {
 			rsp, err := suite.Get("/echo", nil)
 			require.NoError(t, err)
