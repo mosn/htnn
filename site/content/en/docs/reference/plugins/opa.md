@@ -4,7 +4,7 @@ title: OPA
 
 ## Description
 
-This Plugin integrates with [Open Policy Agent (OPA)](https://www.openpolicyagent.org).
+This plugin integrates with [Open Policy Agent (OPA)](https://www.openpolicyagent.org).
 
 ## Attribute
 

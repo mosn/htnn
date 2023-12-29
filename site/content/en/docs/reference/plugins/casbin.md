@@ -4,7 +4,7 @@ title: Casbin
 
 ## Description
 
-This Plugin embeds the powerful and efficient open-source access control library [casbin](https://casbin.org/docs/overview) that supports various access control models for enforcing authorization across the board.
+This plugin embeds the powerful and efficient open-source access control library [casbin](https://casbin.org/docs/overview) that supports various access control models for enforcing authorization across the board.
 
 ## Attribute
 
