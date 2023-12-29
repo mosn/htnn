@@ -19,7 +19,6 @@ package benchmark
 import (
 	"context"
 	"fmt"
-	"os"
 	"runtime"
 	"strconv"
 	"sync"
@@ -30,48 +29,11 @@ import (
 	istiov1b1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	"k8s.io/apimachinery/pkg/types"
 	controllerruntime "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	mosniov1 "mosn.io/moe/controller/api/v1"
 	"mosn.io/moe/controller/tests/pkg"
 )
-
-const (
-	interval = time.Second * 1
-)
-
-var (
-	timeout time.Duration
-	scale   int
-)
-
-func init() {
-	s := os.Getenv("BENCHMARK_SCALE")
-	if s == "" {
-		scale = 2500
-	} else {
-		var err error
-		scale, err = strconv.Atoi(s)
-		if err != nil {
-			panic(err)
-		}
-	}
-
-	timeout = 5 * time.Second * time.Duration(scale/100)
-	if timeout < 10*time.Second {
-		timeout = 10 * time.Second
-	}
-}
-
-func createEventually(ctx context.Context, obj client.Object) {
-	Eventually(func() bool {
-		if err := k8sClient.Create(ctx, obj); err != nil {
-			return false
-		}
-		return true
-	}, timeout, interval).Should(BeTrue())
-}
 
 func createResource(ctx context.Context, policy *mosniov1.HTTPFilterPolicy, virtualService *istiov1b1.VirtualService, i int) {
 	id := strconv.Itoa(i)

@@ -31,7 +31,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	istiov1b1 "istio.io/client-go/pkg/apis/networking/v1beta1"
-	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -142,12 +141,8 @@ func (suite *Suite) stopPortForward(t *testing.T) {
 func (suite *Suite) cleanup(t *testing.T) {
 	c := suite.Opt.Client
 	ctx := context.Background()
-	all := corev1.NamespaceAll
-	listOps := &client.ListOptions{
-		Namespace: all,
-	}
 	var policies mosniov1.HTTPFilterPolicyList
-	err := c.List(ctx, &policies, listOps)
+	err := c.List(ctx, &policies)
 	require.NoError(t, err)
 	for _, e := range policies.Items {
 		// DeepCopy here is to satisfy the requirement of gosec
@@ -156,7 +151,7 @@ func (suite *Suite) cleanup(t *testing.T) {
 	}
 
 	var httproutes gwapiv1.HTTPRouteList
-	err = c.List(ctx, &httproutes, listOps)
+	err = c.List(ctx, &httproutes)
 	require.NoError(t, err)
 	for _, e := range httproutes.Items {
 		require.NoError(t, c.Delete(ctx, e.DeepCopy()))
@@ -164,7 +159,7 @@ func (suite *Suite) cleanup(t *testing.T) {
 	}
 
 	var virtualservices istiov1b1.VirtualServiceList
-	err = c.List(ctx, &virtualservices, listOps)
+	err = c.List(ctx, &virtualservices)
 	require.NoError(t, err)
 	for _, e := range virtualservices.Items {
 		require.NoError(t, c.Delete(ctx, e))

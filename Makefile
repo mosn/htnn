@@ -240,7 +240,7 @@ create-cluster: kind
 
 .PHONY: delete-cluster
 delete-cluster: kind
-	$(KIND) delete cluster --name htnn
+	$(KIND) delete cluster --name htnn || true
 
 .PHONY: e2e-docker-build
 e2e-docker-build:
