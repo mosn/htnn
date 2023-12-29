@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
+  lint:
     timeout-minutes: 10
     runs-on: ubuntu-latest
     steps:

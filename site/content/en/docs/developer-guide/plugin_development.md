@@ -9,7 +9,7 @@ weight: 10
 Assumed you are at the root of this project.
 
 1. Create a directory under `./plugins/`.
-2. Think about the configuration and write down it into `./plugins/$your_plugin/config.proto`. Then run `make gen-proto`.
+2. Think about the configuration and write down it into `./plugins/$your_plugin/config.proto`. Then run `make gen-proto`. The `proto` file uses [proto-gen-valdate](https://github.com/bufbuild/protoc-gen-validate?tab=readme-ov-file#constraint-rules) to define validation.
 3. Finish the plugin. Don't forget to write tests. You can take `./plugins/demo` as an example.
 4. Add the doc of the plugin in the `site/content/en/docs/reference/plugins/$your_plugin.md` and (optional) in other languages.
 5. Add your plugin's package into `./plugins/plugins.go`. Run `make build-so`. Now the plugin is compiled into `libgolang.so`.
