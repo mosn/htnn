@@ -1,4 +1,4 @@
-//go:build bench
+//go:build benchmark
 
 /*
 Copyright The HTNN Authors.
@@ -24,7 +24,9 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"testing"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -65,6 +67,42 @@ func mustReadInput(fn string, out interface{}) {
 	Expect(yaml.UnmarshalStrict(input, out, yaml.DisallowUnknownFields)).To(Succeed())
 }
 
+const (
+	interval = time.Second * 1
+)
+
+var (
+	timeout time.Duration
+	scale   int
+)
+
+func init() {
+	s := os.Getenv("BENCHMARK_SCALE")
+	if s == "" {
+		scale = 2500
+	} else {
+		var err error
+		scale, err = strconv.Atoi(s)
+		if err != nil {
+			panic(err)
+		}
+	}
+
+	timeout = 5 * time.Second * time.Duration(scale/100)
+	if timeout < 10*time.Second {
+		timeout = 10 * time.Second
+	}
+}
+
+func createEventually(ctx context.Context, obj client.Object) {
+	Eventually(func() bool {
+		if err := k8sClient.Create(ctx, obj); err != nil {
+			return false
+		}
+		return true
+	}, timeout, interval).Should(BeTrue())
+}
+
 func TestBenchmark(t *testing.T) {
 	RegisterFailHandler(Fail)
 
@@ -88,8 +126,8 @@ var _ = BeforeSuite(func() {
 		// default path defined in controller-runtime which is /usr/local/kubebuilder/.
 		// Note that you must have the required binaries setup under the bin directory to perform
 		// the tests directly. When we run make test it will be setup and used automatically.
-		BinaryAssetsDirectory: filepath.Join("bin", "k8s",
-			fmt.Sprintf("1.28.3-%s-%s", runtime.GOOS, runtime.GOARCH)),
+		BinaryAssetsDirectory: filepath.Join("..", "..", "bin", "k8s",
+			fmt.Sprintf("1.28.0-%s-%s", runtime.GOOS, runtime.GOARCH)),
 	}
 
 	var err error

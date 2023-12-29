@@ -13,7 +13,7 @@
     - match:
       - uri:
           prefix: /
-      name: default
+      name: default/default
       route:
       - destination:
           host: default
@@ -25,12 +25,10 @@
     name: default
     namespace: default
   spec:
-    selector:
-      istio: ingressgateway
     servers:
     - hosts:
       - default.local
       port:
         name: http
-        number: 8888
+        number: 80
         protocol: HTTP

@@ -77,7 +77,7 @@ test: manifests generate envtest ## Run tests.
 
 .PHONY: benchmark
 benchmark: manifests generate envtest ## Run benchmarks
-	BENCHMARK_SCALE=$(BENCHMARK_SCALE) KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test -tags bench -timeout=1200s -v ./tests/benchmark/...
+	BENCHMARK_SCALE=$(BENCHMARK_SCALE) KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test -tags benchmark -timeout=1200s -v ./tests/benchmark/...
 
 ##@ Build
 
@@ -122,6 +122,7 @@ docker-buildx: ## Build and push docker image for the manager for cross-platform
 ##@ Deployment
 
 ignore-not-found ?= false
+KIND ?= kind
 
 .PHONY: install
 install: manifests kustomize ## Install CRDs into the K8s cluster specified in ~/.kube/config.
@@ -133,7 +134,7 @@ uninstall: manifests kustomize ## Uninstall CRDs from the K8s cluster specified 
 
 .PHONY: deploy-image
 deploy-image:
-	kind load docker-image ${IMG}
+	$(KIND) load docker-image ${KIND_OPTION} ${IMG}
 
 .PHONY: deploy
 deploy: deploy-image manifests kustomize ## Deploy controller to the K8s cluster specified in ~/.kube/config.

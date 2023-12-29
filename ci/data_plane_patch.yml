@@ -1,0 +1,16 @@
+spec:
+  strategy:
+    type: Recreate
+    rollingUpdate: null
+  template:
+    spec:
+      containers:
+      - name: istio-proxy
+        volumeMounts:
+        - name: golang
+          mountPath: /etc/libgolang.so
+      volumes:
+      - name: golang
+        hostPath:
+          path: /etc/libgolang.so
+          type: File
