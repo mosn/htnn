@@ -375,7 +375,7 @@ var _ api.StreamInfo = (*StreamInfo)(nil)
 type LocalResponse struct {
 	Code    int
 	Body    string
-	Headers map[string]string
+	Headers map[string][]string
 }
 
 type filterCallbackHandler struct {
@@ -416,7 +416,7 @@ func (i *filterCallbackHandler) WaitContinued() {
 	<-i.ch
 }
 
-func (i *filterCallbackHandler) SendLocalReply(responseCode int, bodyText string, headers map[string]string, grpcStatus int64, details string) {
+func (i *filterCallbackHandler) SendLocalReply(responseCode int, bodyText string, headers map[string][]string, grpcStatus int64, details string) {
 	i.lock.Lock()
 	defer i.lock.Unlock()
 	i.resp = LocalResponse{Code: responseCode, Body: bodyText, Headers: headers}

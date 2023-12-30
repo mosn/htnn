@@ -106,7 +106,7 @@ func TestLocalReplyJSON_UseReqHeader(t *testing.T) {
 			},
 			reply: envoy.LocalResponse{
 				Code:    200,
-				Headers: map[string]string{"Content-Type": "application/json"},
+				Headers: map[string][]string{"Content-Type": {"application/json"}},
 				Body:    `{"msg":"msg"}`,
 			},
 		},
@@ -119,7 +119,7 @@ func TestLocalReplyJSON_UseReqHeader(t *testing.T) {
 			reply: envoy.LocalResponse{
 				Code:    200,
 				Body:    `{"msg":"msg"}`,
-				Headers: map[string]string{"Content-Type": "application/json"},
+				Headers: map[string][]string{"Content-Type": {"application/json"}},
 			},
 		},
 		{
@@ -179,7 +179,7 @@ func TestLocalReplyJSON_UseRespHeader(t *testing.T) {
 			reply: envoy.LocalResponse{
 				Code:    200,
 				Body:    `{"msg":"msg"}`,
-				Headers: map[string]string{"Content-Type": "application/json"},
+				Headers: map[string][]string{"Content-Type": {"application/json"}},
 			},
 		},
 		{
@@ -191,7 +191,7 @@ func TestLocalReplyJSON_UseRespHeader(t *testing.T) {
 			reply: envoy.LocalResponse{
 				Code:    200,
 				Body:    `{"msg":"msg"}`,
-				Headers: map[string]string{"Content-Type": "application/json"},
+				Headers: map[string][]string{"Content-Type": {"application/json"}},
 			},
 		},
 		{
@@ -267,6 +267,6 @@ func TestLocalReplyJSON_DoNotChangeMsgIfContentTypeIsGiven(t *testing.T) {
 	assert.Equal(t, envoy.LocalResponse{
 		Code:    200,
 		Body:    "msg",
-		Headers: map[string]string{"Content-Type": "text/plain"},
+		Headers: map[string][]string{"Content-Type": {"text/plain"}},
 	}, lr)
 }
