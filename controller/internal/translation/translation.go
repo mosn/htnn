@@ -59,8 +59,9 @@ func (info *Info) Merge(other *Info) {
 type PolicyScope int
 
 const (
-	PolicyScopeRoute PolicyScope = iota
-	PolicyScopeHost
+	// sort from small to large
+	PolicyScopeRule  PolicyScope = iota // a route in a VirtualService or a rule in xRoute
+	PolicyScopeRoute                    // a VirtualService or a xRoute
 )
 
 type HTTPFilterPolicyWrapper struct {

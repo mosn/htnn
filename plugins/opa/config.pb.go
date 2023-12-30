@@ -91,6 +91,53 @@ func (x *Remote) GetPolicy() string {
 	return ""
 }
 
+type Local struct {
+	state         protoimpl.MessageState
+	sizeCache     protoimpl.SizeCache
+	unknownFields protoimpl.UnknownFields
+
+	Text string `protobuf:"bytes,1,opt,name=text,proto3" json:"text,omitempty"`
+}
+
+func (x *Local) Reset() {
+	*x = Local{}
+	if protoimpl.UnsafeEnabled {
+		mi := &file_plugins_opa_config_proto_msgTypes[1]
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		ms.StoreMessageInfo(mi)
+	}
+}
+
+func (x *Local) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Local) ProtoMessage() {}
+
+func (x *Local) ProtoReflect() protoreflect.Message {
+	mi := &file_plugins_opa_config_proto_msgTypes[1]
+	if protoimpl.UnsafeEnabled && x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Local.ProtoReflect.Descriptor instead.
+func (*Local) Descriptor() ([]byte, []int) {
+	return file_plugins_opa_config_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *Local) GetText() string {
+	if x != nil {
+		return x.Text
+	}
+	return ""
+}
+
 type Config struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
@@ -99,13 +146,14 @@ type Config struct {
 	// Types that are assignable to ConfigType:
 	//
 	//	*Config_Remote
+	//	*Config_Local
 	ConfigType isConfig_ConfigType `protobuf_oneof:"config_type"`
 }
 
 func (x *Config) Reset() {
 	*x = Config{}
 	if protoimpl.UnsafeEnabled {
-		mi := &file_plugins_opa_config_proto_msgTypes[1]
+		mi := &file_plugins_opa_config_proto_msgTypes[2]
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		ms.StoreMessageInfo(mi)
 	}
@@ -118,7 +166,7 @@ func (x *Config) String() string {
 func (*Config) ProtoMessage() {}
 
 func (x *Config) ProtoReflect() protoreflect.Message {
-	mi := &file_plugins_opa_config_proto_msgTypes[1]
+	mi := &file_plugins_opa_config_proto_msgTypes[2]
 	if protoimpl.UnsafeEnabled && x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -131,7 +179,7 @@ func (x *Config) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Config.ProtoReflect.Descriptor instead.
 func (*Config) Descriptor() ([]byte, []int) {
-	return file_plugins_opa_config_proto_rawDescGZIP(), []int{1}
+	return file_plugins_opa_config_proto_rawDescGZIP(), []int{2}
 }
 
 func (m *Config) GetConfigType() isConfig_ConfigType {
@@ -148,15 +196,28 @@ func (x *Config) GetRemote() *Remote {
 	return nil
 }
 
+func (x *Config) GetLocal() *Local {
+	if x, ok := x.GetConfigType().(*Config_Local); ok {
+		return x.Local
+	}
+	return nil
+}
+
 type isConfig_ConfigType interface {
 	isConfig_ConfigType()
 }
 
 type Config_Remote struct {
-	Remote *Remote `protobuf:"bytes,1,opt,name=remote,proto3,oneof"` // TODO: allow OPA rule in local file/text
+	Remote *Remote `protobuf:"bytes,1,opt,name=remote,proto3,oneof"`
+}
+
+type Config_Local struct {
+	Local *Local `protobuf:"bytes,2,opt,name=local,proto3,oneof"`
 }
 
 func (*Config_Remote) isConfig_ConfigType() {}
+
+func (*Config_Local) isConfig_ConfigType() {}
 
 var File_plugins_opa_config_proto protoreflect.FileDescriptor
 
@@ -169,14 +230,20 @@ var file_plugins_opa_config_proto_rawDesc = []byte{
 	0x6c, 0x18, 0x01, 0x20, 0x01, 0x28, 0x09, 0x42, 0x0b, 0xfa, 0x42, 0x08, 0x72, 0x06, 0xd0, 0x01,
 	0x00, 0x88, 0x01, 0x01, 0x52, 0x03, 0x75, 0x72, 0x6c, 0x12, 0x22, 0x0a, 0x06, 0x70, 0x6f, 0x6c,
 	0x69, 0x63, 0x79, 0x18, 0x02, 0x20, 0x01, 0x28, 0x09, 0x42, 0x0a, 0xfa, 0x42, 0x07, 0x72, 0x05,
-	0x10, 0x01, 0xd0, 0x01, 0x00, 0x52, 0x06, 0x70, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x22, 0x4b, 0x0a,
-	0x06, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67, 0x12, 0x2d, 0x0a, 0x06, 0x72, 0x65, 0x6d, 0x6f, 0x74,
-	0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x13, 0x2e, 0x70, 0x6c, 0x75, 0x67, 0x69, 0x6e,
-	0x73, 0x2e, 0x6f, 0x70, 0x61, 0x2e, 0x52, 0x65, 0x6d, 0x6f, 0x74, 0x65, 0x48, 0x00, 0x52, 0x06,
-	0x72, 0x65, 0x6d, 0x6f, 0x74, 0x65, 0x42, 0x12, 0x0a, 0x0b, 0x63, 0x6f, 0x6e, 0x66, 0x69, 0x67,
-	0x5f, 0x74, 0x79, 0x70, 0x65, 0x12, 0x03, 0xf8, 0x42, 0x01, 0x42, 0x19, 0x5a, 0x17, 0x6d, 0x6f,
-	0x73, 0x6e, 0x2e, 0x69, 0x6f, 0x2f, 0x6d, 0x6f, 0x65, 0x2f, 0x70, 0x6c, 0x75, 0x67, 0x69, 0x6e,
-	0x73, 0x2f, 0x6f, 0x70, 0x61, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74, 0x6f, 0x33,
+	0x10, 0x01, 0xd0, 0x01, 0x00, 0x52, 0x06, 0x70, 0x6f, 0x6c, 0x69, 0x63, 0x79, 0x22, 0x27, 0x0a,
+	0x05, 0x4c, 0x6f, 0x63, 0x61, 0x6c, 0x12, 0x1e, 0x0a, 0x04, 0x74, 0x65, 0x78, 0x74, 0x18, 0x01,
+	0x20, 0x01, 0x28, 0x09, 0x42, 0x0a, 0xfa, 0x42, 0x07, 0x72, 0x05, 0x10, 0x01, 0xd0, 0x01, 0x00,
+	0x52, 0x04, 0x74, 0x65, 0x78, 0x74, 0x22, 0x77, 0x0a, 0x06, 0x43, 0x6f, 0x6e, 0x66, 0x69, 0x67,
+	0x12, 0x2d, 0x0a, 0x06, 0x72, 0x65, 0x6d, 0x6f, 0x74, 0x65, 0x18, 0x01, 0x20, 0x01, 0x28, 0x0b,
+	0x32, 0x13, 0x2e, 0x70, 0x6c, 0x75, 0x67, 0x69, 0x6e, 0x73, 0x2e, 0x6f, 0x70, 0x61, 0x2e, 0x52,
+	0x65, 0x6d, 0x6f, 0x74, 0x65, 0x48, 0x00, 0x52, 0x06, 0x72, 0x65, 0x6d, 0x6f, 0x74, 0x65, 0x12,
+	0x2a, 0x0a, 0x05, 0x6c, 0x6f, 0x63, 0x61, 0x6c, 0x18, 0x02, 0x20, 0x01, 0x28, 0x0b, 0x32, 0x12,
+	0x2e, 0x70, 0x6c, 0x75, 0x67, 0x69, 0x6e, 0x73, 0x2e, 0x6f, 0x70, 0x61, 0x2e, 0x4c, 0x6f, 0x63,
+	0x61, 0x6c, 0x48, 0x00, 0x52, 0x05, 0x6c, 0x6f, 0x63, 0x61, 0x6c, 0x42, 0x12, 0x0a, 0x0b, 0x63,
+	0x6f, 0x6e, 0x66, 0x69, 0x67, 0x5f, 0x74, 0x79, 0x70, 0x65, 0x12, 0x03, 0xf8, 0x42, 0x01, 0x42,
+	0x19, 0x5a, 0x17, 0x6d, 0x6f, 0x73, 0x6e, 0x2e, 0x69, 0x6f, 0x2f, 0x6d, 0x6f, 0x65, 0x2f, 0x70,
+	0x6c, 0x75, 0x67, 0x69, 0x6e, 0x73, 0x2f, 0x6f, 0x70, 0x61, 0x62, 0x06, 0x70, 0x72, 0x6f, 0x74,
+	0x6f, 0x33,
 }
 
 var (
@@ -191,18 +258,20 @@ func file_plugins_opa_config_proto_rawDescGZIP() []byte {
 	return file_plugins_opa_config_proto_rawDescData
 }
 
-var file_plugins_opa_config_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_plugins_opa_config_proto_msgTypes = make([]protoimpl.MessageInfo, 3)
 var file_plugins_opa_config_proto_goTypes = []interface{}{
 	(*Remote)(nil), // 0: plugins.opa.Remote
-	(*Config)(nil), // 1: plugins.opa.Config
+	(*Local)(nil),  // 1: plugins.opa.Local
+	(*Config)(nil), // 2: plugins.opa.Config
 }
 var file_plugins_opa_config_proto_depIdxs = []int32{
 	0, // 0: plugins.opa.Config.remote:type_name -> plugins.opa.Remote
-	1, // [1:1] is the sub-list for method output_type
-	1, // [1:1] is the sub-list for method input_type
-	1, // [1:1] is the sub-list for extension type_name
-	1, // [1:1] is the sub-list for extension extendee
-	0, // [0:1] is the sub-list for field type_name
+	1, // 1: plugins.opa.Config.local:type_name -> plugins.opa.Local
+	2, // [2:2] is the sub-list for method output_type
+	2, // [2:2] is the sub-list for method input_type
+	2, // [2:2] is the sub-list for extension type_name
+	2, // [2:2] is the sub-list for extension extendee
+	0, // [0:2] is the sub-list for field type_name
 }
 
 func init() { file_plugins_opa_config_proto_init() }
@@ -224,6 +293,18 @@ func file_plugins_opa_config_proto_init() {
 			}
 		}
 		file_plugins_opa_config_proto_msgTypes[1].Exporter = func(v interface{}, i int) interface{} {
+			switch v := v.(*Local); i {
+			case 0:
+				return &v.state
+			case 1:
+				return &v.sizeCache
+			case 2:
+				return &v.unknownFields
+			default:
+				return nil
+			}
+		}
+		file_plugins_opa_config_proto_msgTypes[2].Exporter = func(v interface{}, i int) interface{} {
 			switch v := v.(*Config); i {
 			case 0:
 				return &v.state
@@ -236,8 +317,9 @@ func file_plugins_opa_config_proto_init() {
 			}
 		}
 	}
-	file_plugins_opa_config_proto_msgTypes[1].OneofWrappers = []interface{}{
+	file_plugins_opa_config_proto_msgTypes[2].OneofWrappers = []interface{}{
 		(*Config_Remote)(nil),
+		(*Config_Local)(nil),
 	}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
@@ -245,7 +327,7 @@ func file_plugins_opa_config_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: file_plugins_opa_config_proto_rawDesc,
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   3,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

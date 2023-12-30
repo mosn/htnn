@@ -79,14 +79,14 @@ func (s *InitState) AddPolicyForVirtualService(policy *mosniov1.HTTPFilterPolicy
 			routeName := httpRoute.Name
 			vsp.RoutePolicies[routeName] = append(vsp.RoutePolicies[routeName], &HTTPFilterPolicyWrapper{
 				HTTPFilterPolicy: policy.DeepCopy(),
-				scope:            PolicyScopeHost,
+				scope:            PolicyScopeRoute,
 			})
 		}
 	} else {
 		routeName := string(*policy.Spec.TargetRef.SectionName)
 		vsp.RoutePolicies[routeName] = append(vsp.RoutePolicies[routeName], &HTTPFilterPolicyWrapper{
 			HTTPFilterPolicy: policy.DeepCopy(),
-			scope:            PolicyScopeRoute,
+			scope:            PolicyScopeRule,
 		})
 	}
 
@@ -122,7 +122,7 @@ func (s *InitState) AddPolicyForHTTPRoute(policy *mosniov1.HTTPFilterPolicy, rou
 		name := fmt.Sprintf("%s.%s.%d", route.Namespace, route.Name, i)
 		hp.RoutePolicies[name] = append(hp.RoutePolicies[name], &HTTPFilterPolicyWrapper{
 			HTTPFilterPolicy: policy.DeepCopy(),
-			scope:            PolicyScopeHost,
+			scope:            PolicyScopeRoute,
 		})
 	}
 

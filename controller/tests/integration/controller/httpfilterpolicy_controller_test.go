@@ -28,6 +28,7 @@ import (
 	istiov1b1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -395,7 +396,21 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 				obj := pkg.MapToObj(in)
 				gvk := obj.GetObjectKind().GroupVersionKind()
 				if gvk.Kind == "EnvoyFilter" {
-					Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
+					if obj.GetName() == "htnn-http-filter" {
+						ef := obj.(*istiov1a3.EnvoyFilter).DeepCopy()
+						nsName := types.NamespacedName{Namespace: obj.GetNamespace(), Name: obj.GetName()}
+						err := k8sClient.Get(ctx, nsName, ef)
+						if err != nil {
+							Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
+						} else {
+							obj.SetResourceVersion(ef.ResourceVersion)
+							// default EnvoyFilter may be created already. Reset it to the one in
+							// test case.
+							Expect(k8sClient.Update(ctx, obj)).Should(Succeed())
+						}
+					} else {
+						Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
+					}
 				}
 			}
 			for _, in := range input {
@@ -766,6 +781,33 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 				return len(envoyfilters.Items) == 1
 			}, timeout, interval).Should(BeTrue())
 			Expect(envoyfilters.Items[0].Name).To(Equal("htnn-http-filter"))
+		})
+
+		It("deal with unattached httproute", func() {
+			ctx := context.Background()
+			input := []map[string]interface{}{}
+			mustReadInput("httproute", &input)
+
+			for _, in := range input {
+				obj := pkg.MapToObj(in)
+				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
+			}
+
+			Eventually(func() bool {
+				var policies mosniov1.HTTPFilterPolicyList
+				if err := k8sClient.List(ctx, &policies); err != nil {
+					return false
+				}
+				if len(policies.Items) == 0 {
+					return false
+				}
+				policy := policies.Items[0]
+				if len(policy.Status.Conditions) == 0 {
+					return false
+				}
+				cond := policy.Status.Conditions[0]
+				return cond.Reason == string(gwapiv1a2.PolicyReasonTargetNotFound)
+			}, timeout, interval).Should(BeTrue())
 		})
 	})
 
