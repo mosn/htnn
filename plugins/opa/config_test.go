@@ -62,6 +62,15 @@ func TestBadConfig(t *testing.T) {
 			}`,
 			err: "invalid Remote.Url: value must be a valid URI",
 		},
+		{
+			name: "empty text in local",
+			input: `{
+				"local": {
+					"text": ""
+				}
+			}`,
+			err: "invalid Local.Text: value length must be at least 1 runes",
+		},
 	}
 
 	for _, tt := range tests {
@@ -69,6 +78,43 @@ func TestBadConfig(t *testing.T) {
 			conf := &config{}
 			protojson.Unmarshal([]byte(tt.input), conf)
 			err := conf.Validate()
+			assert.NotNil(t, err)
+			assert.ErrorContains(t, err, tt.err)
+		})
+	}
+}
+
+func TestConfigInit(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		err   string
+	}{
+		{
+			name: "bad text in local",
+			input: `{
+				"local": {
+					"text": "package a/b"
+				}
+			}`,
+			err: "invalid Local.Text: bad package name",
+		},
+		{
+			name: "bad rego syntax",
+			input: `{
+				"local": {
+					"text": "package ab\nimport"
+				}
+			}`,
+			err: "rego_parse_error",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			conf := &config{}
+			protojson.Unmarshal([]byte(tt.input), conf)
+			err := conf.Init(nil)
 			assert.NotNil(t, err)
 			assert.ErrorContains(t, err, tt.err)
 		})
