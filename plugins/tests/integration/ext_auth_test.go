@@ -29,12 +29,12 @@ import (
 
 var (
 	//go:embed ext_auth_route.yml
-	backendRoute string
+	extAuthRoute string
 )
 
 func TestExtAuth(t *testing.T) {
 	dp, err := data_plane.StartDataPlane(t, &data_plane.Option{
-		Bootstrap: data_plane.Bootstrap().AddBackendRoute(backendRoute),
+		Bootstrap: data_plane.Bootstrap().AddBackendRoute(extAuthRoute),
 	})
 	if err != nil {
 		t.Fatalf("failed to start data plane: %v", err)
