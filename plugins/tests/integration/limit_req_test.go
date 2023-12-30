@@ -42,25 +42,25 @@ func TestLimitReq(t *testing.T) {
 			name: "rps > 1",
 			config: control_plane.NewSinglePluinConfig("limit_req", map[string]interface{}{
 				"average": 1,
-				"period":  "0.01s",
+				"period":  "0.1s",
 			}),
 			run: func(t *testing.T) {
 				resp, _ := dp.Head("/echo", nil)
 				assert.Equal(t, 200, resp.StatusCode)
 
-				time.Sleep(5 * time.Millisecond) // trigger delay
+				time.Sleep(50 * time.Millisecond) // trigger delay
 				now := time.Now()
 				resp, _ = dp.Head("/echo", nil)
-				assert.Equal(t, 200, resp.StatusCode)
 				pass := time.Since(now)
-				// the delay time is slightly larger than 5ms
-				assert.True(t, pass < 6*time.Millisecond, pass)
+				assert.Equal(t, 200, resp.StatusCode)
+				// delay time plus the req time
+				assert.True(t, pass < 55*time.Millisecond, pass)
+
+				time.Sleep(100 * time.Millisecond) // forget the limit
+				resp, _ = dp.Head("/echo", nil)
+				assert.Equal(t, 200, resp.StatusCode)
 				resp, _ = dp.Head("/echo", nil)
 				assert.Equal(t, 429, resp.StatusCode)
-
-				time.Sleep(10 * time.Millisecond) // forget the limit
-				resp, _ = dp.Head("/echo", nil)
-				assert.Equal(t, 200, resp.StatusCode)
 			},
 		},
 		{
