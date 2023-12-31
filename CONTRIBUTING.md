@@ -1,4 +1,4 @@
-MOE is released under the Apache 2.0 license, and follows a very standard Github development process. If you would like to contribute something, this document should help you get started and maximize the chances of your PR being merged.
+HTNN is released under the Apache 2.0 license, and follows a very standard Github development process. If you would like to contribute something, this document should help you get started and maximize the chances of your PR being merged.
 
 ## Communication
 

@@ -60,11 +60,11 @@ You can specify the plugin's type in its `Order` method.
 If a plugin doesn't claim its order, it will be put into `OrderPositionUnspecified` group, with the operation `OrderOperationNop`.
 
 If you want to configure a plugin in different positions, you can define the plugin as the base class,
-and register its derived classes. Please check [this](https://github.com/mosn/moe/blob/main/pkg/plugins/plugins_test.go) for the example.
+and register its derived classes. Please check [this](https://github.com/mosn/htnn/blob/main/pkg/plugins/plugins_test.go) for the example.
 
 ## Filter manager
 
-The MOE project introduces filter manager between the Envoy Go filter and the Go Plugins.
+The HTNN project introduces filter manager between the Envoy Go filter and the Go Plugins.
 
 Filter manager makes the features below possible:
 

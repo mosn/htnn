@@ -21,8 +21,8 @@ import (
 	"github.com/jellydator/ttlcache/v3"
 	"golang.org/x/time/rate"
 
-	"mosn.io/moe/pkg/filtermanager/api"
-	"mosn.io/moe/pkg/plugins"
+	"mosn.io/htnn/pkg/filtermanager/api"
+	"mosn.io/htnn/pkg/plugins"
 )
 
 const (

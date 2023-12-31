@@ -34,8 +34,8 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	"sigs.k8s.io/yaml"
 
-	mosniov1 "mosn.io/moe/controller/api/v1"
-	"mosn.io/moe/controller/tests/pkg"
+	mosniov1 "mosn.io/htnn/controller/api/v1"
+	"mosn.io/htnn/controller/tests/pkg"
 )
 
 func ptrstr(s string) *string {

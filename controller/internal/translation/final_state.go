@@ -22,8 +22,8 @@ import (
 
 	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 
-	"mosn.io/moe/controller/internal/istio"
-	"mosn.io/moe/controller/internal/model"
+	"mosn.io/htnn/controller/internal/istio"
+	"mosn.io/htnn/controller/internal/model"
 )
 
 const (

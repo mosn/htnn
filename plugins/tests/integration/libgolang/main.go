@@ -19,9 +19,9 @@ package main
 import (
 	"github.com/envoyproxy/envoy/contrib/golang/filters/http/source/go/pkg/http"
 
-	"mosn.io/moe/pkg/filtermanager"
-	_ "mosn.io/moe/plugins"
-	_ "mosn.io/moe/plugins/tests/integration"
+	"mosn.io/htnn/pkg/filtermanager"
+	_ "mosn.io/htnn/plugins"
+	_ "mosn.io/htnn/plugins/tests/integration"
 )
 
 func init() {

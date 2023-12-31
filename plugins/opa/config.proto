@@ -18,7 +18,7 @@ package plugins.opa;
 
 import "validate/validate.proto";
 
-option go_package = "mosn.io/moe/plugins/opa";
+option go_package = "mosn.io/htnn/plugins/opa";
 
 message Remote {
   string url = 1 [(validate.rules).string = { ignore_empty: false, uri: true }];

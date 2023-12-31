@@ -28,4 +28,5 @@ clean:
 
 .PHONY: publish
 publish:
-	docker run --rm -v $(PWD):/src --name docsy htnn-docsy -- hugo --minify --gc --baseURL https://moe.github.io/
+# change baseURL to real link
+	docker run --rm -v $(PWD):/src --name docsy htnn-docsy -- hugo --minify --gc --baseURL https://htnn.github.io/

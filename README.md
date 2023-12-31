@@ -1,8 +1,8 @@
-# Moe
+# HTNN
 
-[![test](https://github.com/mosn/moe/actions/workflows/test.yml/badge.svg)](https://github.com/mosn/moe/actions/workflows/test.yml)
+[![test](https://github.com/mosn/htnn/actions/workflows/test.yml/badge.svg)](https://github.com/mosn/htnn/actions/workflows/test.yml)
 
-Moe is...
+HTNN is...
 
 ## the hub of the Envoy Go plugins.
 
@@ -16,11 +16,11 @@ To know how to use the Go plugins in a static configuration, you can read [./etc
 
 To know how to add plugins to this repo, you can read [Plugin Development](./site/content/en/docs/developer-guide/plugin_development.md).
 
-To import Moe to your project and add your private plugin, you can take a look at the [example](./examples/dev_your_plugin).
+To import HTNN to your project and add your private plugin, you can take a look at the [example](./examples/dev_your_plugin).
 
 ## Thanks
 
-**MOE** would not be possible without the valuable open-source work of projects in the community. We would like to extend a special thank-you to:
+**HTNN** would not be possible without the valuable open-source work of projects in the community. We would like to extend a special thank-you to:
 
 - [Envoy](https://www.envoyproxy.io).
 - [Istio](https://istio.io).

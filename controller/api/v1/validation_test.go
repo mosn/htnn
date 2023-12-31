@@ -24,7 +24,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	"mosn.io/moe/pkg/plugins"
+	"mosn.io/htnn/pkg/plugins"
 )
 
 func TestValidateHTTPFilterPolicy(t *testing.T) {

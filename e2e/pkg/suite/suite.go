@@ -36,9 +36,9 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/utils/roundtripper"
 
-	mosniov1 "mosn.io/moe/controller/api/v1"
-	"mosn.io/moe/e2e/pkg/k8s"
-	"mosn.io/moe/pkg/log"
+	mosniov1 "mosn.io/htnn/controller/api/v1"
+	"mosn.io/htnn/e2e/pkg/k8s"
+	"mosn.io/htnn/pkg/log"
 )
 
 var (

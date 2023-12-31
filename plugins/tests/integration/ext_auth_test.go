@@ -22,9 +22,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"mosn.io/moe/pkg/filtermanager"
-	"mosn.io/moe/plugins/tests/integration/control_plane"
-	"mosn.io/moe/plugins/tests/integration/data_plane"
+	"mosn.io/htnn/pkg/filtermanager"
+	"mosn.io/htnn/plugins/tests/integration/control_plane"
+	"mosn.io/htnn/plugins/tests/integration/data_plane"
 )
 
 var (

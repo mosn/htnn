@@ -20,9 +20,9 @@ import (
 
 	"google.golang.org/protobuf/encoding/protojson"
 
-	"mosn.io/moe/pkg/filtermanager"
-	"mosn.io/moe/pkg/filtermanager/api"
-	"mosn.io/moe/pkg/log"
+	"mosn.io/htnn/pkg/filtermanager"
+	"mosn.io/htnn/pkg/filtermanager/api"
+	"mosn.io/htnn/pkg/log"
 )
 
 var (

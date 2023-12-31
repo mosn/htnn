@@ -21,8 +21,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"mosn.io/moe/pkg/filtermanager/api"
-	"mosn.io/moe/plugins/tests/pkg/envoy"
+	"mosn.io/htnn/pkg/filtermanager/api"
+	"mosn.io/htnn/plugins/tests/pkg/envoy"
 )
 
 func TestCasbin(t *testing.T) {

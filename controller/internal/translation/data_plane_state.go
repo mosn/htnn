@@ -26,7 +26,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	"mosn.io/moe/controller/internal/model"
+	"mosn.io/htnn/controller/internal/model"
 )
 
 // dataPlaneState converts the init state to the structure used by the data plane

@@ -42,10 +42,10 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/structpb"
 
-	"mosn.io/moe/pkg/filtermanager"
-	"mosn.io/moe/pkg/log"
-	"mosn.io/moe/pkg/proto"
-	"mosn.io/moe/plugins/tests/integration/data_plane"
+	"mosn.io/htnn/pkg/filtermanager"
+	"mosn.io/htnn/pkg/log"
+	"mosn.io/htnn/pkg/proto"
+	"mosn.io/htnn/plugins/tests/integration/data_plane"
 )
 
 var (

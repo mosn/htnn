@@ -15,7 +15,7 @@
 package plugins
 
 import (
-	"mosn.io/moe/pkg/filtermanager/api"
+	"mosn.io/htnn/pkg/filtermanager/api"
 )
 
 type MockPlugin struct {

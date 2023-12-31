@@ -19,8 +19,8 @@ import (
 	"runtime/debug"
 	"strings"
 
-	"mosn.io/moe/pkg/filtermanager/api"
-	"mosn.io/moe/pkg/plugins"
+	"mosn.io/htnn/pkg/filtermanager/api"
+	"mosn.io/htnn/pkg/plugins"
 )
 
 type basePlugin struct {

@@ -19,8 +19,8 @@ package main
 import (
 	"github.com/envoyproxy/envoy/contrib/golang/filters/http/source/go/pkg/http"
 
-	"mosn.io/moe/pkg/filtermanager"
-	_ "mosn.io/moe/plugins"
+	"mosn.io/htnn/pkg/filtermanager"
+	_ "mosn.io/htnn/plugins"
 )
 
 // Version is specified by build tag, in VERSION file

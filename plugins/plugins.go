@@ -15,9 +15,9 @@
 package plugins
 
 import (
-	_ "mosn.io/moe/plugins/casbin"
-	_ "mosn.io/moe/plugins/demo"
-	_ "mosn.io/moe/plugins/ext_auth"
-	_ "mosn.io/moe/plugins/limit_req"
-	_ "mosn.io/moe/plugins/opa"
+	_ "mosn.io/htnn/plugins/casbin"
+	_ "mosn.io/htnn/plugins/demo"
+	_ "mosn.io/htnn/plugins/ext_auth"
+	_ "mosn.io/htnn/plugins/limit_req"
+	_ "mosn.io/htnn/plugins/opa"
 )

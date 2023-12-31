@@ -23,7 +23,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/types/known/anypb"
 
-	_ "mosn.io/moe/plugins/tests/pkg/envoy"
+	_ "mosn.io/htnn/plugins/tests/pkg/envoy"
 )
 
 func TestIterateHttpPlugin(t *testing.T) {

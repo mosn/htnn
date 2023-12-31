@@ -20,7 +20,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/encoding/protojson"
 
-	api "mosn.io/moe/api/v1"
+	api "mosn.io/htnn/api/v1"
 )
 
 func TestStringMatcher(t *testing.T) {

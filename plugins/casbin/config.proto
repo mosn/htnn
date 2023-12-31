@@ -18,7 +18,7 @@ package plugins.casbin;
 
 import "validate/validate.proto";
 
-option go_package = "mosn.io/moe/plugins/casbin";
+option go_package = "mosn.io/htnn/plugins/casbin";
 
 message Config {
   message Rule {

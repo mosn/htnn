@@ -16,7 +16,7 @@ syntax = "proto3";
 
 package api.v1;
 
-option go_package = "mosn.io/moe/api/v1";
+option go_package = "mosn.io/htnn/api/v1";
 
 // HTTP response codes supported in Envoy.
 // For more details: https://www.iana.org/assignments/http-status-codes/http-status-codes.xhtml

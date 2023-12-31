@@ -23,7 +23,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	mosniov1 "mosn.io/moe/controller/api/v1"
+	mosniov1 "mosn.io/htnn/controller/api/v1"
 )
 
 func MapToObj(in map[string]interface{}) client.Object {

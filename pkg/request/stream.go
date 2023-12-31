@@ -17,7 +17,7 @@ package request
 import (
 	"net"
 
-	"mosn.io/moe/pkg/filtermanager/api"
+	"mosn.io/htnn/pkg/filtermanager/api"
 )
 
 func GetRemoteIP(info api.StreamInfo) string {

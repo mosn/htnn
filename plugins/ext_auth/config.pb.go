@@ -29,7 +29,7 @@ import (
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	durationpb "google.golang.org/protobuf/types/known/durationpb"
 
-	v1 "mosn.io/moe/api/v1"
+	v1 "mosn.io/htnn/api/v1"
 )
 
 const (

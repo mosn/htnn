@@ -30,7 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"mosn.io/moe/pkg/log"
+	"mosn.io/htnn/pkg/log"
 )
 
 var (

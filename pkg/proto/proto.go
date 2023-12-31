@@ -22,7 +22,7 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 
-	"mosn.io/moe/pkg/log"
+	"mosn.io/htnn/pkg/log"
 )
 
 var (
