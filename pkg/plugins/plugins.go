@@ -18,10 +18,10 @@ import (
 	"encoding/json"
 	"sync"
 
-	"github.com/envoyproxy/envoy/contrib/golang/common/go/api"
 	"google.golang.org/protobuf/encoding/protojson"
 
 	"mosn.io/moe/pkg/filtermanager"
+	"mosn.io/moe/pkg/filtermanager/api"
 	"mosn.io/moe/pkg/log"
 )
 

@@ -139,7 +139,11 @@ type DynamicMetadata = api.DynamicMetadata
 type FilterState = api.FilterState
 
 // ConfigCallbackHandler provides API that is used during initializing configuration
-type ConfigCallbackHandler = api.ConfigCallbackHandler
+type ConfigCallbackHandler interface {
+	// The ConfigCallbackHandler from Envoy is only available when the plugin is
+	// configured in LDS. But the plugin in HTNN is configured in RDS.
+	// So let's provide a placeholder here.
+}
 
 var (
 	// Log API family. Note that the Envoy's log level can be changed at runtime.

@@ -108,6 +108,7 @@ func (p *FilterManagerConfigParser) Parse(any *anypb.Any, callbacks capi.ConfigC
 		name := proto.Name
 		if v, ok := httpFilterConfigFactoryAndParser.Load(name); ok {
 			plugin := v.(*filterConfigFactoryAndParser)
+			// For now, we have nothing to provide as config callbacks
 			config, err := plugin.configParser.Parse(proto.Config, nil)
 			if err != nil {
 				return nil, fmt.Errorf("%w during parsing plugin %s in filtermanager", err, name)
