@@ -171,6 +171,18 @@ func (cp *ControlPlane) UseGoPluginConfig(config *filtermanager.FilterManagerCon
 						Routes: []*route.Route{
 							{
 								Match: &route.RouteMatch{
+									PathSpecifier: &route.RouteMatch_Path{
+										Path: "/detect_if_the_rds_takes_effect",
+									},
+								},
+								Action: &route.Route_DirectResponse{
+									DirectResponse: &route.DirectResponseAction{
+										Status: 200,
+									},
+								},
+							},
+							{
+								Match: &route.RouteMatch{
 									PathSpecifier: &route.RouteMatch_Prefix{
 										Prefix: "/",
 									},

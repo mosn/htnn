@@ -12,12 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package plugins
+package request
 
 import (
-	_ "mosn.io/moe/plugins/casbin"
-	_ "mosn.io/moe/plugins/demo"
-	_ "mosn.io/moe/plugins/ext_auth"
-	_ "mosn.io/moe/plugins/limit_req"
-	_ "mosn.io/moe/plugins/opa"
+	"net"
+
+	"mosn.io/moe/pkg/filtermanager/api"
 )
+
+func GetRemoteIP(info api.StreamInfo) string {
+	ipport := info.DownstreamRemoteAddress()
+	ip, _, _ := net.SplitHostPort(ipport)
+	return ip
+}

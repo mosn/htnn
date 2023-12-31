@@ -12,7 +12,7 @@ MOE is released under the Apache 2.0 license, and follows a very standard Github
   If it is appropriate to write a design document, the document must be hosted either in the GitHub
   tracking issue, or linked to from the issue and hosted in a public location.
 * Small patches and bug fixes don't need prior communication.
-* If you are going to submit a huge feature (> 300 LOC excluding tests or generated code),
+* If you are going to submit a huge PR (> 300 LOC excluding generated code),
   better to split it into several PRs. Each PR should be well tested. For example,
   when submitting a new plugin, you can split it into:
   1. basic feature
