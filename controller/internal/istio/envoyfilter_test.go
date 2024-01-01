@@ -52,7 +52,6 @@ func (p *pluginFirst) Order() plugins.PluginOrder {
 
 func (p *pluginFirst) DefaultHTTPFilterConfig() map[string]interface{} {
 	return map[string]interface{}{
-		"name": "envoy.filters.http.first",
 		"typed_config": map[string]interface{}{
 			"@type":       p.RouteConfigTypeURL(),
 			"stat_prefix": "http_local_rate_limiter",
@@ -73,7 +72,6 @@ func (p *pluginPre) Order() plugins.PluginOrder {
 
 func (p *pluginPre) DefaultHTTPFilterConfig() map[string]interface{} {
 	return map[string]interface{}{
-		"name": "envoy.filters.http.local_ratelimit1",
 		"typed_config": map[string]interface{}{
 			"@type":       p.RouteConfigTypeURL(),
 			"stat_prefix": "http_local_rate_limiter",
@@ -94,7 +92,6 @@ func (p *pluginPost) Order() plugins.PluginOrder {
 
 func (p *pluginPost) DefaultHTTPFilterConfig() map[string]interface{} {
 	return map[string]interface{}{
-		"name": "envoy.filters.http.local_ratelimit2",
 		"typed_config": map[string]interface{}{
 			"@type":       p.RouteConfigTypeURL(),
 			"stat_prefix": "http_local_rate_limiter",
@@ -116,7 +113,6 @@ func (p *pluginLast) Order() plugins.PluginOrder {
 
 func (p *pluginLast) DefaultHTTPFilterConfig() map[string]interface{} {
 	return map[string]interface{}{
-		"name": "envoy.filters.http.last",
 		"typed_config": map[string]interface{}{
 			"@type":       p.RouteConfigTypeURL(),
 			"stat_prefix": "http_local_rate_limiter",

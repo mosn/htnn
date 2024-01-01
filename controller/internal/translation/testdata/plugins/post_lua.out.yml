@@ -1,0 +1,50 @@
+- metadata:
+    creationTimestamp: null
+    name: htnn-h-default.local
+  spec:
+    configPatches:
+    - applyTo: HTTP_ROUTE
+      match:
+        routeConfiguration:
+          vhost:
+            name: default.local:80
+            route:
+              name: default/default
+      patch:
+        operation: MERGE
+        value:
+          typed_per_filter_config:
+            envoy.filters.http.post_lua:
+              '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
+              source_code:
+                inline_string: |
+                  function envoy_on_request(handle)
+                    local headers = handle:headers()
+                    headers:add("code", "inline_code_from_hello")
+                  end
+                  function envoy_on_response(response_handle)
+                    response_handle:headers():add("header_key_1", "header_value_1")
+                  end
+  status: {}
+- metadata:
+    creationTimestamp: null
+    name: htnn-http-filter
+  spec:
+    configPatches:
+    - applyTo: HTTP_FILTER
+      match:
+        context: GATEWAY
+        listener:
+          filterChain:
+            filter:
+              name: envoy.filters.network.http_connection_manager
+              subFilter:
+                name: envoy.filters.http.router
+      patch:
+        operation: INSERT_BEFORE
+        value:
+          disabled: true
+          name: envoy.filters.http.post_lua
+          typed_config:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+  status: {}

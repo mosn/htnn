@@ -16,5 +16,6 @@ package plugins
 
 import (
 	_ "mosn.io/moe/controller/plugins/local_ratelimit"
+	_ "mosn.io/moe/controller/plugins/lua"
 	_ "mosn.io/moe/plugins" // register Go plugins
 )

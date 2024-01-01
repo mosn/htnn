@@ -12,22 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package local_ratelimit
+package lua
 
 import (
-	"fmt"
-
-	local_ratelimit "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/local_ratelimit/v3"
+	lua "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/lua/v3"
 
 	"mosn.io/moe/pkg/plugins"
 )
 
-const (
-	Name = "local_ratelimit"
-)
-
 func init() {
-	plugins.RegisterHttpPlugin(Name, &plugin{})
+	plugins.RegisterHttpPlugin("pre_lua", &prePlugin{})
+	plugins.RegisterHttpPlugin("post_lua", &postPlugin{})
 }
 
 type plugin struct {
@@ -35,32 +30,41 @@ type plugin struct {
 }
 
 func (p *plugin) Type() plugins.PluginType {
-	return plugins.TypeTraffic
+	return plugins.TypeGeneral
 }
 
-func (p *plugin) Order() plugins.PluginOrder {
+func (p *plugin) Config() plugins.PluginConfig {
+	return &lua.LuaPerRoute{}
+}
+
+func (p *plugin) RouteConfigTypeURL() string {
+	return "type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute"
+}
+
+func (p *plugin) DefaultHTTPFilterConfig() map[string]interface{} {
+	return map[string]interface{}{
+		"typed_config": map[string]interface{}{
+			"@type": "type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua",
+		},
+	}
+}
+
+type prePlugin struct {
+	plugin
+}
+
+func (p *prePlugin) Order() plugins.PluginOrder {
 	return plugins.PluginOrder{
 		Position: plugins.OrderPositionPre,
 	}
 }
 
-// Each Native plugin need to implement the methods below
-
-func (p *plugin) Config() plugins.PluginConfig {
-	return &local_ratelimit.LocalRateLimit{}
+type postPlugin struct {
+	plugin
 }
 
-// RouteConfigTypeURL returns the type url of per-route config
-func (p *plugin) RouteConfigTypeURL() string {
-	return fmt.Sprintf("type.googleapis.com/envoy.extensions.filters.http.%s.v3.LocalRateLimit", Name)
-}
-
-// DefaultHTTPFilterConfig returns the placeholder config for http filter
-func (p *plugin) DefaultHTTPFilterConfig() map[string]interface{} {
-	return map[string]interface{}{
-		"typed_config": map[string]interface{}{
-			"@type":       p.RouteConfigTypeURL(),
-			"stat_prefix": "http_local_rate_limiter",
-		},
+func (p *postPlugin) Order() plugins.PluginOrder {
+	return plugins.PluginOrder{
+		Position: plugins.OrderPositionPost,
 	}
 }
