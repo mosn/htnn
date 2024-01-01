@@ -17,7 +17,7 @@ OS = $(shell uname)
 IN_CI ?=
 
 TARGET_SO       = libgolang.so
-PROJECT_NAME    = mosn.io/moe
+PROJECT_NAME    = mosn.io/htnn
 # Both images use glibc 2.31. Ensure libc in the images match each other.
 BUILD_IMAGE     ?= golang:1.20-bullseye
 # This is the envoyproxy/envoy:contrib-debug-dev fetched in 2023-11-22

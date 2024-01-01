@@ -17,7 +17,7 @@ package demo
 import (
 	"fmt"
 
-	"mosn.io/moe/pkg/filtermanager/api"
+	"mosn.io/htnn/pkg/filtermanager/api"
 )
 
 // configFactory returns a factory that produces per-request Filter.

@@ -30,9 +30,9 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	mosniov1 "mosn.io/moe/controller/api/v1"
-	"mosn.io/moe/controller/internal/controller"
-	"mosn.io/moe/pkg/log"
+	mosniov1 "mosn.io/htnn/controller/api/v1"
+	"mosn.io/htnn/controller/internal/controller"
+	"mosn.io/htnn/pkg/log"
 )
 
 // Version is specified by build tag, in VERSION file

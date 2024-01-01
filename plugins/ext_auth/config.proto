@@ -23,7 +23,7 @@ import "api/v1/matcher.proto";
 import "google/protobuf/duration.proto";
 import "validate/validate.proto";
 
-option go_package = "mosn.io/moe/plugins/ext_auth";
+option go_package = "mosn.io/htnn/plugins/ext_auth";
 
 message Config {
   // External authorization service configuration.

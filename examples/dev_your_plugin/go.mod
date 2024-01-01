@@ -1,10 +1,10 @@
-module mosn.io/moe/dev_your_plugin
+module mosn.io/htnn/dev_your_plugin
 
 go 1.20
 
 require (
 	github.com/envoyproxy/envoy v1.28.0
-	mosn.io/moe v0.1.0
+	mosn.io/htnn v0.1.0
 )
 
 require (
@@ -16,4 +16,4 @@ require (
 	google.golang.org/protobuf v1.31.0 // indirect
 )
 
-replace mosn.io/moe => ../../
+replace mosn.io/htnn => ../../

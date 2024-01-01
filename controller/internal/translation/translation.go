@@ -22,7 +22,7 @@ import (
 	"github.com/go-logr/logr"
 	"golang.org/x/exp/slices"
 
-	mosniov1 "mosn.io/moe/controller/api/v1"
+	mosniov1 "mosn.io/htnn/controller/api/v1"
 )
 
 type Ctx struct {

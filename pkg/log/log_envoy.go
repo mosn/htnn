@@ -21,7 +21,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/funcr"
 
-	"mosn.io/moe/pkg/filtermanager/api"
+	"mosn.io/htnn/pkg/filtermanager/api"
 )
 
 func ptrstr(s string) *string {

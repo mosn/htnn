@@ -38,7 +38,7 @@ Either `remote` or `local` is required.
 
 ## Data exchange
 
-Here is the JSON data Moe sends to the OPA:
+Here is the JSON data HTNN sends to the OPA:
 
 ```json
 {
@@ -71,7 +71,7 @@ The data can be read as `input` document in OPA. It's the same if you use the lo
 
 The OPA policy should define a boolean `allow` and use it to indicate if the request is allowed.
 
-Here is the JSON data OPA sends back to Moe, set by the configured policy:
+Here is the JSON data OPA sends back to HTNN, set by the configured policy:
 
 ```json
 {

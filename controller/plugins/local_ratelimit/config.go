@@ -19,7 +19,7 @@ import (
 
 	local_ratelimit "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/local_ratelimit/v3"
 
-	"mosn.io/moe/pkg/plugins"
+	"mosn.io/htnn/pkg/plugins"
 )
 
 const (

@@ -4,7 +4,7 @@ title: Demo
 
 ## Description
 
-The `demo` plugin is used to show how to add a plugin to moe.
+The `demo` plugin is used to show how to add a plugin to htnn.
 
 ## Attribute
 

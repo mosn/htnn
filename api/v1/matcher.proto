@@ -18,7 +18,7 @@ package api.v1;
 
 import "validate/validate.proto";
 
-option go_package = "mosn.io/moe/api/v1";
+option go_package = "mosn.io/htnn/api/v1";
 
 message StringMatcher {
   oneof match_pattern {

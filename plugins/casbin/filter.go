@@ -17,9 +17,9 @@ package casbin
 import (
 	"github.com/casbin/casbin/v2"
 
-	"mosn.io/moe/pkg/file"
-	"mosn.io/moe/pkg/filtermanager/api"
-	"mosn.io/moe/pkg/request"
+	"mosn.io/htnn/pkg/file"
+	"mosn.io/htnn/pkg/filtermanager/api"
+	"mosn.io/htnn/pkg/request"
 )
 
 func configFactory(c interface{}) api.FilterFactory {

@@ -23,8 +23,8 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 	istiov1b1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 
-	"mosn.io/moe/controller/internal/model"
-	"mosn.io/moe/pkg/plugins"
+	"mosn.io/htnn/controller/internal/model"
+	"mosn.io/htnn/pkg/plugins"
 )
 
 func ValidateHTTPFilterPolicy(policy *HTTPFilterPolicy) error {

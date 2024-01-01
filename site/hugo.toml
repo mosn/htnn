@@ -94,7 +94,7 @@ version = "latest"
 url_latest_version = "https://mosn.io"
 
 # Repository configuration (URLs for in-page links to opening issues and suggesting changes)
-github_repo = "https://github.com/mosn/moe"
+github_repo = "https://github.com/mosn/htnn"
 # An optional link to a related project repo. For example, the sibling repository where your product code lives.
 #github_project_repo = "https://github.com/google/docsy"
 
@@ -157,7 +157,7 @@ enable = true
 # Developer relevant links. These will show up on right side of footer and in the community page if you have one.
 [[params.links.developer]]
   name = "GitHub"
-  url = "https://github.com/mosn/moe"
+  url = "https://github.com/mosn/htnn"
   icon = "fab fa-github"
   desc = "Development takes place here!"
 
@@ -165,7 +165,7 @@ enable = true
   [[menu.main]]
     name = "GitHub"
     weight = 99
-    url = "https://github.com/mosn/moe/"
+    url = "https://github.com/mosn/htnn/"
 
 [[params.versions]]
   version = "latest"

@@ -1,4 +1,4 @@
-module mosn.io/moe
+module mosn.io/htnn
 
 go 1.20
 

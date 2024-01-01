@@ -16,7 +16,7 @@ syntax = "proto3";
 
 package examples.dev_your_plugin.plugins;
 
-option go_package = "mosn.io/moe/dev_your_plugin/plugins";
+option go_package = "mosn.io/htnn/dev_your_plugin/plugins";
 
 message Config {
 }

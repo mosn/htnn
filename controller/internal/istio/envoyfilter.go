@@ -23,9 +23,9 @@ import (
 	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	ctrlcfg "mosn.io/moe/controller/internal/config"
-	"mosn.io/moe/controller/internal/model"
-	"mosn.io/moe/pkg/plugins"
+	ctrlcfg "mosn.io/htnn/controller/internal/config"
+	"mosn.io/htnn/controller/internal/model"
+	"mosn.io/htnn/pkg/plugins"
 )
 
 func MustNewStruct(fields map[string]interface{}) *structpb.Struct {

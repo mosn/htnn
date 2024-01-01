@@ -20,10 +20,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"mosn.io/moe/pkg/filtermanager"
-	"mosn.io/moe/plugins/tests/integration/control_plane"
-	"mosn.io/moe/plugins/tests/integration/data_plane"
-	"mosn.io/moe/plugins/tests/integration/helper"
+	"mosn.io/htnn/pkg/filtermanager"
+	"mosn.io/htnn/plugins/tests/integration/control_plane"
+	"mosn.io/htnn/plugins/tests/integration/data_plane"
+	"mosn.io/htnn/plugins/tests/integration/helper"
 )
 
 func TestOpa(t *testing.T) {

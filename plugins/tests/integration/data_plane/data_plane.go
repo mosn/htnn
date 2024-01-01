@@ -32,8 +32,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"mosn.io/moe/pkg/log"
-	"mosn.io/moe/plugins/tests/integration/helper"
+	"mosn.io/htnn/pkg/log"
+	"mosn.io/htnn/plugins/tests/integration/helper"
 )
 
 var (

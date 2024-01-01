@@ -24,9 +24,9 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/structpb"
 
-	"mosn.io/moe/pkg/filtermanager/api"
-	"mosn.io/moe/pkg/proto"
-	"mosn.io/moe/plugins/tests/pkg/envoy"
+	"mosn.io/htnn/pkg/filtermanager/api"
+	"mosn.io/htnn/pkg/proto"
+	"mosn.io/htnn/plugins/tests/pkg/envoy"
 )
 
 func TestParse(t *testing.T) {

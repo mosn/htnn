@@ -20,7 +20,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"mosn.io/moe/pkg/filtermanager/api"
+	"mosn.io/htnn/pkg/filtermanager/api"
 )
 
 func configFactory(c interface{}) api.FilterFactory {

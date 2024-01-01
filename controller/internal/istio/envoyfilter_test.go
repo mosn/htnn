@@ -24,7 +24,7 @@ import (
 	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	"sigs.k8s.io/yaml"
 
-	"mosn.io/moe/pkg/plugins"
+	"mosn.io/htnn/pkg/plugins"
 )
 
 type basePlugin struct {

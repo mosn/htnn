@@ -26,8 +26,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"mosn.io/moe/pkg/filtermanager"
-	"mosn.io/moe/plugins/tests/integration/data_plane"
+	"mosn.io/htnn/pkg/filtermanager"
+	"mosn.io/htnn/plugins/tests/integration/data_plane"
 )
 
 func assertBody(t *testing.T, exp string, resp *http.Response) {

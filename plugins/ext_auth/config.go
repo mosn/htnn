@@ -18,9 +18,9 @@ import (
 	"net/http"
 	"time"
 
-	"mosn.io/moe/pkg/expr"
-	"mosn.io/moe/pkg/filtermanager/api"
-	"mosn.io/moe/pkg/plugins"
+	"mosn.io/htnn/pkg/expr"
+	"mosn.io/htnn/pkg/filtermanager/api"
+	"mosn.io/htnn/pkg/plugins"
 )
 
 const (

@@ -19,7 +19,7 @@ package plugins.limit_req;
 import "google/protobuf/duration.proto";
 import "validate/validate.proto";
 
-option go_package = "mosn.io/moe/plugins/limit_req";
+option go_package = "mosn.io/htnn/plugins/limit_req";
 
 message Config {
   int32 average = 1 [(validate.rules).int32 = {gt: 0}];

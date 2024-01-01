@@ -19,7 +19,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"mosn.io/moe/e2e/pkg/suite"
+	"mosn.io/htnn/e2e/pkg/suite"
 )
 
 func init() {

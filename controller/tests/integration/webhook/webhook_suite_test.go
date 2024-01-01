@@ -39,7 +39,7 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
-	mosniov1 "mosn.io/moe/controller/api/v1"
+	mosniov1 "mosn.io/htnn/controller/api/v1"
 )
 
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to

@@ -6,7 +6,7 @@ domain: mosn.io
 layout:
 - go.kubebuilder.io/v4
 projectName: controller
-repo: mosn.io/moe/controller
+repo: mosn.io/htnn/controller
 resources:
 - api:
     crdVersion: v1
@@ -14,7 +14,7 @@ resources:
   controller: true
   group: mosn.io
   kind: HTTPFilterPolicy
-  path: mosn.io/moe/controller/api/v1
+  path: mosn.io/htnn/controller/api/v1
   version: v1
   webhooks:
     defaulting: true

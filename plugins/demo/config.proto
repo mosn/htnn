@@ -18,7 +18,7 @@ package plugins.demo;
 
 import "validate/validate.proto";
 
-option go_package = "mosn.io/moe/plugins/demo";
+option go_package = "mosn.io/htnn/plugins/demo";
 
 // We use protobuf to generate plugin configuration, and use protoc-gen-validate to
 // generate relative validation.

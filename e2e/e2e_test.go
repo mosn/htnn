@@ -23,9 +23,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	mosniov1 "mosn.io/moe/controller/api/v1"
-	"mosn.io/moe/e2e/pkg/suite"
-	_ "mosn.io/moe/e2e/tests" // import all tests
+	mosniov1 "mosn.io/htnn/controller/api/v1"
+	"mosn.io/htnn/e2e/pkg/suite"
+	_ "mosn.io/htnn/e2e/tests" // import all tests
 )
 
 func TestE2E(t *testing.T) {

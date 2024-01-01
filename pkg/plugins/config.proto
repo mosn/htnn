@@ -16,7 +16,7 @@ syntax = "proto3";
 
 package pkg.plugins;
 
-option go_package = "mosn.io/moe/pkg/plugins";
+option go_package = "mosn.io/htnn/pkg/plugins";
 
 message Config {
   string pet = 1;

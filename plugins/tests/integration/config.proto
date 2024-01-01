@@ -16,7 +16,7 @@ syntax = "proto3";
 
 package plugins.tests.integration;
 
-option go_package = "mosn.io/moe/plugins/tests/integration";
+option go_package = "mosn.io/htnn/plugins/tests/integration";
 
 message Config {
   bool need = 1;
