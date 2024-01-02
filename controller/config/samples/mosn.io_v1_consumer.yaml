@@ -1,0 +1,12 @@
+apiVersion: mosn.io/v1
+kind: Consumer
+metadata:
+  labels:
+    app.kubernetes.io/name: consumer
+    app.kubernetes.io/instance: consumer-sample
+    app.kubernetes.io/part-of: controller
+    app.kubernetes.io/managed-by: kustomize
+    app.kubernetes.io/created-by: controller
+  name: consumer-sample
+spec:
+  # TODO(user): Add fields here

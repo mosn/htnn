@@ -23,6 +23,32 @@ rules:
 - apiGroups:
   - mosn.io
   resources:
+  - consumers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - mosn.io
+  resources:
+  - consumers/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - mosn.io
+  resources:
+  - consumers/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - mosn.io
+  resources:
   - httpfilterpolicies
   verbs:
   - create

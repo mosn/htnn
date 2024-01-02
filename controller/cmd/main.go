@@ -101,6 +101,13 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "HTTPFilterPolicy")
 		os.Exit(1)
 	}
+	if err = (&controller.ConsumerReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Consumer")
+		os.Exit(1)
+	}
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
 		if err = (&mosniov1.HTTPFilterPolicy{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "HTTPFilterPolicy")

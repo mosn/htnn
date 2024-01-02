@@ -16,8 +16,6 @@ package integration
 
 import (
 	"context"
-	"math/rand"
-	"os"
 	"path/filepath"
 	"time"
 
@@ -32,26 +30,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
-	"sigs.k8s.io/yaml"
 
 	mosniov1 "mosn.io/htnn/controller/api/v1"
 	"mosn.io/htnn/controller/tests/pkg"
 )
 
-func ptrstr(s string) *string {
-	return &s
-}
-
-func mustReadInput(fn string, out *[]map[string]interface{}) {
+func mustReadHTTPFilterPolicy(fn string, out *[]map[string]interface{}) {
 	fn = filepath.Join("testdata", "httpfilterpolicy", fn+".yml")
-	input, err := os.ReadFile(fn)
-	Expect(err).NotTo(HaveOccurred())
-	Expect(yaml.UnmarshalStrict(input, out, yaml.DisallowUnknownFields)).To(Succeed())
-	// shuffle the input to detect bugs relative to the order
-	res := *out
-	rand.Shuffle(len(res), func(i, j int) {
-		res[i], res[j] = res[j], res[i]
-	})
+	mustReadInput(fn, out)
 }
 
 func attachGateway(ctx context.Context, httpRoute *gwapiv1.HTTPRoute, gwName string) {
@@ -97,7 +83,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 		It("deal with invalid crd", func() {
 			ctx := context.Background()
 			input := []map[string]interface{}{}
-			mustReadInput("invalid_httpfilterpolicy", &input)
+			mustReadHTTPFilterPolicy("invalid_httpfilterpolicy", &input)
 
 			for _, in := range input {
 				obj := pkg.MapToObj(in)
@@ -122,7 +108,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 		It("deal with valid crd", func() {
 			ctx := context.Background()
 			input := []map[string]interface{}{}
-			mustReadInput("valid_httpfilterpolicy", &input)
+			mustReadHTTPFilterPolicy("valid_httpfilterpolicy", &input)
 
 			for _, in := range input {
 				obj := pkg.MapToObj(in)
@@ -194,7 +180,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 			}
 
 			input := []map[string]interface{}{}
-			mustReadInput("default_istio", &input)
+			mustReadHTTPFilterPolicy("default_istio", &input)
 
 			for _, in := range input {
 				obj := pkg.MapToObj(in)
@@ -212,7 +198,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 		It("deal with virtualservice", func() {
 			ctx := context.Background()
 			input := []map[string]interface{}{}
-			mustReadInput("virtualservice", &input)
+			mustReadHTTPFilterPolicy("virtualservice", &input)
 
 			var virtualService *istiov1b1.VirtualService
 			for _, in := range input {
@@ -305,7 +291,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 		It("deal with virtualservice when the istio gateway changed", func() {
 			ctx := context.Background()
 			input := []map[string]interface{}{}
-			mustReadInput("virtualservice", &input)
+			mustReadHTTPFilterPolicy("virtualservice", &input)
 			for _, in := range input {
 				obj := pkg.MapToObj(in)
 				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
@@ -355,7 +341,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 		It("deal with multi policies to one virtualservice", func() {
 			ctx := context.Background()
 			input := []map[string]interface{}{}
-			mustReadInput("multi_policies", &input)
+			mustReadHTTPFilterPolicy("multi_policies", &input)
 
 			for _, in := range input {
 				obj := pkg.MapToObj(in)
@@ -389,7 +375,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 		It("diff envoyfilters", func() {
 			ctx := context.Background()
 			input := []map[string]interface{}{}
-			mustReadInput("diff_envoyfilters", &input)
+			mustReadHTTPFilterPolicy("diff_envoyfilters", &input)
 
 			// We create EnvoyFilter first, to avoid conflicting with the EnvoyFilter created by VirtualService
 			for _, in := range input {
@@ -448,7 +434,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 		It("refer virtualservice across namespace", func() {
 			ctx := context.Background()
 			input := []map[string]interface{}{}
-			mustReadInput("refer_virtualservice_across_namespace", &input)
+			mustReadHTTPFilterPolicy("refer_virtualservice_across_namespace", &input)
 
 			for _, in := range input {
 				obj := pkg.MapToObj(in)
@@ -473,7 +459,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 		It("route doesn't match", func() {
 			ctx := context.Background()
 			input := []map[string]interface{}{}
-			mustReadInput("virtualservice_match_but_route_not", &input)
+			mustReadHTTPFilterPolicy("virtualservice_match_but_route_not", &input)
 			for _, in := range input {
 				obj := pkg.MapToObj(in)
 				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
@@ -518,7 +504,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 		It("deal with virtualservice via route name", func() {
 			ctx := context.Background()
 			input := []map[string]interface{}{}
-			mustReadInput("virtualservice_via_route_name", &input)
+			mustReadHTTPFilterPolicy("virtualservice_via_route_name", &input)
 
 			var virtualService *istiov1b1.VirtualService
 			for _, in := range input {
@@ -620,7 +606,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 			}
 
 			input := []map[string]interface{}{}
-			mustReadInput("default_gwapi", &input)
+			mustReadHTTPFilterPolicy("default_gwapi", &input)
 
 			for _, in := range input {
 				obj := pkg.MapToObj(in)
@@ -636,7 +622,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 		It("deal with httproute", func() {
 			ctx := context.Background()
 			input := []map[string]interface{}{}
-			mustReadInput("httproute", &input)
+			mustReadHTTPFilterPolicy("httproute", &input)
 
 			var httpRoute *gwapiv1.HTTPRoute
 			for _, in := range input {
@@ -731,7 +717,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 		It("deal with httproute when the k8s gateway changed", func() {
 			ctx := context.Background()
 			input := []map[string]interface{}{}
-			mustReadInput("httproute", &input)
+			mustReadHTTPFilterPolicy("httproute", &input)
 			for _, in := range input {
 				obj := pkg.MapToObj(in)
 				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
@@ -786,7 +772,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 		It("deal with unattached httproute", func() {
 			ctx := context.Background()
 			input := []map[string]interface{}{}
-			mustReadInput("httproute", &input)
+			mustReadHTTPFilterPolicy("httproute", &input)
 
 			for _, in := range input {
 				obj := pkg.MapToObj(in)

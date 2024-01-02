@@ -39,6 +39,7 @@ func MustNewStruct(fields map[string]interface{}) *structpb.Struct {
 
 const (
 	DefaultHttpFilter = "htnn-http-filter"
+	ECDSConsumerName  = "htnn-consumer"
 )
 
 type configWrapper struct {
@@ -72,6 +73,24 @@ func DefaultEnvoyFilters() map[string]*istiov1a3.EnvoyFilter {
 		},
 	}
 	patches := []*istioapi.EnvoyFilter_EnvoyConfigObjectPatch{}
+	// consumer
+	patches = append(patches, &istioapi.EnvoyFilter_EnvoyConfigObjectPatch{
+		ApplyTo: istioapi.EnvoyFilter_HTTP_FILTER,
+		Match:   defaultMatch,
+		Patch: &istioapi.EnvoyFilter_Patch{
+			Operation: istioapi.EnvoyFilter_Patch_INSERT_BEFORE,
+			Value: MustNewStruct(map[string]interface{}{
+				"name": ECDSConsumerName,
+				"config_discovery": map[string]interface{}{
+					"type_urls": []interface{}{"type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.Config"},
+					"config_source": map[string]interface{}{
+						"ads": map[string]interface{}{},
+					},
+				},
+			}),
+		},
+	})
+	// Go
 	patches = append(patches, &istioapi.EnvoyFilter_EnvoyConfigObjectPatch{
 		ApplyTo: istioapi.EnvoyFilter_HTTP_FILTER,
 		Match:   defaultMatch,
@@ -186,6 +205,34 @@ func GenerateRouteFilter(host *model.VirtualHost, route string, config map[strin
 						Operation: istioapi.EnvoyFilter_Patch_MERGE,
 						Value: MustNewStruct(map[string]interface{}{
 							"typed_per_filter_config": config,
+						}),
+					},
+				},
+			},
+		},
+	}
+}
+
+func GenerateConsumers(consumers map[string]interface{}) *istiov1a3.EnvoyFilter {
+	return &istiov1a3.EnvoyFilter{
+		Spec: istioapi.EnvoyFilter{
+			ConfigPatches: []*istioapi.EnvoyFilter_EnvoyConfigObjectPatch{
+				{
+					ApplyTo: istioapi.EnvoyFilter_EXTENSION_CONFIG,
+					Patch: &istioapi.EnvoyFilter_Patch{
+						Operation: istioapi.EnvoyFilter_Patch_REPLACE,
+						Value: MustNewStruct(map[string]interface{}{
+							"name": ECDSConsumerName,
+							"typed_config": map[string]interface{}{
+								"@type":        "type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.Config",
+								"library_id":   "cm",
+								"library_path": "/etc/libgolang.so",
+								"plugin_name":  "cm",
+								"plugin_config": map[string]interface{}{
+									"@type": "type.googleapis.com/xds.type.v3.TypedStruct",
+									"value": consumers,
+								},
+							},
 						}),
 					},
 				},
