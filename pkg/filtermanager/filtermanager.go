@@ -295,13 +295,9 @@ type jsonReply struct {
 }
 
 func (m *filterManager) localReply(v *api.LocalResponse) {
-	// TODO: support multiple same name header in Envoy
-	var hdr map[string]string
+	var hdr map[string][]string
 	if v.Header != nil {
-		hdr = map[string]string{}
-		for k, vv := range map[string][]string(v.Header) {
-			hdr[k] = vv[0]
-		}
+		hdr = map[string][]string(v.Header)
 	}
 	if v.Code == 0 {
 		v.Code = 200
@@ -309,7 +305,7 @@ func (m *filterManager) localReply(v *api.LocalResponse) {
 
 	msg := v.Msg
 	// TODO: we can also add custom template response
-	if msg != "" && hdr["Content-Type"] == "" {
+	if msg != "" && len(hdr["Content-Type"]) == 0 {
 		isJSON := false
 		var ok bool
 		var ct string
@@ -333,9 +329,9 @@ func (m *filterManager) localReply(v *api.LocalResponse) {
 			data, _ := json.Marshal(rsp)
 			msg = string(data)
 			if hdr == nil {
-				hdr = map[string]string{}
+				hdr = map[string][]string{}
 			}
-			hdr["Content-Type"] = "application/json"
+			hdr["Content-Type"] = []string{"application/json"}
 		}
 	}
 	m.callbacks.SendLocalReply(v.Code, msg, hdr, 0, "")
