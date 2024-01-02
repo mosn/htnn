@@ -4,7 +4,7 @@ go 1.20
 
 require (
 	github.com/agiledragon/gomonkey/v2 v2.11.0
-	github.com/casbin/casbin/v2 v2.80.0
+	github.com/casbin/casbin/v2 v2.81.0
 	github.com/cncf/xds/go v0.0.0-20231016030527-8bd2eac9fb4a
 	github.com/envoyproxy/envoy v1.28.1-0.20231229160620-448cbd60ee4e
 	github.com/envoyproxy/go-control-plane v0.11.2-0.20231019082134-6e4589f570e1 // version used by istio 1.20

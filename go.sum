@@ -11,8 +11,8 @@ github.com/arbovm/levenshtein v0.0.0-20160628152529-48b4e1c0c4d0/go.mod h1:t2tdK
 github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=
 github.com/beorn7/perks v1.0.1/go.mod h1:G2ZrVWU2WbWT9wwq4/hrbKbnv/1ERSJQ0ibhJ6rlkpw=
 github.com/bytecodealliance/wasmtime-go/v3 v3.0.2 h1:3uZCA/BLTIu+DqCfguByNMJa2HVHpXvjfy0Dy7g6fuA=
-github.com/casbin/casbin/v2 v2.80.0 h1:khGQBLnC+4XuAoGH/KW1JvyY0/nfFG8AhgzDrQKCH/g=
-github.com/casbin/casbin/v2 v2.80.0/go.mod h1:jX8uoN4veP85O/n2674r2qtfSXI6myvxW85f6TH50fw=
+github.com/casbin/casbin/v2 v2.81.0 h1:vNwJXK7a+TJZElZ5saP+SFJvweZNtJ3MlVP6P4IuRqE=
+github.com/casbin/casbin/v2 v2.81.0/go.mod h1:jX8uoN4veP85O/n2674r2qtfSXI6myvxW85f6TH50fw=
 github.com/casbin/govaluate v1.1.0 h1:6xdCWIpE9CwHdZhlVQW+froUrCsjb6/ZYNcXODfLT+E=
 github.com/casbin/govaluate v1.1.0/go.mod h1:G/UnbIjZk/0uMNaLwZZmFQrR72tYRZWQkO70si/iR7A=
 github.com/cenkalti/backoff/v4 v4.2.1 h1:y4OZtCnogmCPw98Zjyt5a6+QwPLGkiQsYW5oUqylYbM=
