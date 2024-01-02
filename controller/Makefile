@@ -96,7 +96,7 @@ run: manifests generate ## Run a controller from your host.
 # More info: https://docs.docker.com/develop/develop-images/build_enhancements/
 .PHONY: docker-build
 docker-build: ## Build docker image with the manager.
-	cd .. && $(CONTAINER_TOOL) build -t ${IMG} -f controller/Dockerfile .
+	cd .. && $(CONTAINER_TOOL) build -t ${IMG} --build-arg GOPROXY=${GOPROXY} -f controller/Dockerfile .
 
 .PHONY: docker-push
 docker-push: ## Push docker image with the manager.
@@ -115,7 +115,8 @@ docker-buildx: ## Build and push docker image for the manager for cross-platform
 	sed -e '1 s/\(^FROM\)/FROM --platform=\$$\{BUILDPLATFORM\}/; t' -e ' 1,// s//FROM --platform=\$$\{BUILDPLATFORM\}/' Dockerfile > Dockerfile.cross
 	cd .. && $(CONTAINER_TOOL) buildx create --name project-v3-builder; \
 	$(CONTAINER_TOOL) buildx use project-v3-builder && \
-	$(CONTAINER_TOOL) buildx build --push --platform=$(PLATFORMS) --tag ${IMG} -f controller/Dockerfile.cross . ; \
+	$(CONTAINER_TOOL) buildx build --push --platform=$(PLATFORMS) --tag ${IMG} --build-arg GOPROXY=${GOPROXY} \
+		-f controller/Dockerfile.cross . ; \
 	$(CONTAINER_TOOL) buildx rm project-v3-builder
 	rm Dockerfile.cross
 

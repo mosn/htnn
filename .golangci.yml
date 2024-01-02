@@ -32,12 +32,18 @@ linters-settings:
 
 issues:
   exclude-rules:
-    - path: _test\.go
+    - path: _test\.go # unit tests
       linters:
         - errcheck
         - gosec
         - unparam
-    - path: tests/
+    - path: tests/ # integration tests
+      linters:
+        - bodyclose
+        - errcheck
+        - gosec
+        - unparam
+    - path: e2e/ # e2e tests
       linters:
         - bodyclose
         - errcheck

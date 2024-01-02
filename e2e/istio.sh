@@ -29,8 +29,8 @@ install() {
         curl -sL https://istio.io/downloadIstioctl | sh -
         mv "$HOME"/.istioctl/bin/istioctl ./bin
     fi
-    istioctl version
     istioctl install --set profile=default -y
+    istioctl version
     istioctl manifest apply  --set .values.global.proxy.image="htnn/e2e-dp:0.1.0" -y
 }
 

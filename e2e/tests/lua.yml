@@ -1,0 +1,29 @@
+apiVersion: mosn.io/v1
+kind: HTTPFilterPolicy
+metadata:
+  name: policy
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: default
+  filters:
+    pre_lua:
+      config:
+        source_code:
+          inline_string: |
+            function envoy_on_request(handle)
+              local headers = handle:headers()
+              headers:add("doraemon", "Good morning!")
+            end
+    demo:
+      config:
+        host_name: doraemon
+    post_lua:
+      config:
+        source_code:
+          inline_string: |
+            function envoy_on_request(handle)
+              local headers = handle:headers()
+              headers:add("doraemon", "world.")
+            end

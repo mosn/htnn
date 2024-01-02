@@ -45,7 +45,7 @@ type filter struct {
 // The doc of each API can be found in package pkg/filtermanager/api
 
 func (f *filter) DecodeHeaders(header api.RequestHeaderMap, endStream bool) api.ResultAction {
-	header.Set(f.config.HostName, f.hello())
+	header.Add(f.config.HostName, f.hello())
 	return api.Continue
 }
 
