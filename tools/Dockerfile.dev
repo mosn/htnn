@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM --platform=$TARGETPLATFORM golang:1.20-bullseye
+FROM --platform=$TARGETPLATFORM golang:1.21-bullseye
 
 # If this image is changed, tell @spacewander to push it.
 # TODO: Maybe we can push this image automatically by tag?

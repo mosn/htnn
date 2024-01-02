@@ -1,6 +1,11 @@
 module mosn.io/htnn
 
-go 1.20
+// Some dependencies already require Go 1.21 and they are VIP so we can't use old version of
+// them. Run `go list -m -json all | jq -r 'select(.GoVersion != null) | .Path + " requires Go " + .GoVersion'`
+// if you are interested in who they are.
+go 1.21
+
+toolchain go1.21.5
 
 require (
 	github.com/agiledragon/gomonkey/v2 v2.11.0
