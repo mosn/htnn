@@ -50,6 +50,8 @@ func MapToObj(in map[string]interface{}) client.Object {
 		switch in["kind"] {
 		case "HTTPFilterPolicy":
 			out = &mosniov1.HTTPFilterPolicy{}
+		case "Consumer":
+			out = &mosniov1.Consumer{}
 		}
 	}
 	if out == nil {

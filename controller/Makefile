@@ -36,6 +36,7 @@ SHELL = /usr/bin/env bash -o pipefail
 .SHELLFLAGS = -ec
 
 ENABLE_WEBHOOKS ?= false
+CONTROLLER_OPTIONS ?=
 
 VERSION = $(shell cat ../VERSION)
 GIT_VERSION = $(shell git log -1 --pretty=format:%h)
@@ -89,7 +90,7 @@ build: manifests generate
 
 .PHONY: run
 run: manifests generate ## Run a controller from your host.
-	ENABLE_WEBHOOKS=$(ENABLE_WEBHOOKS) go run -tags ctrl -race ./cmd/main.go
+	ENABLE_WEBHOOKS=$(ENABLE_WEBHOOKS) go run -tags ctrl -race ./cmd/main.go $(CONTROLLER_OPTIONS)
 
 # If you wish to build the manager image targeting other platforms you can use the --platform flag.
 # (i.e. docker build --platform linux/arm64). However, you must enable docker buildKit for it.

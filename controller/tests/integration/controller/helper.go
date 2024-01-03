@@ -12,26 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build so
-
-package main
+package integration
 
 import (
-	"github.com/envoyproxy/envoy/contrib/golang/filters/http/source/go/pkg/http"
+	"math/rand"
+	"os"
 
-	"mosn.io/htnn/pkg/consumer"
-	"mosn.io/htnn/pkg/filtermanager"
-	_ "mosn.io/htnn/plugins"
+	. "github.com/onsi/gomega"
+	"sigs.k8s.io/yaml"
 )
 
-// Version is specified by build tag, in VERSION file
-var (
-	Version string = ""
-)
-
-func init() {
-	http.RegisterHttpFilterConfigFactoryAndParser("fm", filtermanager.FilterManagerConfigFactory, &filtermanager.FilterManagerConfigParser{})
-	http.RegisterHttpFilterConfigFactoryAndParser("cm", consumer.ConsumerManagerConfigFactory, &consumer.ConsumerManagerConfigParser{})
+func ptrstr(s string) *string {
+	return &s
 }
 
-func main() {}
+func mustReadInput(fn string, out *[]map[string]interface{}) {
+	input, err := os.ReadFile(fn)
+	Expect(err).NotTo(HaveOccurred())
+	Expect(yaml.UnmarshalStrict(input, out, yaml.DisallowUnknownFields)).To(Succeed())
+	// shuffle the input to detect bugs relative to the order
+	res := *out
+	rand.Shuffle(len(res), func(i, j int) {
+		res[i], res[j] = res[j], res[i]
+	})
+}
