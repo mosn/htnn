@@ -103,9 +103,9 @@ func toMergedPolicy(rp *routePolicy) *mergedPolicy {
 	for _, plugin := range fmc.Plugins {
 		name := plugin.Name
 		url := ""
-		cppPlugin, ok := plugins.LoadHttpPlugin(name).(plugins.NativePlugin)
+		nativePlugin, ok := plugins.LoadHttpPlugin(name).(plugins.NativePlugin)
 		if ok {
-			url = cppPlugin.RouteConfigTypeURL()
+			url = nativePlugin.RouteConfigTypeURL()
 		}
 		if !ok {
 			goFilterManager.Plugins = append(goFilterManager.Plugins, plugin)
