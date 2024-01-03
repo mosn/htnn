@@ -28,8 +28,8 @@ spec:
   gatewayClassName: istio
   listeners:
   - name: default
-    hostname: "default.local"
-    port: 18001
+    hostname: "localhost"
+    port: 10000
     protocol: HTTP
 ---
 apiVersion: v1

@@ -15,11 +15,11 @@ This plugin limits the number of requests per second, by leveraging Envoy's `loc
 
 ## Configuration
 
-See https://www.envoyproxy.io/docs/envoy/v1.28.0/configuration/http/http_filters/local_rate_limit_filter
+See the corresponding [Envoy documentation](https://www.envoyproxy.io/docs/envoy/v1.28.0/configuration/http/http_filters/local_rate_limit_filter).
 
 ## Usage
 
-Assumed we have the HTTPRoute below attached to `0.0.0.0:18001`, and a backend server listening to port `8080`:
+Assumed we have the HTTPRoute below attached to `localhost:10000`, and a backend server listening to port `8080`:
 
 ```yaml
 apiVersion: gateway.networking.k8s.io/v1
@@ -30,7 +30,6 @@ spec:
   parentRefs:
   - name: default
     namespace: default
-  hostnames: ["default.local"]
   rules:
   - matches:
     - path:
@@ -41,7 +40,7 @@ spec:
       port: 8080
 ```
 
-By applying the configuration below, the rate of requests to `default.local` is limited to 1 request per second:
+By applying the configuration below, the rate of requests to `http://localhost:10000/` is limited to 1 request per second:
 
 ```yaml
 apiVersion: mosn.io/v1
@@ -74,14 +73,14 @@ spec:
 We can test it out:
 
 ```
-$ while true; do curl -I http://0.0.0.0:18001/ -H "Host: default.local" 2>/dev/null | head -1 ;done
+$ while true; do curl -I http://localhost:10000/ 2>/dev/null | head -1 ;done
 HTTP/1.1 200 OK
 HTTP/1.1 429 Too Many Requests
 HTTP/1.1 429 Too Many Requests
 ```
 
 ```
-$ while true; do curl -I http://0.0.0.0:18001/ -H "Host: default.local" 2>/dev/null | head -1 ; sleep 1; done
+$ while true; do curl -I http://localhost:10000/ 2>/dev/null | head -1 ; sleep 1; done
 HTTP/1.1 200 OK
 HTTP/1.1 200 OK
 ```

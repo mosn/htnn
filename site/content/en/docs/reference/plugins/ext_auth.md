@@ -54,7 +54,7 @@ Each client request runs this plugin will trigger an authorization request. The 
 * Path from the original client request, after the configured prefix
 * Header `Authorization` from the original client request
 
-Assumed we provide a configuration to `http://127.0.0.1:10000/` like:
+Assumed we provide a configuration to `http://localhost:10000/` like:
 
 ```yaml
 http_service:
@@ -64,14 +64,14 @@ http_service:
 If we make a GET request with a path called `users`:
 
 ```shell
-curl -i http://127.0.0.1:10000/users -X GET -H "foo: bar" -H "Authorization: xxx"
+curl -i http://localhost:10000/users -X GET -H "foo: bar" -H "Authorization: xxx"
 ```
 
 The service listening on `10001` will receive an authorization request like:
 
 ```
 GET /ext_auth/users HTTP/1.1
-Host: 127.0.0.1:10000
+Host: localhost:10000
 User-Agent: Go-http-client/1.1
 Authorization: xxx
 Accept-Encoding: gzip
@@ -82,14 +82,14 @@ You can figure out that the request has the same method and adds its own path to
 If we make a different request with a body:
 
 ```shell
-curl -i http://127.0.0.1:10000/users -d 'test'
+curl -i http://localhost:10000/users -d 'test'
 ```
 
 The authorization request will be:
 
 ```
 POST /ext_auth/users HTTP/1.1
-Host: 127.0.0.1:10000
+Host: localhost:10000
 User-Agent: Go-http-client/1.1
 Content-Length: 0
 Accept-Encoding: gzip
