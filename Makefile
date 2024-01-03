@@ -232,11 +232,9 @@ kind: $(LOCALBIN)
 	@test -x $(KIND) || GOBIN=$(LOCALBIN) go install sigs.k8s.io/kind@v0.20.0
 
 .PHONY: create-cluster
-create-cluster: kind
+create-cluster: kind kubectl
 	$(KIND) create cluster --name htnn --image kindest/node:v$(MIN_K8S_VERSION)
-# remove below once istio ships gateway api CRD by default
-	$(KUBECTL) apply -f controller/tests/testdata/crd/gateway.networking.k8s.io_gateways.yaml
-	$(KUBECTL) apply -f controller/tests/testdata/crd/gateway.networking.k8s.io_httproutes.yaml
+	$(KUBECTL) kustomize "github.com/kubernetes-sigs/gateway-api/config/crd?ref=v1.0.0" | $(KUBECTL) apply -f -
 
 .PHONY: delete-cluster
 delete-cluster: kind
@@ -244,9 +242,12 @@ delete-cluster: kind
 
 .PHONY: e2e-docker-build
 e2e-docker-build:
+	cd controller/ && make docker-build
+
+.PHONY: e2e-prepare-data-plane
+e2e-prepare-data-plane: build-so kind
 	docker build -t htnn/e2e-dp:0.1.0 -f e2e/Dockerfile .
 	$(KIND) load docker-image htnn/e2e-dp:0.1.0 --name htnn
-	cd controller/ && make docker-build
 
 .PHONY: deploy-istio
 deploy-istio:
@@ -257,9 +258,6 @@ deploy-istio:
 deploy-cert-manager:
 	$(KUBECTL) apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.3/cert-manager.yaml
 	$(KUBECTL) wait --timeout=5m -n cert-manager deployment/cert-manager-cainjector --for=condition=Available
-
-.PHONY: deploy-dependencies
-deploy-dependencies: deploy-istio deploy-cert-manager
 
 .PHONY: deploy-controller
 deploy-controller: kubectl
@@ -272,7 +270,7 @@ undeploy-controller: kubectl
 
 .PHONY: run-e2e
 run-e2e:
-	cd e2e/ && PATH=$(LOCALBIN):$(PATH) go test -v .
+	PATH=$(LOCALBIN):"$(PATH)" go test -v ./e2e
 
-.PHONY: e2e
-e2e: build-so delete-cluster create-cluster deploy-dependencies e2e-docker-build deploy-controller run-e2e
+.PHONY: e2e-ci
+e2e: delete-cluster create-cluster deploy-cert-manager e2e-prepare-data-plane deploy-istio e2e-docker-build deploy-controller run-e2e

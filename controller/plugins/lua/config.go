@@ -29,10 +29,6 @@ type plugin struct {
 	plugins.PluginMethodDefaultImpl
 }
 
-func (p *plugin) Type() plugins.PluginType {
-	return plugins.TypeGeneral
-}
-
 func (p *plugin) Config() plugins.PluginConfig {
 	return &lua.LuaPerRoute{}
 }
