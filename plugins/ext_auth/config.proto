@@ -38,7 +38,7 @@ message HttpService {
   // Sets the HTTP server which the authorization requests must be sent to.
   // We don't use HttpUri like Envoy because we set the Host directly instead of using
   // the result from Cluster.
-  string url = 1 [(validate.rules).string = { ignore_empty: false, uri: true }];
+  string url = 1 [(validate.rules).string = { uri: true }];
   google.protobuf.Duration timeout = 2;
 
   // Settings used for controlling authorization request metadata.
