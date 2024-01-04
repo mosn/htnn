@@ -96,6 +96,11 @@ type Initer interface {
 	Init(cb api.ConfigCallbackHandler) error
 }
 
+type PluginConsumerConfig interface {
+	PluginConfig
+	Index() string
+}
+
 type NativePlugin interface {
 	Plugin
 
@@ -107,4 +112,10 @@ type GoPlugin interface {
 	Plugin
 
 	ConfigFactory() api.FilterConfigFactory
+}
+
+type ConsumerPlugin interface {
+	Plugin
+
+	ConsumerConfig() PluginConsumerConfig
 }

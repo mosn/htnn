@@ -33,6 +33,7 @@ import (
 	mosniov1 "mosn.io/htnn/controller/api/v1"
 	"mosn.io/htnn/controller/internal/config"
 	"mosn.io/htnn/controller/internal/istio"
+	pkgConsumer "mosn.io/htnn/pkg/consumer"
 )
 
 // ConsumerReconciler reconciles a Consumer object
@@ -74,7 +75,7 @@ func (r *ConsumerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 }
 
 type consumerReconcileState struct {
-	namespaceToConsumers map[string]map[string]*mosniov1.ConsumerSpec
+	namespaceToConsumers map[string]map[string]*mosniov1.Consumer
 }
 
 func (r *ConsumerReconciler) consumersToState(ctx context.Context, consumers *mosniov1.ConsumerList) (*consumerReconcileState, error) {
@@ -82,14 +83,14 @@ func (r *ConsumerReconciler) consumersToState(ctx context.Context, consumers *mo
 		return nil, fmt.Errorf("failed to list Consumer: %w", err)
 	}
 
-	namespaceToConsumers := make(map[string]map[string]*mosniov1.ConsumerSpec)
+	namespaceToConsumers := make(map[string]map[string]*mosniov1.Consumer)
 	for i := range consumers.Items {
 		consumer := &consumers.Items[i]
 		namespace := consumer.Namespace
 		if namespaceToConsumers[namespace] == nil {
-			namespaceToConsumers[namespace] = make(map[string]*mosniov1.ConsumerSpec)
+			namespaceToConsumers[namespace] = make(map[string]*mosniov1.Consumer)
 		}
-		namespaceToConsumers[namespace][consumer.Name] = &consumer.Spec
+		namespaceToConsumers[namespace][consumer.Name] = consumer
 	}
 
 	state := &consumerReconcileState{
@@ -103,11 +104,11 @@ func (r *ConsumerReconciler) generateCustomResource(ctx context.Context, logger 
 	for ns, consumers := range state.namespaceToConsumers {
 		data := make(map[string]interface{}, len(consumers))
 		for consumerName, consumer := range consumers {
-			cfg := map[string]interface{}{}
-			for name, conf := range consumer.Auth {
-				cfg[name] = string(conf.Raw)
+			s := pkgConsumer.NewConsumer(consumer).Marshal()
+			data[consumerName] = map[string]interface{}{
+				"d": s,
+				"v": consumer.ResourceVersion,
 			}
-			data[consumerName] = cfg
 		}
 		consumerData[ns] = data
 	}

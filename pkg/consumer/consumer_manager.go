@@ -62,12 +62,7 @@ func (p *ConsumerManagerConfigParser) Parse(any *anypb.Any, callbacks capi.Confi
 		return nil, errors.New("bad TypedStruct format")
 	}
 
-	data, err := configStruct.Value.MarshalJSON()
-	if err != nil {
-		return nil, err
-	}
-
-	updateConsumers(data)
+	updateConsumers(configStruct.Value)
 
 	return &consumerManagerConfig{}, nil
 }

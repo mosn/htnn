@@ -86,11 +86,11 @@ var _ = Describe("Consumer controller", func() {
 			typedCfg := value["typed_config"].(map[string]interface{})
 			pluginCfg := typedCfg["plugin_config"].(map[string]interface{})
 
-			marshaledCfg := map[string]map[string]map[string]interface{}{}
+			marshaledCfg := map[string]map[string]interface{}{}
 			b, _ := json.Marshal(pluginCfg["value"])
 			json.Unmarshal(b, &marshaledCfg)
 			// mapping is namespace -> name -> config
-			Expect(marshaledCfg["default"]["spacewander"]["key-auth"]).ToNot(BeNil())
+			Expect(marshaledCfg["default"]["spacewander"]).ToNot(BeNil())
 		})
 	})
 })
