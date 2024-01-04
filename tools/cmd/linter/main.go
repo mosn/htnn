@@ -135,6 +135,23 @@ func lintFilename() error {
 	return nil
 }
 
+func readPackageName(path string) (string, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if strings.HasPrefix(line, "package ") {
+			return line, nil
+		}
+	}
+	return "", nil
+}
+
 func lintFilenameForCode(root string) error {
 	return filepath.Walk(root, func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
@@ -155,6 +172,23 @@ func lintFilenameForCode(root string) error {
 		if base != "docker-compose.yml" && strings.ContainsRune(base, '-') {
 			return fmt.Errorf("please use '_' instead of '-' in the code file name %s", path)
 		}
+		if strings.ToLower(base) != base {
+			return fmt.Errorf("name %s should be in lowercase", path)
+		}
+
+		if ext == ".go" {
+			line, err := readPackageName(path)
+			if err != nil {
+				return err
+			}
+
+			if line != "package main" {
+				if line != "package "+filepath.Base(filepath.Dir(path)) {
+					return fmt.Errorf("package name should be the same as the directory name in %s", path)
+				}
+			}
+		}
+
 		return nil
 	})
 }
