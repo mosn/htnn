@@ -19,6 +19,7 @@ package main
 import (
 	"github.com/envoyproxy/envoy/contrib/golang/filters/http/source/go/pkg/http"
 
+	"mosn.io/htnn/pkg/consumer"
 	"mosn.io/htnn/pkg/filtermanager"
 	_ "mosn.io/htnn/plugins"
 	_ "mosn.io/htnn/plugins/tests/integration"
@@ -26,6 +27,7 @@ import (
 
 func init() {
 	http.RegisterHttpFilterConfigFactoryAndParser("fm", filtermanager.FilterManagerConfigFactory, &filtermanager.FilterManagerConfigParser{})
+	http.RegisterHttpFilterConfigFactoryAndParser("cm", consumer.ConsumerManagerConfigFactory, &consumer.ConsumerManagerConfigParser{})
 }
 
 func main() {}

@@ -33,7 +33,6 @@ import (
 	mosniov1 "mosn.io/htnn/controller/api/v1"
 	"mosn.io/htnn/controller/internal/config"
 	"mosn.io/htnn/controller/internal/istio"
-	pkgConsumer "mosn.io/htnn/pkg/consumer"
 )
 
 // ConsumerReconciler reconciles a Consumer object
@@ -104,7 +103,7 @@ func (r *ConsumerReconciler) generateCustomResource(ctx context.Context, logger 
 	for ns, consumers := range state.namespaceToConsumers {
 		data := make(map[string]interface{}, len(consumers))
 		for consumerName, consumer := range consumers {
-			s := pkgConsumer.NewConsumer(consumer).Marshal()
+			s := consumer.Marshal()
 			data[consumerName] = map[string]interface{}{
 				"d": s,
 				"v": consumer.ResourceVersion,

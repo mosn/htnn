@@ -38,7 +38,7 @@ func (c *consumerTest) Add(ns string, consumer *Consumer) *consumerTest {
 		c.values[ns] = make(map[string]interface{})
 	}
 	idx := c.values[ns].(map[string]interface{})
-	idx[consumer.Name] = map[string]interface{}{
+	idx[consumer.ConsumerName] = map[string]interface{}{
 		"d": consumer.Marshal(),
 		"v": consumer.ResourceVersion,
 	}
@@ -58,45 +58,45 @@ func TestUpdateConsumer(t *testing.T) {
 		"key_auth": []byte("{\"key\": \"test\"}"),
 	}
 	c := &Consumer{
-		Name:            "me",
+		ConsumerName:    "me",
 		ResourceVersion: "1",
 		Auth:            auth,
 	}
 	v := newConsumerTest().Add("ns", c).Build()
 	updateConsumers(v)
 
-	r := GetConsumer("ns", "key_auth", "test")
+	r, _ := LookupConsumer("ns", "key_auth", "test")
 	require.NotNil(t, r)
-	require.Equal(t, "me", r.Name)
+	require.Equal(t, "me", r.Name())
 
-	r = GetConsumer("ns", "key_auth", "not_found")
+	r, _ = LookupConsumer("ns", "key_auth", "not_found")
 	require.Nil(t, r)
 
 	// no change
 	c.Auth["key_auth"] = []byte("{\"key\": \"two\"}")
 	v = newConsumerTest().Add("ns", c).Build()
 	updateConsumers(v)
-	r = GetConsumer("ns", "key_auth", "test")
-	require.Equal(t, "me", r.Name)
+	r, _ = LookupConsumer("ns", "key_auth", "test")
+	require.Equal(t, "me", r.Name())
 
 	// update
 	c.ResourceVersion = "2"
 	v = newConsumerTest().Add("ns", c).Build()
 	updateConsumers(v)
-	r = GetConsumer("ns", "key_auth", "test")
+	r, _ = LookupConsumer("ns", "key_auth", "test")
 	require.Nil(t, r)
-	r = GetConsumer("ns", "key_auth", "two")
-	require.Equal(t, "me", r.Name)
+	r, _ = LookupConsumer("ns", "key_auth", "two")
+	require.Equal(t, "me", r.Name())
 
 	// remove
-	c.Name = "you"
+	c.ConsumerName = "you"
 	c.ResourceVersion = "3"
 	v = newConsumerTest().Add("ns", c).Build()
 	updateConsumers(v)
-	r = GetConsumer("ns", "key_auth", "me")
+	r, _ = LookupConsumer("ns", "key_auth", "me")
 	require.Nil(t, r)
-	r = GetConsumer("ns", "key_auth", "two")
-	require.Equal(t, "you", r.Name)
+	r, _ = LookupConsumer("ns", "key_auth", "two")
+	require.Equal(t, "you", r.Name())
 }
 
 func TestConsumerUnmarshal(t *testing.T) {

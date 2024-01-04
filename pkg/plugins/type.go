@@ -15,8 +15,6 @@
 package plugins
 
 import (
-	"google.golang.org/protobuf/reflect/protoreflect"
-
 	"mosn.io/htnn/pkg/filtermanager/api"
 )
 
@@ -78,6 +76,9 @@ type PluginOrder struct {
 	Operation PluginOrderOperation
 }
 
+type PluginConfig = api.PluginConfig
+type PluginConsumerConfig = api.PluginConsumerConfig
+
 type Plugin interface {
 	Config() PluginConfig
 
@@ -87,18 +88,8 @@ type Plugin interface {
 	Merge(parent interface{}, child interface{}) interface{}
 }
 
-type PluginConfig interface {
-	ProtoReflect() protoreflect.Message
-	Validate() error
-}
-
 type Initer interface {
 	Init(cb api.ConfigCallbackHandler) error
-}
-
-type PluginConsumerConfig interface {
-	PluginConfig
-	Index() string
 }
 
 type NativePlugin interface {

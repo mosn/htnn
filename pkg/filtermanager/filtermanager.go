@@ -20,29 +20,16 @@ import (
 	"fmt"
 	"reflect"
 	"runtime"
-	"sync"
+	"runtime/debug"
 
 	xds "github.com/cncf/xds/go/xds/type/v3"
 	capi "github.com/envoyproxy/envoy/contrib/golang/common/go/api"
 	"google.golang.org/protobuf/types/known/anypb"
 
+	pkgConsumer "mosn.io/htnn/pkg/consumer"
 	"mosn.io/htnn/pkg/filtermanager/api"
+	pkgPlugins "mosn.io/htnn/pkg/plugins"
 )
-
-var (
-	httpFilterConfigFactoryAndParser = sync.Map{}
-)
-
-// Here we introduce extra struct to avoid cyclic import between pkg/filtermanager and pkg/plugins
-type FilterConfigParser interface {
-	Parse(input interface{}, callbacks api.ConfigCallbackHandler) (interface{}, error)
-	Merge(parentConfig interface{}, childConfig interface{}) interface{}
-}
-
-type filterConfigFactoryAndParser struct {
-	configParser  FilterConfigParser
-	configFactory api.FilterConfigFactory
-}
 
 // We can't import package below here that will cause build failure in Mac
 // "github.com/envoyproxy/envoy/contrib/golang/filters/http/source/go/pkg/http"
@@ -59,6 +46,8 @@ type FilterConfig struct {
 }
 
 type FilterManagerConfig struct {
+	Namespace string `json:"namespace,omitempty"`
+
 	Plugins []*FilterConfig `json:"plugins"`
 }
 
@@ -68,6 +57,8 @@ type filterConfig struct {
 }
 
 type filterManagerConfig struct {
+	namespace string
+
 	current []*filterConfig
 }
 
@@ -102,14 +93,14 @@ func (p *FilterManagerConfigParser) Parse(any *anypb.Any, callbacks capi.ConfigC
 
 	plugins := fmConfig.Plugins
 	conf := &filterManagerConfig{
-		current: make([]*filterConfig, 0, len(plugins)),
+		namespace: fmConfig.Namespace,
+		current:   make([]*filterConfig, 0, len(plugins)),
 	}
 	for _, proto := range plugins {
 		name := proto.Name
-		if v, ok := httpFilterConfigFactoryAndParser.Load(name); ok {
-			plugin := v.(*filterConfigFactoryAndParser)
+		if plugin := pkgPlugins.LoadHttpFilterConfigFactoryAndParser(name); plugin != nil {
 			// For now, we have nothing to provide as config callbacks
-			config, err := plugin.configParser.Parse(proto.Config, nil)
+			config, err := plugin.ConfigParser.Parse(proto.Config, nil)
 			if err != nil {
 				return nil, fmt.Errorf("%w during parsing plugin %s in filtermanager", err, name)
 			}
@@ -142,8 +133,9 @@ func (p *FilterManagerConfigParser) Merge(parent interface{}, child interface{})
 }
 
 type filterManager struct {
-	filters []api.Filter
-	names   []string
+	filters      []api.Filter
+	names        []string
+	authnFilters []api.Filter
 
 	decodeRequestNeeded bool
 	decodeIdx           int
@@ -160,9 +152,33 @@ type filterManager struct {
 	canSkipEncodeData    bool
 	canSkipOnLog         bool
 
-	callbacks capi.FilterCallbackHandler
+	callbacks *filterManagerCallbackHandler
 
 	capi.PassThroughStreamFilter
+}
+
+type filterManagerCallbackHandler struct {
+	capi.FilterCallbackHandler
+
+	namespace string
+	consumer  api.Consumer
+}
+
+func (cb *filterManagerCallbackHandler) LookupConsumer(pluginName, key string) (api.Consumer, bool) {
+	return pkgConsumer.LookupConsumer(cb.namespace, pluginName, key)
+}
+
+func (cb *filterManagerCallbackHandler) GetConsumer() api.Consumer {
+	return cb.consumer
+}
+
+func (cb *filterManagerCallbackHandler) SetConsumer(c api.Consumer) {
+	if c == nil {
+		api.LogErrorf("set consumer with nil consumer: %s", debug.Stack())
+		return
+	}
+	api.LogInfof("set consumer, namespace: %s, name: %s", cb.namespace, c.Name())
+	cb.consumer = c
 }
 
 type phase int
@@ -198,18 +214,33 @@ func isMethodFromPassThroughFilter(filter api.Filter, methodName string) (bool, 
 	return wrapped, nil
 }
 
+var canSkipMethod = map[string]bool{
+	"DecodeHeaders":  true,
+	"DecodeData":     true,
+	"DecodeRequest":  true,
+	"EncodeHeaders":  true,
+	"EncodeData":     true,
+	"EncodeResponse": true,
+	"OnLog":          true,
+}
+
 func FilterManagerConfigFactory(c interface{}) capi.StreamFilterFactory {
 	conf := c.(*filterManagerConfig)
 	newConfig := conf.current
 	factories := make([]api.FilterFactory, len(newConfig))
 	names := make([]string, len(factories))
+	authnFiltersEndAt := 0
 	for i, fc := range newConfig {
 		var factory api.FilterConfigFactory
 		name := fc.Name
 		names[i] = name
-		if v, ok := httpFilterConfigFactoryAndParser.Load(name); ok {
-			plugin := v.(*filterConfigFactoryAndParser)
-			factory = plugin.configFactory
+		if plugin := pkgPlugins.LoadHttpFilterConfigFactoryAndParser(name); plugin != nil {
+			p := pkgPlugins.LoadHttpPlugin(name)
+			if p.Order().Position == pkgPlugins.OrderPositionAuthn {
+				authnFiltersEndAt = i + 1
+			}
+
+			factory = plugin.ConfigFactory
 			config := fc.parsedConfig
 			factories[i] = factory(config)
 
@@ -220,18 +251,13 @@ func FilterManagerConfigFactory(c interface{}) capi.StreamFilterFactory {
 		}
 	}
 
-	return func(callbacks capi.FilterCallbackHandler) capi.StreamFilter {
-		filters := make([]api.Filter, len(factories))
-		canSkipMethod := map[string]bool{
-			"DecodeHeaders":  true,
-			"DecodeData":     true,
-			"DecodeRequest":  true,
-			"EncodeHeaders":  true,
-			"EncodeData":     true,
-			"EncodeResponse": true,
-			"OnLog":          true,
+	return func(cb capi.FilterCallbackHandler) capi.StreamFilter {
+		callbacks := &filterManagerCallbackHandler{
+			FilterCallbackHandler: cb,
+			namespace:             conf.namespace,
 		}
 
+		filters := make([]api.Filter, len(factories))
 		for i, factory := range factories {
 			f := factory(callbacks)
 			for meth := range canSkipMethod {
@@ -251,6 +277,13 @@ func FilterManagerConfigFactory(c interface{}) capi.StreamFilterFactory {
 
 			decodeIdx: -1,
 			encodeIdx: -1,
+		}
+
+		if authnFiltersEndAt != 0 {
+			authnFilters := filters[:authnFiltersEndAt]
+			fm.authnFilters = authnFilters
+			fm.names = names[authnFiltersEndAt:]
+			fm.filters = filters[authnFiltersEndAt:]
 		}
 
 		// The skip check is based on the compiled code. So if the DecodeRequest is defined,
@@ -347,6 +380,28 @@ func (m *filterManager) DecodeHeaders(header api.RequestHeaderMap, endStream boo
 		var res api.ResultAction
 
 		m.reqHdr = header
+		if len(m.authnFilters) > 0 {
+			for _, f := range m.authnFilters {
+				// Authn plugins only use DecodeHeaders for now
+				res = f.DecodeHeaders(header, endStream)
+				if m.handleAction(res, phaseDecodeHeaders) {
+					return
+				}
+			}
+
+			// we check consumer at the end of authn filters, so we can have multiple authn filters
+			// configured and the consumer will be set by any of them
+			_, ok := m.callbacks.consumer.(*pkgConsumer.Consumer)
+			if !ok {
+				api.LogInfo("reject for consumer not found")
+				m.localReply(&api.LocalResponse{
+					Code: 401,
+					Msg:  "consumer not found",
+				})
+				return
+			}
+		}
+
 		for i, f := range m.filters {
 			res = f.DecodeHeaders(header, endStream)
 			if m.handleAction(res, phaseDecodeHeaders) {
@@ -596,14 +651,4 @@ func (m *filterManager) OnLog() {
 	for _, f := range m.filters {
 		f.OnLog()
 	}
-}
-
-func RegisterHttpFilterConfigFactoryAndParser(name string, factory api.FilterConfigFactory, parser FilterConfigParser) {
-	if factory == nil {
-		panic("config factory should not be nil")
-	}
-	httpFilterConfigFactoryAndParser.Store(name, &filterConfigFactoryAndParser{
-		parser,
-		factory,
-	})
 }

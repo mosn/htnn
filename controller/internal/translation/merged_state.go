@@ -81,6 +81,7 @@ func toMergedPolicy(rp *routePolicy) *mergedPolicy {
 			Filters: make(map[string]runtime.RawExtension),
 		},
 	}
+
 	for _, policy := range policies {
 		used := false
 		for name, filter := range policy.Spec.Filters {
@@ -100,10 +101,13 @@ func toMergedPolicy(rp *routePolicy) *mergedPolicy {
 	goFilterManager := &filtermanager.FilterManagerConfig{
 		Plugins: []*filtermanager.FilterConfig{},
 	}
+
+	consumerNeeded := false
 	for _, plugin := range fmc.Plugins {
 		name := plugin.Name
 		url := ""
-		nativePlugin, ok := plugins.LoadHttpPlugin(name).(plugins.NativePlugin)
+		p := plugins.LoadHttpPlugin(name)
+		nativePlugin, ok := p.(plugins.NativePlugin)
 		if ok {
 			url = nativePlugin.RouteConfigTypeURL()
 		}
@@ -114,6 +118,14 @@ func toMergedPolicy(rp *routePolicy) *mergedPolicy {
 			m["@type"] = url
 			nativeFilters = append(nativeFilters, plugin)
 		}
+
+		_, ok = p.(plugins.ConsumerPlugin)
+		if ok {
+			consumerNeeded = true
+		}
+	}
+	if consumerNeeded {
+		goFilterManager.Namespace = rp.NsName.Namespace
 	}
 
 	config := map[string]interface{}{}

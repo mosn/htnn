@@ -14,7 +14,9 @@
 
 package key_auth
 
-import "mosn.io/htnn/pkg/filtermanager/api"
+import (
+	"mosn.io/htnn/pkg/filtermanager/api"
+)
 
 func configFactory(c interface{}) api.FilterFactory {
 	conf := c.(*config)
@@ -31,4 +33,30 @@ type filter struct {
 
 	callbacks api.FilterCallbackHandler
 	config    *config
+}
+
+func (f *filter) verify(value string) api.ResultAction {
+	c, ok := f.callbacks.LookupConsumer(Name, value)
+	if !ok {
+		return &api.LocalResponse{Code: 401, Msg: "invalid key"}
+	}
+
+	f.callbacks.SetConsumer(c)
+	return api.Continue
+}
+
+func (f *filter) DecodeHeaders(header api.RequestHeaderMap, endStream bool) api.ResultAction {
+	config := f.config
+	for _, key := range config.Keys {
+		vals := header.Values(key.Name)
+		n := len(vals)
+		if n == 1 {
+			return f.verify(vals[0])
+		}
+		if n > 1 {
+			return &api.LocalResponse{Code: 401, Msg: "duplicate key found"}
+		}
+		// TODO: support query
+	}
+	return api.Continue
 }

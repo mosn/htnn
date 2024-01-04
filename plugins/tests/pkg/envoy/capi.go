@@ -24,6 +24,8 @@ import (
 	"sync"
 
 	"github.com/envoyproxy/envoy/contrib/golang/common/go/api"
+
+	fmapi "mosn.io/htnn/pkg/filtermanager/api"
 )
 
 func init() {
@@ -384,6 +386,7 @@ type filterCallbackHandler struct {
 
 	streamInfo api.StreamInfo
 	resp       LocalResponse
+	consumer   fmapi.Consumer
 	ch         chan struct{}
 }
 
@@ -443,6 +446,18 @@ func (i *filterCallbackHandler) LogLevel() api.LogType {
 
 func (i *filterCallbackHandler) GetProperty(key string) (string, error) {
 	return "", nil
+}
+
+func (i *filterCallbackHandler) LookupConsumer(_, _ string) (fmapi.Consumer, bool) {
+	return nil, false
+}
+
+func (i *filterCallbackHandler) GetConsumer() fmapi.Consumer {
+	return i.consumer
+}
+
+func (i *filterCallbackHandler) SetConsumer(c fmapi.Consumer) {
+	i.consumer = c
 }
 
 var _ api.FilterCallbackHandler = (*filterCallbackHandler)(nil)
