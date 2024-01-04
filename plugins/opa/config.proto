@@ -21,14 +21,14 @@ import "validate/validate.proto";
 option go_package = "mosn.io/htnn/plugins/opa";
 
 message Remote {
-  string url = 1 [(validate.rules).string = { ignore_empty: false, uri: true }];
+  string url = 1 [(validate.rules).string = { uri: true }];
   string policy = 2
-    [(validate.rules).string = { ignore_empty: false, min_len: 1 }];
+    [(validate.rules).string = { min_len: 1 }];
 }
 
 message Local {
   string text = 1
-    [(validate.rules).string = { ignore_empty: false, min_len: 1 }];
+    [(validate.rules).string = { min_len: 1 }];
 }
 
 message Config {
