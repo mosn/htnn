@@ -27,5 +27,5 @@ option go_package = "mosn.io/htnn/plugins/demo";
 
 message Config {
   string host_name = 1
-    [(validate.rules).string = { ignore_empty: false, min_len: 1 }];
+    [(validate.rules).string = { min_len: 1 }];
 }

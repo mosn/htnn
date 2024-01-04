@@ -23,9 +23,9 @@ option go_package = "mosn.io/htnn/plugins/casbin";
 message Config {
   message Rule {
     string model = 1
-      [(validate.rules).string = { ignore_empty: false, min_len: 1 }];
+      [(validate.rules).string = { min_len: 1 }];
     string policy = 2
-      [(validate.rules).string = { ignore_empty: false, min_len: 1 }];
+      [(validate.rules).string = { min_len: 1 }];
   }
 
   Rule rule = 1 [(validate.rules).message.required = true];
@@ -36,7 +36,7 @@ message Config {
   message Token {
     Source source = 1;
     string name = 2
-      [(validate.rules).string = { ignore_empty: false, min_len: 1 }];
+      [(validate.rules).string = { min_len: 1 }];
   }
 
   Token token = 2 [(validate.rules).message.required = true];
