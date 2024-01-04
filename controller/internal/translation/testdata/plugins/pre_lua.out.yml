@@ -47,4 +47,5 @@
           name: envoy.filters.http.pre_lua
           typed_config:
             '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
+    priority: 100
   status: {}
