@@ -220,7 +220,7 @@ func GenerateConsumers(consumers map[string]interface{}) *istiov1a3.EnvoyFilter 
 				{
 					ApplyTo: istioapi.EnvoyFilter_EXTENSION_CONFIG,
 					Patch: &istioapi.EnvoyFilter_Patch{
-						Operation: istioapi.EnvoyFilter_Patch_REPLACE,
+						Operation: istioapi.EnvoyFilter_Patch_ADD,
 						Value: MustNewStruct(map[string]interface{}{
 							"name": ECDSConsumerName,
 							"typed_config": map[string]interface{}{
