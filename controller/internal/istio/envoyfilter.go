@@ -174,6 +174,7 @@ func DefaultEnvoyFilters() map[string]*istiov1a3.EnvoyFilter {
 		},
 		Spec: istioapi.EnvoyFilter{
 			ConfigPatches: patches,
+			Priority:      100, // the priority is specific to silent the warning for relative operation
 		},
 	}
 
