@@ -1,0 +1,32 @@
+- metadata:
+    annotations:
+      htnn.mosn.io/info: '{"httpfilterpolicies":["default/policy"]}'
+    creationTimestamp: null
+    name: htnn-h-example.com
+  spec:
+    configPatches:
+    - applyTo: HTTP_ROUTE
+      match:
+        routeConfiguration:
+          vhost:
+            name: example.com:80
+            route:
+              name: policy
+      patch:
+        operation: MERGE
+        value:
+          typed_per_filter_config:
+            envoy.filters.http.golang:
+              '@type': type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.ConfigsPerRoute
+              plugins_config:
+                fm:
+                  config:
+                    '@type': type.googleapis.com/xds.type.v3.TypedStruct
+                    value:
+                      namespace: vs-default
+                      plugins:
+                      - config:
+                          keys:
+                          - name: apikey
+                        name: key_auth
+  status: {}

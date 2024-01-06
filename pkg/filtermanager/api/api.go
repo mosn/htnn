@@ -16,6 +16,7 @@ package api
 
 import (
 	"github.com/envoyproxy/envoy/contrib/golang/common/go/api"
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 type DecodeWholeRequestFilter interface {
@@ -109,6 +110,21 @@ type ResponseTrailerMap = api.ResponseTrailerMap
 
 type StreamInfo = api.StreamInfo
 
+type PluginConfig interface {
+	ProtoReflect() protoreflect.Message
+	Validate() error
+}
+
+type PluginConsumerConfig interface {
+	PluginConfig
+	Index() string
+}
+
+type Consumer interface {
+	Name() string
+	PluginConfig(name string) PluginConsumerConfig
+}
+
 // FilterCallbackHandler provides API that is used during request processing
 type FilterCallbackHandler interface {
 	// StreamInfo provides API to get/set current stream's context.
@@ -127,6 +143,14 @@ type FilterCallbackHandler interface {
 	// * ErrSerializationFailure (Currently, fetching attributes in List/Map type are unsupported)
 	// * ErrValueNotFound
 	GetProperty(key string) (string, error)
+
+	// LookupConsumer is used in the Authn plugins to fetch the corresponding consumer, with
+	// the plugin name and plugin specific key. We return a 'fat' Consumer so that additional
+	// info like `Name` can be retrieved.
+	LookupConsumer(pluginName, key string) (Consumer, bool)
+	// SetConsumer is used in the Authn plugins to set the corresponding consumer after authentication.
+	SetConsumer(c Consumer)
+	GetConsumer() Consumer
 }
 
 type FilterFactory func(callbacks FilterCallbackHandler) Filter

@@ -236,6 +236,7 @@ func FilterManagerConfigToTypedStruct(fmc *filtermanager.FilterManagerConfig) *x
 
 func NewSinglePluinConfig(name string, config interface{}) *filtermanager.FilterManagerConfig {
 	fmc := &filtermanager.FilterManagerConfig{}
+	fmc.Namespace = "ns"
 	fmc.Plugins = []*filtermanager.FilterConfig{{Name: name, Config: config}}
 	return fmc
 }

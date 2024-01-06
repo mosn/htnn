@@ -19,14 +19,20 @@ package v1
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
+
+	pkgConsumer "mosn.io/htnn/pkg/consumer"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
+type ConsumerPlugin struct {
+	Config runtime.RawExtension `json:"config"`
+}
+
 // ConsumerSpec defines the desired state of Consumer
 type ConsumerSpec struct {
-	Auth map[string]runtime.RawExtension `json:"auth"`
+	Auth map[string]ConsumerPlugin `json:"auth"`
 }
 
 // ConsumerStatus defines the observed state of Consumer
@@ -49,6 +55,18 @@ type Consumer struct {
 
 	Spec   ConsumerSpec   `json:"spec,omitempty"`
 	Status ConsumerStatus `json:"status,omitempty"`
+}
+
+func (c *Consumer) Marshal() string {
+	auth := make(map[string][]byte, len(c.Spec.Auth))
+	for k, v := range c.Spec.Auth {
+		auth[k] = v.Config.Raw
+	}
+	consumer := &pkgConsumer.Consumer{
+		ConsumerName: c.Name,
+		Auth:         auth,
+	}
+	return consumer.Marshal()
 }
 
 //+kubebuilder:object:root=true

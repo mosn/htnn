@@ -20,15 +20,45 @@ import (
 
 	"google.golang.org/protobuf/encoding/protojson"
 
-	"mosn.io/htnn/pkg/filtermanager"
 	"mosn.io/htnn/pkg/filtermanager/api"
 	"mosn.io/htnn/pkg/log"
 )
 
 var (
-	logger      = log.DefaultLogger.WithName("plugins")
-	httpPlugins = sync.Map{}
+	logger = log.DefaultLogger.WithName("plugins")
+
+	httpPlugins                      = sync.Map{}
+	httpFilterConfigFactoryAndParser = sync.Map{}
 )
+
+// Here we introduce extra struct to avoid cyclic import between pkg/filtermanager and pkg/plugins
+type FilterConfigParser interface {
+	Parse(input interface{}, callbacks api.ConfigCallbackHandler) (interface{}, error)
+	Merge(parentConfig interface{}, childConfig interface{}) interface{}
+}
+
+type FilterConfigFactoryAndParser struct {
+	ConfigParser  FilterConfigParser
+	ConfigFactory api.FilterConfigFactory
+}
+
+func RegisterHttpFilterConfigFactoryAndParser(name string, factory api.FilterConfigFactory, parser FilterConfigParser) {
+	if factory == nil {
+		panic("config factory should not be nil")
+	}
+	httpFilterConfigFactoryAndParser.Store(name, &FilterConfigFactoryAndParser{
+		parser,
+		factory,
+	})
+}
+
+func LoadHttpFilterConfigFactoryAndParser(name string) *FilterConfigFactoryAndParser {
+	res, ok := httpFilterConfigFactoryAndParser.Load(name)
+	if !ok {
+		return nil
+	}
+	return res.(*FilterConfigFactoryAndParser)
+}
 
 func RegisterHttpPlugin(name string, plugin Plugin) {
 	if plugin == nil {
@@ -37,7 +67,7 @@ func RegisterHttpPlugin(name string, plugin Plugin) {
 
 	logger.Info("register plugin", "name", name)
 	if goPlugin, ok := plugin.(GoPlugin); ok {
-		filtermanager.RegisterHttpFilterConfigFactoryAndParser(name,
+		RegisterHttpFilterConfigFactoryAndParser(name,
 			goPlugin.ConfigFactory(),
 			NewPluginConfigParser(goPlugin))
 	}

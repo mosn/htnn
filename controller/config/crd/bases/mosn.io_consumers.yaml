@@ -36,8 +36,13 @@ spec:
             properties:
               auth:
                 additionalProperties:
+                  properties:
+                    config:
+                      type: object
+                      x-kubernetes-preserve-unknown-fields: true
+                  required:
+                  - config
                   type: object
-                  x-kubernetes-preserve-unknown-fields: true
                 type: object
             required:
             - auth
