@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"sort"
 
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 
 	mosniov1 "mosn.io/htnn/controller/api/v1"
@@ -78,7 +77,7 @@ func toMergedPolicy(rp *routePolicy) *mergedPolicy {
 	}
 	p := &mosniov1.HTTPFilterPolicy{
 		Spec: mosniov1.HTTPFilterPolicySpec{
-			Filters: make(map[string]runtime.RawExtension),
+			Filters: make(map[string]mosniov1.HTTPPlugin),
 		},
 	}
 
@@ -193,12 +192,12 @@ func translateHTTPFilterPolicyToFilterManagerConfig(policy *mosniov1.HTTPFilterP
 		Plugins: []*filtermanager.FilterConfig{},
 	}
 	for name, filter := range policy.Spec.Filters {
-		cfg := model.PluginConfigWrapper{}
+		var cfg interface{}
 		// we validated the filter at the beginning, so theorily err should not happen
-		_ = json.Unmarshal(filter.Raw, &cfg)
+		_ = json.Unmarshal(filter.Config.Raw, &cfg)
 		fmc.Plugins = append(fmc.Plugins, &filtermanager.FilterConfig{
 			Name:   name,
-			Config: cfg.Config,
+			Config: cfg,
 		})
 	}
 

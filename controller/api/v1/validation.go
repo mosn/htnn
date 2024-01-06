@@ -15,7 +15,6 @@
 package v1
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -23,7 +22,6 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 	istiov1b1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 
-	"mosn.io/htnn/controller/internal/model"
 	"mosn.io/htnn/pkg/plugins"
 )
 
@@ -52,11 +50,8 @@ func ValidateHTTPFilterPolicy(policy *HTTPFilterPolicy) error {
 			// reject unknown filter in CP, ignore unknown filter in DP
 			return errors.New("unknown http filter: " + name)
 		}
-		cfg := &model.PluginConfigWrapper{}
-		if err := json.Unmarshal(filter.Raw, cfg); err != nil {
-			return err
-		}
-		data, _ := json.Marshal(cfg.Config)
+
+		data := filter.Config.Raw
 		conf := p.Config()
 		if err := protojson.Unmarshal(data, conf); err != nil {
 			return fmt.Errorf("failed to unmarshal for filter %s: %w", name, err)
