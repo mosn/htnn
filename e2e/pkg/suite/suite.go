@@ -200,13 +200,13 @@ func (suite *Suite) Patch(path string, header http.Header, body io.Reader) (*htt
 }
 
 func (suite *Suite) do(method string, path string, header http.Header, body io.Reader) (*http.Response, error) {
-	req, err := http.NewRequest(method, "http://default.local:18001"+path, body)
+	req, err := http.NewRequest(method, "http://localhost:10000"+path, body)
 	if err != nil {
 		return nil, err
 	}
 	req.Header = header
 	tr := &http.Transport{DialContext: func(ctx context.Context, proto, addr string) (conn net.Conn, err error) {
-		return net.DialTimeout("tcp", ":18001", 1*time.Second)
+		return net.DialTimeout("tcp", ":10000", 1*time.Second)
 	}}
 
 	client := &http.Client{Transport: tr, Timeout: 10 * time.Second}

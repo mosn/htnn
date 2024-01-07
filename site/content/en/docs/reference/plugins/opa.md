@@ -111,7 +111,7 @@ allow {
 }'
 ```
 
-Then we provide a configuration to `http://127.0.0.1:10000/echo` like:
+Then we provide a configuration to `http://localhost:10000/echo` like:
 
 ```yaml
 opa:
@@ -125,20 +125,20 @@ As you can see, the policy `test` will be used to evaluate the input that we sen
 Now, to test it out:
 
 ```
-curl -i -X GET 127.0.0.1:10000/echo
+curl -i -X GET localhost:10000/echo
 HTTP/1.1 200 OK
 ```
 
 If we try to make a request with a different method, the request will fail:
 
 ```
-curl -i -X POST 127.0.0.1:10000/echo -d "AA"
+curl -i -X POST localhost:10000/echo -d "AA"
 HTTP/1.1 403 FORBIDDEN
 ```
 
 ### Interact with Local Policy Rules
 
-We can also configure the policy rules directly. Assumed we provide a configuration to `http://127.0.0.1:10000/echo` like:
+We can also configure the policy rules directly. Assumed we provide a configuration to `http://localhost:10000/echo` like:
 
 ```yaml
 opa:
@@ -158,13 +158,13 @@ opa:
 Now, to test it out:
 
 ```
-curl -i -X GET 127.0.0.1:10000/echo
+curl -i -X GET localhost:10000/echo
 HTTP/1.1 200 OK
 ```
 
 If we try to make a request with a different method, the request will fail:
 
 ```
-curl -i -X POST 127.0.0.1:10000/echo -d "AA"
+curl -i -X POST localhost:10000/echo -d "AA"
 HTTP/1.1 403 FORBIDDEN
 ```

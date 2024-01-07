@@ -6,7 +6,7 @@ spec:
   parentRefs:
   - name: default
     namespace: e2e
-  hostnames: ["default.local"]
+  hostnames: ["localhost"]
   rules:
   - matches:
     - path:

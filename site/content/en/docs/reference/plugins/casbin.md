@@ -64,7 +64,7 @@ g, alice, admin
 
 The above configuration allows anyone to access the homepage (/) using a GET request. However, only users with admin permissions (alice) can access other pages and use other request methods.
 
-Now we provide a configuration to `http://127.0.0.1:10000/` like:
+Now we provide a configuration to `http://localhost:10000/` like:
 
 ```yaml
 rule:
@@ -78,20 +78,20 @@ token:
 If we make a GET request to the homepage:
 
 ```shell
-curl -i http://127.0.0.1:10000/ -X GET
+curl -i http://localhost:10000/ -X GET
 HTTP/1.1 200 OK
 ```
 
 But if an unauthorized user tries to access any other page, they will receive a 403 error:
 
 ```shell
-curl -i http://127.0.0.1:10000/other -H 'user: bob' -X GET
+curl -i http://localhost:10000/other -H 'user: bob' -X GET
 HTTP/1.1 403 Forbidden
 ```
 
 Only users with admin privileges can access the endpoints:
 
 ```shell
-curl -i http://127.0.0.1:10000/other -H 'user: alice' -X GET
+curl -i http://localhost:10000/other -H 'user: alice' -X GET
 HTTP/1.1 200 OK
 ```
