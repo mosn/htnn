@@ -32,6 +32,11 @@ updates:
     schedule:
       interval: "daily"
       time: "03:00"
+  - package-ecosystem: "docker"
+    directory: "/site"
+    schedule:
+      interval: "daily"
+      time: "03:00"
   - package-ecosystem: github-actions
     directory: /
     schedule:
