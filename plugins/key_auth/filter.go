@@ -15,7 +15,10 @@
 package key_auth
 
 import (
+	"net/url"
+
 	"mosn.io/htnn/pkg/filtermanager/api"
+	"mosn.io/htnn/pkg/request"
 )
 
 func configFactory(c interface{}) api.FilterFactory {
@@ -47,8 +50,18 @@ func (f *filter) verify(value string) api.ResultAction {
 
 func (f *filter) DecodeHeaders(header api.RequestHeaderMap, endStream bool) api.ResultAction {
 	config := f.config
+	var query url.Values
 	for _, key := range config.Keys {
-		vals := header.Values(key.Name)
+		var vals []string
+		if key.Source == Source_query {
+			if query == nil {
+				query = request.GetUrl(header).Query()
+			}
+			vals = query[key.Name]
+		} else {
+			vals = header.Values(key.Name)
+		}
+
 		n := len(vals)
 		if n == 1 {
 			return f.verify(vals[0])
@@ -56,7 +69,6 @@ func (f *filter) DecodeHeaders(header api.RequestHeaderMap, endStream bool) api.
 		if n > 1 {
 			return &api.LocalResponse{Code: 401, Msg: "duplicate key found"}
 		}
-		// TODO: support query
 	}
 	return api.Continue
 }
