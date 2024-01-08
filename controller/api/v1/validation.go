@@ -92,3 +92,28 @@ func ValidateGateway(gw *istiov1b1.Gateway) error {
 	}
 	return nil
 }
+
+func ValidateConsumer(c *Consumer) error {
+	for name, filter := range c.Spec.Auth {
+		plugin := plugins.LoadHttpPlugin(name)
+		if plugin == nil {
+			// reject unknown filter in CP, ignore unknown filter in DP
+			return errors.New("unknown http filter: " + name)
+		}
+		p, ok := plugin.(plugins.ConsumerPlugin)
+		if !ok {
+			return errors.New("configured authn filter is not a consumer plugin: " + name)
+		}
+
+		data := filter.Config.Raw
+		conf := p.ConsumerConfig()
+		if err := protojson.Unmarshal(data, conf); err != nil {
+			return fmt.Errorf("failed to unmarshal for filter %s: %w", name, err)
+		}
+
+		if err := conf.Validate(); err != nil {
+			return fmt.Errorf("invalid config for filter %s: %w", name, err)
+		}
+	}
+	return nil
+}

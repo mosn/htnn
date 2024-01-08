@@ -5,6 +5,16 @@
     namespace: default
   spec:
     auth:
-      key-auth:
+      key_auth:
         config:
-          source: xx
+          key: xx
+- apiVersion: mosn.io/v1
+  kind: Consumer
+  metadata:
+    name: unchanged
+    namespace: default
+  spec:
+    auth:
+      key_auth:
+        config:
+          key: yy

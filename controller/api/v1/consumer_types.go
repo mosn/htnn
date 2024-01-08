@@ -17,6 +17,8 @@ limitations under the License.
 package v1
 
 import (
+	"time"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 
@@ -33,6 +35,7 @@ type ConsumerPlugin struct {
 
 // ConsumerSpec defines the desired state of Consumer
 type ConsumerSpec struct {
+	// +kubebuilder:validation:MinProperties=1
 	Auth map[string]ConsumerPlugin `json:"auth"`
 }
 
@@ -44,6 +47,12 @@ type ConsumerStatus struct {
 	// +listType=map
 	// +listMapKey=type
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
+
+	changed bool
+}
+
+func (s *ConsumerStatus) IsChanged() bool {
+	return s.changed
 }
 
 //+kubebuilder:object:root=true
@@ -68,6 +77,55 @@ func (c *Consumer) Marshal() string {
 		Auth:         auth,
 	}
 	return consumer.Marshal()
+}
+
+func (c *Consumer) IsSpecChanged() bool {
+	if len(c.Status.Conditions) == 0 {
+		// newly created
+		return true
+	}
+	for _, cond := range c.Status.Conditions {
+		if cond.ObservedGeneration != c.Generation {
+			return true
+		}
+	}
+	return false
+}
+
+func (consumer *Consumer) SetAccepted(reason ConditionReason, msg ...string) {
+	c := metav1.Condition{
+		Type:               string(ConditionAccepted),
+		Reason:             string(reason),
+		LastTransitionTime: metav1.NewTime(time.Now()),
+		ObservedGeneration: consumer.Generation,
+	}
+	switch reason {
+	case ReasonAccepted:
+		c.Status = metav1.ConditionTrue
+		c.Message = "The resource has been accepted"
+	case ReasonInvalid:
+		c.Status = metav1.ConditionFalse
+		if len(msg) > 0 {
+			c.Message = msg[0]
+		} else {
+			c.Message = "The resource is invalid"
+		}
+	}
+	conds, changed := addOrUpdateCondition(consumer.Status.Conditions, c)
+	consumer.Status.Conditions = conds
+
+	if changed {
+		consumer.Status.changed = true
+	}
+}
+
+func (c *Consumer) IsValid() bool {
+	for _, cond := range c.Status.Conditions {
+		if cond.Type == string(ConditionAccepted) && cond.Reason == string(ReasonInvalid) {
+			return false
+		}
+	}
+	return true
 }
 
 //+kubebuilder:object:root=true

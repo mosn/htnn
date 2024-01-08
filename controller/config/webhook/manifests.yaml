@@ -10,6 +10,26 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
+      path: /mutate-mosn-io-v1-consumer
+  failurePolicy: Fail
+  name: mconsumer.kb.io
+  rules:
+  - apiGroups:
+    - mosn.io
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - consumers
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
       path: /mutate-mosn-io-v1-httpfilterpolicy
   failurePolicy: Fail
   name: mhttpfilterpolicy.kb.io
@@ -50,6 +70,27 @@ kind: ValidatingWebhookConfiguration
 metadata:
   name: validating-webhook-configuration
 webhooks:
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-mosn-io-v1-consumer
+  failurePolicy: Fail
+  name: vconsumer.kb.io
+  rules:
+  - apiGroups:
+    - mosn.io
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    - DELETE
+    resources:
+    - consumers
+  sideEffects: None
 - admissionReviewVersions:
   - v1
   clientConfig:
