@@ -13,7 +13,7 @@
 # limitations under the License.
 
 # Use debian image for ARM64 support
-FROM floryn90/hugo:ext-debian@sha256:55e887d8847bb430b11360e430475dd9b7a7d968aa6e5b4d4440c91f3f64d894
+FROM floryn90/hugo:ext-debian@sha256:8371a1bf430a15464d346fd6955ebdd6a93003afd711b27c0b656e5505a8de65
 
 RUN apt install -y --no-install-recommends git && \
   git config --global --add safe.directory /src
