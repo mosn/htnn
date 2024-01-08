@@ -36,6 +36,8 @@ spec:
             properties:
               auth:
                 additionalProperties:
+                  description: ConsumerPlugin defines the authentication plugin configuration
+                    used in the consumer
                   properties:
                     config:
                       type: object

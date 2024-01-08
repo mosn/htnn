@@ -38,8 +38,15 @@ spec:
             properties:
               filters:
                 additionalProperties:
+                  description: HTTPPlugin defines the plugin configuration used in
+                    the HTTP layer
+                  properties:
+                    config:
+                      type: object
+                      x-kubernetes-preserve-unknown-fields: true
+                  required:
+                  - config
                   type: object
-                  x-kubernetes-preserve-unknown-fields: true
                 description: Filters is a map of filter names to filter configurations.
                 type: object
               targetRef:

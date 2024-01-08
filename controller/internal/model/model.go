@@ -27,7 +27,3 @@ type VirtualHost struct {
 	Gateway *Gateway
 	Name    string
 }
-
-type PluginConfigWrapper struct {
-	Config interface{} `json:"config"`
-}

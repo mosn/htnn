@@ -131,7 +131,11 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 
 			// to invalid
 			base := client.MergeFrom(p.DeepCopy())
-			p.Spec.Filters["unknown"] = runtime.RawExtension{Raw: []byte(`{"config":"unknown"}`)}
+			p.Spec.Filters["unknown"] = mosniov1.HTTPPlugin{
+				Config: runtime.RawExtension{
+					Raw: []byte(`{}`),
+				},
+			}
 			Expect(k8sClient.Patch(ctx, p, base)).Should(Succeed())
 			Eventually(func() bool {
 				if err := k8sClient.List(ctx, &policies); err != nil {

@@ -46,9 +46,11 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 							Kind:  "VirtualService",
 						},
 					},
-					Filters: map[string]runtime.RawExtension{
+					Filters: map[string]HTTPPlugin{
 						"animal": {
-							Raw: []byte(`{"config":{"pet":"cat"}}`),
+							Config: runtime.RawExtension{
+								Raw: []byte(`{"pet":"cat"}`),
+							},
 						},
 					},
 				},
@@ -64,9 +66,11 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 							Kind:  "HTTPRoute",
 						},
 					},
-					Filters: map[string]runtime.RawExtension{
+					Filters: map[string]HTTPPlugin{
 						"animal": {
-							Raw: []byte(`{"config":{"pet":"cat"}}`),
+							Config: runtime.RawExtension{
+								Raw: []byte(`{"pet":"cat"}`),
+							},
 						},
 					},
 				},
@@ -82,9 +86,11 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 							Kind:  "VirtualService",
 						},
 					},
-					Filters: map[string]runtime.RawExtension{
+					Filters: map[string]HTTPPlugin{
 						"property": {
-							Raw: []byte(`{"config":{"pet":"cat"}}`),
+							Config: runtime.RawExtension{
+								Raw: []byte(`{"pet":"cat"}`),
+							},
 						},
 					},
 				},
@@ -119,9 +125,11 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 							Kind:  "VirtualService",
 						},
 					},
-					Filters: map[string]runtime.RawExtension{
+					Filters: map[string]HTTPPlugin{
 						"local_ratelimit": {
-							Raw: []byte(`{"config":{}}`),
+							Config: runtime.RawExtension{
+								Raw: []byte(`{}`),
+							},
 						},
 					},
 				},

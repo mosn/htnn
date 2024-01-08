@@ -20,7 +20,6 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	runtime "k8s.io/apimachinery/pkg/runtime"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
 
@@ -40,7 +39,7 @@ type HTTPFilterPolicySpec struct {
 	TargetRef gwapiv1a2.PolicyTargetReferenceWithSectionName `json:"targetRef"`
 
 	// Filters is a map of filter names to filter configurations.
-	Filters map[string]runtime.RawExtension `json:"filters,omitempty"`
+	Filters map[string]HTTPPlugin `json:"filters,omitempty"`
 }
 
 // HTTPFilterPolicyStatus defines the observed state of HTTPFilterPolicy
