@@ -32,11 +32,15 @@ static_resources:
                         value:
                           ns:
                             consumer:
+                              # auth config:
+                              # key_auth: {"key":"rick"}
+                              # hmac_auth: {"access_key":"ak","secret_key":"sk","signed_headers":["x-custom-a"]}
                               d: |
                                 {
                                   "name":"consumer",
                                   "auth":{
-                                    "key_auth":"eyJrZXkiOiJyaWNrIn0="
+                                    "key_auth":"eyJrZXkiOiJyaWNrIn0=",
+                                    "hmac_auth":"eyJhY2Nlc3Nfa2V5IjoiYWsiLCJzZWNyZXRfa2V5Ijoic2siLCJzaWduZWRfaGVhZGVycyI6WyJ4LWN1c3RvbS1hIl19Cg=="
                                   }
                                 }
                               v: "4355415"

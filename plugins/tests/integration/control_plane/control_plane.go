@@ -240,3 +240,10 @@ func NewSinglePluinConfig(name string, config interface{}) *filtermanager.Filter
 	fmc.Plugins = []*filtermanager.FilterConfig{{Name: name, Config: config}}
 	return fmc
 }
+
+func NewPluinConfig(plugins []*filtermanager.FilterConfig) *filtermanager.FilterManagerConfig {
+	fmc := &filtermanager.FilterManagerConfig{}
+	fmc.Namespace = "ns"
+	fmc.Plugins = plugins
+	return fmc
+}
