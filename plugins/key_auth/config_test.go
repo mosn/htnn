@@ -32,6 +32,13 @@ func TestConfig(t *testing.T) {
 			input: `{}`,
 			err:   "invalid Config.Keys: value must contain at least 1 item",
 		},
+		{
+			name: "unknown source",
+			input: `{
+				"keys": [{"name": "x", "source": "body"}]
+			}`,
+			err: "invalid Config.Keys: value must contain at least 1 item",
+		},
 	}
 
 	for _, tt := range tests {

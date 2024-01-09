@@ -58,6 +58,33 @@ func TestKeyAuth(t *testing.T) {
 				assert.Equal(t, 401, resp.StatusCode)
 			},
 		},
+		{
+			name: "key in the query",
+			config: control_plane.NewSinglePluinConfig("key_auth", map[string]interface{}{
+				"keys": []interface{}{
+					map[string]interface{}{
+						"name":   "Authorization",
+						"source": "header",
+					},
+					map[string]interface{}{
+						"name":   "ak",
+						"source": "query",
+					},
+				},
+			}),
+			run: func(t *testing.T) {
+				resp, _ := dp.Get("/echo?ak=rick", nil)
+				assert.Equal(t, 200, resp.StatusCode)
+				resp, _ = dp.Get("/echo?ak=morty", nil)
+				assert.Equal(t, 401, resp.StatusCode)
+				resp, _ = dp.Get("/echo", nil)
+				assert.Equal(t, 401, resp.StatusCode)
+				resp, _ = dp.Get("/echo?ak=rick&ak=morty", nil)
+				assert.Equal(t, 401, resp.StatusCode)
+				resp, _ = dp.Get("/echo?ak=rick", http.Header{"Authorization": []string{"morty"}})
+				assert.Equal(t, 401, resp.StatusCode)
+			},
+		},
 	}
 
 	for _, tt := range tests {
