@@ -115,6 +115,11 @@ func main() {
 		}
 
 		mosniov1.RegisterVirtualServiceWebhook(mgr)
+
+		if err = (&mosniov1.Consumer{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "Consumer")
+			os.Exit(1)
+		}
 	}
 	//+kubebuilder:scaffold:builder
 

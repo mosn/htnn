@@ -278,7 +278,7 @@ func (r *HTTPFilterPolicyReconciler) policyToTranslationState(ctx context.Contex
 		nsName := types.NamespacedName{Name: string(ref.Name), Namespace: policy.Namespace}
 
 		// defensive code in case the webhook doesn't work
-		if policy.IsChanged() {
+		if policy.IsSpecChanged() {
 			err := mosniov1.ValidateHTTPFilterPolicy(policy)
 			if err != nil {
 				logger.Error(err, "invalid HTTPFilterPolicy", "name", policy.Name, "namespace", policy.Namespace)

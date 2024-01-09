@@ -45,6 +45,7 @@ spec:
                   required:
                   - config
                   type: object
+                minProperties: 1
                 type: object
             required:
             - auth

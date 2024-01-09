@@ -59,7 +59,7 @@ func (r *ConsumerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	logger.Info("reconcile")
 
 	var consumers mosniov1.ConsumerList
-	state, err := r.consumersToState(ctx, &consumers)
+	state, err := r.consumersToState(ctx, &logger, &consumers)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -77,7 +77,9 @@ type consumerReconcileState struct {
 	namespaceToConsumers map[string]map[string]*mosniov1.Consumer
 }
 
-func (r *ConsumerReconciler) consumersToState(ctx context.Context, consumers *mosniov1.ConsumerList) (*consumerReconcileState, error) {
+func (r *ConsumerReconciler) consumersToState(ctx context.Context, logger *logr.Logger,
+	consumers *mosniov1.ConsumerList) (*consumerReconcileState, error) {
+
 	if err := r.List(ctx, consumers); err != nil {
 		return nil, fmt.Errorf("failed to list Consumer: %w", err)
 	}
@@ -85,11 +87,27 @@ func (r *ConsumerReconciler) consumersToState(ctx context.Context, consumers *mo
 	namespaceToConsumers := make(map[string]map[string]*mosniov1.Consumer)
 	for i := range consumers.Items {
 		consumer := &consumers.Items[i]
+
+		// defensive code in case the webhook doesn't work
+		if consumer.IsSpecChanged() {
+			err := mosniov1.ValidateConsumer(consumer)
+			if err != nil {
+				logger.Error(err, "invalid Consumer", "name", consumer.Name, "namespace", consumer.Namespace)
+				consumer.SetAccepted(mosniov1.ReasonInvalid, err.Error())
+				continue
+			}
+		}
+		if !consumer.IsValid() {
+			continue
+		}
+
 		namespace := consumer.Namespace
 		if namespaceToConsumers[namespace] == nil {
 			namespaceToConsumers[namespace] = make(map[string]*mosniov1.Consumer)
 		}
 		namespaceToConsumers[namespace][consumer.Name] = consumer
+
+		consumer.SetAccepted(mosniov1.ReasonAccepted)
 	}
 
 	state := &consumerReconcileState{
@@ -146,6 +164,18 @@ func (r *ConsumerReconciler) generateCustomResource(ctx context.Context, logger 
 }
 
 func (r *ConsumerReconciler) updateConsumers(ctx context.Context, consumers *mosniov1.ConsumerList) error {
+	for i := range consumers.Items {
+		consumer := &consumers.Items[i]
+		if !consumer.Status.IsChanged() {
+			continue
+		}
+		// Update operation will change the original object in cache, so we need to deepcopy it.
+		if err := r.Status().Update(ctx, consumer.DeepCopy()); err != nil {
+			return fmt.Errorf("failed to update Consumer status: %w, namespacedName: %v",
+				err,
+				types.NamespacedName{Name: consumer.Name, Namespace: consumer.Namespace})
+		}
+	}
 	return nil
 }
 

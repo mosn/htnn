@@ -16,6 +16,19 @@ package v1
 
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+type ConditionType string
+
+const (
+	ConditionAccepted ConditionType = "Accepted"
+)
+
+type ConditionReason string
+
+const (
+	ReasonAccepted ConditionReason = "Accepted"
+	ReasonInvalid  ConditionReason = "Invalid"
+)
+
 func needUpdateCondition(a, b metav1.Condition) bool {
 	return (a.Status != b.Status) ||
 		(a.Reason != b.Reason) ||

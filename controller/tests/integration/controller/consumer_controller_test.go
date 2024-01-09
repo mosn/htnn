@@ -24,6 +24,9 @@ import (
 	. "github.com/onsi/gomega"
 	istioapi "istio.io/api/networking/v1alpha3"
 	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	mosniov1 "mosn.io/htnn/controller/api/v1"
 	"mosn.io/htnn/controller/tests/pkg"
@@ -91,6 +94,67 @@ var _ = Describe("Consumer controller", func() {
 			json.Unmarshal(b, &marshaledCfg)
 			// mapping is namespace -> name -> config
 			Expect(marshaledCfg["default"]["spacewander"]).ToNot(BeNil())
+			Expect(marshaledCfg["default"]["unchanged"]).ToNot(BeNil())
+
+			var consumers mosniov1.ConsumerList
+			var c *mosniov1.Consumer
+			var cs []metav1.Condition
+			Eventually(func() bool {
+				if err := k8sClient.List(ctx, &consumers); err != nil {
+					return false
+				}
+				for _, item := range consumers.Items {
+					if item.Name == "spacewander" {
+						item := item
+						c = &item
+						cs = c.Status.Conditions
+						return len(cs) == 1
+					}
+				}
+				return false
+			}, timeout, interval).Should(BeTrue())
+			Expect(cs[0].Type).To(Equal(string(mosniov1.ConditionAccepted)))
+			Expect(cs[0].Reason).To(Equal(string(mosniov1.ReasonAccepted)))
+
+			// to invalid
+			base := client.MergeFrom(c.DeepCopy())
+			c.Spec.Auth["unknown"] = mosniov1.ConsumerPlugin{
+				Config: runtime.RawExtension{
+					Raw: []byte(`{}`),
+				},
+			}
+			Expect(k8sClient.Patch(ctx, c, base)).Should(Succeed())
+			Eventually(func() bool {
+				if err := k8sClient.List(ctx, &consumers); err != nil {
+					return false
+				}
+				for _, item := range consumers.Items {
+					if item.Name == "spacewander" {
+						c = &consumers.Items[0]
+						cs = c.Status.Conditions
+						return cs[0].Reason == string(mosniov1.ReasonInvalid)
+					}
+				}
+				return false
+			}, timeout, interval).Should(BeTrue())
+
+			// EnvoyFilter should be updated too
+			Eventually(func() bool {
+				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
+					return false
+				}
+				return len(envoyfilters.Items) == 1
+			}, timeout, interval).Should(BeTrue())
+
+			value = envoyfilters.Items[0].Spec.ConfigPatches[0].Patch.Value.AsMap()
+			typedCfg = value["typed_config"].(map[string]interface{})
+			pluginCfg = typedCfg["plugin_config"].(map[string]interface{})
+
+			marshaledCfg = map[string]map[string]interface{}{}
+			b, _ = json.Marshal(pluginCfg["value"])
+			json.Unmarshal(b, &marshaledCfg)
+			Expect(marshaledCfg["default"]["spacewander"]).To(BeNil())
+			Expect(marshaledCfg["default"]["unchanged"]).ToNot(BeNil())
 		})
 	})
 })

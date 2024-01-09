@@ -57,6 +57,10 @@ type HTTPFilterPolicyStatus struct {
 	changed bool
 }
 
+func (s *HTTPFilterPolicyStatus) IsChanged() bool {
+	return s.changed
+}
+
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:metadata:labels=gateway.networking.k8s.io/policy=direct
@@ -70,7 +74,7 @@ type HTTPFilterPolicy struct {
 	Status HTTPFilterPolicyStatus `json:"status,omitempty"`
 }
 
-func (p *HTTPFilterPolicy) IsChanged() bool {
+func (p *HTTPFilterPolicy) IsSpecChanged() bool {
 	if len(p.Status.Conditions) == 0 {
 		// newly created
 		return true
@@ -124,10 +128,6 @@ func (p *HTTPFilterPolicy) IsValid() bool {
 		}
 	}
 	return true
-}
-
-func (s *HTTPFilterPolicyStatus) IsChanged() bool {
-	return s.changed
 }
 
 //+kubebuilder:object:root=true

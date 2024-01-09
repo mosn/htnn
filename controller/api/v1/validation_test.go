@@ -202,3 +202,68 @@ func TestValidateVirtualService(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateConsumer(t *testing.T) {
+	tests := []struct {
+		name     string
+		policy   *HTTPFilterPolicy
+		consumer *Consumer
+		err      string
+	}{
+		{
+			name: "ok",
+			consumer: &Consumer{
+				Spec: ConsumerSpec{
+					Auth: map[string]ConsumerPlugin{
+						"key_auth": {
+							Config: runtime.RawExtension{
+								Raw: []byte(`{"key":"cat"}`),
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "unknown",
+			consumer: &Consumer{
+				Spec: ConsumerSpec{
+					Auth: map[string]ConsumerPlugin{
+						"property": {
+							Config: runtime.RawExtension{
+								Raw: []byte(`{"pet":"cat"}`),
+							},
+						},
+					},
+				},
+			},
+			err: "unknown http filter: property",
+		},
+		{
+			name: "bad configuration",
+			consumer: &Consumer{
+				Spec: ConsumerSpec{
+					Auth: map[string]ConsumerPlugin{
+						"key_auth": {
+							Config: runtime.RawExtension{
+								Raw: []byte(`{"keys":"cat"}`),
+							},
+						},
+					},
+				},
+			},
+			err: "unknown field \"keys\"",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateConsumer(tt.consumer)
+			if tt.err == "" {
+				assert.Nil(t, err)
+			} else {
+				assert.ErrorContains(t, err, tt.err)
+			}
+		})
+	}
+}
