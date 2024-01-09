@@ -25,7 +25,7 @@ BUILD_IMAGE     ?= golang:1.21-bullseye
 # to get the sha256 ID
 PROXY_IMAGE     ?= envoyproxy/envoy@sha256:08a498a45afc12b593dd415f6c91b401c35aff119190fc6d549c1873082bf463
 # We may need to use timestamp if we need to update the image in one PR
-DEV_TOOLS_IMAGE ?= ghcr.io/mosn/htnn-dev-tools:2023-10-23
+DEV_TOOLS_IMAGE ?= ghcr.io/mosn/htnn-dev-tools:2024-01-05
 
 VERSION   = $(shell cat VERSION)
 GIT_VERSION     = $(shell git log -1 --pretty=format:%h)
@@ -139,8 +139,13 @@ dev-tools:
 # See https://github.com/docker/buildx/issues/835#issuecomment-966496802
 .PHONY: build-dev-tools
 build-dev-tools:
+	# before running this task, please run `make build-dev-tools-local` and check if the image work locally
 	docker buildx build --platform=linux/amd64,linux/arm64 \
 		--network=host --build-arg GOPROXY=${GOPROXY} -t ${DEV_TOOLS_IMAGE} --push -f tools/Dockerfile.dev ./tools
+
+.PHONY: build-dev-tools-local
+build-dev-tools-local:
+	docker build --network=host --build-arg GOPROXY=${GOPROXY} -t ${DEV_TOOLS_IMAGE} -f tools/Dockerfile.dev ./tools
 
 # For lint-go/fmt-go: we don't cover examples/dev_your_plugin which is just an example
 
@@ -160,6 +165,16 @@ fmt-go: install-go-fmtter
 lint-proto: $(LOCALBIN)
 	test -x $(LOCALBIN)/buf || GOBIN=$(LOCALBIN) go install github.com/bufbuild/buf/cmd/buf@v1.28.1
 	$(LOCALBIN)/buf lint
+
+.PHONY: fmt-proto
+fmt-proto: dev-tools
+	docker run --rm -v $(PWD):/go/src/${PROJECT_NAME} -w /go/src/${PROJECT_NAME} \
+		${DEV_TOOLS_IMAGE} \
+		make fmt-proto-local
+
+.PHONY: fmt-proto-local
+fmt-proto-local:
+	find . -name '*.proto' -exec clang-format -i {} \+
 
 .PHONY: install-license-checker
 install-license-checker: $(LOCALBIN)
@@ -208,7 +223,7 @@ lint-remain:
 lint: lint-go lint-proto lint-license lint-spell lint-editorconfig lint-remain
 
 .PHONY: fmt
-fmt: fmt-go
+fmt: fmt-go fmt-proto
 
 .PHONY: verify-example
 verify-example:

@@ -26,7 +26,7 @@ enum Source {
 }
 
 message Key {
-  string name = 1 [(validate.rules).string = { min_len: 1 }];
+  string name = 1 [(validate.rules).string = {min_len: 1}];
   // default to header
   Source source = 2;
 }
@@ -36,5 +36,5 @@ message Config {
 }
 
 message ConsumerConfig {
-  string key = 1 [(validate.rules).string = { min_len: 1 }];
+  string key = 1 [(validate.rules).string = {min_len: 1}];
 }

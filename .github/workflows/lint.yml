@@ -36,6 +36,14 @@ jobs:
           exit 1
         fi
 
+    - name: format proto
+      run: |
+        make fmt-proto
+        if !git diff --exit-code; then
+          echo "Files are not well formatted. Please run 'make fmt-proto' and commit changes."
+          exit 1
+        fi
+
     - name: check generated files
       run: |
         make gen-proto

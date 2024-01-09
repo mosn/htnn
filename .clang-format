@@ -12,15 +12,11 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-root = true
-
-[*]
-indent_style = space
-charset = utf-8
-trim_trailing_whitespace = true
-
-[Makefile]
-indent_style = tab
-
-[*.{yml,yaml}]
-indent_size = 2
+# same as Envoy
+---
+Language: Proto
+ColumnLimit: 100
+SpacesInContainerLiterals: false
+AllowShortFunctionsOnASingleLine: false
+ReflowComments: false
+...

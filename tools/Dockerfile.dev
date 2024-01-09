@@ -56,3 +56,5 @@ RUN VER=24.4 && \
     unzip -o ${NAME} -d /usr/local 'include/*' && \
     go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.31.0
 
+# clang-format
+RUN apt install -y --no-install-recommends clang-format

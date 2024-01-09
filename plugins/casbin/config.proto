@@ -22,21 +22,16 @@ option go_package = "mosn.io/htnn/plugins/casbin";
 
 message Config {
   message Rule {
-    string model = 1
-      [(validate.rules).string = { min_len: 1 }];
-    string policy = 2
-      [(validate.rules).string = { min_len: 1 }];
+    string model = 1 [(validate.rules).string = {min_len: 1}];
+    string policy = 2 [(validate.rules).string = {min_len: 1}];
   }
 
   Rule rule = 1 [(validate.rules).message.required = true];
 
-  enum Source {
-    header = 0;
-  }
+  enum Source { header = 0; }
   message Token {
     Source source = 1;
-    string name = 2
-      [(validate.rules).string = { min_len: 1 }];
+    string name = 2 [(validate.rules).string = {min_len: 1}];
   }
 
   Token token = 2 [(validate.rules).message.required = true];
