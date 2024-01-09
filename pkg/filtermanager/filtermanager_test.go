@@ -77,8 +77,8 @@ func TestPassThrough(t *testing.T) {
 	m := FilterManagerConfigFactory(&filterManagerConfig{
 		current: []*filterConfig{
 			{
-				// fallback to PassThroughFilter
-				Name: "unknown",
+				Name:          "passthrough",
+				configFactory: PassThroughFactory,
 			},
 		},
 	})(cb)
@@ -141,7 +141,8 @@ func TestLocalReplyJSON_UseReqHeader(t *testing.T) {
 			m := FilterManagerConfigFactory(&filterManagerConfig{
 				current: []*filterConfig{
 					{
-						Name: "test",
+						Name:          "test",
+						configFactory: PassThroughFactory,
 					},
 				},
 			})(cb).(*filterManager)
@@ -213,7 +214,8 @@ func TestLocalReplyJSON_UseRespHeader(t *testing.T) {
 			m := FilterManagerConfigFactory(&filterManagerConfig{
 				current: []*filterConfig{
 					{
-						Name: "test",
+						Name:          "test",
+						configFactory: PassThroughFactory,
 					},
 				},
 			})(cb).(*filterManager)
@@ -248,7 +250,8 @@ func TestLocalReplyJSON_DoNotChangeMsgIfContentTypeIsGiven(t *testing.T) {
 	m := FilterManagerConfigFactory(&filterManagerConfig{
 		current: []*filterConfig{
 			{
-				Name: "test",
+				Name:          "test",
+				configFactory: PassThroughFactory,
 			},
 		},
 	})(cb).(*filterManager)

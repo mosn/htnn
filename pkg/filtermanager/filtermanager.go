@@ -52,12 +52,14 @@ type FilterManagerConfig struct {
 }
 
 type filterConfig struct {
-	Name         string
-	parsedConfig interface{}
+	Name          string
+	parsedConfig  interface{}
+	configFactory api.FilterConfigFactory
 }
 
 type filterManagerConfig struct {
-	namespace string
+	namespace         string
+	authnFiltersEndAt int
 
 	current []*filterConfig
 }
@@ -96,6 +98,10 @@ func (p *FilterManagerConfigParser) Parse(any *anypb.Any, callbacks capi.ConfigC
 		namespace: fmConfig.Namespace,
 		current:   make([]*filterConfig, 0, len(plugins)),
 	}
+
+	authnFiltersEndAt := 0
+	i := 0
+
 	for _, proto := range plugins {
 		name := proto.Name
 		if plugin := pkgPlugins.LoadHttpFilterConfigFactoryAndParser(name); plugin != nil {
@@ -106,13 +112,22 @@ func (p *FilterManagerConfigParser) Parse(any *anypb.Any, callbacks capi.ConfigC
 			}
 
 			conf.current = append(conf.current, &filterConfig{
-				Name:         proto.Name,
-				parsedConfig: config,
+				Name:          proto.Name,
+				parsedConfig:  config,
+				configFactory: plugin.ConfigFactory,
 			})
+
+			p := pkgPlugins.LoadHttpPlugin(name)
+			if p.Order().Position == pkgPlugins.OrderPositionAuthn {
+				authnFiltersEndAt = i + 1
+			}
+			i++
+
 		} else {
 			api.LogErrorf("plugin %s not found, ignored", name)
 		}
 	}
+	conf.authnFiltersEndAt = authnFiltersEndAt
 
 	return conf, nil
 }
@@ -134,7 +149,6 @@ func (p *FilterManagerConfigParser) Merge(parent interface{}, child interface{})
 
 type filterManager struct {
 	filters      []api.Filter
-	names        []string
 	authnFilters []api.Filter
 
 	decodeRequestNeeded bool
@@ -227,29 +241,6 @@ var canSkipMethod = map[string]bool{
 func FilterManagerConfigFactory(c interface{}) capi.StreamFilterFactory {
 	conf := c.(*filterManagerConfig)
 	newConfig := conf.current
-	factories := make([]api.FilterFactory, len(newConfig))
-	names := make([]string, len(factories))
-	authnFiltersEndAt := 0
-	for i, fc := range newConfig {
-		var factory api.FilterConfigFactory
-		name := fc.Name
-		names[i] = name
-		if plugin := pkgPlugins.LoadHttpFilterConfigFactoryAndParser(name); plugin != nil {
-			p := pkgPlugins.LoadHttpPlugin(name)
-			if p.Order().Position == pkgPlugins.OrderPositionAuthn {
-				authnFiltersEndAt = i + 1
-			}
-
-			factory = plugin.ConfigFactory
-			config := fc.parsedConfig
-			factories[i] = factory(config)
-
-		} else {
-			api.LogErrorf("plugin %s not found, pass through by default", name)
-			factory = PassThroughFactory
-			factories[i] = factory(nil)
-		}
-	}
 
 	return func(cb capi.FilterCallbackHandler) capi.StreamFilter {
 		callbacks := &filterManagerCallbackHandler{
@@ -257,13 +248,16 @@ func FilterManagerConfigFactory(c interface{}) capi.StreamFilterFactory {
 			namespace:             conf.namespace,
 		}
 
-		filters := make([]api.Filter, len(factories))
-		for i, factory := range factories {
-			f := factory(callbacks)
+		filters := make([]api.Filter, len(newConfig))
+		for i, fc := range newConfig {
+			factory := fc.configFactory
+			config := fc.parsedConfig
+			f := factory(config)(callbacks)
 			for meth := range canSkipMethod {
 				ok, err := isMethodFromPassThroughFilter(f, meth)
 				if err != nil {
-					api.LogErrorf("failed to check method %s in filter %s: %v", meth, names[i], err)
+					api.LogErrorf("failed to check method %s in filter: %v", meth, err)
+					// canSkipMethod[meth] will be false
 				}
 				canSkipMethod[meth] = ok
 			}
@@ -272,17 +266,16 @@ func FilterManagerConfigFactory(c interface{}) capi.StreamFilterFactory {
 
 		fm := &filterManager{
 			callbacks: callbacks,
-			names:     names,
 			filters:   filters,
 
 			decodeIdx: -1,
 			encodeIdx: -1,
 		}
 
-		if authnFiltersEndAt != 0 {
+		if conf.authnFiltersEndAt != 0 {
+			authnFiltersEndAt := conf.authnFiltersEndAt
 			authnFilters := filters[:authnFiltersEndAt]
 			fm.authnFilters = authnFilters
-			fm.names = names[authnFiltersEndAt:]
 			fm.filters = filters[authnFiltersEndAt:]
 		}
 
