@@ -24,7 +24,9 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/structpb"
 
+	pkgConsumer "mosn.io/htnn/pkg/consumer"
 	"mosn.io/htnn/pkg/filtermanager/api"
+	"mosn.io/htnn/pkg/filtermanager/model"
 	"mosn.io/htnn/pkg/proto"
 	"mosn.io/htnn/plugins/tests/pkg/envoy"
 )
@@ -75,10 +77,10 @@ func TestParse(t *testing.T) {
 func TestPassThrough(t *testing.T) {
 	cb := envoy.NewFilterCallbackHandler()
 	m := FilterManagerConfigFactory(&filterManagerConfig{
-		current: []*filterConfig{
+		current: []*model.ParsedFilterConfig{
 			{
 				Name:          "passthrough",
-				configFactory: PassThroughFactory,
+				ConfigFactory: PassThroughFactory,
 			},
 		},
 	})(cb)
@@ -139,14 +141,14 @@ func TestLocalReplyJSON_UseReqHeader(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cb := envoy.NewFilterCallbackHandler()
 			m := FilterManagerConfigFactory(&filterManagerConfig{
-				current: []*filterConfig{
+				current: []*model.ParsedFilterConfig{
 					{
 						Name:          "test",
-						configFactory: PassThroughFactory,
+						ConfigFactory: PassThroughFactory,
 					},
 				},
 			})(cb).(*filterManager)
-			patches := gomonkey.ApplyMethodReturn(m.filters[0], "DecodeHeaders", &api.LocalResponse{
+			patches := gomonkey.ApplyMethodReturn(m.filters[0].Filter, "DecodeHeaders", &api.LocalResponse{
 				Code: 200,
 				Msg:  "msg",
 			})
@@ -212,14 +214,14 @@ func TestLocalReplyJSON_UseRespHeader(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cb := envoy.NewFilterCallbackHandler()
 			m := FilterManagerConfigFactory(&filterManagerConfig{
-				current: []*filterConfig{
+				current: []*model.ParsedFilterConfig{
 					{
 						Name:          "test",
-						configFactory: PassThroughFactory,
+						ConfigFactory: PassThroughFactory,
 					},
 				},
 			})(cb).(*filterManager)
-			patches := gomonkey.ApplyMethodReturn(m.filters[0], "EncodeHeaders", &api.LocalResponse{
+			patches := gomonkey.ApplyMethodReturn(m.filters[0].Filter, "EncodeHeaders", &api.LocalResponse{
 				Code: 200,
 				Msg:  "msg",
 			})
@@ -248,14 +250,14 @@ func TestLocalReplyJSON_UseRespHeader(t *testing.T) {
 func TestLocalReplyJSON_DoNotChangeMsgIfContentTypeIsGiven(t *testing.T) {
 	cb := envoy.NewFilterCallbackHandler()
 	m := FilterManagerConfigFactory(&filterManagerConfig{
-		current: []*filterConfig{
+		current: []*model.ParsedFilterConfig{
 			{
 				Name:          "test",
-				configFactory: PassThroughFactory,
+				ConfigFactory: PassThroughFactory,
 			},
 		},
 	})(cb).(*filterManager)
-	patches := gomonkey.ApplyMethodReturn(m.filters[0], "DecodeHeaders", &api.LocalResponse{
+	patches := gomonkey.ApplyMethodReturn(m.filters[0].Filter, "DecodeHeaders", &api.LocalResponse{
 		Msg:    "msg",
 		Header: http.Header(map[string][]string{"Content-Type": {"text/plain"}}),
 	})
@@ -272,4 +274,62 @@ func TestLocalReplyJSON_DoNotChangeMsgIfContentTypeIsGiven(t *testing.T) {
 		Body:    "msg",
 		Headers: map[string][]string{"Content-Type": {"text/plain"}},
 	}, lr)
+}
+
+func setConsumerFactory(interface{}) api.FilterFactory {
+	return func(callbacks api.FilterCallbackHandler) api.Filter {
+		return &setConsumerFilter{
+			callbacks: callbacks,
+		}
+	}
+}
+
+type setConsumerFilter struct {
+	api.PassThroughFilter
+	callbacks api.FilterCallbackHandler
+}
+
+func (f *setConsumerFilter) DecodeHeaders(header api.RequestHeaderMap, endStream bool) api.ResultAction {
+	f.callbacks.SetConsumer(&pkgConsumer.Consumer{
+		FilterConfigs: []*model.ParsedFilterConfig{
+			{
+				Name:          "on_log",
+				ConfigFactory: onLogFactory,
+			},
+		},
+	})
+	return api.Continue
+}
+
+func onLogFactory(interface{}) api.FilterFactory {
+	return func(callbacks api.FilterCallbackHandler) api.Filter {
+		return &onLogFilter{}
+	}
+}
+
+type onLogFilter struct {
+	api.PassThroughFilter
+}
+
+func (f *onLogFilter) OnLog() {
+}
+
+func TestFiltersFromConsumer(t *testing.T) {
+	cb := envoy.NewFilterCallbackHandler()
+	m := FilterManagerConfigFactory(&filterManagerConfig{
+		authnFiltersEndAt: 1,
+		current: []*model.ParsedFilterConfig{
+			{
+				Name:          "set_consumer",
+				ConfigFactory: setConsumerFactory,
+			},
+		},
+	})(cb).(*filterManager)
+	assert.Equal(t, true, m.canSkipOnLog)
+	assert.Equal(t, 0, len(m.filters))
+	hdr := envoy.NewRequestHeaderMap(http.Header{})
+	m.DecodeHeaders(hdr, true)
+	cb.WaitContinued()
+	assert.Equal(t, false, m.canSkipOnLog)
+	assert.Equal(t, 1, len(m.filters))
 }

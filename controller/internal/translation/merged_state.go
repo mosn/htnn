@@ -24,6 +24,7 @@ import (
 	mosniov1 "mosn.io/htnn/controller/api/v1"
 	"mosn.io/htnn/controller/internal/model"
 	"mosn.io/htnn/pkg/filtermanager"
+	fmModel "mosn.io/htnn/pkg/filtermanager/model"
 	"mosn.io/htnn/pkg/plugins"
 )
 
@@ -96,9 +97,9 @@ func toMergedPolicy(rp *routePolicy) *mergedPolicy {
 	}
 
 	fmc := translateHTTPFilterPolicyToFilterManagerConfig(p)
-	nativeFilters := []*filtermanager.FilterConfig{}
+	nativeFilters := []*fmModel.FilterConfig{}
 	goFilterManager := &filtermanager.FilterManagerConfig{
-		Plugins: []*filtermanager.FilterConfig{},
+		Plugins: []*fmModel.FilterConfig{},
 	}
 
 	consumerNeeded := false
@@ -159,7 +160,7 @@ func toMergedPolicy(rp *routePolicy) *mergedPolicy {
 	}
 }
 
-func sortPlugins(ps []*filtermanager.FilterConfig) {
+func sortPlugins(ps []*fmModel.FilterConfig) {
 	sort.Slice(ps, func(i, j int) bool {
 		return plugins.ComparePluginOrder(ps[i].Name, ps[j].Name)
 	})
@@ -189,13 +190,13 @@ func toMergedState(ctx *Ctx, state *dataPlaneState) (*FinalState, error) {
 
 func translateHTTPFilterPolicyToFilterManagerConfig(policy *mosniov1.HTTPFilterPolicy) *filtermanager.FilterManagerConfig {
 	fmc := &filtermanager.FilterManagerConfig{
-		Plugins: []*filtermanager.FilterConfig{},
+		Plugins: []*fmModel.FilterConfig{},
 	}
 	for name, filter := range policy.Spec.Filters {
 		var cfg interface{}
 		// we validated the filter at the beginning, so theorily err should not happen
 		_ = json.Unmarshal(filter.Config.Raw, &cfg)
-		fmc.Plugins = append(fmc.Plugins, &filtermanager.FilterConfig{
+		fmc.Plugins = append(fmc.Plugins, &fmModel.FilterConfig{
 			Name:   name,
 			Config: cfg,
 		})
