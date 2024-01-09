@@ -25,7 +25,6 @@ import (
 
 	"mosn.io/htnn/pkg/consumer"
 	"mosn.io/htnn/pkg/filtermanager/api"
-	"mosn.io/htnn/pkg/plugins"
 	"mosn.io/htnn/plugins/tests/pkg/envoy"
 )
 
@@ -45,7 +44,7 @@ func TestHmacAuth(t *testing.T) {
 				"extra":         {"2", "1"},
 			},
 			consumer: &consumer.Consumer{
-				ConsumerConfigs: map[string]plugins.PluginConsumerConfig{
+				ConsumerConfigs: map[string]api.PluginConsumerConfig{
 					Name: &ConsumerConfig{
 						AccessKey: "ak",
 						SecretKey: "sk",
@@ -67,7 +66,7 @@ func TestHmacAuth(t *testing.T) {
 				DateHeader:      {"Fri Jan  5 16:10:54 CST 2024"},
 			},
 			consumer: &consumer.Consumer{
-				ConsumerConfigs: map[string]plugins.PluginConsumerConfig{
+				ConsumerConfigs: map[string]api.PluginConsumerConfig{
 					Name: &ConsumerConfig{
 						AccessKey: "ak",
 						SecretKey: "sk",
@@ -83,7 +82,7 @@ func TestHmacAuth(t *testing.T) {
 				DateHeader:      {"Fri Jan  5 16:10:54 CST 2024"},
 			},
 			consumer: &consumer.Consumer{
-				ConsumerConfigs: map[string]plugins.PluginConsumerConfig{
+				ConsumerConfigs: map[string]api.PluginConsumerConfig{
 					Name: &ConsumerConfig{
 						AccessKey: "ak",
 						SecretKey: "sk",

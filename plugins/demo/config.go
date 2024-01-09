@@ -60,8 +60,8 @@ func (p *plugin) ConfigFactory() api.FilterConfigFactory {
 	return configFactory
 }
 
-// ConfigFactory returns plugins.PluginConfig's implementation used during configuration processing
-func (p *plugin) Config() plugins.PluginConfig {
+// ConfigFactory returns api.PluginConfig's implementation used during configuration processing
+func (p *plugin) Config() api.PluginConfig {
 	return &config{}
 }
 

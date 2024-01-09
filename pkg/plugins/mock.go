@@ -26,7 +26,7 @@ func (m *MockPlugin) ConfigFactory() api.FilterConfigFactory {
 	return func(interface{}) api.FilterFactory { return nil }
 }
 
-func (m *MockPlugin) Config() PluginConfig {
+func (m *MockPlugin) Config() api.PluginConfig {
 	return &MockPluginConfig{}
 }
 

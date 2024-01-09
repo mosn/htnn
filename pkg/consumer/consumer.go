@@ -43,7 +43,7 @@ type Consumer struct {
 
 	// fields that set in the data plane
 	ResourceVersion string                                  `json:"-"`
-	ConsumerConfigs map[string]plugins.PluginConsumerConfig `json:"-"`
+	ConsumerConfigs map[string]api.PluginConsumerConfig `json:"-"`
 }
 
 func (c *Consumer) Marshal() string {
@@ -58,7 +58,7 @@ func (c *Consumer) Unmarshal(s string) error {
 		return err
 	}
 
-	c.ConsumerConfigs = make(map[string]plugins.PluginConsumerConfig, len(c.Auth))
+	c.ConsumerConfigs = make(map[string]api.PluginConsumerConfig, len(c.Auth))
 	for name, data := range c.Auth {
 		p, ok := plugins.LoadHttpPlugin(name).(plugins.ConsumerPlugin)
 		if !ok {
@@ -159,6 +159,6 @@ func (c *Consumer) Name() string {
 	return c.ConsumerName
 }
 
-func (c *Consumer) PluginConfig(name string) plugins.PluginConsumerConfig {
+func (c *Consumer) PluginConfig(name string) api.PluginConsumerConfig {
 	return c.ConsumerConfigs[name]
 }

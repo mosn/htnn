@@ -76,11 +76,8 @@ type PluginOrder struct {
 	Operation PluginOrderOperation
 }
 
-type PluginConfig = api.PluginConfig
-type PluginConsumerConfig = api.PluginConsumerConfig
-
 type Plugin interface {
-	Config() PluginConfig
+	Config() api.PluginConfig
 
 	// Optional methods
 	Type() PluginType
@@ -108,5 +105,5 @@ type GoPlugin interface {
 type ConsumerPlugin interface {
 	Plugin
 
-	ConsumerConfig() PluginConsumerConfig
+	ConsumerConfig() api.PluginConsumerConfig
 }

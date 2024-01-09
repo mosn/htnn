@@ -24,6 +24,7 @@ import (
 	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	"sigs.k8s.io/yaml"
 
+	"mosn.io/htnn/pkg/filtermanager/api"
 	"mosn.io/htnn/pkg/plugins"
 )
 
@@ -34,7 +35,7 @@ func (p *basePlugin) RouteConfigTypeURL() string {
 	return "type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit"
 }
 
-func (p basePlugin) Config() plugins.PluginConfig {
+func (p basePlugin) Config() api.PluginConfig {
 	return &local_ratelimit.LocalRateLimit{}
 }
 
