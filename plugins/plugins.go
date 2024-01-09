@@ -18,6 +18,7 @@ import (
 	_ "mosn.io/htnn/plugins/casbin"
 	_ "mosn.io/htnn/plugins/demo"
 	_ "mosn.io/htnn/plugins/ext_auth"
+	_ "mosn.io/htnn/plugins/hmac_auth"
 	_ "mosn.io/htnn/plugins/key_auth"
 	_ "mosn.io/htnn/plugins/limit_req"
 	_ "mosn.io/htnn/plugins/opa"
