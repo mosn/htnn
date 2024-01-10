@@ -68,9 +68,9 @@ type Consumer struct {
 }
 
 func (c *Consumer) Marshal() string {
-	auth := make(map[string][]byte, len(c.Spec.Auth))
+	auth := make(map[string]string, len(c.Spec.Auth))
 	for k, v := range c.Spec.Auth {
-		auth[k] = v.Config.Raw
+		auth[k] = string(v.Config.Raw)
 	}
 	consumer := &pkgConsumer.Consumer{
 		ConsumerName: c.Name,

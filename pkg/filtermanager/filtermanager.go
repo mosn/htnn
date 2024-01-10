@@ -21,6 +21,7 @@ import (
 	"reflect"
 	"runtime"
 	"runtime/debug"
+	"sort"
 
 	xds "github.com/cncf/xds/go/xds/type/v3"
 	capi "github.com/envoyproxy/envoy/contrib/golang/common/go/api"
@@ -28,6 +29,7 @@ import (
 
 	pkgConsumer "mosn.io/htnn/pkg/consumer"
 	"mosn.io/htnn/pkg/filtermanager/api"
+	"mosn.io/htnn/pkg/filtermanager/model"
 	pkgPlugins "mosn.io/htnn/pkg/plugins"
 )
 
@@ -40,28 +42,17 @@ import (
 type FilterManagerConfigParser struct {
 }
 
-type FilterConfig struct {
-	Name   string      `json:"name"`
-	Config interface{} `json:"config"`
-}
-
 type FilterManagerConfig struct {
 	Namespace string `json:"namespace,omitempty"`
 
-	Plugins []*FilterConfig `json:"plugins"`
-}
-
-type filterConfig struct {
-	Name          string
-	parsedConfig  interface{}
-	configFactory api.FilterConfigFactory
+	Plugins []*model.FilterConfig `json:"plugins"`
 }
 
 type filterManagerConfig struct {
 	namespace         string
 	authnFiltersEndAt int
 
-	current []*filterConfig
+	current []*model.ParsedFilterConfig
 }
 
 func (p *FilterManagerConfigParser) Parse(any *anypb.Any, callbacks capi.ConfigCallbackHandler) (interface{}, error) {
@@ -70,7 +61,7 @@ func (p *FilterManagerConfigParser) Parse(any *anypb.Any, callbacks capi.ConfigC
 	// No configuration
 	if any.GetTypeUrl() == "" {
 		conf := &filterManagerConfig{
-			current: []*filterConfig{},
+			current: []*model.ParsedFilterConfig{},
 		}
 		return conf, nil
 	}
@@ -96,7 +87,7 @@ func (p *FilterManagerConfigParser) Parse(any *anypb.Any, callbacks capi.ConfigC
 	plugins := fmConfig.Plugins
 	conf := &filterManagerConfig{
 		namespace: fmConfig.Namespace,
-		current:   make([]*filterConfig, 0, len(plugins)),
+		current:   make([]*model.ParsedFilterConfig, 0, len(plugins)),
 	}
 
 	authnFiltersEndAt := 0
@@ -111,10 +102,10 @@ func (p *FilterManagerConfigParser) Parse(any *anypb.Any, callbacks capi.ConfigC
 				return nil, fmt.Errorf("%w during parsing plugin %s in filtermanager", err, name)
 			}
 
-			conf.current = append(conf.current, &filterConfig{
+			conf.current = append(conf.current, &model.ParsedFilterConfig{
 				Name:          proto.Name,
-				parsedConfig:  config,
-				configFactory: plugin.ConfigFactory,
+				ParsedConfig:  config,
+				ConfigFactory: plugin.ConfigFactory,
 			})
 
 			p := pkgPlugins.LoadHttpPlugin(name)
@@ -147,9 +138,21 @@ func (p *FilterManagerConfigParser) Merge(parent interface{}, child interface{})
 	return child
 }
 
+type filterWrapper struct {
+	api.Filter
+	name string
+}
+
+func newFilterWrapper(name string, f api.Filter) *filterWrapper {
+	return &filterWrapper{
+		Filter: f,
+		name:   name,
+	}
+}
+
 type filterManager struct {
-	filters      []api.Filter
-	authnFilters []api.Filter
+	filters      []*filterWrapper
+	authnFilters []*filterWrapper
 
 	decodeRequestNeeded bool
 	decodeIdx           int
@@ -228,14 +231,16 @@ func isMethodFromPassThroughFilter(filter api.Filter, methodName string) (bool, 
 	return wrapped, nil
 }
 
-var canSkipMethod = map[string]bool{
-	"DecodeHeaders":  true,
-	"DecodeData":     true,
-	"DecodeRequest":  true,
-	"EncodeHeaders":  true,
-	"EncodeData":     true,
-	"EncodeResponse": true,
-	"OnLog":          true,
+func newSkipMethodsMap() map[string]bool {
+	return map[string]bool{
+		"DecodeHeaders":  true,
+		"DecodeData":     true,
+		"DecodeRequest":  true,
+		"EncodeHeaders":  true,
+		"EncodeData":     true,
+		"EncodeResponse": true,
+		"OnLog":          true,
+	}
 }
 
 func FilterManagerConfigFactory(c interface{}) capi.StreamFilterFactory {
@@ -248,10 +253,11 @@ func FilterManagerConfigFactory(c interface{}) capi.StreamFilterFactory {
 			namespace:             conf.namespace,
 		}
 
-		filters := make([]api.Filter, len(newConfig))
+		canSkipMethod := newSkipMethodsMap()
+		filters := make([]*filterWrapper, len(newConfig))
 		for i, fc := range newConfig {
-			factory := fc.configFactory
-			config := fc.parsedConfig
+			factory := fc.ConfigFactory
+			config := fc.ParsedConfig
 			f := factory(config)(callbacks)
 			for meth := range canSkipMethod {
 				ok, err := isMethodFromPassThroughFilter(f, meth)
@@ -261,7 +267,7 @@ func FilterManagerConfigFactory(c interface{}) capi.StreamFilterFactory {
 				}
 				canSkipMethod[meth] = ok
 			}
-			filters[i] = f
+			filters[i] = newFilterWrapper(fc.Name, f)
 		}
 
 		fm := &filterManager{
@@ -384,7 +390,7 @@ func (m *filterManager) DecodeHeaders(header api.RequestHeaderMap, endStream boo
 
 			// we check consumer at the end of authn filters, so we can have multiple authn filters
 			// configured and the consumer will be set by any of them
-			_, ok := m.callbacks.consumer.(*pkgConsumer.Consumer)
+			c, ok := m.callbacks.consumer.(*pkgConsumer.Consumer)
 			if !ok {
 				api.LogInfo("reject for consumer not found")
 				m.localReply(&api.LocalResponse{
@@ -392,6 +398,39 @@ func (m *filterManager) DecodeHeaders(header api.RequestHeaderMap, endStream boo
 					Msg:  "consumer not found",
 				})
 				return
+			}
+
+			if len(c.FilterConfigs) > 0 {
+				canSkipMethod := newSkipMethodsMap()
+				filters := make([]*filterWrapper, len(c.FilterConfigs))
+				names := make([]string, len(c.FilterConfigs))
+				for i, fc := range c.FilterConfigs {
+					factory := fc.ConfigFactory
+					config := fc.ParsedConfig
+					f := factory(config)(m.callbacks)
+					for meth := range canSkipMethod {
+						ok, err := isMethodFromPassThroughFilter(f, meth)
+						if err != nil {
+							api.LogErrorf("failed to check method %s in filter: %v", meth, err)
+							// canSkipMethod[meth] will be false
+						}
+						canSkipMethod[meth] = ok
+					}
+					filters[i] = newFilterWrapper(fc.Name, f)
+					names[i] = filters[i].name
+				}
+
+				api.LogInfof("add filters %v from consumer %s", names, c.Name())
+
+				m.canSkipDecodeData = m.canSkipDecodeData && canSkipMethod["DecodeData"] && canSkipMethod["DecodeRequest"]
+				m.canSkipEncodeHeaders = m.canSkipEncodeData && canSkipMethod["EncodeHeaders"]
+				m.canSkipEncodeData = m.canSkipEncodeData && canSkipMethod["EncodeData"] && canSkipMethod["EncodeResponse"]
+				m.canSkipOnLog = m.canSkipOnLog && canSkipMethod["OnLog"]
+
+				m.filters = append(m.filters, filters...)
+				sort.Slice(m.filters, func(i, j int) bool {
+					return pkgPlugins.ComparePluginOrder(m.filters[i].name, m.filters[j].name)
+				})
 			}
 		}
 

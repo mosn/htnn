@@ -27,6 +27,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"mosn.io/htnn/pkg/filtermanager"
+	"mosn.io/htnn/pkg/filtermanager/model"
 	"mosn.io/htnn/plugins/tests/integration/data_plane"
 )
 
@@ -44,7 +45,7 @@ func TestFilterManagerDecode(t *testing.T) {
 	defer dp.Stop()
 
 	b := &filtermanager.FilterManagerConfig{
-		Plugins: []*filtermanager.FilterConfig{
+		Plugins: []*model.FilterConfig{
 			{
 				Name: "buffer",
 				Config: &Config{
@@ -55,7 +56,7 @@ func TestFilterManagerDecode(t *testing.T) {
 		},
 	}
 	sThenB := &filtermanager.FilterManagerConfig{
-		Plugins: []*filtermanager.FilterConfig{
+		Plugins: []*model.FilterConfig{
 			{
 				Name: "stream",
 				Config: &Config{
@@ -72,7 +73,7 @@ func TestFilterManagerDecode(t *testing.T) {
 		},
 	}
 	sThenBThenS := &filtermanager.FilterManagerConfig{
-		Plugins: []*filtermanager.FilterConfig{
+		Plugins: []*model.FilterConfig{
 			{
 				Name: "stream",
 				Config: &Config{
@@ -95,7 +96,7 @@ func TestFilterManagerDecode(t *testing.T) {
 		},
 	}
 	sThenBThenSThenB := &filtermanager.FilterManagerConfig{
-		Plugins: []*filtermanager.FilterConfig{
+		Plugins: []*model.FilterConfig{
 			{
 				Name: "stream",
 				Config: &Config{
@@ -125,7 +126,7 @@ func TestFilterManagerDecode(t *testing.T) {
 		},
 	}
 	nbThenS := &filtermanager.FilterManagerConfig{
-		Plugins: []*filtermanager.FilterConfig{
+		Plugins: []*model.FilterConfig{
 			{
 				Name: "buffer",
 				Config: &Config{
@@ -141,7 +142,7 @@ func TestFilterManagerDecode(t *testing.T) {
 		},
 	}
 	bThenNb := &filtermanager.FilterManagerConfig{
-		Plugins: []*filtermanager.FilterConfig{
+		Plugins: []*model.FilterConfig{
 			{
 				Name: "buffer",
 				Config: &Config{
@@ -272,7 +273,7 @@ func TestFilterManagerEncode(t *testing.T) {
 	defer dp.Stop()
 
 	b := &filtermanager.FilterManagerConfig{
-		Plugins: []*filtermanager.FilterConfig{
+		Plugins: []*model.FilterConfig{
 			{
 				Name: "buffer",
 				Config: &Config{
@@ -283,7 +284,7 @@ func TestFilterManagerEncode(t *testing.T) {
 		},
 	}
 	sThenB := &filtermanager.FilterManagerConfig{
-		Plugins: []*filtermanager.FilterConfig{
+		Plugins: []*model.FilterConfig{
 			{
 				Name: "buffer",
 				Config: &Config{
@@ -300,7 +301,7 @@ func TestFilterManagerEncode(t *testing.T) {
 		},
 	}
 	sThenBThenS := &filtermanager.FilterManagerConfig{
-		Plugins: []*filtermanager.FilterConfig{
+		Plugins: []*model.FilterConfig{
 			{
 				Name: "stream",
 				Config: &Config{
@@ -323,7 +324,7 @@ func TestFilterManagerEncode(t *testing.T) {
 		},
 	}
 	sThenBThenSThenB := &filtermanager.FilterManagerConfig{
-		Plugins: []*filtermanager.FilterConfig{
+		Plugins: []*model.FilterConfig{
 			{
 				Name: "buffer",
 				Config: &Config{
@@ -353,7 +354,7 @@ func TestFilterManagerEncode(t *testing.T) {
 		},
 	}
 	nbThenS := &filtermanager.FilterManagerConfig{
-		Plugins: []*filtermanager.FilterConfig{
+		Plugins: []*model.FilterConfig{
 			{
 				Name: "stream",
 				Config: &Config{
@@ -369,7 +370,7 @@ func TestFilterManagerEncode(t *testing.T) {
 		},
 	}
 	bThenNb := &filtermanager.FilterManagerConfig{
-		Plugins: []*filtermanager.FilterConfig{
+		Plugins: []*model.FilterConfig{
 			{
 				Name: "buffer",
 				Config: &Config{
@@ -485,7 +486,7 @@ func TestFilterManagerDecodeLocalReply(t *testing.T) {
 	defer dp.Stop()
 
 	dh := &filtermanager.FilterManagerConfig{
-		Plugins: []*filtermanager.FilterConfig{
+		Plugins: []*model.FilterConfig{
 			{
 				Name: "localReply",
 				Config: &Config{
@@ -496,7 +497,7 @@ func TestFilterManagerDecodeLocalReply(t *testing.T) {
 		},
 	}
 	dd := &filtermanager.FilterManagerConfig{
-		Plugins: []*filtermanager.FilterConfig{
+		Plugins: []*model.FilterConfig{
 			{
 				Name: "localReply",
 				Config: &Config{
@@ -507,7 +508,7 @@ func TestFilterManagerDecodeLocalReply(t *testing.T) {
 		},
 	}
 	ddThenB := &filtermanager.FilterManagerConfig{
-		Plugins: []*filtermanager.FilterConfig{
+		Plugins: []*model.FilterConfig{
 			{
 				Name: "localReply",
 				Config: &Config{
@@ -525,7 +526,7 @@ func TestFilterManagerDecodeLocalReply(t *testing.T) {
 		},
 	}
 	dr := &filtermanager.FilterManagerConfig{
-		Plugins: []*filtermanager.FilterConfig{
+		Plugins: []*model.FilterConfig{
 			{
 				Name: "localReply",
 				Config: &Config{
@@ -536,7 +537,7 @@ func TestFilterManagerDecodeLocalReply(t *testing.T) {
 		},
 	}
 	bThenDh := &filtermanager.FilterManagerConfig{
-		Plugins: []*filtermanager.FilterConfig{
+		Plugins: []*model.FilterConfig{
 			{
 				Name: "buffer",
 				Config: &Config{
@@ -554,7 +555,7 @@ func TestFilterManagerDecodeLocalReply(t *testing.T) {
 		},
 	}
 	bThenDd := &filtermanager.FilterManagerConfig{
-		Plugins: []*filtermanager.FilterConfig{
+		Plugins: []*model.FilterConfig{
 			{
 				Name: "buffer",
 				Config: &Config{
@@ -573,7 +574,7 @@ func TestFilterManagerDecodeLocalReply(t *testing.T) {
 	}
 
 	lrThenE := &filtermanager.FilterManagerConfig{
-		Plugins: []*filtermanager.FilterConfig{
+		Plugins: []*model.FilterConfig{
 			{
 				Name: "localReply",
 				Config: &Config{
@@ -590,7 +591,7 @@ func TestFilterManagerDecodeLocalReply(t *testing.T) {
 		},
 	}
 	fOrder := &filtermanager.FilterManagerConfig{
-		Plugins: []*filtermanager.FilterConfig{
+		Plugins: []*model.FilterConfig{
 			{
 				Name: "buffer",
 				Config: &Config{
@@ -615,7 +616,7 @@ func TestFilterManagerDecodeLocalReply(t *testing.T) {
 		},
 	}
 	fOrderM := &filtermanager.FilterManagerConfig{
-		Plugins: []*filtermanager.FilterConfig{
+		Plugins: []*model.FilterConfig{
 			{
 				Name: "buffer",
 				Config: &Config{
@@ -724,7 +725,7 @@ func TestFilterManagerEncodeLocalReply(t *testing.T) {
 	defer dp.Stop()
 
 	eh := &filtermanager.FilterManagerConfig{
-		Plugins: []*filtermanager.FilterConfig{
+		Plugins: []*model.FilterConfig{
 			{
 				Name: "localReply",
 				Config: &Config{
@@ -735,7 +736,7 @@ func TestFilterManagerEncodeLocalReply(t *testing.T) {
 		},
 	}
 	ed := &filtermanager.FilterManagerConfig{
-		Plugins: []*filtermanager.FilterConfig{
+		Plugins: []*model.FilterConfig{
 			{
 				Name: "localReply",
 				Config: &Config{
@@ -746,7 +747,7 @@ func TestFilterManagerEncodeLocalReply(t *testing.T) {
 		},
 	}
 	er := &filtermanager.FilterManagerConfig{
-		Plugins: []*filtermanager.FilterConfig{
+		Plugins: []*model.FilterConfig{
 			{
 				Name: "localReply",
 				Config: &Config{
@@ -757,7 +758,7 @@ func TestFilterManagerEncodeLocalReply(t *testing.T) {
 		},
 	}
 	edThenB := &filtermanager.FilterManagerConfig{
-		Plugins: []*filtermanager.FilterConfig{
+		Plugins: []*model.FilterConfig{
 			{
 				Name: "buffer",
 				Config: &Config{
@@ -775,7 +776,7 @@ func TestFilterManagerEncodeLocalReply(t *testing.T) {
 		},
 	}
 	bThenEh := &filtermanager.FilterManagerConfig{
-		Plugins: []*filtermanager.FilterConfig{
+		Plugins: []*model.FilterConfig{
 			{
 				Name: "localReply",
 				Config: &Config{
@@ -793,7 +794,7 @@ func TestFilterManagerEncodeLocalReply(t *testing.T) {
 		},
 	}
 	bThenEd := &filtermanager.FilterManagerConfig{
-		Plugins: []*filtermanager.FilterConfig{
+		Plugins: []*model.FilterConfig{
 			{
 				Name: "localReply",
 				Config: &Config{
@@ -811,7 +812,7 @@ func TestFilterManagerEncodeLocalReply(t *testing.T) {
 		},
 	}
 	bThenSThenEh := &filtermanager.FilterManagerConfig{
-		Plugins: []*filtermanager.FilterConfig{
+		Plugins: []*model.FilterConfig{
 			{
 				Name: "localReply",
 				Config: &Config{

@@ -20,7 +20,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/types/known/structpb"
 
-	_ "mosn.io/htnn/plugins/key_auth"
+	"mosn.io/htnn/pkg/filtermanager/model"
+	_ "mosn.io/htnn/plugins/key_auth" // for test
+	_ "mosn.io/htnn/plugins/opa"      // for test
 )
 
 type consumerTest struct {
@@ -40,7 +42,7 @@ func (c *consumerTest) Add(ns string, consumer *Consumer) *consumerTest {
 	idx := c.values[ns].(map[string]interface{})
 	idx[consumer.ConsumerName] = map[string]interface{}{
 		"d": consumer.Marshal(),
-		"v": consumer.ResourceVersion,
+		"v": consumer.resourceVersion,
 	}
 	return c
 }
@@ -54,12 +56,12 @@ func TestUpdateConsumer(t *testing.T) {
 	// clean index
 	resourceIndex = make(map[string]map[string]*Consumer)
 
-	auth := map[string][]byte{
-		"key_auth": []byte("{\"key\": \"test\"}"),
+	auth := map[string]string{
+		"key_auth": "{\"key\": \"test\"}",
 	}
 	c := &Consumer{
 		ConsumerName:    "me",
-		ResourceVersion: "1",
+		resourceVersion: "1",
 		Auth:            auth,
 	}
 	v := newConsumerTest().Add("ns", c).Build()
@@ -73,14 +75,14 @@ func TestUpdateConsumer(t *testing.T) {
 	require.Nil(t, r)
 
 	// no change
-	c.Auth["key_auth"] = []byte("{\"key\": \"two\"}")
+	c.Auth["key_auth"] = string("{\"key\": \"two\"}")
 	v = newConsumerTest().Add("ns", c).Build()
 	updateConsumers(v)
 	r, _ = LookupConsumer("ns", "key_auth", "test")
 	require.Equal(t, "me", r.Name())
 
 	// update
-	c.ResourceVersion = "2"
+	c.resourceVersion = "2"
 	v = newConsumerTest().Add("ns", c).Build()
 	updateConsumers(v)
 	r, _ = LookupConsumer("ns", "key_auth", "test")
@@ -90,7 +92,7 @@ func TestUpdateConsumer(t *testing.T) {
 
 	// remove
 	c.ConsumerName = "you"
-	c.ResourceVersion = "3"
+	c.resourceVersion = "3"
 	v = newConsumerTest().Add("ns", c).Build()
 	updateConsumers(v)
 	r, _ = LookupConsumer("ns", "key_auth", "me")
@@ -99,37 +101,80 @@ func TestUpdateConsumer(t *testing.T) {
 	require.Equal(t, "you", r.Name())
 }
 
-func TestConsumerUnmarshal(t *testing.T) {
+func TestConsumerInitConfigs(t *testing.T) {
 	var tests = []struct {
 		name     string
 		consumer Consumer
-		wantErr  bool
+		err      string
 	}{
+		{
+			name: "ok",
+			consumer: Consumer{
+				Auth: map[string]string{
+					"key_auth": "{\"key\": \"test\"}",
+				},
+				Filters: map[string]*model.FilterConfig{
+					"opa": {
+						Config: map[string]interface{}{
+							"remote": map[string]interface{}{
+								"url":    "http://opa:8181",
+								"policy": "t",
+							},
+						},
+					},
+				},
+			},
+		},
 		{
 			name: "not consumer plugin",
 			consumer: Consumer{
-				Auth: map[string][]byte{
-					"not_consumer": []byte("{\"key\": \"test\"}"),
+				Auth: map[string]string{
+					"demo": "{\"key\": \"test\"}",
 				},
 			},
-			wantErr: true,
+			err: "plugin demo is not for consumer",
 		},
 		{
 			name: "failed to validate",
 			consumer: Consumer{
-				Auth: map[string][]byte{
-					"key_auth": []byte("{\"key2\": \"test\"}"),
+				Auth: map[string]string{
+					"key_auth": "{\"key2\": \"test\"}",
 				},
 			},
-			wantErr: true,
+			err: "failed to unmarshal consumer config for plugin key_auth",
+		},
+		{
+			name: "unknown plugin",
+			consumer: Consumer{
+				Filters: map[string]*model.FilterConfig{
+					"opax": {
+						Config: []byte(""),
+					},
+				},
+			},
+			err: "plugin opax not found",
+		},
+		{
+			name: "failed to validate filters",
+			consumer: Consumer{
+				Filters: map[string]*model.FilterConfig{
+					"opa": {
+						Config: []byte(""),
+					},
+				},
+			},
+			err: "during parsing plugin opa in consumer",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			var c Consumer
 			err := c.Unmarshal(tt.consumer.Marshal())
-			if tt.wantErr {
-				require.Error(t, err)
+			require.NoError(t, err)
+
+			err = c.InitConfigs()
+			if tt.err != "" {
+				require.ErrorContains(t, err, tt.err)
 			} else {
 				require.NoError(t, err)
 			}

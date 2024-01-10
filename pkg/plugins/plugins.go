@@ -15,6 +15,7 @@
 package plugins
 
 import (
+	"cmp"
 	"encoding/json"
 	"sync"
 
@@ -152,6 +153,10 @@ var (
 
 // The caller should ganrantee the a, b are valid plugin name.
 func ComparePluginOrder(a, b string) bool {
+	return ComparePluginOrderInt(a, b) < 0
+}
+
+func ComparePluginOrderInt(a, b string) int {
 	nameToOrderInit.Do(func() {
 		IterateHttpPlugin(func(key string, value Plugin) bool {
 			nameToOrder[key] = value.Order()
@@ -162,10 +167,10 @@ func ComparePluginOrder(a, b string) bool {
 	aOrder := nameToOrder[a]
 	bOrder := nameToOrder[b]
 	if aOrder.Position != bOrder.Position {
-		return aOrder.Position < bOrder.Position
+		return int(aOrder.Position - bOrder.Position)
 	}
 	if aOrder.Operation != bOrder.Operation {
-		return aOrder.Operation < bOrder.Operation
+		return int(aOrder.Operation - bOrder.Operation)
 	}
-	return a < b
+	return cmp.Compare(a, b)
 }
