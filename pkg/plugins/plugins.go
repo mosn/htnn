@@ -17,7 +17,6 @@ package plugins
 import (
 	"cmp"
 	"encoding/json"
-	"sync"
 
 	"google.golang.org/protobuf/encoding/protojson"
 
@@ -28,8 +27,8 @@ import (
 var (
 	logger = log.DefaultLogger.WithName("plugins")
 
-	httpPlugins                      = sync.Map{}
-	httpFilterConfigFactoryAndParser = sync.Map{}
+	httpPlugins                      = map[string]Plugin{}
+	httpFilterConfigFactoryAndParser = map[string]*FilterConfigFactoryAndParser{}
 )
 
 // Here we introduce extra struct to avoid cyclic import between pkg/filtermanager and pkg/plugins
@@ -47,18 +46,14 @@ func RegisterHttpFilterConfigFactoryAndParser(name string, factory api.FilterCon
 	if factory == nil {
 		panic("config factory should not be nil")
 	}
-	httpFilterConfigFactoryAndParser.Store(name, &FilterConfigFactoryAndParser{
+	httpFilterConfigFactoryAndParser[name] = &FilterConfigFactoryAndParser{
 		parser,
 		factory,
-	})
+	}
 }
 
 func LoadHttpFilterConfigFactoryAndParser(name string) *FilterConfigFactoryAndParser {
-	res, ok := httpFilterConfigFactoryAndParser.Load(name)
-	if !ok {
-		return nil
-	}
-	return res.(*FilterConfigFactoryAndParser)
+	return httpFilterConfigFactoryAndParser[name]
 }
 
 func RegisterHttpPlugin(name string, plugin Plugin) {
@@ -73,21 +68,21 @@ func RegisterHttpPlugin(name string, plugin Plugin) {
 			NewPluginConfigParser(goPlugin))
 	}
 
-	httpPlugins.Store(name, plugin)
+	// override plugin is allowed so that we can patch plugin with bugfix if upgrading
+	// the whole htnn is not available
+	httpPlugins[name] = plugin
 }
 
 func LoadHttpPlugin(name string) Plugin {
-	res, ok := httpPlugins.Load(name)
-	if !ok {
-		return nil
-	}
-	return res.(Plugin)
+	return httpPlugins[name]
 }
 
 func IterateHttpPlugin(f func(key string, value Plugin) bool) {
-	httpPlugins.Range(func(k, v any) bool {
-		return f(k.(string), v.(Plugin))
-	})
+	for k, v := range httpPlugins {
+		if !f(k, v) {
+			return
+		}
+	}
 }
 
 type PluginConfigParser struct {
@@ -146,26 +141,22 @@ func (p *PluginMethodDefaultImpl) Merge(parent interface{}, child interface{}) i
 	return child
 }
 
-var (
-	nameToOrder     = map[string]PluginOrder{}
-	nameToOrderInit = sync.Once{}
-)
-
-// The caller should ganrantee the a, b are valid plugin name.
 func ComparePluginOrder(a, b string) bool {
 	return ComparePluginOrderInt(a, b) < 0
 }
 
 func ComparePluginOrderInt(a, b string) int {
-	nameToOrderInit.Do(func() {
-		IterateHttpPlugin(func(key string, value Plugin) bool {
-			nameToOrder[key] = value.Order()
-			return true
-		})
-	})
+	pa := httpPlugins[a]
+	pb := httpPlugins[b]
+	if pa == nil || pb == nil {
+		// The caller should guarantee the a, b are valid plugin name, so this case only happens
+		// in test.
+		return cmp.Compare(a, b)
+	}
 
-	aOrder := nameToOrder[a]
-	bOrder := nameToOrder[b]
+	aOrder := pa.Order()
+	bOrder := pb.Order()
+
 	if aOrder.Position != bOrder.Position {
 		return int(aOrder.Position - bOrder.Position)
 	}
