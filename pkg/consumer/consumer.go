@@ -22,6 +22,7 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 
 	"mosn.io/htnn/pkg/filtermanager/api"
+	"mosn.io/htnn/pkg/filtermanager/model"
 	"mosn.io/htnn/pkg/log"
 	"mosn.io/htnn/pkg/plugins"
 )
@@ -39,11 +40,14 @@ type Consumer struct {
 	// So we use `ConsumerName` as the field name, and `Name()` as the method name.
 	ConsumerName string `json:"name"`
 
-	Auth map[string][]byte `json:"auth"`
+	Auth    map[string]string              `json:"auth"`
+	Filters map[string]*model.FilterConfig `json:"filters"`
 
 	// fields that set in the data plane
-	ResourceVersion string                                  `json:"-"`
+	namespace       string
+	resourceVersion string
 	ConsumerConfigs map[string]api.PluginConsumerConfig `json:"-"`
+	FilterConfigs   []*model.ParsedFilterConfig         `json:"-"`
 }
 
 func (c *Consumer) Marshal() string {
@@ -53,10 +57,11 @@ func (c *Consumer) Marshal() string {
 }
 
 func (c *Consumer) Unmarshal(s string) error {
-	err := json.Unmarshal([]byte(s), c)
-	if err != nil {
-		return err
-	}
+	return json.Unmarshal([]byte(s), c)
+}
+
+func (c *Consumer) InitConfigs() error {
+	logger.Info("init configs for consumer", "name", c.ConsumerName, "namespace", c.namespace)
 
 	c.ConsumerConfigs = make(map[string]api.PluginConsumerConfig, len(c.Auth))
 	for name, data := range c.Auth {
@@ -66,18 +71,38 @@ func (c *Consumer) Unmarshal(s string) error {
 		}
 
 		conf := p.ConsumerConfig()
-		err = protojson.Unmarshal(data, conf)
+		err := protojson.Unmarshal([]byte(data), conf)
 		if err != nil {
 			return fmt.Errorf("failed to unmarshal consumer config for plugin %s: %w", name, err)
 		}
 
-		err := conf.Validate()
+		err = conf.Validate()
 		if err != nil {
 			return fmt.Errorf("failed to validate consumer config for plugin %s: %w", name, err)
 		}
 
 		c.ConsumerConfigs[name] = conf
 	}
+
+	c.FilterConfigs = make([]*model.ParsedFilterConfig, 0, len(c.Filters))
+	for name, data := range c.Filters {
+		p := plugins.LoadHttpFilterConfigFactoryAndParser(name)
+		if p == nil {
+			return fmt.Errorf("plugin %s not found", name)
+		}
+
+		conf, err := p.ConfigParser.Parse(data.Config, nil)
+		if err != nil {
+			return fmt.Errorf("%w during parsing plugin %s in consumer", err, name)
+		}
+
+		c.FilterConfigs = append(c.FilterConfigs, &model.ParsedFilterConfig{
+			Name:          name,
+			ParsedConfig:  conf,
+			ConfigFactory: p.ConfigFactory,
+		})
+	}
+
 	return nil
 }
 
@@ -95,7 +120,7 @@ func updateConsumers(value *structpb.Struct) {
 			v := fields["v"].GetStringValue()
 
 			currValue, ok := currIdx[name]
-			if !ok || currValue.ResourceVersion != v {
+			if !ok || currValue.resourceVersion != v {
 				s := fields["d"].GetStringValue()
 				var c Consumer
 				err := c.Unmarshal(s)
@@ -104,7 +129,15 @@ func updateConsumers(value *structpb.Struct) {
 					continue
 				}
 
-				c.ResourceVersion = v
+				c.namespace = ns
+
+				err = c.InitConfigs()
+				if err != nil {
+					logger.Error(err, "failed to init", "consumer", s, "name", name, "namespace", ns)
+					continue
+				}
+
+				c.resourceVersion = v
 				newIdx[name] = &c
 			} else {
 				newIdx[name] = currValue

@@ -43,6 +43,7 @@ import (
 	"google.golang.org/protobuf/types/known/structpb"
 
 	"mosn.io/htnn/pkg/filtermanager"
+	"mosn.io/htnn/pkg/filtermanager/model"
 	"mosn.io/htnn/pkg/log"
 	"mosn.io/htnn/pkg/proto"
 	"mosn.io/htnn/plugins/tests/integration/data_plane"
@@ -237,11 +238,11 @@ func FilterManagerConfigToTypedStruct(fmc *filtermanager.FilterManagerConfig) *x
 func NewSinglePluinConfig(name string, config interface{}) *filtermanager.FilterManagerConfig {
 	fmc := &filtermanager.FilterManagerConfig{}
 	fmc.Namespace = "ns"
-	fmc.Plugins = []*filtermanager.FilterConfig{{Name: name, Config: config}}
+	fmc.Plugins = []*model.FilterConfig{{Name: name, Config: config}}
 	return fmc
 }
 
-func NewPluinConfig(plugins []*filtermanager.FilterConfig) *filtermanager.FilterManagerConfig {
+func NewPluinConfig(plugins []*model.FilterConfig) *filtermanager.FilterManagerConfig {
 	fmc := &filtermanager.FilterManagerConfig{}
 	fmc.Namespace = "ns"
 	fmc.Plugins = plugins
