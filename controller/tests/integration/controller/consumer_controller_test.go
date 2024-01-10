@@ -46,9 +46,9 @@ var _ = Describe("Consumer controller", func() {
 
 	Context("When reconciling Consumer", func() {
 		BeforeEach(func() {
-			var policies mosniov1.HTTPFilterPolicyList
-			if err := k8sClient.List(ctx, &policies); err == nil {
-				for _, e := range policies.Items {
+			var consumers mosniov1.ConsumerList
+			if err := k8sClient.List(ctx, &consumers); err == nil {
+				for _, e := range consumers.Items {
 					Expect(k8sClient.Delete(ctx, &e)).Should(Succeed())
 				}
 			}
@@ -69,6 +69,26 @@ var _ = Describe("Consumer controller", func() {
 				obj := pkg.MapToObj(in)
 				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
 			}
+
+			var consumers mosniov1.ConsumerList
+			var c *mosniov1.Consumer
+			var cs []metav1.Condition
+			Eventually(func() bool {
+				if err := k8sClient.List(ctx, &consumers); err != nil {
+					return false
+				}
+				for _, item := range consumers.Items {
+					if item.Name == "spacewander" {
+						item := item
+						c = &item
+						cs = c.Status.Conditions
+						return len(cs) == 1
+					}
+				}
+				return false
+			}, timeout, interval).Should(BeTrue())
+			Expect(cs[0].Type).To(Equal(string(mosniov1.ConditionAccepted)))
+			Expect(cs[0].Reason).To(Equal(string(mosniov1.ReasonAccepted)))
 
 			var envoyfilters istiov1a3.EnvoyFilterList
 			Eventually(func() bool {
@@ -95,26 +115,6 @@ var _ = Describe("Consumer controller", func() {
 			// mapping is namespace -> name -> config
 			Expect(marshaledCfg["default"]["spacewander"]).ToNot(BeNil())
 			Expect(marshaledCfg["default"]["unchanged"]).ToNot(BeNil())
-
-			var consumers mosniov1.ConsumerList
-			var c *mosniov1.Consumer
-			var cs []metav1.Condition
-			Eventually(func() bool {
-				if err := k8sClient.List(ctx, &consumers); err != nil {
-					return false
-				}
-				for _, item := range consumers.Items {
-					if item.Name == "spacewander" {
-						item := item
-						c = &item
-						cs = c.Status.Conditions
-						return len(cs) == 1
-					}
-				}
-				return false
-			}, timeout, interval).Should(BeTrue())
-			Expect(cs[0].Type).To(Equal(string(mosniov1.ConditionAccepted)))
-			Expect(cs[0].Reason).To(Equal(string(mosniov1.ReasonAccepted)))
 
 			// to invalid
 			base := client.MergeFrom(c.DeepCopy())
