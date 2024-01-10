@@ -17,10 +17,10 @@ package translation
 import (
 	"context"
 	"encoding/json"
+	"slices"
 	"sort"
 
 	"github.com/go-logr/logr"
-	"golang.org/x/exp/slices"
 
 	mosniov1 "mosn.io/htnn/controller/api/v1"
 )

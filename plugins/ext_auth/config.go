@@ -51,7 +51,7 @@ func (p *plugin) ConfigFactory() api.FilterConfigFactory {
 	return configFactory
 }
 
-func (p *plugin) Config() plugins.PluginConfig {
+func (p *plugin) Config() api.PluginConfig {
 	return &config{}
 }
 

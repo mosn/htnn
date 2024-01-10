@@ -26,7 +26,7 @@ import (
 type basePlugin struct {
 }
 
-func (p basePlugin) Config() plugins.PluginConfig {
+func (p basePlugin) Config() api.PluginConfig {
 	return &Config{}
 }
 

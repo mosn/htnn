@@ -19,6 +19,7 @@ import (
 
 	local_ratelimit "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/local_ratelimit/v3"
 
+	"mosn.io/htnn/pkg/filtermanager/api"
 	"mosn.io/htnn/pkg/plugins"
 )
 
@@ -46,7 +47,7 @@ func (p *plugin) Order() plugins.PluginOrder {
 
 // Each Native plugin need to implement the methods below
 
-func (p *plugin) Config() plugins.PluginConfig {
+func (p *plugin) Config() api.PluginConfig {
 	return &local_ratelimit.LocalRateLimit{}
 }
 

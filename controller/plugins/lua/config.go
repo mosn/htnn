@@ -17,6 +17,7 @@ package lua
 import (
 	lua "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/lua/v3"
 
+	"mosn.io/htnn/pkg/filtermanager/api"
 	"mosn.io/htnn/pkg/plugins"
 )
 
@@ -29,7 +30,7 @@ type plugin struct {
 	plugins.PluginMethodDefaultImpl
 }
 
-func (p *plugin) Config() plugins.PluginConfig {
+func (p *plugin) Config() api.PluginConfig {
 	return &lua.LuaPerRoute{}
 }
 

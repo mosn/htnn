@@ -45,7 +45,7 @@ func (p *plugin) ConfigFactory() api.FilterConfigFactory {
 	return configFactory
 }
 
-func (p *plugin) Config() plugins.PluginConfig {
+func (p *plugin) Config() api.PluginConfig {
 	return &config{}
 }
 
@@ -53,7 +53,7 @@ type config struct {
 	Config
 }
 
-func (p *plugin) ConsumerConfig() plugins.PluginConsumerConfig {
+func (p *plugin) ConsumerConfig() api.PluginConsumerConfig {
 	return &ConsumerConfig{}
 }
 
