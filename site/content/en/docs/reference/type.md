@@ -2,7 +2,7 @@
 title: Type
 ---
 
-This documentation describes type definitions used across different plugins. Definitions are listed in alphabetical order.
+This documentation describes common type definitions used across different plugins. Definitions are listed in alphabetical order.
 
 ## Duration
 

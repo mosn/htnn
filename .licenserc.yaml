@@ -18,7 +18,6 @@ header:
   paths-ignore:
     # ignore doc, testdata and configuration
     - '**/*.md'
-    - 'docs/**'
     - 'LICENSE'
     - 'NOTICE'
     - '**/testdata/**'
@@ -34,9 +33,9 @@ header:
     - '**/go.sum'
     - 'buf.lock'
     - 'controller/PROJECT'
-    - 'controller/hack/boilerplate.go.txt'
     # files can't add license
     - '**/*.json'
+    - '**/*.txt'
     - 'VERSION'
     - '.ignore_words'
     # files from other projects

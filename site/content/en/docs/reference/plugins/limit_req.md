@@ -21,7 +21,7 @@ The `limit_req` plugin limits the number of requests per second to this proxy. T
 | period  | [Duration](../../type#duration) | False    |            | The time unit of rate. The limit rate is defined as `average / period`. Default to 1s, which means requests per second. |
 | burst   | int32                           | False    | gt: 0      | The number of requests allowed to exceed the rate. Default to 1.                                                        |
 
-The number of requests is counted per client IP. When the number of requests exceeds the `average / period` rate for more than `burst`, it is delayed if the required delay time is not larger than the maximum delay. If the required delay is larger than the maximum delay, the request is dropped with a `429` HTTP status code.
+The number of requests is counted per client IP. When the request rate exceeds the `average / period` rate, and the number of exceeded requests is more than `burst`, we will calculate a required delay time to slow down the rate to the expectation. The request is delayed if the required delay time is not larger than the maximum delay. If the required delay is larger than the maximum delay, the request is dropped with a `429` HTTP status code.
 
 The maximum delay is half of the rate (`1 / 2 * average / period`) by default, and 500ms if the `average / period` is less than 1.
 
