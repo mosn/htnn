@@ -35,19 +35,15 @@ var (
 )
 
 type Consumer struct {
-	// We provide `Name()` as the API for the `api.Consumer` interface.
-	// However, Go doesn't allow method & field to share the same name.
-	// So we use `ConsumerName` as the field name, and `Name()` as the method name.
-	ConsumerName string `json:"name"`
-
 	Auth    map[string]string              `json:"auth"`
-	Filters map[string]*model.FilterConfig `json:"filters"`
+	Filters map[string]*model.FilterConfig `json:"filters,omitempty"`
 
 	// fields that set in the data plane
 	namespace       string
-	resourceVersion string
-	ConsumerConfigs map[string]api.PluginConsumerConfig `json:"-"`
-	FilterConfigs   []*model.ParsedFilterConfig         `json:"-"`
+	name            string
+	generation      int
+	ConsumerConfigs map[string]api.PluginConsumerConfig  `json:"-"`
+	FilterConfigs   map[string]*model.ParsedFilterConfig `json:"-"`
 }
 
 func (c *Consumer) Marshal() string {
@@ -61,7 +57,7 @@ func (c *Consumer) Unmarshal(s string) error {
 }
 
 func (c *Consumer) InitConfigs() error {
-	logger.Info("init configs for consumer", "name", c.ConsumerName, "namespace", c.namespace)
+	logger.Info("init configs for consumer", "name", c.name, "namespace", c.namespace)
 
 	c.ConsumerConfigs = make(map[string]api.PluginConsumerConfig, len(c.Auth))
 	for name, data := range c.Auth {
@@ -84,7 +80,7 @@ func (c *Consumer) InitConfigs() error {
 		c.ConsumerConfigs[name] = conf
 	}
 
-	c.FilterConfigs = make([]*model.ParsedFilterConfig, 0, len(c.Filters))
+	c.FilterConfigs = make(map[string]*model.ParsedFilterConfig, len(c.Filters))
 	for name, data := range c.Filters {
 		p := plugins.LoadHttpFilterConfigFactoryAndParser(name)
 		if p == nil {
@@ -96,11 +92,11 @@ func (c *Consumer) InitConfigs() error {
 			return fmt.Errorf("%w during parsing plugin %s in consumer", err, name)
 		}
 
-		c.FilterConfigs = append(c.FilterConfigs, &model.ParsedFilterConfig{
+		c.FilterConfigs[name] = &model.ParsedFilterConfig{
 			Name:          name,
 			ParsedConfig:  conf,
 			ConfigFactory: p.ConfigFactory,
-		})
+		}
 	}
 
 	return nil
@@ -117,10 +113,10 @@ func updateConsumers(value *structpb.Struct) {
 		newIdx := map[string]*Consumer{}
 		for name, value := range nsValue.GetStructValue().GetFields() {
 			fields := value.GetStructValue().GetFields()
-			v := fields["v"].GetStringValue()
+			v := int(fields["v"].GetNumberValue())
 
 			currValue, ok := currIdx[name]
-			if !ok || currValue.resourceVersion != v {
+			if !ok || currValue.generation != v {
 				s := fields["d"].GetStringValue()
 				var c Consumer
 				err := c.Unmarshal(s)
@@ -129,6 +125,7 @@ func updateConsumers(value *structpb.Struct) {
 					continue
 				}
 
+				c.name = name
 				c.namespace = ns
 
 				err = c.InitConfigs()
@@ -137,7 +134,7 @@ func updateConsumers(value *structpb.Struct) {
 					continue
 				}
 
-				c.resourceVersion = v
+				c.generation = v
 				newIdx[name] = &c
 			} else {
 				newIdx[name] = currValue
@@ -161,9 +158,9 @@ func updateConsumers(value *structpb.Struct) {
 				idx := cfg.Index()
 				if pluginScopeIdx[idx] != nil {
 					// TODO: find an effective way to detect collision in the control plane
-					err := fmt.Errorf("duplicate index %s", value.ConsumerName)
+					err := fmt.Errorf("duplicate index %s", value.name)
 					logger.Error(err, fmt.Sprintf("ignore consumer %s for plugin %s", pluginName, idx),
-						"namespace", ns, "existing consumer", pluginScopeIdx[idx].ConsumerName)
+						"namespace", ns, "existing consumer", pluginScopeIdx[idx].name)
 					continue
 				}
 				pluginScopeIdx[idx] = value
@@ -189,7 +186,7 @@ func LookupConsumer(ns, pluginName, key string) (api.Consumer, bool) {
 
 // Implement pkg.filtermanager.api.Consumer
 func (c *Consumer) Name() string {
-	return c.ConsumerName
+	return c.name
 }
 
 func (c *Consumer) PluginConfig(name string) api.PluginConsumerConfig {

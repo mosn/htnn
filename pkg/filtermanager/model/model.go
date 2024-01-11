@@ -17,8 +17,8 @@ package model
 import "mosn.io/htnn/pkg/filtermanager/api"
 
 type FilterConfig struct {
-	Name   string      `json:"name"`
-	Config interface{} `json:"config"`
+	Name   string      `json:"name,omitempty"`
+	Config interface{} `json:"config,omitempty"`
 }
 
 type ParsedFilterConfig struct {

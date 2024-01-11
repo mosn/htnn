@@ -18,3 +18,7 @@
       key_auth:
         config:
           key: yy
+      hmac_auth:
+        config:
+          access_key: ak
+          secret_key: sk

@@ -34,17 +34,15 @@ static_resources:
                             consumer:
                               d: |
                                 {
-                                  "name":"consumer",
                                   "auth":{
                                     "key_auth":"{\"key\":\"rick\"}",
                                     "hmac_auth": "{\"access_key\":\"ak\",\"secret_key\":\"sk\",\"signed_headers\":[\"x-custom-a\"]}"
                                   }
                                 }
-                              v: "4355415"
+                              v: 4355415
                             with_filter:
                               d: |
                                 {
-                                  "name":"with_filter",
                                   "auth":{
                                     "key_auth":"{\"key\":\"marvin\"}"
                                   },
@@ -54,7 +52,7 @@ static_resources:
                                     }
                                   }
                                 }
-                              v: "4355415"
+                              v: 4355415
                   - name: envoy.filters.http.golang
                     disabled: true
                     typed_config:

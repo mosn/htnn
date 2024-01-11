@@ -40,9 +40,9 @@ func (c *consumerTest) Add(ns string, consumer *Consumer) *consumerTest {
 		c.values[ns] = make(map[string]interface{})
 	}
 	idx := c.values[ns].(map[string]interface{})
-	idx[consumer.ConsumerName] = map[string]interface{}{
+	idx[consumer.name] = map[string]interface{}{
 		"d": consumer.Marshal(),
-		"v": consumer.resourceVersion,
+		"v": consumer.generation,
 	}
 	return c
 }
@@ -60,9 +60,9 @@ func TestUpdateConsumer(t *testing.T) {
 		"key_auth": "{\"key\": \"test\"}",
 	}
 	c := &Consumer{
-		ConsumerName:    "me",
-		resourceVersion: "1",
-		Auth:            auth,
+		name:       "me",
+		generation: 1,
+		Auth:       auth,
 	}
 	v := newConsumerTest().Add("ns", c).Build()
 	updateConsumers(v)
@@ -82,7 +82,7 @@ func TestUpdateConsumer(t *testing.T) {
 	require.Equal(t, "me", r.Name())
 
 	// update
-	c.resourceVersion = "2"
+	c.generation = 2
 	v = newConsumerTest().Add("ns", c).Build()
 	updateConsumers(v)
 	r, _ = LookupConsumer("ns", "key_auth", "test")
@@ -91,8 +91,8 @@ func TestUpdateConsumer(t *testing.T) {
 	require.Equal(t, "me", r.Name())
 
 	// remove
-	c.ConsumerName = "you"
-	c.resourceVersion = "3"
+	c.name = "you"
+	c.generation = 3
 	v = newConsumerTest().Add("ns", c).Build()
 	updateConsumers(v)
 	r, _ = LookupConsumer("ns", "key_auth", "me")

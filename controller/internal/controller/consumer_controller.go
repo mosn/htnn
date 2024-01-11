@@ -128,7 +128,8 @@ func (r *ConsumerReconciler) generateCustomResource(ctx context.Context, logger 
 			s := consumer.Marshal()
 			data[consumerName] = map[string]interface{}{
 				"d": s,
-				"v": consumer.ResourceVersion,
+				// only track the change of the Spec, so we use Generation here
+				"v": consumer.Generation,
 			}
 		}
 		consumerData[ns] = data

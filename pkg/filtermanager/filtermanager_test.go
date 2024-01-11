@@ -291,10 +291,17 @@ type setConsumerFilter struct {
 
 func (f *setConsumerFilter) DecodeHeaders(header api.RequestHeaderMap, endStream bool) api.ResultAction {
 	f.callbacks.SetConsumer(&pkgConsumer.Consumer{
-		FilterConfigs: []*model.ParsedFilterConfig{
-			{
+		FilterConfigs: map[string]*model.ParsedFilterConfig{
+			"on_log": {
 				Name:          "on_log",
 				ConfigFactory: onLogFactory,
+			},
+			"add_req": {
+				Name:          "add_req",
+				ConfigFactory: addReqFactory,
+				ParsedConfig: addReqConf{
+					hdrName: "x-htnn-consumer",
+				},
 			},
 		},
 	})
@@ -314,6 +321,29 @@ type onLogFilter struct {
 func (f *onLogFilter) OnLog() {
 }
 
+type addReqConf struct {
+	hdrName string
+}
+
+func addReqFactory(c interface{}) api.FilterFactory {
+	return func(callbacks api.FilterCallbackHandler) api.Filter {
+		return &addReqFilter{
+			conf: c.(addReqConf),
+		}
+	}
+}
+
+type addReqFilter struct {
+	api.PassThroughFilter
+
+	conf addReqConf
+}
+
+func (f *addReqFilter) DecodeHeaders(header api.RequestHeaderMap, endStream bool) api.ResultAction {
+	header.Set(f.conf.hdrName, "htnn")
+	return api.Continue
+}
+
 func TestFiltersFromConsumer(t *testing.T) {
 	cb := envoy.NewFilterCallbackHandler()
 	m := FilterManagerConfigFactory(&filterManagerConfig{
@@ -323,13 +353,25 @@ func TestFiltersFromConsumer(t *testing.T) {
 				Name:          "set_consumer",
 				ConfigFactory: setConsumerFactory,
 			},
+			{
+				Name:          "add_req",
+				ConfigFactory: addReqFactory,
+				ParsedConfig: addReqConf{
+					hdrName: "x-htnn-route",
+				},
+			},
 		},
 	})(cb).(*filterManager)
 	assert.Equal(t, true, m.canSkipOnLog)
-	assert.Equal(t, 0, len(m.filters))
+	assert.Equal(t, 1, len(m.filters))
 	hdr := envoy.NewRequestHeaderMap(http.Header{})
 	m.DecodeHeaders(hdr, true)
 	cb.WaitContinued()
 	assert.Equal(t, false, m.canSkipOnLog)
-	assert.Equal(t, 1, len(m.filters))
+	assert.Equal(t, 2, len(m.filters))
+
+	_, ok := hdr.Get("x-htnn-route")
+	assert.False(t, ok)
+	_, ok = hdr.Get("x-htnn-consumer")
+	assert.True(t, ok)
 }

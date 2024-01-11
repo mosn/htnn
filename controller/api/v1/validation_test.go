@@ -221,6 +221,13 @@ func TestValidateConsumer(t *testing.T) {
 							},
 						},
 					},
+					Filters: map[string]HTTPPlugin{
+						"animal": {
+							Config: runtime.RawExtension{
+								Raw: []byte(`{"pet":"cat"}`),
+							},
+						},
+					},
 				},
 			},
 		},
@@ -237,7 +244,7 @@ func TestValidateConsumer(t *testing.T) {
 					},
 				},
 			},
-			err: "unknown http filter: property",
+			err: "unknown authn filter: property",
 		},
 		{
 			name: "bad configuration",
@@ -253,6 +260,50 @@ func TestValidateConsumer(t *testing.T) {
 				},
 			},
 			err: "unknown field \"keys\"",
+		},
+		{
+			name: "invalid config for filter",
+			consumer: &Consumer{
+				Spec: ConsumerSpec{
+					Auth: map[string]ConsumerPlugin{
+						"key_auth": {
+							Config: runtime.RawExtension{
+								Raw: []byte(`{"key":"cat"}`),
+							},
+						},
+					},
+					Filters: map[string]HTTPPlugin{
+						"opa": {
+							Config: runtime.RawExtension{
+								Raw: []byte(`{}`),
+							},
+						},
+					},
+				},
+			},
+			err: "invalid config for filter opa",
+		},
+		{
+			name: "invalid filter",
+			consumer: &Consumer{
+				Spec: ConsumerSpec{
+					Auth: map[string]ConsumerPlugin{
+						"key_auth": {
+							Config: runtime.RawExtension{
+								Raw: []byte(`{"key":"cat"}`),
+							},
+						},
+					},
+					Filters: map[string]HTTPPlugin{
+						"key_auth": {
+							Config: runtime.RawExtension{
+								Raw: []byte(`{}`),
+							},
+						},
+					},
+				},
+			},
+			err: "http filter should not in authn/pre/post position: key_auth",
 		},
 	}
 
