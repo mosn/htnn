@@ -27,8 +27,12 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	mosniov1 "mosn.io/htnn/controller/api/v1"
 	"mosn.io/htnn/controller/internal/config"
@@ -181,7 +185,16 @@ func (r *ConsumerReconciler) updateConsumers(ctx context.Context, consumers *mos
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *ConsumerReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewControllerManagedBy(mgr).
-		For(&mosniov1.Consumer{}).
-		Complete(r)
+	controller := ctrl.NewControllerManagedBy(mgr).
+		Named("consumer").
+		Watches(
+			&mosniov1.Consumer{},
+			handler.EnqueueRequestsFromMapFunc(func(_ context.Context, _ client.Object) []reconcile.Request {
+				return triggerReconciliation()
+			}),
+			builder.WithPredicates(
+				predicate.GenerationChangedPredicate{},
+			),
+		)
+	return controller.Complete(r)
 }

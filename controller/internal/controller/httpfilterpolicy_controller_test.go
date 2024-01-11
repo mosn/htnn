@@ -115,6 +115,6 @@ func TestVirtualServiceIndexer(t *testing.T) {
 	assert.Equal(t, 1, len(reqs))
 	assert.Equal(t, types.NamespacedName{
 		Namespace: "",
-		Name:      "httpfilterpolicies",
+		Name:      "htnn",
 	}, reqs[0].NamespacedName)
 }

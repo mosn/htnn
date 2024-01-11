@@ -608,16 +608,6 @@ func (v *K8sGatewayIndexer) Predicate() predicate.Predicate {
 	return predicate.GenerationChangedPredicate{}
 }
 
-var (
-	reconcileReqPlaceholder = []reconcile.Request{{NamespacedName: types.NamespacedName{
-		Name: "httpfilterpolicies", // just a placeholder
-	}}}
-)
-
-func triggerReconciliation() []reconcile.Request {
-	return reconcileReqPlaceholder
-}
-
 // SetupWithManager sets up the controller with the Manager.
 func (r *HTTPFilterPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	ctx := context.Background()
