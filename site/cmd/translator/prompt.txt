@@ -20,6 +20,7 @@ Document content ......
 The following glossary is required for translation.
 Do not translate words inside the glossary below:
 ---
+boolean
 Consumer
 Route
 HTTPRoute

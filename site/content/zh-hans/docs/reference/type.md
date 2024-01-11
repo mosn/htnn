@@ -18,7 +18,7 @@ HTTP 状态码的整数枚举。
 
 ## StringMatcher
 
-StringMatcher 包含操作以及是否忽略大小写的 `ignore_case` 的布尔标志。以下是操作列表：
+StringMatcher 包含操作以及是否忽略大小写的 `ignore_case` 的 boolean 标志。以下是操作列表：
 
 * exact: 必须完全匹配此处指定的字符串
 * prefix: 必须具有此处指定的前缀
