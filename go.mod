@@ -18,7 +18,7 @@ require (
 	github.com/go-logr/zapr v1.3.0
 	github.com/golang/protobuf v1.5.3
 	github.com/jellydator/ttlcache/v3 v3.1.1
-	github.com/onsi/ginkgo/v2 v2.13.2
+	github.com/onsi/ginkgo/v2 v2.14.0
 	github.com/onsi/gomega v1.30.0
 	github.com/open-policy-agent/opa v0.60.0
 	github.com/prometheus/client_golang v1.18.0
@@ -96,7 +96,7 @@ require (
 	golang.org/x/sys v0.15.0 // indirect
 	golang.org/x/term v0.15.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
-	golang.org/x/tools v0.16.0 // indirect
+	golang.org/x/tools v0.16.1 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/genproto v0.0.0-20231002182017-d307bd883b97 // indirect
