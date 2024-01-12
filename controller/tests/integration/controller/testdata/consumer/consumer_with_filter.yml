@@ -1,0 +1,14 @@
+- apiVersion: mosn.io/v1
+  kind: Consumer
+  metadata:
+    name: spacewander
+    namespace: default
+  spec:
+    auth:
+      key_auth:
+        config:
+          key: xx
+    filters:
+      demo:
+        config:
+          host_name: darwin

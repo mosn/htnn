@@ -265,7 +265,7 @@ func FilterManagerConfigFactory(c interface{}) capi.StreamFilterFactory {
 					api.LogErrorf("failed to check method %s in filter: %v", meth, err)
 					// canSkipMethod[meth] will be false
 				}
-				canSkipMethod[meth] = ok
+				canSkipMethod[meth] = canSkipMethod[meth] && ok
 			}
 			filters[i] = newFilterWrapper(fc.Name, f)
 		}
@@ -402,9 +402,11 @@ func (m *filterManager) DecodeHeaders(header api.RequestHeaderMap, endStream boo
 
 			if len(c.FilterConfigs) > 0 {
 				canSkipMethod := newSkipMethodsMap()
-				filters := make([]*filterWrapper, len(c.FilterConfigs))
-				names := make([]string, len(c.FilterConfigs))
-				for i, fc := range c.FilterConfigs {
+				filters := make([]*filterWrapper, 0, len(c.FilterConfigs))
+				names := make([]string, 0, len(c.FilterConfigs))
+				for name, fc := range c.FilterConfigs {
+					names = append(names, name)
+
 					factory := fc.ConfigFactory
 					config := fc.ParsedConfig
 					f := factory(config)(m.callbacks)
@@ -414,10 +416,10 @@ func (m *filterManager) DecodeHeaders(header api.RequestHeaderMap, endStream boo
 							api.LogErrorf("failed to check method %s in filter: %v", meth, err)
 							// canSkipMethod[meth] will be false
 						}
-						canSkipMethod[meth] = ok
+						canSkipMethod[meth] = canSkipMethod[meth] && ok
 					}
-					filters[i] = newFilterWrapper(fc.Name, f)
-					names[i] = filters[i].name
+					nf := newFilterWrapper(name, f)
+					filters = append(filters, nf)
 				}
 
 				api.LogInfof("add filters %v from consumer %s", names, c.Name())
@@ -427,7 +429,15 @@ func (m *filterManager) DecodeHeaders(header api.RequestHeaderMap, endStream boo
 				m.canSkipEncodeData = m.canSkipEncodeData && canSkipMethod["EncodeData"] && canSkipMethod["EncodeResponse"]
 				m.canSkipOnLog = m.canSkipOnLog && canSkipMethod["OnLog"]
 
-				m.filters = append(m.filters, filters...)
+				// TODO: add field to control if merging is allowed
+				i := 0
+				for _, f := range m.filters {
+					if c.FilterConfigs[f.name] == nil {
+						m.filters[i] = f
+						i++
+					}
+				}
+				m.filters = append(m.filters[:i], filters...)
 				sort.Slice(m.filters, func(i, j int) bool {
 					return pkgPlugins.ComparePluginOrder(m.filters[i].name, m.filters[j].name)
 				})

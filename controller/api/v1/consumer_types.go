@@ -17,12 +17,14 @@ limitations under the License.
 package v1
 
 import (
+	"encoding/json"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 
 	pkgConsumer "mosn.io/htnn/pkg/consumer"
+	"mosn.io/htnn/pkg/filtermanager/model"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -35,8 +37,15 @@ type ConsumerPlugin struct {
 
 // ConsumerSpec defines the desired state of Consumer
 type ConsumerSpec struct {
+	// Auth is a map of authentication plugin names to plugin configurations.
+	//
 	// +kubebuilder:validation:MinProperties=1
 	Auth map[string]ConsumerPlugin `json:"auth"`
+
+	// Filters is a map of filter names to filter configurations.
+	//
+	// +optional
+	Filters map[string]HTTPPlugin `json:"filters,omitempty"`
 }
 
 // ConsumerStatus defines the observed state of Consumer
@@ -72,10 +81,24 @@ func (c *Consumer) Marshal() string {
 	for k, v := range c.Spec.Auth {
 		auth[k] = string(v.Config.Raw)
 	}
+
 	consumer := &pkgConsumer.Consumer{
-		ConsumerName: c.Name,
-		Auth:         auth,
+		Auth: auth,
 	}
+
+	if len(c.Spec.Filters) > 0 {
+		filters := make(map[string]*model.FilterConfig, len(c.Spec.Filters))
+		for k, v := range c.Spec.Filters {
+			var config interface{}
+			// we use interface{} here because we will introduce configuration merging one day
+			_ = json.Unmarshal(v.Config.Raw, &config)
+			filters[k] = &model.FilterConfig{
+				Config: config,
+			}
+		}
+		consumer.Filters = filters
+	}
+
 	return consumer.Marshal()
 }
 

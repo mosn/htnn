@@ -45,7 +45,22 @@ spec:
                   required:
                   - config
                   type: object
+                description: Auth is a map of authentication plugin names to plugin
+                  configurations.
                 minProperties: 1
+                type: object
+              filters:
+                additionalProperties:
+                  description: HTTPPlugin defines the plugin configuration used in
+                    the HTTP layer
+                  properties:
+                    config:
+                      type: object
+                      x-kubernetes-preserve-unknown-fields: true
+                  required:
+                  - config
+                  type: object
+                description: Filters is a map of filter names to filter configurations.
                 type: object
             required:
             - auth

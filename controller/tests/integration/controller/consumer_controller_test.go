@@ -77,16 +77,23 @@ var _ = Describe("Consumer controller", func() {
 				if err := k8sClient.List(ctx, &consumers); err != nil {
 					return false
 				}
+				handled := len(consumers.Items) == 2
 				for _, item := range consumers.Items {
+					item := item
 					if item.Name == "spacewander" {
-						item := item
 						c = &item
 						cs = c.Status.Conditions
-						return len(cs) == 1
+					}
+					conds := item.Status.Conditions
+					if len(conds) != 1 {
+						handled = false
+						break
 					}
 				}
-				return false
+
+				return handled
 			}, timeout, interval).Should(BeTrue())
+			Expect(c).ToNot(BeNil())
 			Expect(cs[0].Type).To(Equal(string(mosniov1.ConditionAccepted)))
 			Expect(cs[0].Reason).To(Equal(string(mosniov1.ReasonAccepted)))
 
@@ -109,12 +116,20 @@ var _ = Describe("Consumer controller", func() {
 			typedCfg := value["typed_config"].(map[string]interface{})
 			pluginCfg := typedCfg["plugin_config"].(map[string]interface{})
 
-			marshaledCfg := map[string]map[string]interface{}{}
+			marshaledCfg := map[string]map[string]map[string]interface{}{}
 			b, _ := json.Marshal(pluginCfg["value"])
 			json.Unmarshal(b, &marshaledCfg)
 			// mapping is namespace -> name -> config
 			Expect(marshaledCfg["default"]["spacewander"]).ToNot(BeNil())
 			Expect(marshaledCfg["default"]["unchanged"]).ToNot(BeNil())
+			d := marshaledCfg["default"]["spacewander"]["d"].(string)
+			cfg := map[string]interface{}{}
+			err := json.Unmarshal([]byte(d), &cfg)
+			Expect(err).To(BeNil())
+			filter := cfg["auth"].(map[string]interface{})
+			Expect(filter["key_auth"]).ToNot(BeNil())
+
+			v := marshaledCfg["default"]["unchanged"]["v"]
 
 			// to invalid
 			base := client.MergeFrom(c.DeepCopy())
@@ -150,11 +165,54 @@ var _ = Describe("Consumer controller", func() {
 			typedCfg = value["typed_config"].(map[string]interface{})
 			pluginCfg = typedCfg["plugin_config"].(map[string]interface{})
 
-			marshaledCfg = map[string]map[string]interface{}{}
+			marshaledCfg = map[string]map[string]map[string]interface{}{}
 			b, _ = json.Marshal(pluginCfg["value"])
 			json.Unmarshal(b, &marshaledCfg)
 			Expect(marshaledCfg["default"]["spacewander"]).To(BeNil())
 			Expect(marshaledCfg["default"]["unchanged"]).ToNot(BeNil())
+			Expect(marshaledCfg["default"]["unchanged"]["v"]).To(Equal(v))
 		})
+
+		It("with filter", func() {
+			ctx := context.Background()
+			input := []map[string]interface{}{}
+			mustReadConsumer("consumer_with_filter", &input)
+			for _, in := range input {
+				obj := pkg.MapToObj(in)
+				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
+			}
+
+			var envoyfilters istiov1a3.EnvoyFilterList
+			Eventually(func() bool {
+				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
+					return false
+				}
+				return len(envoyfilters.Items) == 1
+			}, timeout, interval).Should(BeTrue())
+
+			ef := envoyfilters.Items[0]
+			Expect(ef.Namespace).To(Equal("istio-system"))
+			Expect(ef.Name).To(Equal("htnn-consumer"))
+			Expect(len(ef.Spec.ConfigPatches)).To(Equal(1))
+			cp := ef.Spec.ConfigPatches[0]
+			Expect(cp.ApplyTo).To(Equal(istioapi.EnvoyFilter_EXTENSION_CONFIG))
+			value := cp.Patch.Value.AsMap()
+			Expect(value["name"]).To(Equal("htnn-consumer"))
+			typedCfg := value["typed_config"].(map[string]interface{})
+			pluginCfg := typedCfg["plugin_config"].(map[string]interface{})
+
+			marshaledCfg := map[string]map[string]map[string]interface{}{}
+			b, _ := json.Marshal(pluginCfg["value"])
+			json.Unmarshal(b, &marshaledCfg)
+			Expect(marshaledCfg["default"]["spacewander"]).ToNot(BeNil())
+
+			d := marshaledCfg["default"]["spacewander"]["d"].(string)
+			cfg := map[string]interface{}{}
+			err := json.Unmarshal([]byte(d), &cfg)
+			Expect(err).To(BeNil())
+			filter := cfg["filters"].(map[string]interface{})
+			Expect(filter["demo"]).ToNot(BeNil())
+		})
+
 	})
 })

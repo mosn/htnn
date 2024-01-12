@@ -61,6 +61,7 @@ func ValidateHTTPFilterPolicy(policy *HTTPFilterPolicy) error {
 			return fmt.Errorf("invalid config for filter %s: %w", name, err)
 		}
 	}
+
 	return nil
 }
 
@@ -98,7 +99,7 @@ func ValidateConsumer(c *Consumer) error {
 		plugin := plugins.LoadHttpPlugin(name)
 		if plugin == nil {
 			// reject unknown filter in CP, ignore unknown filter in DP
-			return errors.New("unknown http filter: " + name)
+			return errors.New("unknown authn filter: " + name)
 		}
 		p, ok := plugin.(plugins.ConsumerPlugin)
 		if !ok {
@@ -115,5 +116,28 @@ func ValidateConsumer(c *Consumer) error {
 			return fmt.Errorf("invalid config for filter %s: %w", name, err)
 		}
 	}
+
+	for name, filter := range c.Spec.Filters {
+		p := plugins.LoadHttpPlugin(name)
+		if p == nil {
+			return errors.New("unknown http filter: " + name)
+		}
+
+		pos := p.Order().Position
+		if pos <= plugins.OrderPositionAuthn || pos >= plugins.OrderPositionPost {
+			return errors.New("http filter should not in authn/pre/post position: " + name)
+		}
+
+		data := filter.Config.Raw
+		conf := p.Config()
+		if err := protojson.Unmarshal(data, conf); err != nil {
+			return fmt.Errorf("failed to unmarshal for filter %s: %w", name, err)
+		}
+
+		if err := conf.Validate(); err != nil {
+			return fmt.Errorf("invalid config for filter %s: %w", name, err)
+		}
+	}
+
 	return nil
 }
