@@ -49,7 +49,7 @@ httpFilterPolicy:
         kind: VirtualService
         name: vs
       filters:
-        key_auth:
+        keyAuth:
           config:
             keys:
               - name: apikey

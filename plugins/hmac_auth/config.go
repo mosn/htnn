@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	Name = "hmac_auth"
+	Name = "hmacAuth"
 )
 
 func init() {

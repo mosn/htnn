@@ -26,7 +26,7 @@ import (
 )
 
 const (
-	Name = "limit_req"
+	Name = "limitReq"
 )
 
 func init() {
@@ -99,7 +99,7 @@ func (conf *config) Init(cb api.ConfigCallbackHandler) error {
 	conf.buckets = buckets
 	go buckets.Start()
 	runtime.SetFinalizer(conf, func(conf *config) {
-		api.LogInfof("stop cache in limit_req conf: %+v", conf)
+		api.LogInfof("stop cache in limitReq conf: %+v", conf)
 		conf.buckets.Stop()
 	})
 

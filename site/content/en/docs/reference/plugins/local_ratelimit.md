@@ -4,7 +4,7 @@ title: Local Ratelimit
 
 ## Description
 
-This plugin limits the number of requests per second, by leveraging Envoy's `local_ratelimit` filter. The limiter is run before authentication.
+The `localRatelimit` plugin limits the number of requests per second, by leveraging Envoy's `local_ratelimit` filter. The limiter is run before authentication.
 
 ## Attribute
 
@@ -53,19 +53,19 @@ spec:
     kind: HTTPRoute
     name: default
   filters:
-    local_ratelimit:
+    localRatelimit:
       config:
-        stat_prefix: http_policy_local_rate_limiter
-        token_bucket:
-          max_tokens: 1
-          tokens_per_fill: 1
-          fill_interval: 1s
-        filter_enabled:
-          default_value:
+        statPrefix: http_policy_local_rate_limiter
+        tokenBucket:
+          maxTokens: 1
+          tokensPerFill: 1
+          fillInterval: 1s
+        filterEnabled:
+          defaultValue:
             numerator: 100
             denominator: HUNDRED
-        filter_enforced:
-          default_value:
+        filterEnforced:
+          defaultValue:
             numerator: 100
             denominator: HUNDRED
 ```

@@ -4,7 +4,7 @@ title: Limit Req
 
 ## 说明
 
-`limit_req` 插件限制了每秒对此代理的请求数量。其实现是基于[令牌桶算法](https://en.wikipedia.org/wiki/Token_bucket)。为易于理解，可以把（下文提到的） `average` 和 `period` 看做是桶的补充速率，而 `burst` 则代表桶的容量。
+`limitReq` 插件限制了每秒对此代理的请求数量。其实现是基于[令牌桶算法](https://en.wikipedia.org/wiki/Token_bucket)。为易于理解，可以把（下文提到的） `average` 和 `period` 看做是桶的补充速率，而 `burst` 则代表桶的容量。
 
 ## 属性
 

@@ -28,8 +28,8 @@ func TestConsumerConfig(t *testing.T) {
 		err   string
 	}{
 		{
-			name:  "name in signed_headers",
-			input: `{"access_key":"a", "secret_key":"s", "signed_headers":[""]}`,
+			name:  "name in signedHeaders",
+			input: `{"accessKey":"a", "secretKey":"s", "signedHeaders":[""]}`,
 			err:   "value length must be at least 1 runes",
 		},
 	}

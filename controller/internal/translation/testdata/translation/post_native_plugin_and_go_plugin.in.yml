@@ -50,7 +50,7 @@ httpFilterPolicy:
         name: httpbin
         sectionName: policy
       filters:
-        post_lua:
+        postLua:
           config:
             source_code:
               inline_string: |

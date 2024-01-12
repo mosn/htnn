@@ -55,7 +55,7 @@ func (p *pluginFirst) DefaultHTTPFilterConfig() map[string]interface{} {
 	return map[string]interface{}{
 		"typed_config": map[string]interface{}{
 			"@type":       p.RouteConfigTypeURL(),
-			"stat_prefix": "http_local_rate_limiter",
+			"statPrefix": "http_local_rate_limiter",
 		},
 	}
 }
@@ -75,7 +75,7 @@ func (p *pluginPre) DefaultHTTPFilterConfig() map[string]interface{} {
 	return map[string]interface{}{
 		"typed_config": map[string]interface{}{
 			"@type":       p.RouteConfigTypeURL(),
-			"stat_prefix": "http_local_rate_limiter",
+			"statPrefix": "http_local_rate_limiter",
 		},
 	}
 }
@@ -95,7 +95,7 @@ func (p *pluginPost) DefaultHTTPFilterConfig() map[string]interface{} {
 	return map[string]interface{}{
 		"typed_config": map[string]interface{}{
 			"@type":       p.RouteConfigTypeURL(),
-			"stat_prefix": "http_local_rate_limiter",
+			"statPrefix": "http_local_rate_limiter",
 		},
 	}
 }
@@ -116,7 +116,7 @@ func (p *pluginLast) DefaultHTTPFilterConfig() map[string]interface{} {
 	return map[string]interface{}{
 		"typed_config": map[string]interface{}{
 			"@type":       p.RouteConfigTypeURL(),
-			"stat_prefix": "http_local_rate_limiter",
+			"statPrefix": "http_local_rate_limiter",
 		},
 	}
 }

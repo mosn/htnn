@@ -11,4 +11,4 @@
     filters:
       demo:
         config:
-          host_name: Mary
+          hostName: Mary

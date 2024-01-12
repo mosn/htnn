@@ -40,7 +40,7 @@ func TestKeyAuth(t *testing.T) {
 	}{
 		{
 			name: "key in the header",
-			config: control_plane.NewSinglePluinConfig("key_auth", map[string]interface{}{
+			config: control_plane.NewSinglePluinConfig("keyAuth", map[string]interface{}{
 				"keys": []interface{}{
 					map[string]interface{}{
 						"name": "Authorization",
@@ -60,7 +60,7 @@ func TestKeyAuth(t *testing.T) {
 		},
 		{
 			name: "key in the query",
-			config: control_plane.NewSinglePluinConfig("key_auth", map[string]interface{}{
+			config: control_plane.NewSinglePluinConfig("keyAuth", map[string]interface{}{
 				"keys": []interface{}{
 					map[string]interface{}{
 						"name":   "Authorization",

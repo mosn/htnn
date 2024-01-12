@@ -29,7 +29,7 @@
                             policy: data
                             url: http://x.local
                         name: opa
-            envoy.filters.http.local_ratelimit:
+            envoy.filters.http.localRatelimit:
               '@type': type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
               filter_enabled:
                 default_value:
@@ -39,9 +39,9 @@
                 default_value:
                   denominator: HUNDRED
                   numerator: 100
-              stat_prefix: http_local_rate_limiter
-              token_bucket:
-                fill_interval: 1s
+              statPrefix: http_local_rate_limiter
+              tokenBucket:
+                fillInterval: 1s
                 max_tokens: 10000
                 tokens_per_fill: 1000
   status: {}

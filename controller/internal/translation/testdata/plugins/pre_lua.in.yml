@@ -9,10 +9,10 @@ spec:
     kind: VirtualService
     name: default
   filters:
-    pre_lua:
+    preLua:
       config:
-        source_code:
-          inline_string: |
+        sourceCode:
+          inlineString: |
             function envoy_on_request(handle)
               local headers = handle:headers()
               headers:add("code", "inline_code_from_hello")

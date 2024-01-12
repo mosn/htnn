@@ -26,7 +26,7 @@ import (
 const (
 	// We name this plugin as ext_auth to distinguish it from the C++ implementation ext_authz.
 	// We may add new feature to this plugin which will make it different from its C++ sibling.
-	Name = "ext_auth"
+	Name = "extAuth"
 )
 
 func init() {

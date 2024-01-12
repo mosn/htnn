@@ -22,8 +22,8 @@ import (
 )
 
 func init() {
-	plugins.RegisterHttpPlugin("pre_lua", &prePlugin{})
-	plugins.RegisterHttpPlugin("post_lua", &postPlugin{})
+	plugins.RegisterHttpPlugin("preLua", &prePlugin{})
+	plugins.RegisterHttpPlugin("postLua", &postPlugin{})
 }
 
 type plugin struct {

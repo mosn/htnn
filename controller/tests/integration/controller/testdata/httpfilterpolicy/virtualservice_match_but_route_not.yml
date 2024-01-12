@@ -11,7 +11,7 @@
     filters:
       demo:
         config:
-          host_name: goldfish
+          hostName: goldfish
 - apiVersion: mosn.io/v1
   kind: HTTPFilterPolicy
   metadata:
@@ -26,4 +26,4 @@
     filters:
       demo:
         config:
-          host_name: goldfish
+          hostName: goldfish

@@ -23,7 +23,7 @@ import (
 )
 
 func TestConfTimeout(t *testing.T) {
-	s := `{"http_service":{
+	s := `{"httpService":{
 		"timeout": "10s"
 	}}`
 	conf := &config{}
@@ -45,7 +45,7 @@ func TestBadConfig(t *testing.T) {
 		},
 		{
 			name:  "invalid HttpService.Url",
-			input: `{"http_service":{"url":"127.0.0.1"}}`,
+			input: `{"httpService":{"url":"127.0.0.1"}}`,
 			err:   "invalid HttpService.Url: value must be absolute",
 		},
 	}

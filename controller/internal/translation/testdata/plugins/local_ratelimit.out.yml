@@ -14,11 +14,11 @@
         operation: MERGE
         value:
           typed_per_filter_config:
-            envoy.filters.http.local_ratelimit:
+            envoy.filters.http.localRatelimit:
               '@type': type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
-              stat_prefix: http_local_rate_limiter
-              token_bucket:
-                max_tokens: 10000
+              statPrefix: http_local_rate_limiter
+              tokenBucket:
+                maxTokens: 10000
   status: {}
 - metadata:
     creationTimestamp: null
@@ -38,9 +38,9 @@
         operation: INSERT_BEFORE
         value:
           disabled: true
-          name: envoy.filters.http.local_ratelimit
+          name: envoy.filters.http.localRatelimit
           typed_config:
             '@type': type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
-            stat_prefix: http_local_rate_limiter
+            statPrefix: http_local_rate_limiter
     priority: 100
   status: {}

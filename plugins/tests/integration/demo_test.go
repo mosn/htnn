@@ -42,7 +42,7 @@ func TestDemo(t *testing.T) {
 		{
 			name: "happy path",
 			config: control_plane.NewSinglePluinConfig("demo", map[string]interface{}{
-				"host_name": "Tom",
+				"hostName": "Tom",
 			}),
 			expect: func(t *testing.T, resp *http.Response) {
 				assert.Equal(t, "hello,", resp.Header.Get("Echo-Tom"), resp)
@@ -51,7 +51,7 @@ func TestDemo(t *testing.T) {
 		{
 			name: "change config",
 			config: control_plane.NewSinglePluinConfig("demo", map[string]interface{}{
-				"host_name": "Mike",
+				"hostName": "Mike",
 			}),
 
 			expect: func(t *testing.T, resp *http.Response) {

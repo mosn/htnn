@@ -46,7 +46,7 @@ func TestExtAuth(t *testing.T) {
 	}{
 		{
 			name: "default",
-			input: `{"http_service":{
+			input: `{"httpService":{
 				"url": "http://127.0.0.1:10001/ext_auth"
 			}}`,
 			hdr: map[string][]string{
@@ -64,10 +64,10 @@ func TestExtAuth(t *testing.T) {
 		},
 		{
 			name: "add headers",
-			input: `{"http_service":{
+			input: `{"httpService":{
 				"url": "http://127.0.0.1:10001/ext_auth",
-				"authorization_request": {
-					"headers_to_add": [
+				"authorizationRequest": {
+					"headersToAdd": [
 						{"key": "foo", "value": "bar"},
 						{"key": "foo", "value": "baz"}
 					]
@@ -83,7 +83,7 @@ func TestExtAuth(t *testing.T) {
 		},
 		{
 			name: "auth denied",
-			input: `{"http_service":{
+			input: `{"httpService":{
 				"url": "http://127.0.0.1:10001/ext_auth"
 			}}`,
 			server: func(r *http.Request) (*http.Response, error) {
@@ -101,7 +101,7 @@ func TestExtAuth(t *testing.T) {
 		},
 		{
 			name: "auth error",
-			input: `{"http_service":{
+			input: `{"httpService":{
 				"url": "http://127.0.0.1:10001/ext_auth"
 			}}`,
 			server: func(r *http.Request) (*http.Response, error) {
@@ -111,7 +111,7 @@ func TestExtAuth(t *testing.T) {
 		},
 		{
 			name: "auth error because of 5xx",
-			input: `{"http_service":{
+			input: `{"httpService":{
 				"url": "http://127.0.0.1:10001/ext_auth"
 			}}`,
 			server: func(r *http.Request) (*http.Response, error) {
@@ -121,10 +121,10 @@ func TestExtAuth(t *testing.T) {
 			res: &api.LocalResponse{Code: 403},
 		},
 		{
-			name: "auth error, status_on_error configured",
-			input: `{"http_service":{
+			name: "auth error, statusOnError configured",
+			input: `{"httpService":{
 				"url": "http://127.0.0.1:10001/ext_auth",
-				"status_on_error": 401
+				"statusOnError": 401
 			}}`,
 			server: func(r *http.Request) (*http.Response, error) {
 				return nil, errors.New("ouch")
@@ -133,10 +133,10 @@ func TestExtAuth(t *testing.T) {
 		},
 		{
 			name: "add matched headers",
-			input: `{"http_service":{
+			input: `{"httpService":{
 				"url": "http://127.0.0.1:10001/ext_auth",
-				"authorization_response": {
-					"allowed_upstream_headers": [
+				"authorizationResponse": {
+					"allowedUpstreamHeaders": [
 						{"exact": "foo"},
 						{"regex": "^ba(r|lh)$"}
 					]
@@ -163,10 +163,10 @@ func TestExtAuth(t *testing.T) {
 		},
 		{
 			name: "auth denied, only matched header to the client",
-			input: `{"http_service":{
+			input: `{"httpService":{
 				"url": "http://127.0.0.1:10001/ext_auth",
-				"authorization_response": {
-					"allowed_client_headers": [
+				"authorizationResponse": {
+					"allowedClientHeaders": [
 						{"exact": "foo"}
 					]
 				}

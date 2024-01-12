@@ -5,10 +5,10 @@
     namespace: default
   spec:
     auth:
-      key_auth:
+      keyAuth:
         config:
           key: xx
     filters:
       demo:
         config:
-          host_name: darwin
+          hostName: darwin

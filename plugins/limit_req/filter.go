@@ -48,7 +48,7 @@ func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api
 	res := bucket.Value().Reserve()
 	delay := res.Delay()
 
-	api.LogInfof("limit_req filter, key: %s, delay: %s", key, delay)
+	api.LogInfof("limitReq filter, key: %s, delay: %s", key, delay)
 
 	if delay > config.maxDelay {
 		res.Cancel()

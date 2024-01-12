@@ -39,8 +39,8 @@ httpFilterPolicy:
         kind: HTTPRoute
         name: http
       filters:
-        local_ratelimit:
+        localRatelimit:
           config:
-            stat_prefix: http_local_rate_limiter
-            token_bucket:
-              fill_interval: 10s
+            statPrefix: http_local_rate_limiter
+            tokenBucket:
+              fillInterval: 10s

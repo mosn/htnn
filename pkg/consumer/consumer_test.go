@@ -57,7 +57,7 @@ func TestUpdateConsumer(t *testing.T) {
 	resourceIndex = make(map[string]map[string]*Consumer)
 
 	auth := map[string]string{
-		"key_auth": "{\"key\": \"test\"}",
+		"keyAuth": "{\"key\": \"test\"}",
 	}
 	c := &Consumer{
 		name:       "me",
@@ -67,27 +67,27 @@ func TestUpdateConsumer(t *testing.T) {
 	v := newConsumerTest().Add("ns", c).Build()
 	updateConsumers(v)
 
-	r, _ := LookupConsumer("ns", "key_auth", "test")
+	r, _ := LookupConsumer("ns", "keyAuth", "test")
 	require.NotNil(t, r)
 	require.Equal(t, "me", r.Name())
 
-	r, _ = LookupConsumer("ns", "key_auth", "not_found")
+	r, _ = LookupConsumer("ns", "keyAuth", "not_found")
 	require.Nil(t, r)
 
 	// no change
-	c.Auth["key_auth"] = string("{\"key\": \"two\"}")
+	c.Auth["keyAuth"] = string("{\"key\": \"two\"}")
 	v = newConsumerTest().Add("ns", c).Build()
 	updateConsumers(v)
-	r, _ = LookupConsumer("ns", "key_auth", "test")
+	r, _ = LookupConsumer("ns", "keyAuth", "test")
 	require.Equal(t, "me", r.Name())
 
 	// update
 	c.generation = 2
 	v = newConsumerTest().Add("ns", c).Build()
 	updateConsumers(v)
-	r, _ = LookupConsumer("ns", "key_auth", "test")
+	r, _ = LookupConsumer("ns", "keyAuth", "test")
 	require.Nil(t, r)
-	r, _ = LookupConsumer("ns", "key_auth", "two")
+	r, _ = LookupConsumer("ns", "keyAuth", "two")
 	require.Equal(t, "me", r.Name())
 
 	// remove
@@ -95,9 +95,9 @@ func TestUpdateConsumer(t *testing.T) {
 	c.generation = 3
 	v = newConsumerTest().Add("ns", c).Build()
 	updateConsumers(v)
-	r, _ = LookupConsumer("ns", "key_auth", "me")
+	r, _ = LookupConsumer("ns", "keyAuth", "me")
 	require.Nil(t, r)
-	r, _ = LookupConsumer("ns", "key_auth", "two")
+	r, _ = LookupConsumer("ns", "keyAuth", "two")
 	require.Equal(t, "you", r.Name())
 }
 
@@ -111,7 +111,7 @@ func TestConsumerInitConfigs(t *testing.T) {
 			name: "ok",
 			consumer: Consumer{
 				Auth: map[string]string{
-					"key_auth": "{\"key\": \"test\"}",
+					"keyAuth": "{\"key\": \"test\"}",
 				},
 				Filters: map[string]*model.FilterConfig{
 					"opa": {
@@ -138,10 +138,10 @@ func TestConsumerInitConfigs(t *testing.T) {
 			name: "failed to validate",
 			consumer: Consumer{
 				Auth: map[string]string{
-					"key_auth": "{\"key2\": \"test\"}",
+					"keyAuth": "{\"key2\": \"test\"}",
 				},
 			},
-			err: "failed to unmarshal consumer config for plugin key_auth",
+			err: "failed to unmarshal consumer config for plugin keyAuth",
 		},
 		{
 			name: "unknown plugin",

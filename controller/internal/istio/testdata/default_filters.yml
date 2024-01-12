@@ -38,7 +38,7 @@
           name: envoy.filters.http.first
           typed_config:
             '@type': type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
-            stat_prefix: http_local_rate_limiter
+            statPrefix: http_local_rate_limiter
     - applyTo: HTTP_FILTER
       match:
         context: GATEWAY
@@ -55,7 +55,7 @@
           name: envoy.filters.http.pre
           typed_config:
             '@type': type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
-            stat_prefix: http_local_rate_limiter
+            statPrefix: http_local_rate_limiter
     - applyTo: HTTP_FILTER
       match:
         context: GATEWAY
@@ -72,7 +72,7 @@
           name: envoy.filters.http.post
           typed_config:
             '@type': type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
-            stat_prefix: http_local_rate_limiter
+            statPrefix: http_local_rate_limiter
     - applyTo: HTTP_FILTER
       match:
         context: GATEWAY
@@ -89,6 +89,6 @@
           name: envoy.filters.http.last
           typed_config:
             '@type': type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
-            stat_prefix: http_local_rate_limiter
+            statPrefix: http_local_rate_limiter
     priority: 100
   status: {}

@@ -4,7 +4,7 @@ title: Post Lua
 
 ## Description
 
-This plugin is the same as the `pre_lua` plugin, but runs around proxying the request to the upstream cluster.
+The `postLua` plugin is the same as the `preLua` plugin, but runs around proxying the request to the upstream cluster.
 
 Because Envoy uses the onion model to proxy requests, the execution order is:
 
@@ -16,7 +16,7 @@ Because Envoy uses the onion model to proxy requests, the execution order is:
 6. running other plugins with the response
 7. request ends
 
-Please refer to [pre_lua](../pre_lua) plugin documentation to know how to use it. Don't forget to replace `pre_lua` with `post_lua` when testing the example.
+Please refer to [preLua](../pre_lua) plugin documentation to know how to use it. Don't forget to replace `preLua` with `postLua` when testing the example.
 
 ## Attribute
 
