@@ -13,24 +13,6 @@
               subFilter:
                 name: envoy.filters.http.router
       patch:
-        operation: INSERT_BEFORE
-        value:
-          config_discovery:
-            config_source:
-              ads: {}
-            type_urls:
-            - type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.Config
-          name: htnn-consumer
-    - applyTo: HTTP_FILTER
-      match:
-        context: GATEWAY
-        listener:
-          filterChain:
-            filter:
-              name: envoy.filters.network.http_connection_manager
-              subFilter:
-                name: envoy.filters.http.router
-      patch:
         operation: INSERT_FIRST
         value:
           disabled: true

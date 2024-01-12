@@ -73,23 +73,6 @@ func DefaultEnvoyFilters() map[string]*istiov1a3.EnvoyFilter {
 		},
 	}
 	patches := []*istioapi.EnvoyFilter_EnvoyConfigObjectPatch{}
-	// consumer
-	patches = append(patches, &istioapi.EnvoyFilter_EnvoyConfigObjectPatch{
-		ApplyTo: istioapi.EnvoyFilter_HTTP_FILTER,
-		Match:   defaultMatch,
-		Patch: &istioapi.EnvoyFilter_Patch{
-			Operation: istioapi.EnvoyFilter_Patch_INSERT_BEFORE,
-			Value: MustNewStruct(map[string]interface{}{
-				"name": ECDSConsumerName,
-				"config_discovery": map[string]interface{}{
-					"type_urls": []interface{}{"type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.Config"},
-					"config_source": map[string]interface{}{
-						"ads": map[string]interface{}{},
-					},
-				},
-			}),
-		},
-	})
 	// Go
 	patches = append(patches, &istioapi.EnvoyFilter_EnvoyConfigObjectPatch{
 		ApplyTo: istioapi.EnvoyFilter_HTTP_FILTER,
@@ -232,6 +215,40 @@ func GenerateConsumers(consumers map[string]interface{}) *istiov1a3.EnvoyFilter 
 								"plugin_config": map[string]interface{}{
 									"@type": "type.googleapis.com/xds.type.v3.TypedStruct",
 									"value": consumers,
+								},
+							},
+						}),
+					},
+				},
+				{
+					ApplyTo: istioapi.EnvoyFilter_HTTP_FILTER,
+					Match: &istioapi.EnvoyFilter_EnvoyConfigObjectMatch{
+						Context: istioapi.EnvoyFilter_GATEWAY,
+						ObjectTypes: &istioapi.EnvoyFilter_EnvoyConfigObjectMatch_Listener{
+							Listener: &istioapi.EnvoyFilter_ListenerMatch{
+								FilterChain: &istioapi.EnvoyFilter_ListenerMatch_FilterChainMatch{
+									Filter: &istioapi.EnvoyFilter_ListenerMatch_FilterMatch{
+										Name: "envoy.filters.network.http_connection_manager",
+										SubFilter: &istioapi.EnvoyFilter_ListenerMatch_SubFilterMatch{
+											Name: "envoy.filters.http.router",
+										},
+									},
+								},
+							},
+						},
+					},
+					// We put the HTTP_FILTER in Consumer's patch, so that deployment which
+					// doesn't use Consumer won't need to subscribe to this ECDS. The side effect
+					// is that the first consumer will cause LDS drain, but it's similar to
+					// deploy a Wasm plugin.
+					Patch: &istioapi.EnvoyFilter_Patch{
+						Operation: istioapi.EnvoyFilter_Patch_INSERT_BEFORE,
+						Value: MustNewStruct(map[string]interface{}{
+							"name": ECDSConsumerName,
+							"config_discovery": map[string]interface{}{
+								"type_urls": []interface{}{"type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.Config"},
+								"config_source": map[string]interface{}{
+									"ads": map[string]interface{}{},
 								},
 							},
 						}),
