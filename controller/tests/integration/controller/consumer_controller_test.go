@@ -108,7 +108,7 @@ var _ = Describe("Consumer controller", func() {
 			ef := envoyfilters.Items[0]
 			Expect(ef.Namespace).To(Equal("istio-system"))
 			Expect(ef.Name).To(Equal("htnn-consumer"))
-			Expect(len(ef.Spec.ConfigPatches)).To(Equal(1))
+			Expect(len(ef.Spec.ConfigPatches)).To(Equal(2))
 			cp := ef.Spec.ConfigPatches[0]
 			Expect(cp.ApplyTo).To(Equal(istioapi.EnvoyFilter_EXTENSION_CONFIG))
 			value := cp.Patch.Value.AsMap()

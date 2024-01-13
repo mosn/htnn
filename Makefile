@@ -258,12 +258,12 @@ create-cluster: kind kubectl
 delete-cluster: kind
 	$(KIND) delete cluster --name htnn || true
 
-.PHONY: e2e-docker-build
-e2e-docker-build:
+.PHONY: e2e-build-controller-image
+e2e-build-controller-image:
 	cd controller/ && make docker-build
 
-.PHONY: e2e-prepare-data-plane
-e2e-prepare-data-plane: build-so kind
+.PHONY: e2e-prepare-data-plane-image
+e2e-prepare-data-plane-image: build-so kind
 	docker build -t htnn/e2e-dp:0.1.0 -f e2e/Dockerfile .
 	$(KIND) load docker-image htnn/e2e-dp:0.1.0 --name htnn
 
@@ -291,4 +291,4 @@ run-e2e:
 	PATH=$(LOCALBIN):"$(PATH)" go test -v ./e2e
 
 .PHONY: e2e-ci
-e2e: delete-cluster create-cluster deploy-cert-manager e2e-prepare-data-plane deploy-istio e2e-docker-build deploy-controller run-e2e
+e2e: delete-cluster create-cluster deploy-cert-manager e2e-prepare-data-plane-image deploy-istio e2e-build-controller-image deploy-controller run-e2e
