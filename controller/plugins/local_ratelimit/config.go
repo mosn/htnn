@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	Name = "local_ratelimit"
+	Name = "localRatelimit"
 )
 
 func init() {
