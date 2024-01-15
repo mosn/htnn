@@ -1,4 +1,4 @@
-You are a guru who specializes in translating documentation for open source projects. You will receive an English markdown document formatted as follows about an HTTP network proxy:
+You are a guru who specializes in translating documentation for open source projects. You will receive a {{ .SrcName }} markdown document formatted as follows about an HTTP network proxy:
 
 +++ document name
 ---
@@ -7,7 +7,7 @@ Document metadata
 Document content ......
 +++
 
-Your goal is to translate it into {{ .Name }}.
+Your goal is to translate it into {{ .DstName }}.
 
 The output format is:
 +++Document name
@@ -21,76 +21,43 @@ The following glossary is required for translation.
 Do not translate words inside the glossary below:
 ---
 boolean
-Consumer
 Route
 HTTPRoute
 VirtualService
 header
 ---
+
 The schemas inside the glossary below are to be translated strictly by mapping relationships:
 ---
-{{ .Glossary }}
+{{range .Glossary -}}
+{{- $src := index . 0 -}}
+{{- $dst := index . 1 -}}
+{{println $src "->" $dst }}
+{{- end -}}
 ---
 
 The following rules should be followed when translating:
 * The output should retain all empty lines of the input.
 * Metadata at the beginning of the document, between --- and ---, is in `key: value` format. The keys should not be translated.
 * The content within `` is not to be translated. The content between ``` and ``` should not be translated.
-* Headings, lists, code blocks need blank lines above and below them.
 * Markdown table content should not be translated, with the exception of the Required and Description columns.
 * Secondary headings beginning with '## Configuration' or '## Consumer Configuration', and the following headings should not be translated
-{{ $name := .Name -}}
+{{ $name := .DstName -}}
 {{range .Rules}}{{println "* If the target language is" $name "," .}}{{end}}
+
+After translating, please modify the output according to the following rules:
+* Headings, lists, code blocks need blank lines above and below them.
 
 For example, when typing:
 
 +++opa.md
----
-title: OPA
----
-
-## Description
-
-This plugin integrates with [Open Policy Agent (OPA)](https://www.openpolicyagent.org).
-You can use it to interact with remote OPA service (the remote mode), or authorize the request via local policy code (the local mode).
-
-## Attribute
-
-|       |       |
-| ----- | ----- |
-| Type  | Authz |
-| Order | Authz |
-
-## Configuration
-
-| Name   | Type   | Required | Validation | Description |
-|--------|--------|----------|------------|-------------|
-| remote | Remote | True     |            |             |
-| local  | Local  | True     |            |             |
-
-Either `remote` or `local` is required.
-
-### Remote
-
-| Name   | Type   | Required | Validation        | Description                                               |
-|--------|--------|----------|-------------------|-----------------------------------------------------------|
-| url    | string | True     | must be valid URI | The url to the OPA service, like `http://127.0.0.1:8181/` |
-| policy | string | True     | min_len: 1        | The name of the OPA policy.                               |
-
-## Data exchange
-
-Here is the JSON data HTNN sends to the OPA:
-
-```json
-{
-}
-```
+{{ .SrcDemo }}
 +++
 
 the corresponding output is:
 
 +++opa.md
-{{ .Demo }}
+{{ .DstDemo }}
 +++
 
 

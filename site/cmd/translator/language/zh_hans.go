@@ -34,11 +34,11 @@ func (l *zhHans) Name() string {
 	return "Simplified Chinese"
 }
 
-func (l *zhHans) Glossary() string {
-	return `
-## Description -> ## 说明
-## Usage -> ## 用法
-`
+func (l *zhHans) Glossary() [][2]string {
+	return [][2]string{
+		{"## Description", "## 说明"},
+		{"## Usage", "## 用法"},
+	}
 }
 
 func (l *zhHans) Rules() []string {

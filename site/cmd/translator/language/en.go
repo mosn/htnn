@@ -14,21 +14,34 @@
 
 package language
 
-type Language interface {
-	Name() string
-	Glossary() [][2]string
-	Rules() []string
-	Demo() string
-}
-
-var (
-	languages = map[string]Language{}
+import (
+	_ "embed"
 )
 
-func registerLanguage(code string, la Language) {
-	languages[code] = la
+var (
+	//go:embed en.md
+	enDemo string
+)
+
+func init() {
+	registerLanguage("en", &en{})
 }
 
-func LookupLanguage(code string) Language {
-	return languages[code]
+type en struct {
+}
+
+func (l *en) Name() string {
+	return "English"
+}
+
+func (l *en) Glossary() [][2]string {
+	return nil
+}
+
+func (l *en) Rules() []string {
+	return []string{}
+}
+
+func (l *en) Demo() string {
+	return enDemo
 }

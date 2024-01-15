@@ -31,7 +31,8 @@ var (
 )
 
 var inputFile = flag.String("f", "", "the file to translate")
-var locale = flag.String("l", "zh-Hans", "the locale code that we support")
+var fromLocale = flag.String("from", "en", "the locale code that we translate from")
+var toLocale = flag.String("to", "en", "the locale code that we translate to")
 
 func mustNoErr(err error) {
 	if err != nil {
@@ -46,9 +47,14 @@ func main() {
 		panic("no input file")
 	}
 
-	lang := language.LookupLanguage(*locale)
-	if lang == nil {
-		panic(fmt.Sprintf("language %s not supported", *locale))
+	fromLang := language.LookupLanguage(*fromLocale)
+	if fromLang == nil {
+		panic(fmt.Sprintf("language %s not supported", *fromLocale))
+	}
+
+	toLang := language.LookupLanguage(*toLocale)
+	if toLang == nil {
+		panic(fmt.Sprintf("language %s not supported", *toLocale))
 	}
 
 	b, err := os.ReadFile(*inputFile)
@@ -59,18 +65,30 @@ func main() {
 	t, err := template.New("prompt").Parse(prompt)
 	mustNoErr(err)
 
+	glossary := toLang.Glossary()
+	if *toLocale == "en" {
+		glossary = fromLang.Glossary()
+		for i, piece := range glossary {
+			glossary[i][0], glossary[i][1] = piece[1], piece[0]
+		}
+	}
+
 	data := struct {
 		InputText string
-		Name      string
-		Glossary  string
+		Glossary  [][2]string
 		Rules     []string
-		Demo      string
+		SrcName   string
+		DstName   string
+		SrcDemo   string
+		DstDemo   string
 	}{
 		InputText: text,
-		Name:      lang.Name(),
-		Glossary:  lang.Glossary(),
-		Rules:     lang.Rules(),
-		Demo:      lang.Demo(),
+		Glossary:  glossary,
+		Rules:     toLang.Rules(),
+		SrcName:   fromLang.Name(),
+		DstName:   toLang.Name(),
+		SrcDemo:   fromLang.Demo(),
+		DstDemo:   toLang.Demo(),
 	}
 
 	err = t.Execute(os.Stdout, data)
