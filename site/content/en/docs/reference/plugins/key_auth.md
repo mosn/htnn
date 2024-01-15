@@ -4,7 +4,7 @@ title: Key Auth
 
 ## Description
 
-This plugin authenticates the client according to the consumers and the key sent in the request.
+The `keyAuth` plugin authenticates the client according to the consumers and the key sent in the request.
 
 ## Attribute
 
@@ -50,7 +50,7 @@ metadata:
   namespace: default
 spec:
   auth:
-    key_auth:
+    keyAuth:
       config:
         key: rick
 ```

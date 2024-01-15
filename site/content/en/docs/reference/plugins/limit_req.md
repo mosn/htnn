@@ -4,7 +4,7 @@ title: Limit Req
 
 ## Description
 
-The `limit_req` plugin limits the number of requests per second to this proxy. The implementation is based on the [token bucket algorithm](https://en.wikipedia.org/wiki/Token_bucket). To draw a comparison, consider the `average` and `period` (as specified further on) to act as the refill rate for the bucket, while the `burst` represents the bucket's size.
+The `limitReq` plugin limits the number of requests per second to this proxy. The implementation is based on the [token bucket algorithm](https://en.wikipedia.org/wiki/Token_bucket). To draw a comparison, consider the `average` and `period` (as specified further on) to act as the refill rate for the bucket, while the `burst` represents the bucket's size.
 
 ## Attribute
 

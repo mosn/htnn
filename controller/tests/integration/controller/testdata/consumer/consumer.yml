@@ -5,7 +5,7 @@
     namespace: default
   spec:
     auth:
-      key_auth:
+      keyAuth:
         config:
           key: xx
 - apiVersion: mosn.io/v1
@@ -15,10 +15,10 @@
     namespace: default
   spec:
     auth:
-      key_auth:
+      keyAuth:
         config:
           key: yy
-      hmac_auth:
+      hmacAuth:
         config:
           access_key: ak
           secret_key: sk

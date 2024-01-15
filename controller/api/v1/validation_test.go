@@ -126,7 +126,7 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 						},
 					},
 					Filters: map[string]HTTPPlugin{
-						"local_ratelimit": {
+						"localRatelimit": {
 							Config: runtime.RawExtension{
 								Raw: []byte(`{}`),
 							},
@@ -215,7 +215,7 @@ func TestValidateConsumer(t *testing.T) {
 			consumer: &Consumer{
 				Spec: ConsumerSpec{
 					Auth: map[string]ConsumerPlugin{
-						"key_auth": {
+						"keyAuth": {
 							Config: runtime.RawExtension{
 								Raw: []byte(`{"key":"cat"}`),
 							},
@@ -251,7 +251,7 @@ func TestValidateConsumer(t *testing.T) {
 			consumer: &Consumer{
 				Spec: ConsumerSpec{
 					Auth: map[string]ConsumerPlugin{
-						"key_auth": {
+						"keyAuth": {
 							Config: runtime.RawExtension{
 								Raw: []byte(`{"keys":"cat"}`),
 							},
@@ -266,7 +266,7 @@ func TestValidateConsumer(t *testing.T) {
 			consumer: &Consumer{
 				Spec: ConsumerSpec{
 					Auth: map[string]ConsumerPlugin{
-						"key_auth": {
+						"keyAuth": {
 							Config: runtime.RawExtension{
 								Raw: []byte(`{"key":"cat"}`),
 							},
@@ -288,14 +288,14 @@ func TestValidateConsumer(t *testing.T) {
 			consumer: &Consumer{
 				Spec: ConsumerSpec{
 					Auth: map[string]ConsumerPlugin{
-						"key_auth": {
+						"keyAuth": {
 							Config: runtime.RawExtension{
 								Raw: []byte(`{"key":"cat"}`),
 							},
 						},
 					},
 					Filters: map[string]HTTPPlugin{
-						"key_auth": {
+						"keyAuth": {
 							Config: runtime.RawExtension{
 								Raw: []byte(`{}`),
 							},
@@ -303,7 +303,7 @@ func TestValidateConsumer(t *testing.T) {
 					},
 				},
 			},
-			err: "http filter should not in authn/pre/post position: key_auth",
+			err: "http filter should not in authn/pre/post position: keyAuth",
 		},
 	}
 

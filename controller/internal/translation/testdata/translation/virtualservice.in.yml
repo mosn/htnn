@@ -101,4 +101,4 @@ httpFilterPolicy:
       filters:
         animal:
           config:
-            host_name: goldfish
+            hostName: goldfish

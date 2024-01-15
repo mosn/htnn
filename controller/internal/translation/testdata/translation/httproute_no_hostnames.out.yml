@@ -25,6 +25,6 @@
                     value:
                       plugins:
                       - config:
-                          host_name: goldfish
+                          hostName: goldfish
                         name: animal
   status: {}

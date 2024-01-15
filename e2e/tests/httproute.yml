@@ -28,4 +28,4 @@ spec:
   filters:
     demo:
       config:
-        host_name: doraemon
+        hostName: doraemon

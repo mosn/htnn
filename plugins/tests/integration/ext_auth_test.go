@@ -49,8 +49,8 @@ func TestExtAuth(t *testing.T) {
 	}{
 		{
 			name: "default",
-			config: control_plane.NewSinglePluinConfig("ext_auth", map[string]interface{}{
-				"http_service": map[string]interface{}{
+			config: control_plane.NewSinglePluinConfig("extAuth", map[string]interface{}{
+				"httpService": map[string]interface{}{
 					"url": "http://127.0.0.1:10001/ext_auth",
 				},
 			}),
@@ -68,10 +68,10 @@ func TestExtAuth(t *testing.T) {
 		},
 		{
 			name: "failed to ext auth",
-			config: control_plane.NewSinglePluinConfig("ext_auth", map[string]interface{}{
-				"http_service": map[string]interface{}{
-					"url":             "http://127.0.0.1:2023/ext_auth",
-					"status_on_error": 401,
+			config: control_plane.NewSinglePluinConfig("extAuth", map[string]interface{}{
+				"httpService": map[string]interface{}{
+					"url":           "http://127.0.0.1:2023/ext_auth",
+					"statusOnError": 401,
 				},
 			}),
 			run: func(t *testing.T) {
@@ -81,10 +81,10 @@ func TestExtAuth(t *testing.T) {
 		},
 		{
 			name: "with body",
-			config: control_plane.NewSinglePluinConfig("ext_auth", map[string]interface{}{
-				"http_service": map[string]interface{}{
-					"url":               "http://127.0.0.1:10001/ext_auth",
-					"with_request_body": true,
+			config: control_plane.NewSinglePluinConfig("extAuth", map[string]interface{}{
+				"httpService": map[string]interface{}{
+					"url":             "http://127.0.0.1:10001/ext_auth",
+					"withRequestBody": true,
 				},
 			}),
 			run: func(t *testing.T) {

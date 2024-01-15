@@ -4,7 +4,7 @@ title: OPA
 
 ## Description
 
-This plugin integrates with [Open Policy Agent (OPA)](https://www.openpolicyagent.org).
+The `opa` plugin integrates with [Open Policy Agent (OPA)](https://www.openpolicyagent.org).
 You can use it to interact with remote OPA service (the remote mode), or authorize the request via local policy code (the local mode).
 
 ## Attribute

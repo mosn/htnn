@@ -14,10 +14,10 @@
         operation: MERGE
         value:
           typed_per_filter_config:
-            envoy.filters.http.pre_lua:
+            envoy.filters.http.preLua:
               '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
-              source_code:
-                inline_string: |
+              sourceCode:
+                inlineString: |
                   function envoy_on_request(handle)
                     local headers = handle:headers()
                     headers:add("code", "inline_code_from_hello")
@@ -44,7 +44,7 @@
         operation: INSERT_BEFORE
         value:
           disabled: true
-          name: envoy.filters.http.pre_lua
+          name: envoy.filters.http.preLua
           typed_config:
             '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
     priority: 100

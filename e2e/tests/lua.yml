@@ -8,21 +8,21 @@ spec:
     kind: HTTPRoute
     name: default
   filters:
-    pre_lua:
+    preLua:
       config:
-        source_code:
-          inline_string: |
+        sourceCode:
+          inlineString: |
             function envoy_on_request(handle)
               local headers = handle:headers()
               headers:add("doraemon", "Good morning!")
             end
     demo:
       config:
-        host_name: doraemon
-    post_lua:
+        hostName: doraemon
+    postLua:
       config:
-        source_code:
-          inline_string: |
+        sourceCode:
+          inlineString: |
             function envoy_on_request(handle)
               local headers = handle:headers()
               headers:add("doraemon", "world.")

@@ -4,7 +4,7 @@ title: Pre Lua
 
 ## Description
 
-This plugin allows Lua snippets to be run at the beginning and the end of a request, by leveraging Envoy's `lua` filter.
+The `preLua` plugin allows Lua snippets to be run at the beginning and the end of a request, by leveraging Envoy's `lua` filter.
 
 Because Envoy uses the onion model to proxy requests, the execution order is:
 
@@ -63,10 +63,10 @@ spec:
     kind: HTTPRoute
     name: default
   filters:
-    pre_lua:
+    preLua:
       config:
-        source_code:
-          inline_string: |
+        sourceCode:
+          inlineString: |
             function envoy_on_request(handle)
               local resp_headers = {[":status"] = "200"}
               local data = "hello, world"

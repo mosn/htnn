@@ -9,8 +9,8 @@ spec:
     kind: VirtualService
     name: default
   filters:
-    local_ratelimit:
+    localRatelimit:
       config:
-        stat_prefix: http_local_rate_limiter
-        token_bucket:
-          max_tokens: 10000
+        statPrefix: http_local_rate_limiter
+        tokenBucket:
+          maxTokens: 10000

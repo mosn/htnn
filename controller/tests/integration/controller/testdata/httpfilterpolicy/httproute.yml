@@ -11,7 +11,7 @@
     filters:
       demo:
         config:
-          host_name: goldfish
+          hostName: goldfish
 - apiVersion: gateway.networking.k8s.io/v1
   kind: HTTPRoute
   metadata:

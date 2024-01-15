@@ -145,6 +145,15 @@ func TestTranslate(t *testing.T) {
 	}
 }
 
+// snakeToCamel converts a snake_case string to a camelCase string.
+func snakeToCamel(s string) string {
+	words := strings.Split(s, "_")
+	for i := 1; i < len(words); i++ {
+		words[i] = strings.Title(words[i])
+	}
+	return strings.Join(words, "")
+}
+
 func TestPlugins(t *testing.T) {
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "plugins", "*.in.yml"))
 	require.NoError(t, err)
@@ -177,7 +186,7 @@ func TestPlugins(t *testing.T) {
 			require.NoError(t, err)
 
 			defaultEnvoyFilters := istio.DefaultEnvoyFilters()
-			expPlugin := fmt.Sprintf("envoy.filters.http.%s", name)
+			expPlugin := fmt.Sprintf("envoy.filters.http.%s", snakeToCamel(name))
 			for name := range defaultEnvoyFilters {
 				for _, ef := range fs.EnvoyFilters {
 					if ef.Name == name {

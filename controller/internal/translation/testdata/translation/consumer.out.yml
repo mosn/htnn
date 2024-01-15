@@ -28,5 +28,5 @@
                       - config:
                           keys:
                           - name: apikey
-                        name: key_auth
+                        name: keyAuth
   status: {}

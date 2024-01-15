@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	Name = "key_auth"
+	Name = "keyAuth"
 )
 
 func init() {

@@ -40,7 +40,7 @@ func TestConsumerWithFilter(t *testing.T) {
 	}{
 		{
 			name: "authn & exec",
-			config: control_plane.NewSinglePluinConfig("key_auth", map[string]interface{}{
+			config: control_plane.NewSinglePluinConfig("keyAuth", map[string]interface{}{
 				"keys": []interface{}{
 					map[string]interface{}{
 						"name": "Authorization",

@@ -290,5 +290,6 @@ undeploy-controller: kubectl
 run-e2e:
 	PATH=$(LOCALBIN):"$(PATH)" go test -v ./e2e
 
+# Run `make undeploy-controller e2e-build-controller-image  deploy-controller` to update the controller
 .PHONY: e2e-ci
-e2e: delete-cluster create-cluster deploy-cert-manager e2e-prepare-data-plane-image deploy-istio e2e-build-controller-image deploy-controller run-e2e
+e2e-ci: delete-cluster create-cluster deploy-cert-manager e2e-prepare-data-plane-image deploy-istio e2e-build-controller-image deploy-controller run-e2e

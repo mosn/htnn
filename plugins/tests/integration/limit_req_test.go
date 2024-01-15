@@ -40,7 +40,7 @@ func TestLimitReq(t *testing.T) {
 	}{
 		{
 			name: "rps > 1",
-			config: control_plane.NewSinglePluinConfig("limit_req", map[string]interface{}{
+			config: control_plane.NewSinglePluinConfig("limitReq", map[string]interface{}{
 				"average": 1,
 				"period":  "0.1s",
 			}),
@@ -65,7 +65,7 @@ func TestLimitReq(t *testing.T) {
 		},
 		{
 			name: "rps <= 1",
-			config: control_plane.NewSinglePluinConfig("limit_req", map[string]interface{}{
+			config: control_plane.NewSinglePluinConfig("limitReq", map[string]interface{}{
 				"average": 1,
 				"period":  "60s",
 			}),

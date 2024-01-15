@@ -15,8 +15,6 @@
 package local_ratelimit
 
 import (
-	"fmt"
-
 	local_ratelimit "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/local_ratelimit/v3"
 
 	"mosn.io/htnn/pkg/filtermanager/api"
@@ -24,7 +22,7 @@ import (
 )
 
 const (
-	Name = "local_ratelimit"
+	Name = "localRatelimit"
 )
 
 func init() {
@@ -53,15 +51,15 @@ func (p *plugin) Config() api.PluginConfig {
 
 // RouteConfigTypeURL returns the type url of per-route config
 func (p *plugin) RouteConfigTypeURL() string {
-	return fmt.Sprintf("type.googleapis.com/envoy.extensions.filters.http.%s.v3.LocalRateLimit", Name)
+	return "type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit"
 }
 
 // DefaultHTTPFilterConfig returns the placeholder config for http filter
 func (p *plugin) DefaultHTTPFilterConfig() map[string]interface{} {
 	return map[string]interface{}{
 		"typed_config": map[string]interface{}{
-			"@type":       p.RouteConfigTypeURL(),
-			"stat_prefix": "http_local_rate_limiter",
+			"@type":      p.RouteConfigTypeURL(),
+			"statPrefix": "http_local_rate_limiter",
 		},
 	}
 }

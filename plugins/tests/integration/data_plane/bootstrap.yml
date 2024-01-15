@@ -35,8 +35,8 @@ static_resources:
                               d: |
                                 {
                                   "auth":{
-                                    "key_auth":"{\"key\":\"rick\"}",
-                                    "hmac_auth": "{\"access_key\":\"ak\",\"secret_key\":\"sk\",\"signed_headers\":[\"x-custom-a\"]}"
+                                    "keyAuth":"{\"key\":\"rick\"}",
+                                    "hmacAuth": "{\"accessKey\":\"ak\",\"secretKey\":\"sk\",\"signedHeaders\":[\"x-custom-a\"]}"
                                   }
                                 }
                               v: 4355415
@@ -44,11 +44,11 @@ static_resources:
                               d: |
                                 {
                                   "auth":{
-                                    "key_auth":"{\"key\":\"marvin\"}"
+                                    "keyAuth":"{\"key\":\"marvin\"}"
                                   },
                                   "filters":{
                                     "demo":{
-                                      "config":{"host_name":"Mike"}
+                                      "config":{"hostName":"Mike"}
                                     }
                                   }
                                 }

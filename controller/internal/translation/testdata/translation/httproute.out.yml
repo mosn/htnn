@@ -25,7 +25,7 @@
                     value:
                       plugins:
                       - config:
-                          host_name: goldfish
+                          hostName: goldfish
                         name: animal
     - applyTo: HTTP_ROUTE
       match:
@@ -47,7 +47,7 @@
                     value:
                       plugins:
                       - config:
-                          host_name: goldfish
+                          hostName: goldfish
                         name: animal
   status: {}
 - metadata:
@@ -77,7 +77,7 @@
                     value:
                       plugins:
                       - config:
-                          host_name: goldfish
+                          hostName: goldfish
                         name: animal
     - applyTo: HTTP_ROUTE
       match:
@@ -99,6 +99,6 @@
                     value:
                       plugins:
                       - config:
-                          host_name: goldfish
+                          hostName: goldfish
                         name: animal
   status: {}

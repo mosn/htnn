@@ -50,13 +50,13 @@ httpFilterPolicy:
         name: httpbin
         sectionName: policy
       filters:
-        local_ratelimit:
+        localRatelimit:
           config:
-            stat_prefix: http_local_rate_limiter
-            token_bucket:
+            statPrefix: http_local_rate_limiter
+            tokenBucket:
               max_tokens: 10000
               tokens_per_fill: 1000
-              fill_interval: 1s
+              fillInterval: 1s
             filter_enabled:
               default_value:
                 numerator: 100
@@ -81,9 +81,9 @@ httpFilterPolicy:
         kind: VirtualService
         name: httpbin
       filters:
-        local_ratelimit:
+        localRatelimit:
           config:
-            stat_prefix: http_local_rate_limiter
-            token_bucket:
-              fill_interval: 10s
+            statPrefix: http_local_rate_limiter
+            tokenBucket:
+              fillInterval: 10s
               max_tokens: 100

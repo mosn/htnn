@@ -22,7 +22,7 @@ import (
 )
 
 func TestPlugin(t *testing.T) {
-	data := []byte(`{"host_name":"Jack"}`)
+	data := []byte(`{"hostName":"Jack"}`)
 	c := &config{}
 	protojson.Unmarshal(data, c)
 	err := c.Validate()
@@ -39,13 +39,13 @@ func TestBadConfig(t *testing.T) {
 		err   string
 	}{
 		{
-			name:  "no host_name",
+			name:  "no hostName",
 			input: `{}`,
 			err:   "invalid Config.HostName: value length must be at least 1 runes",
 		},
 		{
-			name:  "empty host_name",
-			input: `{"host_name":""}`,
+			name:  "empty hostName",
+			input: `{"hostName":""}`,
 			err:   "invalid Config.HostName: value length must be at least 1 runes",
 		},
 	}

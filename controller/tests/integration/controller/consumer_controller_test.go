@@ -127,7 +127,7 @@ var _ = Describe("Consumer controller", func() {
 			err := json.Unmarshal([]byte(d), &cfg)
 			Expect(err).To(BeNil())
 			filter := cfg["auth"].(map[string]interface{})
-			Expect(filter["key_auth"]).ToNot(BeNil())
+			Expect(filter["keyAuth"]).ToNot(BeNil())
 
 			v := marshaledCfg["default"]["unchanged"]["v"]
 
