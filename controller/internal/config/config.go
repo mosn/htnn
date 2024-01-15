@@ -14,6 +14,16 @@
 
 package config
 
+import (
+	"github.com/spf13/viper"
+
+	"mosn.io/htnn/pkg/log"
+)
+
+var (
+	logger = log.DefaultLogger.WithName("config")
+)
+
 func GoSoPath() string {
 	return "/etc/libgolang.so"
 }
@@ -22,4 +32,26 @@ var rootNamespace = "istio-system"
 
 func RootNamespace() string {
 	return rootNamespace
+}
+
+func Init() {
+	viper.SetConfigName("config")
+	viper.SetConfigType("yaml")
+	viper.AddConfigPath(".")
+	viper.AddConfigPath("./config")
+
+	if err := viper.ReadInConfig(); err != nil {
+		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
+			logger.Error(err, "read config file failed")
+		}
+
+		return
+	}
+
+	logger.Info("use config file", "filename", viper.ConfigFileUsed())
+
+	cfgRootNamespace := viper.GetString("istio.rootNamespace")
+	if cfgRootNamespace != "" {
+		rootNamespace = cfgRootNamespace
+	}
 }

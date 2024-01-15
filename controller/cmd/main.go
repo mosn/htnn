@@ -31,6 +31,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	mosniov1 "mosn.io/htnn/controller/api/v1"
+	"mosn.io/htnn/controller/internal/config"
 	"mosn.io/htnn/controller/internal/controller"
 	"mosn.io/htnn/pkg/log"
 )
@@ -69,6 +70,8 @@ func main() {
 	flag.Parse()
 
 	ctrl.SetLogger(log.DefaultLogger)
+
+	config.Init()
 
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{
 		Scheme:                 scheme,
