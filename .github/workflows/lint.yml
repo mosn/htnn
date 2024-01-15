@@ -31,7 +31,7 @@ jobs:
     - name: format go
       run: |
         make fmt-go
-        if !git diff --exit-code; then
+        if ! git diff --exit-code; then
           echo "Files are not well formatted. Please run 'make fmt-go' and commit changes."
           exit 1
         fi
@@ -39,7 +39,7 @@ jobs:
     - name: format proto
       run: |
         make fmt-proto
-        if !git diff --exit-code; then
+        if ! git diff --exit-code; then
           echo "Files are not well formatted. Please run 'make fmt-proto' and commit changes."
           exit 1
         fi
@@ -47,7 +47,7 @@ jobs:
     - name: check generated files
       run: |
         make gen-proto
-        if !git diff --exit-code; then
+        if ! git diff --exit-code; then
           echo "Generated files are not up-to-date. Please run 'make gen-proto' and commit changes."
           exit 1
         fi
