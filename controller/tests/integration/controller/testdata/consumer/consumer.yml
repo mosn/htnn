@@ -22,3 +22,11 @@
         config:
           access_key: ak
           secret_key: sk
+# EnvoyFilter to remove
+- apiVersion: networking.istio.io/v1alpha3
+  kind: EnvoyFilter
+  metadata:
+    labels:
+      htnn.mosn.io/created-by: Consumer
+    name: htnn-consumer
+    namespace: default

@@ -23,7 +23,6 @@ import (
 	"github.com/go-logr/logr"
 	"google.golang.org/protobuf/proto"
 	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -52,6 +51,7 @@ const (
 //+kubebuilder:rbac:groups=mosn.io,resources=consumers,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=mosn.io,resources=consumers/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=mosn.io,resources=consumers/finalizers,verbs=update
+//+kubebuilder:rbac:groups=networking.istio.io,resources=envoyfilters,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -143,24 +143,37 @@ func (r *ConsumerReconciler) generateCustomResource(ctx context.Context, logger 
 	}
 	ef.Labels[LabelCreatedBy] = "Consumer"
 
-	var envoyfilter istiov1a3.EnvoyFilter
 	nsName := types.NamespacedName{Name: ef.Name, Namespace: ef.Namespace}
-	err := r.Get(ctx, nsName, &envoyfilter)
-	if err != nil {
-		if !apierrors.IsNotFound(err) {
-			return fmt.Errorf("failed to get EnvoyFilter: %w, namespacedName: %v", err, nsName)
-		}
+	var envoyfilters istiov1a3.EnvoyFilterList
+	if err := r.List(ctx, &envoyfilters, client.MatchingLabels{LabelCreatedBy: "Consumer"}); err != nil {
+		return fmt.Errorf("failed to list EnvoyFilter: %w", err)
+	}
 
+	var envoyfilter *istiov1a3.EnvoyFilter
+	for _, ef := range envoyfilters.Items {
+		if ef.Namespace != nsName.Namespace || ef.Name != nsName.Name {
+			logger.Info("delete EnvoyFilter", "name", ef.Name, "namespace", ef.Namespace)
+
+			if err := r.Delete(ctx, ef); err != nil {
+				return fmt.Errorf("failed to delete EnvoyFilter: %w, namespacedName: %v",
+					err, types.NamespacedName{Name: ef.Name, Namespace: ef.Namespace})
+			}
+		} else {
+			envoyfilter = ef
+		}
+	}
+
+	if envoyfilter == nil {
 		logger.Info("create EnvoyFilter", "name", ef.Name, "namespace", ef.Namespace)
 
-		if err = r.Create(ctx, ef); err != nil {
+		if err := r.Create(ctx, ef); err != nil {
 			return fmt.Errorf("failed to create EnvoyFilter: %w, namespacedName: %v", err, nsName)
 		}
 	} else if !proto.Equal(&envoyfilter.Spec, &ef.Spec) {
 		logger.Info("update EnvoyFilter", "name", ef.Name, "namespace", ef.Namespace)
 
 		ef.SetResourceVersion(envoyfilter.ResourceVersion)
-		if err = r.Update(ctx, ef); err != nil {
+		if err := r.Update(ctx, ef); err != nil {
 			return fmt.Errorf("failed to update EnvoyFilter: %w, namespacedName: %v", err, nsName)
 		}
 	}

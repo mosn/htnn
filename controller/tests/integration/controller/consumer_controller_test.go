@@ -102,7 +102,7 @@ var _ = Describe("Consumer controller", func() {
 				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
 					return false
 				}
-				return len(envoyfilters.Items) == 1
+				return len(envoyfilters.Items) == 1 && envoyfilters.Items[0].Namespace == "istio-system"
 			}, timeout, interval).Should(BeTrue())
 
 			ef := envoyfilters.Items[0]
