@@ -17,6 +17,7 @@ package cel
 import (
 	"fmt"
 	"reflect"
+	"strings"
 	"sync"
 
 	"github.com/google/cel-go/cel"
@@ -154,6 +155,21 @@ func defineRequest() cel.EnvOption {
 			returnType:     decls.String,
 		},
 		{
+			method:         "header",
+			parameterTypes: []*exprpb.Type{decls.String},
+			returnType:     decls.String,
+		},
+		{
+			method:         "query_path",
+			parameterTypes: []*exprpb.Type{},
+			returnType:     decls.String,
+		},
+		{
+			method:         "query",
+			parameterTypes: []*exprpb.Type{decls.String},
+			returnType:     decls.String,
+		},
+		{
 			method:         "id",
 			parameterTypes: []*exprpb.Type{},
 			returnType:     decls.String,
@@ -189,11 +205,46 @@ func (r *request) Receive(function string, overload string, args []ref.Val) ref.
 		return types.String(r.headers.Scheme())
 	case "method":
 		return types.String(r.headers.Method())
+	case "header":
+		name := args[0].Value().(string)
+		return types.String(r.Header(name))
+	case "query_path":
+		return types.String(pkgRequest.GetUrl(r.headers).RawQuery)
+	case "query":
+		name := args[0].Value().(string)
+		return types.String(r.Query(name))
 	case "id":
 		return fromProperty(r.callback, "request.id")
 	}
 
 	return types.NewErr("no such function - %s", function)
+}
+
+func (r *request) Header(name string) string {
+	v := r.headers.Values(name)
+	n := len(v)
+	if n == 1 {
+		return v[0]
+	} else if n == 0 {
+		return ""
+	}
+
+	// Return []string may be inconvenient in a small one-line script.
+	// So we join them into a string with comma, which is the same as Envoy's behavior.
+	return strings.Join(v, ",")
+}
+
+func (r *request) Query(name string) string {
+	query := pkgRequest.GetUrl(r.headers).Query()
+	v := query[name]
+	n := len(v)
+	if n == 1 {
+		return v[0]
+	} else if n == 0 {
+		return ""
+	}
+
+	return strings.Join(v, ",")
 }
 
 func (r *request) TypeName() string {
