@@ -23,6 +23,7 @@ import (
 
 func GetUrl(header api.RequestHeaderMap) *url.URL {
 	path := header.Path()
+	// TODO: cache it
 	uri, err := url.ParseRequestURI(path)
 	if err != nil {
 		panic(fmt.Sprintf("unexpected bad request uri given by envoy: %v", err))
