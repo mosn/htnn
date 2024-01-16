@@ -1,0 +1,4 @@
+istio:
+  # Should match istio's rootNamespace configuration.
+  # See https://istio.io/latest/docs/reference/config/istio.mesh.v1alpha1/#MeshConfig for more info.
+  rootNamespace: "istio-system"
