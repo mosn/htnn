@@ -34,11 +34,11 @@ import (
 )
 
 var (
-	logger = log.DefaultLogger.WithName("suite")
+	logger = log.DefaultLogger.WithName("k8s")
 )
 
 const (
-	defaultNamespace = "e2e"
+	DefaultNamespace = "e2e"
 )
 
 func Prepare(t *testing.T, client client.Client, source string) {
@@ -93,7 +93,7 @@ func readResources(decoder *yaml.YAMLOrJSONDecoder) ([]unstructured.Unstructured
 
 		ns := uObj.GetNamespace()
 		if ns == "" {
-			uObj.SetNamespace(defaultNamespace)
+			uObj.SetNamespace(DefaultNamespace)
 		}
 		resources = append(resources, uObj)
 	}

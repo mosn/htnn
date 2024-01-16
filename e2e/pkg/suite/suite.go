@@ -117,7 +117,8 @@ func (suite *Suite) Run(t *testing.T) {
 // We use port-forward so that both Linux and Mac can expose port in the same way
 func (suite *Suite) startPortForward(t *testing.T) {
 	// TODO: rewrite it with Go code
-	cmdline := "kubectl wait --timeout=5m -n e2e deployment/default-istio --for=condition=Available"
+	cmdline := fmt.Sprintf("kubectl wait --timeout=5m -n %s deployment/default-istio --for=condition=Available",
+		k8s.DefaultNamespace)
 	cmd := strings.Fields(cmdline)
 	wait := exec.Command(cmd[0], cmd[1:]...)
 	err := wait.Run()
@@ -157,6 +158,15 @@ func (suite *Suite) cleanup(t *testing.T) {
 		logger.Info("Deleted", "name", e.GetName(), "kind", e.GetObjectKind())
 	}
 
+	var consumers mosniov1.ConsumerList
+	err = c.List(ctx, &consumers)
+	require.NoError(t, err)
+	for _, e := range consumers.Items {
+		// DeepCopy here is to satisfy the requirement of gosec
+		require.NoError(t, c.Delete(ctx, e.DeepCopy()))
+		logger.Info("Deleted", "name", e.GetName(), "kind", e.GetObjectKind())
+	}
+
 	var httproutes gwapiv1.HTTPRouteList
 	err = c.List(ctx, &httproutes)
 	require.NoError(t, err)
@@ -173,6 +183,10 @@ func (suite *Suite) cleanup(t *testing.T) {
 		logger.Info("Deleted", "name", e.GetName(), "kind", e.GetObjectKind())
 	}
 	// let HTNN to clean up EnvoyFilter
+}
+
+func (suite *Suite) K8sClient() client.Client {
+	return suite.Opt.Client
 }
 
 func (suite *Suite) Head(path string, header http.Header) (*http.Response, error) {
