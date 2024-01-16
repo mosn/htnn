@@ -21,9 +21,9 @@ We use AI to translate the documentation. In details, we create some rules via p
 
 This work is done semi-automatically:
 
-1. Run `go run cmd/translator/main.go -f content/en/path/to/x.md | pbcopy` to create prompt for translating `x.md`.
+1. Run `go run cmd/translator/main.go -f ./path/to/x.md --to zh-Hans | pbcopy` to create prompt for translating `x.md` from English to Simplified Chinese. If you want to translate Simplified Chinese to English, use `go run cmd/translator/main.go -f ./path/to/x.md --from zh-Hans | pbcopy`.
 2. Find a human to submit it to LLM.
-3. Tweak the output. We only need to tweak 5% of the result.
+3. Tweak the output.
 
 We would like to run it in CI if:
 
