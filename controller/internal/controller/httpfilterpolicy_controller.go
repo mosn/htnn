@@ -333,7 +333,7 @@ func (r *HTTPFilterPolicyReconciler) translationStateToCustomResource(ctx contex
 	}
 
 	for _, ef := range envoyfilters.Items {
-		if _, ok := finalState.EnvoyFilters[ef.Name]; !ok {
+		if _, ok := finalState.EnvoyFilters[ef.Name]; !ok || ef.Namespace != config.RootNamespace() {
 			logger.Info("delete EnvoyFilter", "name", ef.Name, "namespace", ef.Namespace)
 			if err := r.Delete(ctx, ef); err != nil {
 				return fmt.Errorf("failed to delete EnvoyFilter: %w, namespacedName: %v",
