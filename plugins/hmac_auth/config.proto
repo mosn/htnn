@@ -33,10 +33,9 @@ enum Algorithm {
 }
 
 message ConsumerConfig {
-  string access_key = 1 [ (validate.rules).string = {min_len : 1} ];
-  string secret_key = 2 [ (validate.rules).string = {min_len : 1} ];
+  string access_key = 1 [(validate.rules).string = {min_len: 1}];
+  string secret_key = 2 [(validate.rules).string = {min_len: 1}];
   // default to hmac_sha256
   Algorithm algorithm = 3;
-  repeated string signed_headers = 4
-      [ (validate.rules).repeated .items.string.min_len = 1 ];
+  repeated string signed_headers = 4 [(validate.rules).repeated .items.string.min_len = 1];
 }
