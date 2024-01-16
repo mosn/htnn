@@ -62,10 +62,27 @@ func RegisterHttpPlugin(name string, plugin Plugin) {
 	}
 
 	logger.Info("register plugin", "name", name)
+
 	if goPlugin, ok := plugin.(GoPlugin); ok {
+		order := plugin.Order()
+		if order.Position == OrderPositionPre || order.Position == OrderPositionPost {
+			panic("invalid plugin order position: Go plugin should not use OrderPositionPre or OrderPositionPost")
+		}
 		RegisterHttpFilterConfigFactoryAndParser(name,
 			goPlugin.ConfigFactory(),
 			NewPluginConfigParser(goPlugin))
+	}
+	if _, ok := plugin.(NativePlugin); ok {
+		order := plugin.Order()
+		if order.Position != OrderPositionPre && order.Position != OrderPositionPost {
+			panic("invalid plugin order position: Native plugin should use OrderPositionPre or OrderPositionPost")
+		}
+	}
+	if _, ok := plugin.(ConsumerPlugin); ok {
+		order := plugin.Order()
+		if order.Position != OrderPositionAuthn {
+			panic("invalid plugin order position: Consumer plugin should use OrderPositionAuthn")
+		}
 	}
 
 	// override plugin is allowed so that we can patch plugin with bugfix if upgrading
