@@ -53,7 +53,7 @@ func (f *filter) DecodeHeaders(header api.RequestHeaderMap, endStream bool) api.
 	var query url.Values
 	for _, key := range config.Keys {
 		var vals []string
-		if key.Source == Source_query {
+		if key.Source == Source_QUERY {
 			if query == nil {
 				query = request.GetUrl(header).Query()
 			}

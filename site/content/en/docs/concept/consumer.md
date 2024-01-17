@@ -62,7 +62,7 @@ spec:
     keyAuth:
       keys:
         - name: ak
-          source: query
+          source: QUERY
 ---
 apiVersion: mosn.io/v1
 kind: HTTPFilterPolicy
@@ -77,7 +77,7 @@ spec:
     keyAuth:
       keys:
         - name: Authorization
-          source: header
+          source: HEADER
 ```
 
 Without the Consumer layer of abstraction, each route would have to be configured with `key: Leo`. Imagine one day, for example, `Leo` is just a temporary user and we need to revoke their permissions. With the Consumer, we would only need to delete the consumer `Leo`, without any need to alter the route configurations.
@@ -126,7 +126,7 @@ spec:
     keyAuth:
       keys:
         - name: Authorization
-          source: header
+          source: HEADER
 ```
 
 If the authentication result is for a prestigious VIP member, then the `average` configuration would be 10. If it's a regular member, then the corresponding configuration would be just 1.

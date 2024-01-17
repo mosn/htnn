@@ -40,7 +40,7 @@ func TestBadConfig(t *testing.T) {
 					"policy": ""
 				},
 				"token": {
-					"source": "header",
+					"source": "HEADER",
 					"name": "role"
 				}
 			}`,

@@ -62,7 +62,7 @@ spec:
     keyAuth:
       keys:
         - name: ak
-          source: query
+          source: QUERY
 ---
 apiVersion: mosn.io/v1
 kind: HTTPFilterPolicy
@@ -77,7 +77,7 @@ spec:
     keyAuth:
       keys:
         - name: Authorization
-          source: header
+          source: HEADER
 ```
 
 如果没有消费者这一层抽象，那么每个路由都需要配置 `key: Leo`。假设有一天，比如说 `Leo` 只是个临时用户，我们需要回收权限。在有消费者的情况下，我们只需删除消费者 `Leo`，无需改动任何路由配置。
@@ -126,7 +126,7 @@ spec:
     keyAuth:
       keys:
         - name: Authorization
-          source: header
+          source: HEADER
 ```
 
 如果认证结果是尊贵的 VIP 会员，那么 `average` 的配置会是 10。如果是普通的会员，那么对应的配置只是 1。

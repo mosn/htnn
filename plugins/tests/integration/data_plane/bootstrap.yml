@@ -36,7 +36,7 @@ static_resources:
                                 {
                                   "auth":{
                                     "keyAuth":"{\"key\":\"rick\"}",
-                                    "hmacAuth": "{\"accessKey\":\"ak\",\"secretKey\":\"sk\",\"signedHeaders\":[\"x-custom-a\"]}"
+                                    "hmacAuth": "{\"accessKey\":\"ak\",\"secretKey\":\"sk\",\"signedHeaders\":[\"x-custom-a\"],\"algorithm\":\"HMAC_SHA256\"}"
                                   }
                                 }
                               v: 4355415
