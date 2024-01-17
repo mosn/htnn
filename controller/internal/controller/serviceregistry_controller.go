@@ -29,7 +29,6 @@ import (
 
 	mosniov1 "mosn.io/htnn/controller/api/v1"
 	"mosn.io/htnn/controller/internal/registry"
-	_ "mosn.io/htnn/controller/registries"
 )
 
 // ServiceRegistryReconciler reconciles a ServiceRegistry object
