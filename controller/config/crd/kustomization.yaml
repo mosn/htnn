@@ -4,6 +4,7 @@
 resources:
 - bases/mosn.io_httpfilterpolicies.yaml
 - bases/mosn.io_consumers.yaml
+- bases/mosn.io_serviceregistries.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
 patches:
@@ -11,12 +12,14 @@ patches:
 # patches here are for enabling the conversion webhook for each CRD
 - path: patches/webhook_in_httpfilterpolicies.yaml
 - path: patches/webhook_in_consumers.yaml
+#- path: patches/webhook_in_serviceregistries.yaml
 #+kubebuilder:scaffold:crdkustomizewebhookpatch
 
 # [CERTMANAGER] To enable cert-manager, uncomment all the sections with [CERTMANAGER] prefix.
 # patches here are for enabling the CA injection for each CRD
 - path: patches/cainjection_in_httpfilterpolicies.yaml
 - path: patches/cainjection_in_consumers.yaml
+#- path: patches/cainjection_in_serviceregistries.yaml
 #+kubebuilder:scaffold:crdkustomizecainjectionpatch
 
 # [WEBHOOK] To enable webhook, uncomment the following section

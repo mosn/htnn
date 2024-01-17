@@ -73,6 +73,32 @@ rules:
   - patch
   - update
 - apiGroups:
+  - mosn.io
+  resources:
+  - serviceregistries
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - mosn.io
+  resources:
+  - serviceregistries/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - mosn.io
+  resources:
+  - serviceregistries/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
   - networking.istio.io
   resources:
   - envoyfilters
@@ -97,6 +123,17 @@ rules:
   verbs:
   - get
   - list
+  - watch
+- apiGroups:
+  - networking.istio.io
+  resources:
+  - serviceentries
+  verbs:
+  - delete
+  - get
+  - list
+  - patch
+  - update
   - watch
 - apiGroups:
   - networking.istio.io

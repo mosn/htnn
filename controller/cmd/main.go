@@ -32,6 +32,7 @@ import (
 
 	mosniov1 "mosn.io/htnn/controller/api/v1"
 	"mosn.io/htnn/controller/internal/controller"
+	"mosn.io/htnn/controller/internal/registry"
 	"mosn.io/htnn/pkg/log"
 )
 
@@ -108,6 +109,18 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "Consumer")
 		os.Exit(1)
 	}
+
+	registry.InitRegistryManager(&registry.RegistryManagerOption{
+		Client: mgr.GetClient(),
+	})
+	if err = (&controller.ServiceRegistryReconciler{
+		Client: mgr.GetClient(),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "ServiceRegistry")
+		os.Exit(1)
+	}
+
 	if os.Getenv("ENABLE_WEBHOOKS") != "false" {
 		if err = (&mosniov1.HTTPFilterPolicy{}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "HTTPFilterPolicy")

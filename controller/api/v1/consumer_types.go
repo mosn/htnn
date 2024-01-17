@@ -50,7 +50,7 @@ type ConsumerSpec struct {
 
 // ConsumerStatus defines the observed state of Consumer
 type ConsumerStatus struct {
-	// Conditions describe the current conditions of the SecurityPolicy.
+	// Conditions describe the current conditions.
 	//
 	// +optional
 	// +listType=map

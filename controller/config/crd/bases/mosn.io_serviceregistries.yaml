@@ -4,20 +4,20 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.13.0
-  name: consumers.mosn.io
+  name: serviceregistries.mosn.io
 spec:
   group: mosn.io
   names:
-    kind: Consumer
-    listKind: ConsumerList
-    plural: consumers
-    singular: consumer
+    kind: ServiceRegistry
+    listKind: ServiceRegistryList
+    plural: serviceregistries
+    singular: serviceregistry
   scope: Namespaced
   versions:
   - name: v1
     schema:
       openAPIV3Schema:
-        description: Consumer is the Schema for the consumers API
+        description: ServiceRegistry is the Schema for the serviceregistries API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -32,41 +32,17 @@ spec:
           metadata:
             type: object
           spec:
-            description: ConsumerSpec defines the desired state of Consumer
+            description: ServiceRegistrySpec defines the desired state of ServiceRegistry
             properties:
-              auth:
-                additionalProperties:
-                  description: ConsumerPlugin defines the authentication plugin configuration
-                    used in the consumer
-                  properties:
-                    config:
-                      type: object
-                      x-kubernetes-preserve-unknown-fields: true
-                  required:
-                  - config
-                  type: object
-                description: Auth is a map of authentication plugin names to plugin
-                  configurations.
-                minProperties: 1
+              config:
                 type: object
-              filters:
-                additionalProperties:
-                  description: HTTPPlugin defines the plugin configuration used in
-                    the HTTP layer
-                  properties:
-                    config:
-                      type: object
-                      x-kubernetes-preserve-unknown-fields: true
-                  required:
-                  - config
-                  type: object
-                description: Filters is a map of filter names to filter configurations.
-                type: object
-            required:
-            - auth
+                x-kubernetes-preserve-unknown-fields: true
+              type:
+                description: Type is the type of the service registry.
+                type: string
             type: object
           status:
-            description: ConsumerStatus defines the observed state of Consumer
+            description: ServiceRegistryStatus defines the observed state of ServiceRegistry
             properties:
               conditions:
                 description: Conditions describe the current conditions.
