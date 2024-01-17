@@ -41,7 +41,7 @@ The following rules should be followed when translating:
 * Metadata at the beginning of the document, between --- and ---, is in `key: value` format. The keys should not be translated.
 * The content within `` is not to be translated. The content between ``` and ``` should not be translated.
 * Markdown table content should not be translated, with the exception of the Required and Description columns.
-* Secondary headings beginning with '## Configuration' or '## Consumer Configuration', and the following headings should not be translated
+* The following headings after '## Configuration' or '## Consumer Configuration' should not be translated
 {{ $name := .DstName -}}
 {{range .Rules}}{{println "* If the target language is" $name "," .}}{{end}}
 
