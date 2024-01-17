@@ -42,7 +42,7 @@ func TestConfig(t *testing.T) {
 		{
 			name:  "invalid burst",
 			input: `{"average":1,"burst":-1}`,
-			err:   "invalid Config.Burst: value must be greater than 0",
+			err:   "invalid value for uint32 type",
 		},
 		{
 			name:     "pass",
@@ -59,8 +59,10 @@ func TestConfig(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			conf := &config{}
-			protojson.Unmarshal([]byte(tt.input), conf)
-			err := conf.Validate()
+			err := protojson.Unmarshal([]byte(tt.input), conf)
+			if err == nil {
+				err = conf.Validate()
+			}
 			if tt.err == "" {
 				assert.Nil(t, err)
 
