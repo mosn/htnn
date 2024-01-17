@@ -37,6 +37,10 @@ func TestCompile(t *testing.T) {
 			expr: `req`,
 		},
 		{
+			name: "bad arguments",
+			expr: `request.header()`,
+		},
+		{
 			name: "bad return type",
 			expr: `1 + 2`,
 		},
@@ -90,7 +94,10 @@ func TestCelWithRequest(t *testing.T) {
 	hdr := http.Header{}
 	hdr.Set(":authority", "t.local")
 	hdr.Set(":method", "PUT")
-	hdr.Set(":path", "/x?a=1")
+	hdr.Set(":path", "/x?a=1&b=2&b=")
+	hdr.Add("single", "a")
+	hdr.Add("multi", "a")
+	hdr.Add("multi", "b")
 
 	tests := []struct {
 		name   string
@@ -101,7 +108,7 @@ func TestCelWithRequest(t *testing.T) {
 			name: "path",
 			code: `request.path()`,
 			expect: func(t *testing.T, res any) {
-				require.Equal(t, "/x?a=1", res)
+				require.Equal(t, "/x?a=1&b=2&b=", res)
 			},
 		},
 		{
@@ -130,6 +137,55 @@ func TestCelWithRequest(t *testing.T) {
 			code: `request.method()`,
 			expect: func(t *testing.T, res any) {
 				require.Equal(t, "PUT", res)
+			},
+		},
+		{
+			name: "single header",
+			code: `request.header("single")`,
+			expect: func(t *testing.T, res any) {
+				require.Equal(t, "a", res)
+			},
+		},
+		{
+			name: "multi header",
+			code: `request.header("multi")`,
+			expect: func(t *testing.T, res any) {
+				require.Equal(t, "a,b", res)
+			},
+		},
+		{
+			name: "header not found",
+			code: `request.header("x")`,
+			expect: func(t *testing.T, res any) {
+				require.Equal(t, "", res)
+			},
+		},
+		{
+			name: "query_path",
+			code: `request.query_path()`,
+			expect: func(t *testing.T, res any) {
+				require.Equal(t, "a=1&b=2&b=", res)
+			},
+		},
+		{
+			name: "single query arg",
+			code: `request.query("a")`,
+			expect: func(t *testing.T, res any) {
+				require.Equal(t, "1", res)
+			},
+		},
+		{
+			name: "multi query arg",
+			code: `request.query("b")`,
+			expect: func(t *testing.T, res any) {
+				require.Equal(t, "2,", res)
+			},
+		},
+		{
+			name: "query arg not found",
+			code: `request.query("x")`,
+			expect: func(t *testing.T, res any) {
+				require.Equal(t, "", res)
 			},
 		},
 		{
