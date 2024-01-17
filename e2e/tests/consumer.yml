@@ -1,0 +1,53 @@
+apiVersion: mosn.io/v1
+kind: Consumer
+metadata:
+  name: rick
+spec:
+  auth:
+    keyAuth:
+      config:
+        key: rick
+  filters:
+    limitReq:
+      config:
+        average: 1
+        period: 0.1s
+    demo:
+      config:
+        hostName: rick
+---
+apiVersion: mosn.io/v1
+kind: Consumer
+metadata:
+  name: morty
+spec:
+  auth:
+    keyAuth:
+      config:
+        key: morty
+---
+apiVersion: mosn.io/v1
+kind: Consumer
+metadata:
+  name: doraemon
+  namespace: default
+spec:
+  auth:
+    keyAuth:
+      config:
+        key: doraemon
+---
+apiVersion: mosn.io/v1
+kind: HTTPFilterPolicy
+metadata:
+  name: policy
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: default
+  filters:
+    keyAuth:
+      config:
+        keys:
+        - name: Authorization

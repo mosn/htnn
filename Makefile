@@ -290,6 +290,8 @@ undeploy-controller: kubectl
 run-e2e:
 	PATH=$(LOCALBIN):"$(PATH)" go test -v ./e2e
 
-# Run `make undeploy-controller e2e-build-controller-image  deploy-controller` to update the controller
+# Run `make undeploy-controller e2e-build-controller-image  deploy-controller` to update the controller.
+# To update the data plane, run `make e2e-prepare-data-plane-image` to update the image and then delete
+# the ingressgateway pod to trigger restart.
 .PHONY: e2e-ci
 e2e-ci: delete-cluster create-cluster deploy-cert-manager e2e-prepare-data-plane-image deploy-istio e2e-build-controller-image deploy-controller run-e2e
