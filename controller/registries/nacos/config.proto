@@ -23,4 +23,3 @@ option go_package = "mosn.io/htnn/controller/registries/nacos";
 message Config {
   string server_address = 1 [(validate.rules).string = {min_len: 1}];
 }
-
