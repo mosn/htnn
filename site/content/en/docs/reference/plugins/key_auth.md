@@ -15,24 +15,22 @@ The `keyAuth` plugin authenticates the client according to the consumers and the
 
 ## Configuration
 
-### Filter Configuration
-
 | Name | Type  | Required | Validation | Description                           |
 | ---- | ----- | -------- | ---------- | ------------------------------------- |
 | keys | Key[] | True     | min_len: 1 | Where to find the authentication key. |
 
 Keys configured in the `keys` field are matched one by one until one of them is matched.
 
-#### Key
+### Key
 
-| Name   | Type   | Required | Validation      | Description                                   |
-| ------ | ------ | -------- | --------------- | --------------------------------------------- |
-| name   | string | True     | min_len: 1      | The source's name                             |
-| source | enum   | False    | [header, query] | Where to find the token, default to `header`. |
+| Name   | Type   | Required | Validation      | Description                                 |
+|--------|--------|----------|-----------------|---------------------------------------------|
+| name   | string | True     | min_len: 1      | The source's name                           |
+| source | enum   | False    | [header, query] | Where to find the key, default to `header`. |
 
-When the `source` is `header`, it fetches the token from the configured request header `name`. It can also be `query`: fetch token from URL query string.
+When the `source` is `header`, it fetches the key from the configured request header `name`. It can also be `query`: fetch token from URL query string.
 
-### Consumer Configuration
+## Consumer Configuration
 
 | Name | Type   | Required | Validation | Description        |
 | ---- | ------ | -------- | ---------- | ------------------ |
@@ -83,7 +81,7 @@ $ curl -I 'http://127.0.0.1:10000/?ak=rick'
 HTTP/1.1 200 OK
 ```
 
-Note that if a `key` exists in the request, the subsequent keys will not be used to authenticate the client:
+Note that if a configured `key` exists in the request, the subsequent `key` in `keys` will not be used to authenticate the client:
 
 ```
 $ curl -I 'http://127.0.0.1:10000/?ak=rick' -H "Authorization: morty"
