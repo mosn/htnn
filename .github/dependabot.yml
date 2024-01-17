@@ -23,6 +23,9 @@ updates:
     schedule:
       interval: "daily"
       time: "06:00"
+    ignore:
+      # the Envoy lib need to be fit with the Envoy we use. So let's disable auto-updates.
+      - dependency-name: "github.com/envoyproxy/envoy"
   - package-ecosystem: "gomod"
     directory: "/site"
     schedule:
