@@ -690,7 +690,11 @@ func (m *filterManager) OnLog() {
 		return
 	}
 
-	for _, f := range m.filters {
-		f.OnLog()
-	}
+	go func() {
+		defer m.callbacks.RecoverPanic()
+
+		for _, f := range m.filters {
+			f.OnLog()
+		}
+	}()
 }
