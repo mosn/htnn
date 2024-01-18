@@ -1,0 +1,27 @@
+# permissions for end users to view serviceregistries.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: clusterrole
+    app.kubernetes.io/instance: serviceregistry-viewer-role
+    app.kubernetes.io/component: rbac
+    app.kubernetes.io/created-by: controller
+    app.kubernetes.io/part-of: controller
+    app.kubernetes.io/managed-by: kustomize
+  name: serviceregistry-viewer-role
+rules:
+- apiGroups:
+  - mosn.io
+  resources:
+  - serviceregistries
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - mosn.io
+  resources:
+  - serviceregistries/status
+  verbs:
+  - get

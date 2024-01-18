@@ -2,4 +2,5 @@
 resources:
 - _v1_httpfilterpolicy.yaml
 - mosn.io_v1_consumer.yaml
+- mosn.io_v1_serviceregistry.yaml
 #+kubebuilder:scaffold:manifestskustomizesamples
