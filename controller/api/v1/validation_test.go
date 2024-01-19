@@ -206,7 +206,6 @@ func TestValidateVirtualService(t *testing.T) {
 func TestValidateConsumer(t *testing.T) {
 	tests := []struct {
 		name     string
-		policy   *HTTPFilterPolicy
 		consumer *Consumer
 		err      string
 	}{
@@ -310,6 +309,61 @@ func TestValidateConsumer(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := ValidateConsumer(tt.consumer)
+			if tt.err == "" {
+				assert.Nil(t, err)
+			} else {
+				assert.ErrorContains(t, err, tt.err)
+			}
+		})
+	}
+}
+
+func TestValidateServiceRegistry(t *testing.T) {
+	tests := []struct {
+		name     string
+		registry *ServiceRegistry
+		err      string
+	}{
+		{
+			name: "ok",
+			registry: &ServiceRegistry{
+				Spec: ServiceRegistrySpec{
+					Type: "nacos",
+					Config: runtime.RawExtension{
+						Raw: []byte(`{"serverAddress":"nacos.io"}`),
+					},
+				},
+			},
+		},
+		{
+			name: "unknown",
+			registry: &ServiceRegistry{
+				Spec: ServiceRegistrySpec{
+					Type: "unknown",
+					Config: runtime.RawExtension{
+						Raw: []byte(`{"serverAddress":"nacos.io"}`),
+					},
+				},
+			},
+			err: "unknown registry unknown",
+		},
+		{
+			name: "bad configuration",
+			registry: &ServiceRegistry{
+				Spec: ServiceRegistrySpec{
+					Type: "nacos",
+					Config: runtime.RawExtension{
+						Raw: []byte(`{"serverAddress":""}`),
+					},
+				},
+			},
+			err: "value length must be at least 1 runes",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateServiceRegistry(tt.registry)
 			if tt.err == "" {
 				assert.Nil(t, err)
 			} else {

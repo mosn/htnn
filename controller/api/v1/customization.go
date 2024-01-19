@@ -15,5 +15,6 @@
 package v1
 
 import (
-	_ "mosn.io/htnn/controller/plugins" // register plugins
+	_ "mosn.io/htnn/controller/plugins"    // register plugins
+	_ "mosn.io/htnn/controller/registries" // register registries
 )

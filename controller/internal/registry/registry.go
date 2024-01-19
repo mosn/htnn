@@ -15,7 +15,6 @@
 package registry
 
 import (
-	"google.golang.org/protobuf/encoding/protojson"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -34,22 +33,6 @@ type RegistryManagerOption struct {
 func InitRegistryManager(opt *RegistryManagerOption) {
 }
 
-func convertConfig(reg pkgRegistry.Registry, data []byte) (pkgRegistry.RegistryConfig, error) {
-	conf := reg.Config()
-
-	err := protojson.Unmarshal(data, conf)
-	if err != nil {
-		return nil, err
-	}
-
-	err = conf.Validate()
-	if err != nil {
-		return nil, err
-	}
-
-	return conf, nil
-}
-
 func UpdateRegistry(registry *mosniov1.ServiceRegistry) error {
 	key := types.NamespacedName{Namespace: registry.Namespace, Name: registry.Name}
 	if reg, ok := registries[key]; !ok {
@@ -58,7 +41,7 @@ func UpdateRegistry(registry *mosniov1.ServiceRegistry) error {
 			return err
 		}
 
-		conf, err := convertConfig(reg, registry.Spec.Config.Raw)
+		conf, err := pkgRegistry.ParseConfig(reg, registry.Spec.Config.Raw)
 		if err != nil {
 			return err
 		}
@@ -72,7 +55,7 @@ func UpdateRegistry(registry *mosniov1.ServiceRegistry) error {
 		registries[key] = reg
 
 	} else {
-		conf, err := convertConfig(reg, registry.Spec.Config.Raw)
+		conf, err := pkgRegistry.ParseConfig(reg, registry.Spec.Config.Raw)
 		if err != nil {
 			return err
 		}

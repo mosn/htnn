@@ -17,6 +17,7 @@ package registry
 import (
 	"fmt"
 
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
@@ -47,7 +48,7 @@ type Registry interface {
 	Config() RegistryConfig
 }
 
-// RegistryFactory provides method to prepare configuration & create registry
+// RegistryFactory provides methods to prepare configuration & create registry
 type RegistryFactory func(store ServiceEntryStore) (Registry, error)
 
 var (
@@ -67,4 +68,21 @@ func CreateRegistry(name string, store ServiceEntryStore) (Registry, error) {
 	}
 
 	return factory(store)
+}
+
+// ParseConfig parses the given data and returns the configuration according to the registry
+func ParseConfig(reg Registry, data []byte) (RegistryConfig, error) {
+	conf := reg.Config()
+
+	err := protojson.Unmarshal(data, conf)
+	if err != nil {
+		return nil, err
+	}
+
+	err = conf.Validate()
+	if err != nil {
+		return nil, err
+	}
+
+	return conf, nil
 }
