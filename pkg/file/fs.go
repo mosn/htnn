@@ -16,6 +16,7 @@ package file
 
 import (
 	"os"
+	"sync"
 	"time"
 
 	"github.com/jellydator/ttlcache/v3"
@@ -28,8 +29,23 @@ var (
 )
 
 type File struct {
+	lock sync.RWMutex
+
 	Name  string
-	Mtime time.Time
+	mtime time.Time
+}
+
+func (f *File) Mtime() time.Time {
+	f.lock.RLock()
+	defer f.lock.RUnlock()
+	// the returned time.Time should be readonly
+	return f.mtime
+}
+
+func (f *File) SetMtime(t time.Time) {
+	f.lock.Lock()
+	f.mtime = t
+	f.lock.Unlock()
 }
 
 type fs struct {
@@ -80,7 +96,7 @@ func (f *fs) isChanged(file *File) bool {
 		return false
 	}
 
-	return file.Mtime.Before(item.Value().ModTime())
+	return file.Mtime().Before(item.Value().ModTime())
 }
 
 func (f *fs) Stat(path string) (*File, error) {
@@ -92,7 +108,7 @@ func (f *fs) Stat(path string) (*File, error) {
 
 	return &File{
 		Name:  path,
-		Mtime: info.ModTime(),
+		mtime: info.ModTime(),
 	}, nil
 }
 
@@ -115,6 +131,6 @@ func (f *fs) update(file *File) bool {
 		return false
 	}
 
-	file.Mtime = item.Value().ModTime()
+	file.SetMtime(item.Value().ModTime())
 	return true
 }
