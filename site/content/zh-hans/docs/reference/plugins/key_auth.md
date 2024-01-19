@@ -26,9 +26,9 @@ title: Key Auth
 | 名称   | 类型   | 必选 | 校验规则        | 说明                              |
 |--------|--------|------|-----------------|-----------------------------------|
 | name   | string | 是   | min_len: 1      | 来源的名称                        |
-| source | enum   | 否   | [header, query] | 查找密钥的位置，默认为 `header`。 |
+| source | enum   | 否   | [HEADER, QUERY] | 查找密钥的位置，默认为 `HEADER`。 |
 
-当 `source` 是 `header` 时，它会从配置的请求头 `name` 中获取密钥。它也可以是 `query`：此时会从 URL 查询字符串中获取令牌。
+当 `source` 是 `HEADER` 时，它会从配置的请求头 `name` 中获取密钥。它也可以是 `QUERY`：此时会从 URL 查询字符串中获取密钥。
 
 ## 消费者配置
 
@@ -59,7 +59,11 @@ spec:
 keys:
   - name: Authorization
   - name: ak
+<<<<<<< HEAD
     source: query
+=======
+    source: QUERY
+>>>>>>> 9fc903a (follow the protobuf style)
 ```
 
 插件将首先检查请求头 `Authorization`，然后检查查询参数 `ak`。
