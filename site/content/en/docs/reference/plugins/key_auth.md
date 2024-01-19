@@ -47,7 +47,6 @@ apiVersion: mosn.io/v1
 kind: Consumer
 metadata:
   name: consumer
-  namespace: default
 spec:
   auth:
     keyAuth:

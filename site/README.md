@@ -25,7 +25,4 @@ This work is done semi-automatically:
 2. Find a human to submit it to LLM.
 3. Tweak the output.
 
-We would like to run it in CI if:
-
-1. There is a sponsor who gives us enough money.
-2. There is a GitHub Bot to submit the output as a pull request so that the reviewer can tweak it.
+This tool also supports generating prompt for incremental change, but it requires a human to patch the target file with the translation.
