@@ -54,6 +54,11 @@ type ServiceRegistry struct {
 	Status ServiceRegistryStatus `json:"status,omitempty"`
 }
 
+func (r *ServiceRegistry) SetAccepted(reason ConditionReason, msg ...string) {
+	conds, _ := addOrUpdateAcceptedCondition(r.Status.Conditions, r.Generation, reason, msg...)
+	r.Status.Conditions = conds
+}
+
 //+kubebuilder:object:root=true
 
 // ServiceRegistryList contains a list of ServiceRegistry
