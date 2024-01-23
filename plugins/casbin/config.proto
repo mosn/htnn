@@ -28,7 +28,10 @@ message Config {
 
   Rule rule = 1 [(validate.rules).message.required = true];
 
-  enum Source { HEADER = 0; }
+  enum Source {
+    HEADER = 0;
+  }
+
   message Token {
     Source source = 1;
     string name = 2 [(validate.rules).string = {min_len: 1}];
