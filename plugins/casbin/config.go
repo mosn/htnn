@@ -16,6 +16,7 @@ package casbin
 
 import (
 	sync "sync"
+	"sync/atomic"
 
 	"github.com/casbin/casbin/v2"
 
@@ -62,6 +63,7 @@ type config struct {
 	enforcer   *casbin.Enforcer
 	modelFile  *file.File
 	policyFile *file.File
+	updating   atomic.Bool
 }
 
 func (conf *config) Init(cb api.ConfigCallbackHandler) error {

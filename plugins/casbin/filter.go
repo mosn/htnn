@@ -40,39 +40,43 @@ type filter struct {
 }
 
 func (f *filter) DecodeHeaders(header api.RequestHeaderMap, endStream bool) api.ResultAction {
-	role, _ := header.Get(f.config.Token.Name) // role can be ""
+	conf := f.config
+	role, _ := header.Get(conf.Token.Name) // role can be ""
 	url := request.GetUrl(header)
 
-	f.config.lock.RLock()
-	ok, _ := f.config.enforcer.Enforce(role, url.Path, header.Method())
-	f.config.lock.RUnlock()
+	policyChanged := file.IsChanged(conf.modelFile, conf.policyFile)
+	if policyChanged && !conf.updating.Load() {
+		conf.updating.Store(true)
+		go func() {
+			defer conf.updating.Store(false)
+			defer f.callbacks.RecoverPanic()
+
+			e, err := casbin.NewEnforcer(conf.Rule.Model, conf.Rule.Policy)
+			if err != nil {
+				api.LogErrorf("failed to update Enforcer: %w", err)
+				// next request will retry
+			} else {
+				conf.lock.Lock()
+				conf.enforcer = e
+				conf.lock.Unlock()
+
+				file.Update(conf.modelFile, conf.policyFile)
+			}
+		}()
+	}
+
+	conf.lock.RLock()
+	ok, err := f.config.enforcer.Enforce(role, url.Path, header.Method())
+	conf.lock.RUnlock()
 
 	if !ok {
+		if err != nil {
+			api.LogErrorf("failed to enforece %s: %w", role, err)
+		}
 		api.LogInfof("reject forbidden user %s", role)
 		return &api.LocalResponse{
 			Code: 403,
 		}
 	}
 	return api.Continue
-}
-
-func (f *filter) OnLog() {
-	conf := f.config
-
-	conf.lock.RLock()
-	ok := file.IsChanged(conf.modelFile, conf.policyFile)
-	conf.lock.RUnlock()
-	if ok {
-		conf.lock.Lock()
-		defer conf.lock.Unlock()
-
-		e, err := casbin.NewEnforcer(conf.Rule.Model, conf.Rule.Policy)
-		if err != nil {
-			api.LogErrorf("failed to update Enforcer: %v", err)
-			return
-		}
-		conf.enforcer = e
-
-		file.Update(conf.modelFile, conf.policyFile)
-	}
 }

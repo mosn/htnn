@@ -27,15 +27,15 @@ message Config {
 }
 
 enum Algorithm {
-  hmac_sha256 = 0;
-  hmac_sha512 = 1;
-  hmac_sha384 = 2;
+  HMAC_SHA256 = 0;
+  HMAC_SHA384 = 1;
+  HMAC_SHA512 = 2;
 }
 
 message ConsumerConfig {
   string access_key = 1 [(validate.rules).string = {min_len: 1}];
   string secret_key = 2 [(validate.rules).string = {min_len: 1}];
-  // default to hmac_sha256
+  // default to HMAC_SHA256
   Algorithm algorithm = 3;
   repeated string signed_headers = 4 [(validate.rules).repeated .items.string.min_len = 1];
 }

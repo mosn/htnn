@@ -121,11 +121,11 @@ func (f *filter) sign(value []byte) string {
 
 	var hash hash.Hash
 	switch f.consumer.Algorithm {
-	case Algorithm_hmac_sha256:
+	case Algorithm_HMAC_SHA256:
 		hash = hmac.New(sha256.New, secret)
-	case Algorithm_hmac_sha384:
+	case Algorithm_HMAC_SHA384:
 		hash = hmac.New(sha512.New384, secret)
-	case Algorithm_hmac_sha512:
+	case Algorithm_HMAC_SHA512:
 		hash = hmac.New(sha512.New, secret)
 	}
 	hash.Write(value)

@@ -70,7 +70,7 @@ func TestHmacAuth(t *testing.T) {
 					Name: &ConsumerConfig{
 						AccessKey: "ak",
 						SecretKey: "sk",
-						Algorithm: Algorithm_hmac_sha384,
+						Algorithm: Algorithm_HMAC_SHA384,
 					},
 				},
 			},
@@ -86,7 +86,7 @@ func TestHmacAuth(t *testing.T) {
 					Name: &ConsumerConfig{
 						AccessKey: "ak",
 						SecretKey: "sk",
-						Algorithm: Algorithm_hmac_sha512,
+						Algorithm: Algorithm_HMAC_SHA512,
 					},
 				},
 			},

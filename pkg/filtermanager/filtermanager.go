@@ -690,6 +690,10 @@ func (m *filterManager) OnLog() {
 		return
 	}
 
+	// It is unsafe to access the f.callbacks in the goroutine, as the underlying request
+	// may be destroyed when the goroutine is running. So if people want to do some IO jobs,
+	// they need to copy the used data from the request to the Go side before kicking off
+	// the goroutine.
 	for _, f := range m.filters {
 		f.OnLog()
 	}

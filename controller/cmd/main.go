@@ -136,6 +136,11 @@ func main() {
 			setupLog.Error(err, "unable to create webhook", "webhook", "Consumer")
 			os.Exit(1)
 		}
+
+		if err = (&mosniov1.ServiceRegistry{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "ServiceRegistry")
+			os.Exit(1)
+		}
 	}
 	//+kubebuilder:scaffold:builder
 

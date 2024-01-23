@@ -22,6 +22,7 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 	istiov1b1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 
+	"mosn.io/htnn/controller/pkg/registry"
 	"mosn.io/htnn/pkg/plugins"
 )
 
@@ -140,4 +141,14 @@ func ValidateConsumer(c *Consumer) error {
 	}
 
 	return nil
+}
+
+func ValidateServiceRegistry(sr *ServiceRegistry) error {
+	reg, err := registry.CreateRegistry(sr.Spec.Type, nil)
+	if err != nil {
+		return err
+	}
+
+	_, err = registry.ParseConfig(reg, sr.Spec.Config.Raw)
+	return err
 }

@@ -60,6 +60,5 @@ the corresponding output is:
 {{ .DstDemo }}
 +++
 
-
 The text you want to process is as follows:
 {{ .InputText }}

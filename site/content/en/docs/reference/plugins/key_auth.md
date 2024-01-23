@@ -26,9 +26,9 @@ Keys configured in the `keys` field are matched one by one until one of them is 
 | Name   | Type   | Required | Validation      | Description                                 |
 |--------|--------|----------|-----------------|---------------------------------------------|
 | name   | string | True     | min_len: 1      | The source's name                           |
-| source | enum   | False    | [header, query] | Where to find the key, default to `header`. |
+| source | enum   | False    | [HEADER, QUERY] | Where to find the key, default to `HEADER`. |
 
-When the `source` is `header`, it fetches the key from the configured request header `name`. It can also be `query`: fetch token from URL query string.
+When the `source` is `HEADER`, it fetches the key from the configured request header `name`. It can also be `QUERY`: fetch key from URL query string.
 
 ## Consumer Configuration
 
@@ -45,7 +45,6 @@ apiVersion: mosn.io/v1
 kind: Consumer
 metadata:
   name: consumer
-  namespace: default
 spec:
   auth:
     keyAuth:
@@ -59,7 +58,7 @@ Assumed we provide a configuration to `http://127.0.0.1:10000/` like:
 keys:
   - name: Authorization
   - name: ak
-    source: query
+    source: QUERY
 ```
 
 The header `Authorization` will be checked first and then query argument `ak` will be checked after.

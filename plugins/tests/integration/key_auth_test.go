@@ -64,11 +64,11 @@ func TestKeyAuth(t *testing.T) {
 				"keys": []interface{}{
 					map[string]interface{}{
 						"name":   "Authorization",
-						"source": "header",
+						"source": "HEADER",
 					},
 					map[string]interface{}{
 						"name":   "ak",
-						"source": "query",
+						"source": "QUERY",
 					},
 				},
 			}),

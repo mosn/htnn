@@ -7,7 +7,7 @@ title: Plugin development
 Assumed you are at the root of this project.
 
 1. Create a directory under `./plugins/`. The plugin must be in snake style, like `keyAuth`.
-2. Think about the configuration and write down it into `./plugins/$your_plugin/config.proto`. Then run `make gen-proto`. The `proto` file uses [proto-gen-valdate](https://github.com/bufbuild/protoc-gen-validate?tab=readme-ov-file#constraint-rules) to define validation. The plugin name must be in camel style, like `keyAuth`. The configuration fields must be in snake style, like `connect_timeout`.
+2. Think about the configuration and write down it into `./plugins/$your_plugin/config.proto`. Then run `make gen-proto`. The `proto` file uses [proto-gen-valdate](https://github.com/bufbuild/protoc-gen-validate?tab=readme-ov-file#constraint-rules) to define validation. The plugin name must be in camel style, like `keyAuth`. The configuration fields must be in snake style, like `connect_timeout`. The enum value must be in upper snake style, like `HEADER`. See the [official protobuf style](https://protobuf.dev/programming-guides/style/) for the details.
 3. Finish the plugin. Don't forget to write tests. You can take `./plugins/demo` as an example. If your plugin is simple, you can write integration test only.
 4. Add the doc of the plugin in the `site/content/$your_language/docs/reference/plugins/$your_plugin.md`. You can choose to write doc under Simpilified Chinese or English, depends on which is your prime language. We have [tool](https://github.com/mosn/htnn/tree/main/site#cmdtranslator) to translate it to other languages.
 5. Add your plugin's package into `./plugins/plugins.go`. Run `make build-so`. Now the plugin is compiled into `libgolang.so`.

@@ -35,6 +35,8 @@ spec:
             description: ServiceRegistrySpec defines the desired state of ServiceRegistry
             properties:
               config:
+                description: Config is the configuration of the corresponding service
+                  registry.
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
               type:

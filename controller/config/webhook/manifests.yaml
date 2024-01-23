@@ -50,6 +50,26 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
+      path: /mutate-mosn-io-v1-serviceregistry
+  failurePolicy: Fail
+  name: mserviceregistry.kb.io
+  rules:
+  - apiGroups:
+    - mosn.io
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - serviceregistries
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
       path: /mutate-networking-istio-io-v1beta1-virtualservice
   failurePolicy: Fail
   name: mvirtualservice.kb.io
@@ -111,4 +131,25 @@ webhooks:
     - DELETE
     resources:
     - httpfilterpolicies
+  sideEffects: None
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: webhook-service
+      namespace: system
+      path: /validate-mosn-io-v1-serviceregistry
+  failurePolicy: Fail
+  name: vserviceregistry.kb.io
+  rules:
+  - apiGroups:
+    - mosn.io
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    - DELETE
+    resources:
+    - serviceregistries
   sideEffects: None

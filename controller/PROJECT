@@ -39,4 +39,8 @@ resources:
   kind: ServiceRegistry
   path: mosn.io/htnn/controller/api/v1
   version: v1
+  webhooks:
+    defaulting: true
+    validation: true
+    webhookVersion: v1
 version: "3"

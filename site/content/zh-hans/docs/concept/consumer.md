@@ -62,7 +62,7 @@ spec:
     keyAuth:
       keys:
         - name: ak
-          source: query
+          source: QUERY
 ---
 apiVersion: mosn.io/v1
 kind: HTTPFilterPolicy
@@ -77,10 +77,22 @@ spec:
     keyAuth:
       keys:
         - name: Authorization
-          source: header
+          source: HEADER
 ```
 
 如果没有消费者这一层抽象，那么每个路由都需要配置 `key: Leo`。假设有一天，比如说 `Leo` 只是个临时用户，我们需要回收权限。在有消费者的情况下，我们只需删除消费者 `Leo`，无需改动任何路由配置。
+
+我们可以在消费者的 `auth` 字段下配置认证插件（`Type` 为 `Authn` 的插件）。每种认证插件都会有两种配置：一种配置在路由上，负责指定认证参数的来源，比如上面的 HTTPFilterPolicy 的 `keys`。另一种配置在消费者上，负责指定怎样的认证参数匹配到所在的消费者，比如上面的 Consumer 的 `key`。
+
+路由上配置的每个认证插件，都会执行下面的步骤：
+
+1. 从指定的来源获取认证参数。
+2. 如果没找到，则执行下一个插件。
+3. 如果找到，则匹配消费者。
+  1. 如果匹配失败，返回 401 HTTP 状态码。
+  2. 如果匹配成功，则执行下一个插件。
+
+如果执行完全部认证插件后，仍然没有匹配到消费者，则返回 401 HTTP 状态码。
 
 除此之外，我们还可以给消费者配置特定的插件。这些插件只有在通过认证之后才会执行。以下面的配置为例：
 
@@ -126,7 +138,7 @@ spec:
     keyAuth:
       keys:
         - name: Authorization
-          source: header
+          source: HEADER
 ```
 
 如果认证结果是尊贵的 VIP 会员，那么 `average` 的配置会是 10。如果是普通的会员，那么对应的配置只是 1。
