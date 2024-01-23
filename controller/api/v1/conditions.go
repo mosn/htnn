@@ -14,7 +14,11 @@
 
 package v1
 
-import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+import (
+	"time"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
 
 type ConditionType string
 
@@ -57,4 +61,28 @@ func addOrUpdateCondition(conditions []metav1.Condition, one metav1.Condition) (
 		return append(conditions, one), true
 	}
 	return conditions, changed
+}
+
+func addOrUpdateAcceptedCondition(conditions []metav1.Condition,
+	observedGeneration int64, reason ConditionReason, msg ...string) ([]metav1.Condition, bool) {
+
+	c := metav1.Condition{
+		Type:               string(ConditionAccepted),
+		Reason:             string(reason),
+		LastTransitionTime: metav1.NewTime(time.Now()),
+		ObservedGeneration: observedGeneration,
+	}
+	switch reason {
+	case ReasonAccepted:
+		c.Status = metav1.ConditionTrue
+		c.Message = "The resource has been accepted"
+	case ReasonInvalid:
+		c.Status = metav1.ConditionFalse
+		if len(msg) > 0 {
+			c.Message = msg[0]
+		} else {
+			c.Message = "The resource is invalid"
+		}
+	}
+	return addOrUpdateCondition(conditions, c)
 }

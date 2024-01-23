@@ -63,7 +63,15 @@ func (r *ServiceRegistryReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 	if err != nil {
 		logger.Error(err, "failed to operate registry")
+		serviceRegistry.SetAccepted(mosniov1.ReasonInvalid, err.Error())
 		// don't retry if the err is caused by registry
+	} else {
+		serviceRegistry.SetAccepted(mosniov1.ReasonAccepted)
+	}
+
+	if err := r.Status().Update(ctx, serviceRegistry.DeepCopy()); err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to update ServiceRegistry status: %w, namespacedName: %v",
+			err, nsName)
 	}
 
 	return ctrl.Result{}, nil

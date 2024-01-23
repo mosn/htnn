@@ -18,7 +18,6 @@ package v1
 
 import (
 	"encoding/json"
-	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
@@ -116,25 +115,7 @@ func (c *Consumer) IsSpecChanged() bool {
 }
 
 func (consumer *Consumer) SetAccepted(reason ConditionReason, msg ...string) {
-	c := metav1.Condition{
-		Type:               string(ConditionAccepted),
-		Reason:             string(reason),
-		LastTransitionTime: metav1.NewTime(time.Now()),
-		ObservedGeneration: consumer.Generation,
-	}
-	switch reason {
-	case ReasonAccepted:
-		c.Status = metav1.ConditionTrue
-		c.Message = "The resource has been accepted"
-	case ReasonInvalid:
-		c.Status = metav1.ConditionFalse
-		if len(msg) > 0 {
-			c.Message = msg[0]
-		} else {
-			c.Message = "The resource is invalid"
-		}
-	}
-	conds, changed := addOrUpdateCondition(consumer.Status.Conditions, c)
+	conds, changed := addOrUpdateAcceptedCondition(consumer.Status.Conditions, consumer.Generation, reason, msg...)
 	consumer.Status.Conditions = conds
 
 	if changed {
