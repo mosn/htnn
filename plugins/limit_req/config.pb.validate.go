@@ -98,17 +98,6 @@ func (m *Config) validate(all bool) error {
 
 	if m.GetBurst() != 0 {
 
-		if m.GetBurst() <= 0 {
-			err := ConfigValidationError{
-				field:  "Burst",
-				reason: "value must be greater than 0",
-			}
-			if !all {
-				return err
-			}
-			errors = append(errors, err)
-		}
-
 	}
 
 	if len(errors) > 0 {

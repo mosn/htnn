@@ -26,5 +26,5 @@ message Config {
   // Default to one second
   google.protobuf.Duration period = 2;
   // Default to 1
-  uint32 burst = 3 [(validate.rules).uint32 = {ignore_empty: true, gt: 0}];
+  uint32 burst = 3 [(validate.rules).uint32 = {ignore_empty: true}];
 }
