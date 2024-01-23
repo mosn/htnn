@@ -11,7 +11,7 @@ The `localRatelimit` plugin limits the number of requests per second, by leverag
 |       |         |
 |-------|---------|
 | Type  | Traffic |
-| Order | Pre     |
+| Order | Outer   |
 
 ## Configuration
 

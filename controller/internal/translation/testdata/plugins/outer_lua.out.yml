@@ -14,7 +14,7 @@
         operation: MERGE
         value:
           typed_per_filter_config:
-            envoy.filters.http.postLua:
+            envoy.filters.http.outerLua:
               '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
               sourceCode:
                 inlineString: |
@@ -39,12 +39,12 @@
             filter:
               name: envoy.filters.network.http_connection_manager
               subFilter:
-                name: envoy.filters.http.router
+                name: envoy.filters.http.golang
       patch:
         operation: INSERT_BEFORE
         value:
           disabled: true
-          name: envoy.filters.http.postLua
+          name: envoy.filters.http.outerLua
           typed_config:
             '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
     priority: 100

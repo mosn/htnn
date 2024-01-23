@@ -1,19 +1,19 @@
 ---
-title: Pre Lua
+title: Outer Lua
 ---
 
 ## Description
 
-The `preLua` plugin allows Lua snippets to be run at the beginning and the end of a request, by leveraging Envoy's `lua` filter.
+The `outerLua` plugin allows Lua snippets to be run at the beginning and the end of a request, by leveraging Envoy's `lua` filter.
 
 Because Envoy uses the onion model to proxy requests, the execution order is:
 
 1. request starts
-2. running pre-lua and other plugins in `Pre` group
+2. running outerLua and other plugins in `Outer` group
 3. running other plugins
 4. proxy to the upstream
 5. running other plugins with the response
-6. running pre-lua and other plugins in `Pre` group, with the response
+6. running outerLua and other plugins in `Outer` group, with the response
 7. request ends
 
 ## Attribute
@@ -21,7 +21,7 @@ Because Envoy uses the onion model to proxy requests, the execution order is:
 |       |         |
 |-------|---------|
 | Type  | General |
-| Order | Pre     |
+| Order | Outer   |
 
 ## Configuration
 
@@ -63,7 +63,7 @@ spec:
     kind: HTTPRoute
     name: default
   filters:
-    preLua:
+    outerLua:
       config:
         sourceCode:
           inlineString: |

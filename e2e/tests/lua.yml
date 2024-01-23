@@ -8,7 +8,7 @@ spec:
     kind: HTTPRoute
     name: default
   filters:
-    preLua:
+    outerLua:
       config:
         sourceCode:
           inlineString: |
@@ -19,7 +19,7 @@ spec:
     demo:
       config:
         hostName: doraemon
-    postLua:
+    innerLua:
       config:
         sourceCode:
           inlineString: |

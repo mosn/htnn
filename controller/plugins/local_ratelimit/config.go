@@ -39,7 +39,7 @@ func (p *plugin) Type() plugins.PluginType {
 
 func (p *plugin) Order() plugins.PluginOrder {
 	return plugins.PluginOrder{
-		Position: plugins.OrderPositionPre,
+		Position: plugins.OrderPositionOuter,
 	}
 }
 
