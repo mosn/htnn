@@ -25,6 +25,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"runtime/debug"
 	"strings"
 	"testing"
 	"time"
@@ -92,10 +93,7 @@ func (suite *Suite) Run(t *testing.T) {
 		t.Run(test.Name, func(t *testing.T) {
 			defer func() {
 				if p := recover(); p != nil {
-					const size = 64 << 10
-					buf := make([]byte, size)
-					buf = buf[:runtime.Stack(buf, false)]
-					fmt.Printf("panic in test %s: %v\n%s", test.Name, p, buf)
+					fmt.Printf("panic in test %s: %v\n%s", test.Name, p, debug.Stack())
 					t.Fail()
 				}
 			}()
