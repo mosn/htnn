@@ -212,3 +212,44 @@ func TestCelWithRequest(t *testing.T) {
 		})
 	}
 }
+
+func TestCelWithSource(t *testing.T) {
+	tests := []struct {
+		name   string
+		code   string
+		expect func(t *testing.T, res any)
+	}{
+		{
+			name: "ip",
+			code: `source.ip()`,
+			expect: func(t *testing.T, res any) {
+				require.Equal(t, "183.128.130.43", res)
+			},
+		},
+		{
+			name: "address",
+			code: `source.address()`,
+			expect: func(t *testing.T, res any) {
+				require.Equal(t, "183.128.130.43:54321", res)
+			},
+		},
+		{
+			name: "port",
+			code: `string(source.port())`,
+			expect: func(t *testing.T, res any) {
+				require.Equal(t, "54321", res)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s, err := Compile(tt.code, cel.StringType)
+			require.NoError(t, err)
+			cb := envoy.NewFilterCallbackHandler()
+			res, err := EvalRequest(s, cb, nil)
+			require.NoError(t, err)
+			tt.expect(t, res)
+		})
+	}
+}

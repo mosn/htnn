@@ -22,6 +22,7 @@ import (
 
 func GetRemoteIP(info api.StreamInfo) string {
 	ipport := info.DownstreamRemoteAddress()
+	// the IPPort given by Envoy must be valid
 	ip, _, _ := net.SplitHostPort(ipport)
 	return ip
 }

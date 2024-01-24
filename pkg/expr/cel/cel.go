@@ -16,7 +16,9 @@ package cel
 
 import (
 	"fmt"
+	"net"
 	"reflect"
+	"strconv"
 	"strings"
 	"sync"
 
@@ -40,6 +42,7 @@ var (
 		options := []cel.EnvOption{
 			cel.CustomTypeAdapter(&customTypeAdapter{}),
 			defineRequest(),
+			defineSource(),
 		}
 
 		var err error
@@ -86,6 +89,7 @@ var varsPool = sync.Pool{
 	New: func() any {
 		return map[string]any{
 			"request": &request{},
+			"source":  &source{},
 		}
 	},
 }
@@ -95,10 +99,13 @@ func EvalRequest(s *Script, cb api.FilterCallbackHandler, headers api.RequestHea
 	r := vars["request"].(*request)
 	r.headers = headers
 	r.callback = cb
+	so := vars["source"].(*source)
+	so.callback = cb
 
 	res, _, err := s.program.Eval(vars)
 	r.headers = nil
 	r.callback = nil
+	so.callback = nil
 	varsPool.Put(vars)
 
 	if err != nil {
@@ -249,6 +256,73 @@ func (r *request) Query(name string) string {
 
 func (r *request) TypeName() string {
 	return requestType.TypeName()
+}
+
+type source struct {
+	customType
+	callback api.FilterCallbackHandler
+}
+
+var sourceType = cel.ObjectType("htnn.source", traits.ReceiverType)
+var sourceExprType = decls.NewObjectType("htnn.source")
+
+func defineSource() cel.EnvOption {
+	cls := "source"
+	declarations := []*exprpb.Decl{
+		decls.NewConst(cls, sourceExprType, nil),
+	}
+
+	for _, dec := range []struct {
+		method         string
+		parameterTypes []*exprpb.Type
+		returnType     *exprpb.Type
+	}{
+		{
+			method:         "ip",
+			parameterTypes: []*exprpb.Type{},
+			returnType:     decls.String,
+		},
+		{
+			method:         "address",
+			parameterTypes: []*exprpb.Type{},
+			returnType:     decls.String,
+		},
+		{
+			method:         "port",
+			parameterTypes: []*exprpb.Type{},
+			returnType:     decls.Int,
+		},
+	} {
+		declarations = append(declarations,
+			decls.NewFunction(dec.method,
+				decls.NewInstanceOverload(fmt.Sprintf("%s_%s", cls, dec.method),
+					append([]*exprpb.Type{sourceExprType}, dec.parameterTypes...), dec.returnType)),
+		)
+	}
+	return cel.Declarations(declarations...)
+}
+
+func (s *source) Receive(function string, overload string, args []ref.Val) ref.Val {
+	switch function {
+	case "ip":
+		ip := pkgRequest.GetRemoteIP(s.callback.StreamInfo())
+		return types.String(ip)
+	case "address":
+		ipport := s.callback.StreamInfo().DownstreamRemoteAddress()
+		return types.String(ipport)
+	case "port":
+		ipport := s.callback.StreamInfo().DownstreamRemoteAddress()
+		// the IPPort given by Envoy must be valid
+		_, port, _ := net.SplitHostPort(ipport)
+		n, _ := strconv.Atoi(port)
+		return types.Int(n)
+	}
+
+	return types.NewErr("no such function - %s", function)
+}
+
+func (s *source) TypeName() string {
+	return sourceType.TypeName()
 }
 
 type customType struct {
