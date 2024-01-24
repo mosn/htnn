@@ -10,7 +10,7 @@ toolchain go1.21.5
 require (
 	github.com/agiledragon/gomonkey/v2 v2.11.0
 	github.com/casbin/casbin/v2 v2.81.0
-	github.com/cncf/xds/go v0.0.0-20231016030527-8bd2eac9fb4a
+	github.com/cncf/xds/go v0.0.0-20231109132714-523115ebc101
 	github.com/envoyproxy/envoy v1.28.1-0.20231229160620-448cbd60ee4e
 	github.com/envoyproxy/go-control-plane v0.11.2-0.20231019082134-6e4589f570e1 // version used by istio 1.20
 	github.com/envoyproxy/protoc-gen-validate v1.0.2
@@ -29,7 +29,7 @@ require (
 	golang.org/x/exp v0.0.0-20231219180239-dc181d75b848 // indirect
 	golang.org/x/time v0.5.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20231106174013-bbf56f31fb17
-	google.golang.org/grpc v1.60.1
+	google.golang.org/grpc v1.61.0
 	google.golang.org/protobuf v1.32.0
 	gopkg.in/yaml.v3 v3.0.1
 	istio.io/api v1.20.1
