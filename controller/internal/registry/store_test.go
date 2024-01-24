@@ -24,15 +24,14 @@ import (
 	istioapi "istio.io/api/networking/v1beta1"
 	istiov1b1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/config"
 
 	pkgRegistry "mosn.io/htnn/controller/pkg/registry"
 )
 
 func fakeClient(t *testing.T) client.Client {
-	cfg, err := config.GetConfig()
-	require.NoError(t, err)
+	cfg := &rest.Config{}
 	k8sClient, err := client.New(cfg, client.Options{})
 	require.NoError(t, err)
 	return k8sClient
