@@ -34,7 +34,7 @@ For plugins which have the same operation, they are sorted by alphabetical order
 
 Here are the order group (sorted from first to last):
 
-* Pre: First position. It's reserved for Native plugins.
+* Outer: First position. It's reserved for Native plugins.
 
 Now goes the Go plugins:
 
@@ -50,7 +50,7 @@ Now goes the Go plugins:
 End of the Go plugins.
 
 * Istio's extensions go here
-* Post: Last position. It's reserved for Native plugins.
+* Inner: Last position. It's reserved for Native plugins.
 
 There are three kinds of operation: `OrderOperationInsertFirst `, `OrderOperationInsertLast` and `OrderOperationNop`. Each kind means `First`, `Last` and `Middle`.
 
@@ -72,21 +72,7 @@ Filter manager makes the features below possible:
 
 ### Design of the filter manager
 
-Assumed we have three plugins called `A`, `B` and `C`. They are configured in this order:
-
-```yaml
-plugins:
-- name: A
-  config:
-    foo: bar
-- name: B
-  config:
-    pet: cat
-- name: C
-  config:
-    toy: pen
-```
-
+Assumed we have three plugins called `A`, `B` and `C`.
 For each plugin, the calling order of callbacks is:
 
 1. DecodeHeaders
@@ -95,9 +81,18 @@ For each plugin, the calling order of callbacks is:
 4. EncodeData
 5. OnLog
 
+Among the plugins, the calling order is decided by the plugin order. Assumed the `A`
+plugin is in `Outer` group, `B` in `Authn` and `C` in `Inner`.
+
 When processing the request (Decode path), the calling order is `A -> B -> C`.
 When processing the response (Encode path), the calling order is `C -> B -> A`.
 When logging the request, the calling order is `A -> B -> C`.
+
+By using the plugin order instead of plugin name, we can also say:
+
+When processing the request, the calling order is `Outer -> Authn -> Inner`.
+When processing the response, the calling order is `Inner -> Authn -> Outer`.
+When logging the request, the calling order is `Outer -> Authn -> Inner`.
 
 ![filter manager](/images/filtermanager_main_path.jpg)
 

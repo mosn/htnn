@@ -22,8 +22,8 @@ import (
 )
 
 func init() {
-	plugins.RegisterHttpPlugin("preLua", &prePlugin{})
-	plugins.RegisterHttpPlugin("postLua", &postPlugin{})
+	plugins.RegisterHttpPlugin("outerLua", &prePlugin{})
+	plugins.RegisterHttpPlugin("innerLua", &postPlugin{})
 }
 
 type plugin struct {
@@ -52,7 +52,7 @@ type prePlugin struct {
 
 func (p *prePlugin) Order() plugins.PluginOrder {
 	return plugins.PluginOrder{
-		Position: plugins.OrderPositionPre,
+		Position: plugins.OrderPositionOuter,
 	}
 }
 
@@ -62,6 +62,6 @@ type postPlugin struct {
 
 func (p *postPlugin) Order() plugins.PluginOrder {
 	return plugins.PluginOrder{
-		Position: plugins.OrderPositionPost,
+		Position: plugins.OrderPositionInner,
 	}
 }

@@ -125,7 +125,7 @@ func ValidateConsumer(c *Consumer) error {
 		}
 
 		pos := p.Order().Position
-		if pos <= plugins.OrderPositionAuthn || pos >= plugins.OrderPositionPost {
+		if pos <= plugins.OrderPositionAuthn || pos >= plugins.OrderPositionInner {
 			return errors.New("http filter should not in authn/pre/post position: " + name)
 		}
 

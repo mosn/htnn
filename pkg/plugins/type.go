@@ -41,7 +41,7 @@ const (
 type PluginOrderPosition int
 
 const (
-	OrderPositionPre PluginOrderPosition = iota // First position. It's reserved for Native plugins.
+	OrderPositionOuter PluginOrderPosition = iota // First position. It's reserved for Native plugins.
 
 	// Now goes the Go plugins
 	OrderPositionAccess
@@ -58,7 +58,7 @@ const (
 	// Istio's extensions go here
 
 	// Last position. It's reserved for Native plugins.
-	OrderPositionPost
+	OrderPositionInner
 )
 
 type PluginOrderOperation int

@@ -29,7 +29,7 @@
                             policy: data
                             url: http://x.local
                         name: opa
-            envoy.filters.http.postLua:
+            envoy.filters.http.innerLua:
               '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
               source_code:
                 inline_string: |

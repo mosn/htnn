@@ -46,7 +46,7 @@ type pluginFirst struct {
 
 func (p *pluginFirst) Order() plugins.PluginOrder {
 	return plugins.PluginOrder{
-		Position:  plugins.OrderPositionPre,
+		Position:  plugins.OrderPositionOuter,
 		Operation: plugins.OrderOperationInsertFirst,
 	}
 }
@@ -67,7 +67,7 @@ type pluginPre struct {
 
 func (p *pluginPre) Order() plugins.PluginOrder {
 	return plugins.PluginOrder{
-		Position: plugins.OrderPositionPre,
+		Position: plugins.OrderPositionOuter,
 	}
 }
 
@@ -87,7 +87,7 @@ type pluginPost struct {
 
 func (p *pluginPost) Order() plugins.PluginOrder {
 	return plugins.PluginOrder{
-		Position: plugins.OrderPositionPost,
+		Position: plugins.OrderPositionInner,
 	}
 }
 
@@ -107,7 +107,7 @@ type pluginLast struct {
 
 func (p *pluginLast) Order() plugins.PluginOrder {
 	return plugins.PluginOrder{
-		Position:  plugins.OrderPositionPost,
+		Position:  plugins.OrderPositionInner,
 		Operation: plugins.OrderOperationInsertLast,
 	}
 }

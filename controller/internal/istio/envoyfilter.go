@@ -105,7 +105,7 @@ func DefaultEnvoyFilters() map[string]*istiov1a3.EnvoyFilter {
 		filter["disabled"] = true
 		configs = append(configs, &configWrapper{
 			name:   key,
-			pre:    nativePlugin.Order().Position == plugins.OrderPositionPre,
+			pre:    nativePlugin.Order().Position == plugins.OrderPositionOuter,
 			filter: filter,
 		})
 		return true

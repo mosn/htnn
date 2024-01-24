@@ -9,7 +9,7 @@ spec:
     kind: VirtualService
     name: default
   filters:
-    preLua:
+    innerLua:
       config:
         sourceCode:
           inlineString: |
