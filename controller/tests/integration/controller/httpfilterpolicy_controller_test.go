@@ -32,12 +32,13 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	mosniov1 "mosn.io/htnn/controller/api/v1"
+	"mosn.io/htnn/controller/tests/integration/helper"
 	"mosn.io/htnn/controller/tests/pkg"
 )
 
 func mustReadHTTPFilterPolicy(fn string, out *[]map[string]interface{}) {
 	fn = filepath.Join("testdata", "httpfilterpolicy", fn+".yml")
-	mustReadInput(fn, out)
+	helper.MustReadInput(fn, out)
 }
 
 func attachGateway(ctx context.Context, httpRoute *gwapiv1.HTTPRoute, gwName string) {

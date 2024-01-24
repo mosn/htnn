@@ -330,7 +330,7 @@ func TestValidateServiceRegistry(t *testing.T) {
 				Spec: ServiceRegistrySpec{
 					Type: "nacos",
 					Config: runtime.RawExtension{
-						Raw: []byte(`{"serverAddress":"nacos.io"}`),
+						Raw: []byte(`{"serverUrl":"http://nacos.io"}`),
 					},
 				},
 			},
@@ -341,7 +341,7 @@ func TestValidateServiceRegistry(t *testing.T) {
 				Spec: ServiceRegistrySpec{
 					Type: "unknown",
 					Config: runtime.RawExtension{
-						Raw: []byte(`{"serverAddress":"nacos.io"}`),
+						Raw: []byte(`{"serverUrl":"http://nacos.io"}`),
 					},
 				},
 			},
@@ -353,11 +353,11 @@ func TestValidateServiceRegistry(t *testing.T) {
 				Spec: ServiceRegistrySpec{
 					Type: "nacos",
 					Config: runtime.RawExtension{
-						Raw: []byte(`{"serverAddress":""}`),
+						Raw: []byte(`{"serverUrl":""}`),
 					},
 				},
 			},
-			err: "value length must be at least 1 runes",
+			err: "value must be absolute",
 		},
 	}
 

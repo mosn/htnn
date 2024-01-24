@@ -12,27 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package controller
+package model
 
-import (
-	"math/rand"
-	"os"
-
-	. "github.com/onsi/gomega"
-	"sigs.k8s.io/yaml"
+const (
+	LabelCreatedBy = "htnn.mosn.io/created-by"
 )
-
-func ptrstr(s string) *string {
-	return &s
-}
-
-func mustReadInput(fn string, out *[]map[string]interface{}) {
-	input, err := os.ReadFile(fn)
-	Expect(err).NotTo(HaveOccurred())
-	Expect(yaml.UnmarshalStrict(input, out, yaml.DisallowUnknownFields)).To(Succeed())
-	// shuffle the input to detect bugs relative to the order
-	res := *out
-	rand.Shuffle(len(res), func(i, j int) {
-		res[i], res[j] = res[j], res[i]
-	})
-}

@@ -24,8 +24,12 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	mosniov1 "mosn.io/htnn/controller/api/v1"
 	"mosn.io/htnn/controller/internal/registry"
@@ -55,14 +59,18 @@ func (r *ServiceRegistryReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 
 		logger.Info("delete ServiceRegistry")
 		err = registry.DeleteRegistry(nsName)
+		if err != nil {
+			logger.Error(err, "failed to delete registry")
+			// don't retry if the err is caused by registry as the resource is already deleted
+		}
 
-	} else {
-		logger.Info("update ServiceRegistry")
-		err = registry.UpdateRegistry(&serviceRegistry)
+		return ctrl.Result{}, nil
 	}
 
+	logger.Info("update ServiceRegistry")
+	err = registry.UpdateRegistry(&serviceRegistry)
 	if err != nil {
-		logger.Error(err, "failed to operate registry")
+		logger.Error(err, "failed to update registry")
 		serviceRegistry.SetAccepted(mosniov1.ReasonInvalid, err.Error())
 		// don't retry if the err is caused by registry
 	} else {
@@ -80,6 +88,19 @@ func (r *ServiceRegistryReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 // SetupWithManager sets up the controller with the Manager.
 func (r *ServiceRegistryReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&mosniov1.ServiceRegistry{}).
-		Complete(r)
+		Named("serviceregistry").
+		Watches(
+			&mosniov1.ServiceRegistry{},
+			handler.EnqueueRequestsFromMapFunc(func(_ context.Context, obj client.Object) []reconcile.Request {
+				return []reconcile.Request{
+					{NamespacedName: types.NamespacedName{
+						Namespace: obj.GetNamespace(),
+						Name:      obj.GetName(),
+					}},
+				}
+			}),
+			builder.WithPredicates(
+				predicate.GenerationChangedPredicate{},
+			),
+		).Complete(r)
 }

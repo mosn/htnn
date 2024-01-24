@@ -21,7 +21,6 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	"google.golang.org/protobuf/proto"
 	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
@@ -36,6 +35,7 @@ import (
 	mosniov1 "mosn.io/htnn/controller/api/v1"
 	"mosn.io/htnn/controller/internal/config"
 	"mosn.io/htnn/controller/internal/istio"
+	"mosn.io/htnn/controller/internal/model"
 )
 
 // ConsumerReconciler reconciles a Consumer object
@@ -141,11 +141,11 @@ func (r *ConsumerReconciler) generateCustomResource(ctx context.Context, logger 
 	if ef.Labels == nil {
 		ef.Labels = map[string]string{}
 	}
-	ef.Labels[LabelCreatedBy] = "Consumer"
+	ef.Labels[model.LabelCreatedBy] = "Consumer"
 
 	nsName := types.NamespacedName{Name: ef.Name, Namespace: ef.Namespace}
 	var envoyfilters istiov1a3.EnvoyFilterList
-	if err := r.List(ctx, &envoyfilters, client.MatchingLabels{LabelCreatedBy: "Consumer"}); err != nil {
+	if err := r.List(ctx, &envoyfilters, client.MatchingLabels{model.LabelCreatedBy: "Consumer"}); err != nil {
 		return fmt.Errorf("failed to list EnvoyFilter: %w", err)
 	}
 
@@ -169,7 +169,7 @@ func (r *ConsumerReconciler) generateCustomResource(ctx context.Context, logger 
 		if err := r.Create(ctx, ef); err != nil {
 			return fmt.Errorf("failed to create EnvoyFilter: %w, namespacedName: %v", err, nsName)
 		}
-	} else if !proto.Equal(&envoyfilter.Spec, &ef.Spec) {
+	} else {
 		logger.Info("update EnvoyFilter", "name", ef.Name, "namespace", ef.Namespace)
 
 		ef.SetResourceVersion(envoyfilter.ResourceVersion)

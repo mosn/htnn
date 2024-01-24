@@ -1,0 +1,18 @@
+version: "3.8"
+
+services:
+  nacos:
+    hostname: nacos
+    image: nacos/nacos-server:v1.4.6-slim
+    env_file:
+      - env/nacos.env
+    restart: unless-stopped
+    ports:
+      - "8848:8848"
+    networks:
+      service:
+
+
+networks:
+  service:
+

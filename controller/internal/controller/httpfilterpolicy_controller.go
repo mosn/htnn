@@ -46,11 +46,8 @@ import (
 	"mosn.io/htnn/controller/internal/config"
 	"mosn.io/htnn/controller/internal/k8s"
 	"mosn.io/htnn/controller/internal/metrics"
+	"mosn.io/htnn/controller/internal/model"
 	"mosn.io/htnn/controller/internal/translation"
-)
-
-const (
-	LabelCreatedBy = "htnn.mosn.io/created-by"
 )
 
 // HTTPFilterPolicyReconciler reconciles a HTTPFilterPolicy object
@@ -328,7 +325,7 @@ func (r *HTTPFilterPolicyReconciler) translationStateToCustomResource(ctx contex
 	finalState *translation.FinalState) error {
 
 	var envoyfilters istiov1a3.EnvoyFilterList
-	if err := r.List(ctx, &envoyfilters, client.MatchingLabels{LabelCreatedBy: "HTTPFilterPolicy"}); err != nil {
+	if err := r.List(ctx, &envoyfilters, client.MatchingLabels{model.LabelCreatedBy: "HTTPFilterPolicy"}); err != nil {
 		return fmt.Errorf("failed to list EnvoyFilter: %w", err)
 	}
 
@@ -347,7 +344,7 @@ func (r *HTTPFilterPolicyReconciler) translationStateToCustomResource(ctx contex
 		if ef.Labels == nil {
 			ef.Labels = map[string]string{}
 		}
-		ef.Labels[LabelCreatedBy] = "HTTPFilterPolicy"
+		ef.Labels[model.LabelCreatedBy] = "HTTPFilterPolicy"
 
 		var envoyfilter istiov1a3.EnvoyFilter
 		nsName := types.NamespacedName{Name: ef.Name, Namespace: ef.Namespace}

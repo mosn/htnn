@@ -25,12 +25,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	mosniov1 "mosn.io/htnn/controller/api/v1"
+	"mosn.io/htnn/controller/tests/integration/helper"
 	"mosn.io/htnn/controller/tests/pkg"
 )
 
 func mustReadServiceRegistry(fn string, out *[]map[string]interface{}) {
 	fn = filepath.Join("testdata", "serviceregistry", fn+".yml")
-	mustReadInput(fn, out)
+	helper.MustReadInput(fn, out)
 }
 
 var _ = Describe("ServiceRegistry controller", func() {
@@ -48,6 +49,39 @@ var _ = Describe("ServiceRegistry controller", func() {
 					Expect(k8sClient.Delete(ctx, &e)).Should(Succeed())
 				}
 			}
+
+			helper.WaitServiceUp(":8848",
+				"Nacos is unavailble. Please run `make start-controller-service` in controller directory to make it up.")
+		})
+
+		It("deal with invalid serviceregistry crd", func() {
+			ctx := context.Background()
+			input := []map[string]interface{}{}
+			mustReadServiceRegistry("invalid", &input)
+			for _, in := range input {
+				obj := pkg.MapToObj(in)
+				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
+			}
+
+			var registries mosniov1.ServiceRegistryList
+			var r *mosniov1.ServiceRegistry
+			var cs []metav1.Condition
+			Eventually(func() bool {
+				if err := k8sClient.List(ctx, &registries); err != nil {
+					return false
+				}
+				for _, item := range registries.Items {
+					item := item
+					if item.Name == "invalid" {
+						r = &item
+						cs = r.Status.Conditions
+					}
+				}
+
+				return len(cs) == 1
+			}, timeout, interval).Should(BeTrue())
+			Expect(cs[0].Type).To(Equal(string(mosniov1.ConditionAccepted)))
+			Expect(cs[0].Reason).To(Equal(string(mosniov1.ReasonInvalid)))
 		})
 
 		It("deal with serviceregistry crd", func() {

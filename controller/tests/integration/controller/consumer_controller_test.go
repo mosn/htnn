@@ -29,12 +29,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	mosniov1 "mosn.io/htnn/controller/api/v1"
+	"mosn.io/htnn/controller/tests/integration/helper"
 	"mosn.io/htnn/controller/tests/pkg"
 )
 
 func mustReadConsumer(fn string, out *[]map[string]interface{}) {
 	fn = filepath.Join("testdata", "consumer", fn+".yml")
-	mustReadInput(fn, out)
+	helper.MustReadInput(fn, out)
 }
 
 var _ = Describe("Consumer controller", func() {

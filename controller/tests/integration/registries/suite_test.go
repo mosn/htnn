@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package controller
+package registries
 
 import (
 	"context"
@@ -55,14 +55,10 @@ var ctx context.Context
 var cancel context.CancelFunc
 var clientset *kubernetes.Clientset
 
-func ptrstr(s string) *string {
-	return &s
-}
-
-func TestControllers(t *testing.T) {
+func TestRegistries(t *testing.T) {
 	RegisterFailHandler(Fail)
 
-	RunSpecs(t, "Controller Suite")
+	RunSpecs(t, "Registry Suite")
 }
 
 var _ = BeforeSuite(func() {
@@ -122,18 +118,6 @@ var _ = BeforeSuite(func() {
 		HealthProbeBindAddress: "0",
 		Scheme:                 scheme.Scheme,
 	})
-	Expect(err).ToNot(HaveOccurred())
-
-	err = (&controller.HTTPFilterPolicyReconciler{
-		Client: k8sManager.GetClient(),
-		Scheme: k8sManager.GetScheme(),
-	}).SetupWithManager(k8sManager)
-	Expect(err).ToNot(HaveOccurred())
-
-	err = (&controller.ConsumerReconciler{
-		Client: k8sManager.GetClient(),
-		Scheme: k8sManager.GetScheme(),
-	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
 	registry.InitRegistryManager(&registry.RegistryManagerOption{

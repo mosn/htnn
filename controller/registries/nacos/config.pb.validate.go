@@ -56,15 +56,73 @@ func (m *Config) validate(all bool) error {
 
 	var errors []error
 
-	if utf8.RuneCountInString(m.GetServerAddress()) < 1 {
-		err := ConfigValidationError{
-			field:  "ServerAddress",
-			reason: "value length must be at least 1 runes",
+	if uri, err := url.Parse(m.GetServerUrl()); err != nil {
+		err = ConfigValidationError{
+			field:  "ServerUrl",
+			reason: "value must be a valid URI",
+			cause:  err,
 		}
 		if !all {
 			return err
 		}
 		errors = append(errors, err)
+	} else if !uri.IsAbs() {
+		err := ConfigValidationError{
+			field:  "ServerUrl",
+			reason: "value must be absolute",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	// no validation rules for Namespace
+
+	for idx, item := range m.GetGroups() {
+		_, _ = idx, item
+
+		if utf8.RuneCountInString(item) < 1 {
+			err := ConfigValidationError{
+				field:  fmt.Sprintf("Groups[%v]", idx),
+				reason: "value length must be at least 1 runes",
+			}
+			if !all {
+				return err
+			}
+			errors = append(errors, err)
+		}
+
+	}
+
+	if d := m.GetServiceRefreshInterval(); d != nil {
+		dur, err := d.AsDuration(), d.CheckValid()
+		if err != nil {
+			err = ConfigValidationError{
+				field:  "ServiceRefreshInterval",
+				reason: "value is not a valid duration",
+				cause:  err,
+			}
+			if !all {
+				return err
+			}
+			errors = append(errors, err)
+		} else {
+
+			gte := time.Duration(1*time.Second + 0*time.Nanosecond)
+
+			if dur < gte {
+				err := ConfigValidationError{
+					field:  "ServiceRefreshInterval",
+					reason: "value must be greater than or equal to 1s",
+				}
+				if !all {
+					return err
+				}
+				errors = append(errors, err)
+			}
+
+		}
 	}
 
 	if len(errors) > 0 {
