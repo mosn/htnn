@@ -24,6 +24,7 @@ import (
 	"strconv"
 	"strings"
 	sync "sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/nacos-group/nacos-sdk-go/clients"
@@ -47,7 +48,7 @@ func init() {
 		reg := &Nacos{
 			store: store,
 			name:  om.Name,
-			stop:  make(chan struct{}),
+			done:  make(chan struct{}),
 		}
 		return reg, nil
 	})
@@ -83,7 +84,8 @@ type Nacos struct {
 	lock             sync.RWMutex
 	watchingServices map[nacosService]bool
 
-	stop chan struct{}
+	done    chan struct{}
+	stopped atomic.Bool
 }
 
 func (reg *Nacos) fetchAllServices(client *nacosClient) (map[nacosService]bool, error) {
@@ -175,6 +177,9 @@ func (reg *Nacos) getSubscribeCallback(groupName string, serviceName string) fun
 			return
 		}
 
+		if reg.stopped.Load() {
+			return
+		}
 		reg.store.Update(host, reg.generateServiceEntry(host, services))
 	}
 }
@@ -292,9 +297,10 @@ func (reg *Nacos) Start(c registry.RegistryConfig) error {
 	if refreshInteval != nil {
 		dur = refreshInteval.AsDuration()
 	}
-	ticker := time.NewTicker(dur)
 	go func() {
 		logger.Info("start refreshing services", "registry", reg.name)
+		ticker := time.NewTicker(dur)
+		defer ticker.Stop()
 		for {
 			select {
 			case <-ticker.C:
@@ -302,8 +308,9 @@ func (reg *Nacos) Start(c registry.RegistryConfig) error {
 				if err != nil {
 					logger.Error(err, "failed to refresh services", "registry", reg.name)
 				}
-			case <-reg.stop:
+			case <-reg.done:
 				logger.Info("stop refreshing services", "registry", reg.name)
+				return
 			}
 		}
 	}()
@@ -350,7 +357,8 @@ func (reg *Nacos) refresh() error {
 }
 
 func (reg *Nacos) Stop() error {
-	reg.stop <- struct{}{}
+	close(reg.done)
+	reg.stopped.Store(true)
 
 	reg.lock.Lock()
 	defer reg.lock.Unlock()
