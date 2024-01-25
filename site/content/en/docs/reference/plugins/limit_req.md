@@ -14,16 +14,16 @@ The `limitReq` plugin limits the number of requests per second to this proxy. Th
 | Order | Traffic |
 
 ## Configuration
+| Name    | Type                            | Required | Validation | Description                                                                                        |
+|---------|---------------------------------|----------|------------|----------------------------------------------------------------------------------------------------|
+| average | uint32                          | True     | gt: 0      | The threshold value, by default calculated as the number of requests per second.                   |
+| period  | [Duration](../../type#duration) | False    |            | The time unit for the rate. The rate limit is defined as `average / period`. Defaults to 1 second. |
+| burst   | uint32                          | False    |            | The number of requests allowed to exceed the rate. Defaults to 1.                                  |
+| key     | string                          | False    |            | The key used for rate limiting. Defaults to client IP. Supports [CEL expressions](../../expr).        |
 
-| Name    | Type                            | Required | Validation | Description                                                                                                             |
-|---------|---------------------------------|----------|------------|-------------------------------------------------------------------------------------------------------------------------|
-| average | uint32                          | True     | gt: 0      | The threshold, by default in requests per second                                                                        |
-| period  | [Duration](../../type#duration) | False    |            | The time unit of rate. The limit rate is defined as `average / period`. Default to 1s, which means requests per second. |
-| burst   | uint32                          | False    |            | The number of requests allowed to exceed the rate. Default to 1.                                                        |
+When the request rate exceeds `average / period` and the number of excess requests is over `burst`, we calculate the delay time needed to reduce the rate to the expected level. If the required delay time does not exceed the maximum delay, the request will be delayed. If the required delay time is greater than the maximum delay, the request will be dropped with a `429` HTTP status code. By default, the maximum delay is half of the rate (`1 / 2 * average / period`). If `average / period` is less than 1, it defaults to 500 milliseconds.
 
-The number of requests is counted per client IP. When the request rate exceeds the `average / period` rate, and the number of exceeded requests is more than `burst`, we will calculate a required delay time to slow down the rate to the expectation. The request is delayed if the required delay time is not larger than the maximum delay. If the required delay is larger than the maximum delay, the request is dropped with a `429` HTTP status code.
-
-The maximum delay is half of the rate (`1 / 2 * average / period`) by default, and 500ms if the `average / period` is less than 1.
+Requests are counted by client IP by default. You can also configure `key` to use other fields. The configuration inside `key` will be interpreted as a CEL expression. For example, `key: request.header("x-key")` means using the request header `x-key` as the dimension for rate limiting. If the value corresponding to `key` is empty, it falls back to counting by client IP. You can also provide a default value in the expression, such as `key: 'request.header("x-key") != "" ? request.header("x-key") : request.header("x-forwarded-for")'`, which means using the request header `x-key` as the dimension for rate limiting first, and if not found, then using `x-forwarded-for`.
 
 ## Usage
 

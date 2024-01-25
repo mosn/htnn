@@ -143,4 +143,4 @@ spec:
 
 如果认证结果是尊贵的 VIP 会员，那么 `average` 的配置会是 10。如果是普通的会员，那么对应的配置只是 1。
 
-和 Kong / APISIX 里面的消费者不同的是，HTNN 的消费者是 `namespace` 级别的。来自不同 `namespace` 的消费者，只会应用到对应 `namespace` 里的路由配置（HTTPRoute、VirtualService 等等）里的路由。这种设计避免了不同业务间的消费者发生冲突。
+和有些网关里面的消费者不同的是，HTNN 的消费者是 `namespace` 级别的。来自不同 `namespace` 的消费者，只会应用到对应 `namespace` 里的路由配置（HTTPRoute、VirtualService 等等）里的路由。这种设计避免了不同业务间的消费者发生冲突。

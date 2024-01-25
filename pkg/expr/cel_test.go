@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cel
+package expr
 
 import (
 	"net/http"
@@ -27,7 +27,7 @@ import (
 	"mosn.io/htnn/plugins/tests/pkg/envoy"
 )
 
-func TestCompile(t *testing.T) {
+func TestCompileCel(t *testing.T) {
 	cases := []struct {
 		name string
 		expr string
@@ -48,7 +48,7 @@ func TestCompile(t *testing.T) {
 
 	for _, tt := range cases {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := Compile(tt.expr, cel.StringType)
+			_, err := CompileCel(tt.expr, cel.StringType)
 			require.Error(t, err)
 		})
 	}
@@ -62,14 +62,14 @@ func TestCustomType(t *testing.T) {
 }
 
 func TestCel(t *testing.T) {
-	s, err := Compile(`request.host()`, cel.StringType)
+	s, err := CompileCel(`request.host()`, cel.StringType)
 	require.NoError(t, err)
 
 	var wg sync.WaitGroup
 	wg.Add(3)
 	for i := 0; i < 3; i++ {
 		go func() {
-			_, err := Compile(`request.host()`, cel.StringType)
+			_, err := CompileCel(`request.host()`, cel.StringType)
 			require.NoError(t, err)
 			wg.Done()
 		}()
@@ -81,7 +81,7 @@ func TestCel(t *testing.T) {
 		go func() {
 			hdr := http.Header{}
 			hdr.Set(":authority", "t.local")
-			res, err := EvalRequest(s, nil, envoy.NewRequestHeaderMap(hdr))
+			res, err := s.EvalWithRequest(nil, envoy.NewRequestHeaderMap(hdr))
 			require.NoError(t, err)
 			require.Equal(t, "t.local", res)
 			wg.Done()
@@ -199,14 +199,14 @@ func TestCelWithRequest(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s, err := Compile(tt.code, cel.StringType)
+			s, err := CompileCel(tt.code, cel.StringType)
 			require.NoError(t, err)
 			cb := envoy.NewFilterCallbackHandler()
 			patches := gomonkey.ApplyMethodFunc(cb, "GetProperty", func(s string) (string, error) {
 				return "property." + s, nil
 			})
 			defer patches.Reset()
-			res, err := EvalRequest(s, cb, envoy.NewRequestHeaderMap(hdr))
+			res, err := s.EvalWithRequest(cb, envoy.NewRequestHeaderMap(hdr))
 			require.NoError(t, err)
 			tt.expect(t, res)
 		})
@@ -244,10 +244,10 @@ func TestCelWithSource(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s, err := Compile(tt.code, cel.StringType)
+			s, err := CompileCel(tt.code, cel.StringType)
 			require.NoError(t, err)
 			cb := envoy.NewFilterCallbackHandler()
-			res, err := EvalRequest(s, cb, nil)
+			res, err := s.EvalWithRequest(cb, nil)
 			require.NoError(t, err)
 			tt.expect(t, res)
 		})

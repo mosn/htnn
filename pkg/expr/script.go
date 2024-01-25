@@ -12,20 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-syntax = "proto3";
+package expr
 
-package plugins.limit_req;
+import "mosn.io/htnn/pkg/filtermanager/api"
 
-import "google/protobuf/duration.proto";
-import "validate/validate.proto";
-
-option go_package = "mosn.io/htnn/plugins/limit_req";
-
-message Config {
-  uint32 average = 1 [(validate.rules).uint32 = {gt: 0}];
-  // Default to one second
-  google.protobuf.Duration period = 2;
-  // Default to 1
-  uint32 burst = 3 [(validate.rules).uint32 = {ignore_empty: true}];
-  string key = 4;
+type Script interface {
+	EvalWithRequest(cb api.FilterCallbackHandler, headers api.RequestHeaderMap) (any, error)
 }
