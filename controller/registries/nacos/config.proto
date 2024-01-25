@@ -16,10 +16,18 @@ syntax = "proto3";
 
 package controller.registries.nacos;
 
+import "google/protobuf/duration.proto";
 import "validate/validate.proto";
 
 option go_package = "mosn.io/htnn/controller/registries/nacos";
 
 message Config {
-  string server_address = 1 [(validate.rules).string = {min_len: 1}];
+  string server_url = 1 [(validate.rules).string = {uri: true}];
+  string namespace = 2;
+  repeated string groups = 3 [(validate.rules).repeated .items.string.min_len = 1];
+  // Nacos v1 doesn't provide a method to subscribe the number of services.
+  // So we need to check the services at interval. The interval is default to 30s.
+  // A shorter interval will make the new service take effect earlier but cause more pressure on Nacos server.
+  google.protobuf.Duration service_refresh_interval = 4
+      [(validate.rules).duration = {gte {seconds: 1}}];
 }

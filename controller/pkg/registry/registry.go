@@ -16,9 +16,18 @@ package registry
 
 import (
 	"fmt"
+	"strings"
 
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/reflect/protoreflect"
+	istioapi "istio.io/api/networking/v1beta1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"mosn.io/htnn/pkg/log"
+)
+
+var (
+	logger = log.DefaultLogger.WithName("registry")
 )
 
 // RegistryConfig represents the configuration used by the registry
@@ -29,8 +38,43 @@ type RegistryConfig interface {
 	Validate() error
 }
 
+// The protocol defined here should match the protocol field in istio's ServicePort
+// See https://github.com/istio/api/issues/3056
+type Protocol string
+
+const (
+	HTTP        Protocol = "HTTP"
+	HTTPS       Protocol = "HTTPS"
+	GRPC        Protocol = "GRPC"
+	HTTP2       Protocol = "HTTP2"
+	MONGO       Protocol = "MONGO"
+	TCP         Protocol = "TCP"
+	TLS         Protocol = "TLS"
+	Unsupported Protocol = "Unsupported"
+)
+
+var ProtocolMap = map[string]Protocol{
+	"http":  HTTP,
+	"https": HTTPS,
+	"grpc":  GRPC,
+	"http2": HTTP2,
+	"mongo": MONGO,
+	"tcp":   TCP,
+	"tls":   TLS,
+}
+
+func ParseProtocol(s string) Protocol {
+	res, ok := ProtocolMap[strings.ToLower(s)]
+	if !ok {
+		return Unsupported
+	}
+	return res
+}
+
 // ServiceEntryWrapper is a wrapper around the istio's ServiceEntry
 type ServiceEntryWrapper struct {
+	istioapi.ServiceEntry
+	Source string
 }
 
 // ServiceEntryStore is the store of ServiceEntryWrapper
@@ -49,7 +93,7 @@ type Registry interface {
 }
 
 // RegistryFactory provides methods to prepare configuration & create registry
-type RegistryFactory func(store ServiceEntryStore) (Registry, error)
+type RegistryFactory func(store ServiceEntryStore, om metav1.ObjectMeta) (Registry, error)
 
 var (
 	registryFactories = make(map[string]RegistryFactory)
@@ -57,17 +101,21 @@ var (
 
 // AddRegistryFactory will be used by the user to register a new registry
 func AddRegistryFactory(name string, factory RegistryFactory) {
+	logger.Info("register registry", "name", name)
+
+	// override plugin is allowed so that we can patch plugin with bugfix if upgrading
+	// the whole htnn is not available
 	registryFactories[name] = factory
 }
 
 // CreateRegistry is called by HTNN to create a new registry
-func CreateRegistry(name string, store ServiceEntryStore) (Registry, error) {
+func CreateRegistry(name string, store ServiceEntryStore, om metav1.ObjectMeta) (Registry, error) {
 	factory, ok := registryFactories[name]
 	if !ok {
 		return nil, fmt.Errorf("unknown registry %s", name)
 	}
 
-	return factory(store)
+	return factory(store, om)
 }
 
 // ParseConfig parses the given data and returns the configuration according to the registry

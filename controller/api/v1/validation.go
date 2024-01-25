@@ -144,7 +144,7 @@ func ValidateConsumer(c *Consumer) error {
 }
 
 func ValidateServiceRegistry(sr *ServiceRegistry) error {
-	reg, err := registry.CreateRegistry(sr.Spec.Type, nil)
+	reg, err := registry.CreateRegistry(sr.Spec.Type, nil, sr.ObjectMeta)
 	if err != nil {
 		return err
 	}

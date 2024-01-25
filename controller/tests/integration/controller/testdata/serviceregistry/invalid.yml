@@ -1,9 +1,9 @@
 - apiVersion: mosn.io/v1
   kind: ServiceRegistry
   metadata:
-    name: earth
+    name: invalid
     namespace: default
   spec:
     type: nacos
     config:
-      serverUrl: http://0.0.0.0:8848
+      serverUrl: earth.online

@@ -20,10 +20,14 @@ import (
 
 	mosniov1 "mosn.io/htnn/controller/api/v1"
 	pkgRegistry "mosn.io/htnn/controller/pkg/registry"
+	"mosn.io/htnn/pkg/log"
 )
 
 var (
+	logger = log.DefaultLogger.WithName("registry")
+
 	registries = map[types.NamespacedName]pkgRegistry.Registry{}
+	store      *serviceEntryStore
 )
 
 type RegistryManagerOption struct {
@@ -31,12 +35,14 @@ type RegistryManagerOption struct {
 }
 
 func InitRegistryManager(opt *RegistryManagerOption) {
+	store = newServiceEntryStore(opt.Client)
+	go store.Sync()
 }
 
 func UpdateRegistry(registry *mosniov1.ServiceRegistry) error {
 	key := types.NamespacedName{Namespace: registry.Namespace, Name: registry.Name}
 	if reg, ok := registries[key]; !ok {
-		reg, err := pkgRegistry.CreateRegistry(registry.Spec.Type, nil)
+		reg, err := pkgRegistry.CreateRegistry(registry.Spec.Type, store, registry.ObjectMeta)
 		if err != nil {
 			return err
 		}
@@ -45,6 +51,8 @@ func UpdateRegistry(registry *mosniov1.ServiceRegistry) error {
 		if err != nil {
 			return err
 		}
+
+		logger.Info("start registry", "registry", key)
 
 		err = reg.Start(conf)
 		if err != nil {
@@ -60,6 +68,8 @@ func UpdateRegistry(registry *mosniov1.ServiceRegistry) error {
 			return err
 		}
 
+		logger.Info("reload registry", "registry", key)
+
 		err = reg.Reload(conf)
 		if err != nil {
 			return err
@@ -72,9 +82,11 @@ func UpdateRegistry(registry *mosniov1.ServiceRegistry) error {
 func DeleteRegistry(key types.NamespacedName) error {
 	prev, ok := registries[key]
 	if !ok {
+		// this may happens when deleting an invalid ServiceRegistry
 		return nil
 	}
 
 	delete(registries, key)
+	logger.Info("stop registry", "registry", key)
 	return prev.Stop()
 }

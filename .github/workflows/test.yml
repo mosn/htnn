@@ -82,5 +82,9 @@ jobs:
         path: ./controller/bin
         key: ${{ runner.os }}-${{ hashFiles('./controller/Makefile') }}
 
+    - name: Set up services
+      run: |
+        make start-controller-service
+
     - name: Test
       run: make test
