@@ -59,11 +59,7 @@ spec:
 keys:
   - name: Authorization
   - name: ak
-<<<<<<< HEAD
-    source: query
-=======
     source: QUERY
->>>>>>> 9fc903a (follow the protobuf style)
 ```
 
 插件将首先检查请求头 `Authorization`，然后检查查询参数 `ak`。
