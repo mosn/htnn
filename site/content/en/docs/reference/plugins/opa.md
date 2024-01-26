@@ -133,7 +133,7 @@ If we try to make a request with a different method, the request will fail:
 
 ```
 curl -i -X POST localhost:10000/echo -d "AA"
-HTTP/1.1 403 FORBIDDEN
+HTTP/1.1 403 Forbidden
 ```
 
 ### Interact with Local Policy Rules
@@ -166,5 +166,5 @@ If we try to make a request with a different method, the request will fail:
 
 ```
 curl -i -X POST localhost:10000/echo -d "AA"
-HTTP/1.1 403 FORBIDDEN
+HTTP/1.1 403 Forbidden
 ```
