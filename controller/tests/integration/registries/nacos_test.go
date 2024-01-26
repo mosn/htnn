@@ -127,78 +127,76 @@ var _ = Describe("Nacos", func() {
 		interval = time.Millisecond * 250
 	)
 
-	Context("Nacos", func() {
-		BeforeEach(func() {
-			var registries mosniov1.ServiceRegistryList
-			if err := k8sClient.List(ctx, &registries); err == nil {
-				for _, e := range registries.Items {
-					Expect(k8sClient.Delete(ctx, &e)).Should(Succeed())
-				}
+	BeforeEach(func() {
+		var registries mosniov1.ServiceRegistryList
+		if err := k8sClient.List(ctx, &registries); err == nil {
+			for _, e := range registries.Items {
+				Expect(k8sClient.Delete(ctx, &e)).Should(Succeed())
 			}
+		}
 
-			helper.WaitServiceUp(":8848",
-				"Nacos is unavailble. Please run `make start-controller-service` in controller directory to make it up.")
-		})
+		helper.WaitServiceUp(":8848",
+			"Nacos is unavailble. Please run `make start-controller-service` in controller directory to make it up.")
+	})
 
-		It("service life cycle", func() {
-			enableNacos("default")
+	It("service life cycle", func() {
+		enableNacos("default")
 
-			registerInstance("8848", "test", "1.2.3.4", "8080", nil)
+		registerInstance("8848", "test", "1.2.3.4", "8080", nil)
 
-			var entries []*istiov1b1.ServiceEntry
-			Eventually(func() bool {
-				entries = listServiceEntries()
-				return len(entries) == 1
-			}, timeout, interval).Should(BeTrue())
+		var entries []*istiov1b1.ServiceEntry
+		Eventually(func() bool {
+			entries = listServiceEntries()
+			return len(entries) == 1
+		}, timeout, interval).Should(BeTrue())
 
-			Expect(entries[0].Name).To(Equal("test.default-group.public.default.nacos"))
-			Expect(entries[0].Spec.GetHosts()).To(Equal([]string{"test.DEFAULT-GROUP.public.default.nacos"}))
-			Expect(entries[0].Spec.Location).To(Equal(istioapi.ServiceEntry_MESH_INTERNAL))
-			Expect(entries[0].Spec.Resolution).To(Equal(istioapi.ServiceEntry_STATIC))
-			Expect(len(entries[0].Spec.Endpoints)).To(Equal(1))
-			Expect(entries[0].Spec.Endpoints[0].Address).To(Equal("1.2.3.4"))
-			Expect(entries[0].Spec.Endpoints[0].Ports).To(Equal(map[string]uint32{
-				"HTTP": 8080,
-			}))
+		Expect(entries[0].Name).To(Equal("test.default-group.public.default.nacos"))
+		Expect(entries[0].Spec.GetHosts()).To(Equal([]string{"test.DEFAULT-GROUP.public.default.nacos"}))
+		Expect(entries[0].Spec.Location).To(Equal(istioapi.ServiceEntry_MESH_INTERNAL))
+		Expect(entries[0].Spec.Resolution).To(Equal(istioapi.ServiceEntry_STATIC))
+		Expect(len(entries[0].Spec.Endpoints)).To(Equal(1))
+		Expect(entries[0].Spec.Endpoints[0].Address).To(Equal("1.2.3.4"))
+		Expect(entries[0].Spec.Endpoints[0].Ports).To(Equal(map[string]uint32{
+			"HTTP": 8080,
+		}))
 
-			registerInstance("8848", "test", "1.2.3.5", "8080", nil)
+		registerInstance("8848", "test", "1.2.3.5", "8080", nil)
 
-			Eventually(func() bool {
-				entries = listServiceEntries()
-				return len(entries[0].Spec.Endpoints) == 2
-			}, timeout, interval).Should(BeTrue())
+		Eventually(func() bool {
+			entries = listServiceEntries()
+			return len(entries[0].Spec.Endpoints) == 2
+		}, timeout, interval).Should(BeTrue())
 
-			deregisterInstance("8848", "test", "1.2.3.4", "8080")
+		deregisterInstance("8848", "test", "1.2.3.4", "8080")
 
-			Eventually(func() bool {
-				entries = listServiceEntries()
-				return len(entries[0].Spec.Endpoints) == 1
-			}, timeout, interval).Should(BeTrue())
+		Eventually(func() bool {
+			entries = listServiceEntries()
+			return len(entries[0].Spec.Endpoints) == 1
+		}, timeout, interval).Should(BeTrue())
 
-			deregisterInstance("8848", "test", "1.2.3.5", "8080")
-			deleteService("8848", "test")
+		deregisterInstance("8848", "test", "1.2.3.5", "8080")
+		deleteService("8848", "test")
 
-			Eventually(func() bool {
-				entries := listServiceEntries()
-				return len(entries) == 0
-			}, timeout, interval).Should(BeTrue())
-		})
+		Eventually(func() bool {
+			entries := listServiceEntries()
+			return len(entries) == 0
+		}, timeout, interval).Should(BeTrue())
+	})
 
-		It("stop nacos should remove service entries", func() {
-			registerInstance("8848", "test", "1.2.3.4", "8080", nil)
-			enableNacos("default")
+	It("stop nacos should remove service entries", func() {
+		registerInstance("8848", "test", "1.2.3.4", "8080", nil)
+		enableNacos("default")
 
-			Eventually(func() bool {
-				entries := listServiceEntries()
-				return len(entries) == 1
-			}, timeout, interval).Should(BeTrue())
+		Eventually(func() bool {
+			entries := listServiceEntries()
+			return len(entries) == 1
+		}, timeout, interval).Should(BeTrue())
 
-			disableNacos("default")
+		disableNacos("default")
 
-			Eventually(func() bool {
-				entries := listServiceEntries()
-				return len(entries) == 0
-			}, timeout, interval).Should(BeTrue())
-		})
+		Eventually(func() bool {
+			entries := listServiceEntries()
+			return len(entries) == 0
+		}, timeout, interval).Should(BeTrue())
 	})
 })

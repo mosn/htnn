@@ -44,7 +44,7 @@ func newServiceEntryStore(client client.Client) *serviceEntryStore {
 	return &serviceEntryStore{
 		client:       client,
 		entries:      make(map[string]*pkgRegistry.ServiceEntryWrapper),
-		syncInterval: 1 * time.Minute,
+		syncInterval: 20 * time.Second,
 	}
 }
 
@@ -185,7 +185,7 @@ func (store *serviceEntryStore) sync() {
 func (store *serviceEntryStore) Sync() {
 	// We sync the service entries so we can retry if something wrong happened
 	ticker := time.NewTicker(store.syncInterval)
-	defer ticker.Stop()
+	// For now we don't release the ticker
 	for range ticker.C {
 		store.sync()
 	}
