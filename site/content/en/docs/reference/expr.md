@@ -27,3 +27,11 @@ x-hdr: b
 ```
 
 `request.header("x-hdr")` returns `a,b`. `request.query("a")` returns `1,2`.
+
+## source
+
+| name             | parameter type | return type | description                              |
+|------------------|----------------|-------------|------------------------------------------|
+| source.address() |                | string      | Client address, e.g. `1.20.123.48:61245` |
+| source.ip()      |                | string      | Client IP, e.g., `1.20.123.48`           |
+| source.port()    |                | int         | Client port, e.g., 61245                 |

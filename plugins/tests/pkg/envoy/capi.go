@@ -395,7 +395,8 @@ func NewFilterCallbackHandler() *filterCallbackHandler {
 		lock: &sync.RWMutex{},
 		// we create channel with buffer so the goroutine won't leak when we don't call WaitContinued
 		// manually. When running in Envoy, Envoy won't re-run the filter until Continue is called.
-		ch: make(chan struct{}, 10),
+		ch:         make(chan struct{}, 10),
+		streamInfo: &StreamInfo{},
 	}
 }
 
