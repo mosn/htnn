@@ -292,7 +292,7 @@ type setConsumerFilter struct {
 	callbacks api.FilterCallbackHandler
 }
 
-func (f *setConsumerFilter) DecodeHeaders(header api.RequestHeaderMap, endStream bool) api.ResultAction {
+func (f *setConsumerFilter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {
 	f.callbacks.SetConsumer(&pkgConsumer.Consumer{
 		FilterConfigs: map[string]*model.ParsedFilterConfig{
 			"on_log": {
@@ -342,8 +342,8 @@ type addReqFilter struct {
 	conf addReqConf
 }
 
-func (f *addReqFilter) DecodeHeaders(header api.RequestHeaderMap, endStream bool) api.ResultAction {
-	header.Set(f.conf.hdrName, "htnn")
+func (f *addReqFilter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {
+	headers.Set(f.conf.hdrName, "htnn")
 	return api.Continue
 }
 

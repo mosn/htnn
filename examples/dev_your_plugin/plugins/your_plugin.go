@@ -55,7 +55,7 @@ type filter struct {
 	callbacks api.FilterCallbackHandler
 }
 
-func (f *filter) DecodeHeaders(header api.RequestHeaderMap, endStream bool) api.ResultAction {
+func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {
 	hdr := http.Header{}
 	hdr.Set("content-type", "text/plain")
 	return &api.LocalResponse{

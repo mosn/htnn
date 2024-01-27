@@ -48,18 +48,18 @@ func (f *filter) verify(value string) api.ResultAction {
 	return api.Continue
 }
 
-func (f *filter) DecodeHeaders(header api.RequestHeaderMap, endStream bool) api.ResultAction {
+func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {
 	config := f.config
 	var query url.Values
 	for _, key := range config.Keys {
 		var vals []string
 		if key.Source == Source_QUERY {
 			if query == nil {
-				query = request.GetUrl(header).Query()
+				query = request.GetUrl(headers).Query()
 			}
 			vals = query[key.Name]
 		} else {
-			vals = header.Values(key.Name)
+			vals = headers.Values(key.Name)
 		}
 
 		n := len(vals)

@@ -369,7 +369,7 @@ func (m *filterManager) localReply(v *api.LocalResponse) {
 	m.callbacks.SendLocalReply(v.Code, msg, hdr, 0, "")
 }
 
-func (m *filterManager) DecodeHeaders(header api.RequestHeaderMap, endStream bool) capi.StatusType {
+func (m *filterManager) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) capi.StatusType {
 	if m.canSkipDecodeHeaders {
 		return capi.Continue
 	}
@@ -378,11 +378,11 @@ func (m *filterManager) DecodeHeaders(header api.RequestHeaderMap, endStream boo
 		defer m.callbacks.RecoverPanic()
 		var res api.ResultAction
 
-		m.reqHdr = header
+		m.reqHdr = headers
 		if len(m.authnFilters) > 0 {
 			for _, f := range m.authnFilters {
 				// Authn plugins only use DecodeHeaders for now
-				res = f.DecodeHeaders(header, endStream)
+				res = f.DecodeHeaders(headers, endStream)
 				if m.handleAction(res, phaseDecodeHeaders) {
 					return
 				}
@@ -445,7 +445,7 @@ func (m *filterManager) DecodeHeaders(header api.RequestHeaderMap, endStream boo
 		}
 
 		for i, f := range m.filters {
-			res = f.DecodeHeaders(header, endStream)
+			res = f.DecodeHeaders(headers, endStream)
 			if m.handleAction(res, phaseDecodeHeaders) {
 				return
 			}
@@ -461,7 +461,7 @@ func (m *filterManager) DecodeHeaders(header api.RequestHeaderMap, endStream boo
 				}
 
 				// no body
-				res = f.DecodeRequest(header, nil, nil)
+				res = f.DecodeRequest(headers, nil, nil)
 				if m.handleAction(res, phaseDecodeRequest) {
 					return
 				}
@@ -567,7 +567,7 @@ func (m *filterManager) DecodeData(buf api.BufferInstance, endStream bool) capi.
 	return capi.Running
 }
 
-func (m *filterManager) EncodeHeaders(header api.ResponseHeaderMap, endStream bool) capi.StatusType {
+func (m *filterManager) EncodeHeaders(headers api.ResponseHeaderMap, endStream bool) capi.StatusType {
 	if m.canSkipEncodeHeaders {
 		return capi.Continue
 	}
@@ -576,11 +576,11 @@ func (m *filterManager) EncodeHeaders(header api.ResponseHeaderMap, endStream bo
 		defer m.callbacks.RecoverPanic()
 		var res api.ResultAction
 
-		m.rspHdr = header
+		m.rspHdr = headers
 		n := len(m.filters)
 		for i := n - 1; i >= 0; i-- {
 			f := m.filters[i]
-			res = f.EncodeHeaders(header, endStream)
+			res = f.EncodeHeaders(headers, endStream)
 			if m.handleAction(res, phaseEncodeHeaders) {
 				return
 			}
@@ -594,7 +594,7 @@ func (m *filterManager) EncodeHeaders(header api.ResponseHeaderMap, endStream bo
 				}
 
 				// no body
-				res = f.EncodeResponse(header, nil, nil)
+				res = f.EncodeResponse(headers, nil, nil)
 				if m.handleAction(res, phaseEncodeResponse) {
 					return
 				}
