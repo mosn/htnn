@@ -66,13 +66,13 @@ func TestOpaRemote(t *testing.T) {
 					"host":   "localhost",
 					"path":   "/",
 					"query": map[string]interface{}{
-						"a": []interface{}{"1"},
-						"b": []interface{}{""},
-						"c": []interface{}{"true", "foo"},
+						"a": "1",
+						"b": "",
+						"c": "true,foo",
 					},
 					"headers": map[string]interface{}{
-						"pet":   []interface{}{"cat"},
-						"fruit": []interface{}{"apple", "banana"},
+						"pet":   "cat",
+						"fruit": "apple,banana",
 					},
 				}, input["input"].(map[string]interface{})["request"])
 			},
@@ -144,8 +144,8 @@ func TestOpaLocal(t *testing.T) {
 				allow {
 					request.method == "GET"
 					request.path == "/"
-					some "apple" in request.headers.fruit
-					some "true" in request.query.c
+					startswith(request.headers.fruit, "apple")
+					startswith(request.query.c, "true")
 				}`,
 		},
 		{
@@ -154,7 +154,7 @@ func TestOpaLocal(t *testing.T) {
 				import future.keywords
 				default allow = false
 				allow {
-					some true in request.query.c
+					endswith(request.query.c, "true")
 				}`,
 			status: 403,
 		},

@@ -71,25 +71,6 @@ func TestBadConfig(t *testing.T) {
 			}`,
 			err: "invalid Local.Text: value length must be at least 1 runes",
 		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			conf := &config{}
-			protojson.Unmarshal([]byte(tt.input), conf)
-			err := conf.Validate()
-			assert.NotNil(t, err)
-			assert.ErrorContains(t, err, tt.err)
-		})
-	}
-}
-
-func TestConfigInit(t *testing.T) {
-	tests := []struct {
-		name  string
-		input string
-		err   string
-	}{
 		{
 			name: "bad text in local",
 			input: `{
@@ -114,7 +95,7 @@ func TestConfigInit(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			conf := &config{}
 			protojson.Unmarshal([]byte(tt.input), conf)
-			err := conf.Init(nil)
+			err := conf.Validate()
 			assert.NotNil(t, err)
 			assert.ErrorContains(t, err, tt.err)
 		})
