@@ -60,8 +60,6 @@ const (
 	defaultTimeoutMs     = 5 * 1000
 	defaultLogLevel      = "warn"
 	defaultNotLoadCache  = true
-	defaultLogDir        = "/var/log/htnn/nacos/log/"
-	defaultCacheDir      = "/var/log/htnn/nacos/cache/"
 	defaultLogMaxDays    = 3
 	defaultLogMaxSizeMB  = 100
 
@@ -248,12 +246,11 @@ func (reg *Nacos) newClient(config *Config) (*nacosClient, error) {
 		constant.WithTimeoutMs(defaultTimeoutMs),
 		constant.WithLogLevel(defaultLogLevel),
 		constant.WithNotLoadCacheAtStart(defaultNotLoadCache),
-		constant.WithLogDir(defaultLogDir),
 		constant.WithLogRollingConfig(&lumberjack.Logger{
 			MaxSize: defaultLogMaxSizeMB,
 			MaxAge:  defaultLogMaxDays,
 		}),
-		constant.WithCacheDir(defaultCacheDir),
+		// To simplify the permissions, use the path under current work dir to store log & cache
 	)
 
 	sc := []constant.ServerConfig{
