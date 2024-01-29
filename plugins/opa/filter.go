@@ -109,8 +109,8 @@ func (f *filter) isAllowed(input map[string]interface{}) (bool, error) {
 	return result, nil
 }
 
-func (f *filter) DecodeHeaders(header api.RequestHeaderMap, endStream bool) api.ResultAction {
-	input := f.buildInput(header)
+func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {
+	input := f.buildInput(headers)
 	allow, err := f.isAllowed(input)
 	if err != nil {
 		api.LogErrorf("failed to do OPA auth: %v", err)

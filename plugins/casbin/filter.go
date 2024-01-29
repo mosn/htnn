@@ -39,10 +39,10 @@ type filter struct {
 	config    *config
 }
 
-func (f *filter) DecodeHeaders(header api.RequestHeaderMap, endStream bool) api.ResultAction {
+func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {
 	conf := f.config
-	role, _ := header.Get(conf.Token.Name) // role can be ""
-	url := request.GetUrl(header)
+	role, _ := headers.Get(conf.Token.Name) // role can be ""
+	url := request.GetUrl(headers)
 
 	policyChanged := file.IsChanged(conf.modelFile, conf.policyFile)
 	if policyChanged && !conf.updating.Load() {
@@ -66,7 +66,7 @@ func (f *filter) DecodeHeaders(header api.RequestHeaderMap, endStream bool) api.
 	}
 
 	conf.lock.RLock()
-	ok, err := f.config.enforcer.Enforce(role, url.Path, header.Method())
+	ok, err := f.config.enforcer.Enforce(role, url.Path, headers.Method())
 	conf.lock.RUnlock()
 
 	if !ok {
