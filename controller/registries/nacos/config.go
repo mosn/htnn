@@ -157,7 +157,7 @@ func (reg *Nacos) getServiceEntryKey(groupName string, serviceName string) strin
 	suffix := strings.Join([]string{groupName, reg.client.Namespace, reg.name, RegistryType}, ".")
 	suffix = strings.ReplaceAll(suffix, "_", "-")
 	host := strings.Join([]string{serviceName, suffix}, ".")
-	return host
+	return strings.ToLower(host)
 }
 
 func (reg *Nacos) getSubscribeCallback(groupName string, serviceName string) func(services []model.SubscribeService, err error) {

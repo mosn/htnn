@@ -16,7 +16,6 @@ package registry
 
 import (
 	"context"
-	"strings"
 	"sync"
 	"time"
 
@@ -48,13 +47,7 @@ func newServiceEntryStore(client client.Client) *serviceEntryStore {
 	}
 }
 
-func normalizeK8sName(service string) string {
-	return strings.ToLower(service)
-}
-
 func (store *serviceEntryStore) Update(service string, se *pkgRegistry.ServiceEntryWrapper) {
-	service = normalizeK8sName(service)
-
 	store.lock.Lock()
 	defer store.lock.Unlock()
 	store.entries[service] = se
@@ -76,8 +69,6 @@ func (store *serviceEntryStore) Update(service string, se *pkgRegistry.ServiceEn
 // Implement ServiceEntryStore interface
 
 func (store *serviceEntryStore) Delete(service string) {
-	service = normalizeK8sName(service)
-
 	store.lock.Lock()
 	defer store.lock.Unlock()
 	if _, ok := store.entries[service]; !ok {

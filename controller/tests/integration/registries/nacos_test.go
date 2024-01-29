@@ -156,7 +156,7 @@ var _ = Describe("Nacos", func() {
 		}, timeout, interval).Should(BeTrue())
 
 		Expect(entries[0].Name).To(Equal("test.default-group.public.default.nacos"))
-		Expect(entries[0].Spec.GetHosts()).To(Equal([]string{"test.DEFAULT-GROUP.public.default.nacos"}))
+		Expect(entries[0].Spec.GetHosts()).To(Equal([]string{"test.default-group.public.default.nacos"}))
 		Expect(entries[0].Spec.Location).To(Equal(istioapi.ServiceEntry_MESH_INTERNAL))
 		Expect(entries[0].Spec.Resolution).To(Equal(istioapi.ServiceEntry_STATIC))
 		Expect(len(entries[0].Spec.Endpoints)).To(Equal(1))
