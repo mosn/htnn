@@ -18,7 +18,6 @@
 package nacos
 
 import (
-	"errors"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -32,6 +31,7 @@ import (
 	"github.com/nacos-group/nacos-sdk-go/common/constant"
 	"github.com/nacos-group/nacos-sdk-go/model"
 	"github.com/nacos-group/nacos-sdk-go/vo"
+	"gopkg.in/natefinch/lumberjack.v2"
 	istioapi "istio.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -60,6 +60,10 @@ const (
 	defaultTimeoutMs     = 5 * 1000
 	defaultLogLevel      = "warn"
 	defaultNotLoadCache  = true
+	defaultLogDir        = "/var/log/htnn/nacos/log/"
+	defaultCacheDir      = "/var/log/htnn/nacos/cache/"
+	defaultLogMaxDays    = 3
+	defaultLogMaxSizeMB  = 100
 
 	RegistryType = "nacos"
 )
@@ -227,12 +231,10 @@ func (reg *Nacos) generateServiceEntry(host string, services []model.SubscribeSe
 	}
 }
 
-func (reg *Nacos) Start(c registry.RegistryConfig) error {
-	config := c.(*Config)
-
+func (reg *Nacos) newClient(config *Config) (*nacosClient, error) {
 	uri, err := url.Parse(config.ServerUrl)
 	if err != nil {
-		return fmt.Errorf("invalid server url: %s", config.ServerUrl)
+		return nil, fmt.Errorf("invalid server url: %s", config.ServerUrl)
 	}
 
 	domain := uri.Hostname()
@@ -246,7 +248,12 @@ func (reg *Nacos) Start(c registry.RegistryConfig) error {
 		constant.WithTimeoutMs(defaultTimeoutMs),
 		constant.WithLogLevel(defaultLogLevel),
 		constant.WithNotLoadCacheAtStart(defaultNotLoadCache),
-		// To simplify the permissions, use the path under current work dir to store log & cache
+		constant.WithLogDir(defaultLogDir),
+		constant.WithLogRollingConfig(&lumberjack.Logger{
+			MaxSize: defaultLogMaxSizeMB,
+			MaxAge:  defaultLogMaxDays,
+		}),
+		constant.WithCacheDir(defaultCacheDir),
 	)
 
 	sc := []constant.ServerConfig{
@@ -260,7 +267,7 @@ func (reg *Nacos) Start(c registry.RegistryConfig) error {
 		ServerConfigs: sc,
 	})
 	if err != nil {
-		return fmt.Errorf("can not create naming client, err: %v", err)
+		return nil, fmt.Errorf("can not create naming client, err: %v", err)
 	}
 
 	if config.Namespace == "" {
@@ -269,17 +276,26 @@ func (reg *Nacos) Start(c registry.RegistryConfig) error {
 	if len(config.Groups) == 0 {
 		config.Groups = []string{"DEFAULT_GROUP"}
 	}
-	client := &nacosClient{
+	return &nacosClient{
 		Groups:       config.Groups,
 		Namespace:    config.Namespace,
 		namingClient: namingClient,
+	}, nil
+}
+
+func (reg *Nacos) Start(c registry.RegistryConfig) error {
+	config := c.(*Config)
+
+	client, err := reg.newClient(config)
+	if err != nil {
+		return err
 	}
-	reg.client = client
 
 	fetchedServices, err := reg.fetchAllServices(client)
 	if err != nil {
 		return fmt.Errorf("fetch all services error: %v", err)
 	}
+	reg.client = client
 
 	for key := range fetchedServices {
 		err = reg.subscribe(key.GroupName, key.ServiceName)
@@ -369,8 +385,45 @@ func (reg *Nacos) Stop() error {
 	return nil
 }
 
-func (reg *Nacos) Reload(registry.RegistryConfig) error {
-	return errors.New("TODO")
+func (reg *Nacos) Reload(c registry.RegistryConfig) error {
+	config := c.(*Config)
+
+	client, err := reg.newClient(config)
+	if err != nil {
+		return err
+	}
+
+	fetchedServices, err := reg.fetchAllServices(client)
+	if err != nil {
+		return fmt.Errorf("fetch all services error: %v", err)
+	}
+
+	reg.lock.Lock()
+	defer reg.lock.Unlock()
+
+	for key := range reg.watchingServices {
+		// unsubscribe with the previous client
+		if _, ok := fetchedServices[key]; !ok {
+			reg.removeService(key)
+		} else {
+			err = reg.unsubscribe(key.GroupName, key.ServiceName)
+			if err != nil {
+				logger.Error(err, "failed to unsubscribe service", "service", key)
+			}
+		}
+	}
+
+	reg.client = client
+
+	for key := range fetchedServices {
+		err = reg.subscribe(key.GroupName, key.ServiceName)
+		if err != nil {
+			logger.Error(err, "failed to subscribe service", "service", key)
+		}
+	}
+	reg.watchingServices = fetchedServices
+
+	return nil
 }
 
 func (reg *Nacos) Config() registry.RegistryConfig {
