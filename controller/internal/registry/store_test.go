@@ -20,25 +20,17 @@ import (
 
 	"github.com/agiledragon/gomonkey/v2"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	istioapi "istio.io/api/networking/v1beta1"
 	istiov1b1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	pkgRegistry "mosn.io/htnn/controller/pkg/registry"
+	"mosn.io/htnn/controller/tests/pkg"
 )
 
-func fakeClient(t *testing.T) client.Client {
-	cfg := &rest.Config{}
-	k8sClient, err := client.New(cfg, client.Options{})
-	require.NoError(t, err)
-	return k8sClient
-}
-
 func TestSync(t *testing.T) {
-	store := newServiceEntryStore(fakeClient(t))
+	store := newServiceEntryStore(pkg.FakeK8sClient(t))
 
 	var created, updated, deleted bool
 
