@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package cel
+package expr
 
 import (
 	"fmt"
@@ -55,7 +55,7 @@ var (
 	})
 )
 
-type Script struct {
+type CelScript struct {
 	program cel.Program
 }
 
@@ -71,7 +71,7 @@ func compile(env *cel.Env, expr string, celType *cel.Type) (*cel.Ast, error) {
 	return ast, nil
 }
 
-func Compile(expr string, returnType *cel.Type) (*Script, error) {
+func CompileCel(expr string, returnType *cel.Type) (Script, error) {
 	initCelEnv()
 	ast, err := compile(celEnv, expr, returnType)
 	if err != nil {
@@ -79,7 +79,7 @@ func Compile(expr string, returnType *cel.Type) (*Script, error) {
 	}
 	program, _ := celEnv.Program(ast)
 
-	s := &Script{
+	s := &CelScript{
 		program: program,
 	}
 	return s, nil
@@ -94,7 +94,7 @@ var varsPool = sync.Pool{
 	},
 }
 
-func EvalRequest(s *Script, cb api.FilterCallbackHandler, headers api.RequestHeaderMap) (any, error) {
+func (s *CelScript) EvalWithRequest(cb api.FilterCallbackHandler, headers api.RequestHeaderMap) (any, error) {
 	vars := varsPool.Get().(map[string]any)
 	r := vars["request"].(*request)
 	r.headers = headers
