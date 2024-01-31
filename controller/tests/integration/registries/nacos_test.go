@@ -35,6 +35,10 @@ import (
 	"mosn.io/htnn/controller/tests/pkg"
 )
 
+var (
+	currNacos *mosniov1.ServiceRegistry
+)
+
 func enableNacos(nacosInstance string) {
 	input := []map[string]interface{}{}
 	fn := filepath.Join("testdata", "nacos", nacosInstance+".yml")
@@ -44,6 +48,7 @@ func enableNacos(nacosInstance string) {
 		Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
 		Eventually(func() bool {
 			err := k8sClient.Get(ctx, client.ObjectKey{Name: nacosInstance, Namespace: "default"}, obj)
+			currNacos = obj.(*mosniov1.ServiceRegistry)
 			return err == nil
 		}, 10*time.Millisecond, 5*time.Second).Should(BeTrue())
 	}
@@ -151,7 +156,7 @@ var _ = Describe("Nacos", func() {
 		}, timeout, interval).Should(BeTrue())
 
 		Expect(entries[0].Name).To(Equal("test.default-group.public.default.nacos"))
-		Expect(entries[0].Spec.GetHosts()).To(Equal([]string{"test.DEFAULT-GROUP.public.default.nacos"}))
+		Expect(entries[0].Spec.GetHosts()).To(Equal([]string{"test.default-group.public.default.nacos"}))
 		Expect(entries[0].Spec.Location).To(Equal(istioapi.ServiceEntry_MESH_INTERNAL))
 		Expect(entries[0].Spec.Resolution).To(Equal(istioapi.ServiceEntry_STATIC))
 		Expect(len(entries[0].Spec.Endpoints)).To(Equal(1))
@@ -173,14 +178,6 @@ var _ = Describe("Nacos", func() {
 			entries = listServiceEntries()
 			return len(entries[0].Spec.Endpoints) == 1
 		}, timeout, interval).Should(BeTrue())
-
-		deregisterInstance("8848", "test", "1.2.3.5", "8080")
-		deleteService("8848", "test")
-
-		Eventually(func() bool {
-			entries := listServiceEntries()
-			return len(entries) == 0
-		}, timeout, interval).Should(BeTrue())
 	})
 
 	It("stop nacos should remove service entries", func() {
@@ -199,4 +196,61 @@ var _ = Describe("Nacos", func() {
 			return len(entries) == 0
 		}, timeout, interval).Should(BeTrue())
 	})
+
+	It("reload", func() {
+		registerInstance("8848", "test", "1.2.3.4", "8080", nil)
+		registerInstance("8848", "test1", "1.2.3.4", "8080", nil)
+		registerInstance("8848", "test2", "1.2.3.4", "8080", nil)
+		registerInstance("8849", "test", "1.2.3.5", "8080", nil)
+		registerInstance("8849", "test3", "1.2.3.5", "8080", nil)
+
+		// old
+		enableNacos("default")
+		var entries []*istiov1b1.ServiceEntry
+		Eventually(func() bool {
+			entries = listServiceEntries()
+			return len(entries) == 3
+		}, timeout, interval).Should(BeTrue())
+		Expect(entries[0].Spec.Endpoints[0].Address).To(Equal("1.2.3.4"))
+
+		// new
+		base := client.MergeFrom(currNacos.DeepCopy())
+		currNacos.Spec.Config.Raw = []byte(`{"serviceRefreshInterval":"1s", "serverUrl":"http://127.0.0.1:8849"}`)
+		Expect(k8sClient.Patch(ctx, currNacos, base)).Should(Succeed())
+		Eventually(func() bool {
+			entries = listServiceEntries()
+			return len(entries) == 2 && entries[0].Spec.Endpoints[0].Address == "1.2.3.5"
+		}, timeout, interval).Should(BeTrue())
+
+		// refresh & unsubscribe
+		deleteService("8849", "test3")
+		time.Sleep(1 * time.Second)
+		entries = listServiceEntries()
+		Expect(len(entries)).To(Equal(2))
+
+		// ServiceEntry is removed only when the configuration changed
+		base = client.MergeFrom(currNacos.DeepCopy())
+		currNacos.Spec.Config.Raw = []byte(`{"serviceRefreshInterval":"2s", "serverUrl":"http://127.0.0.1:8849"}`)
+		Expect(k8sClient.Patch(ctx, currNacos, base)).Should(Succeed())
+		Eventually(func() bool {
+			entries = listServiceEntries()
+			return len(entries) == 2
+		}, timeout, interval).Should(BeTrue())
+
+		// subscribe change
+		registerInstance("8849", "test", "1.2.4.5", "8080", nil)
+		deleteService("8848", "test") // should be ignored
+		Eventually(func() bool {
+			entries = listServiceEntries()
+			return len(entries[0].Spec.Endpoints) == 2
+		}, timeout, interval).Should(BeTrue())
+
+		// unsubscribe
+		disableNacos("default")
+		Eventually(func() bool {
+			entries := listServiceEntries()
+			return len(entries) == 0
+		}, timeout, interval).Should(BeTrue())
+	})
+
 })

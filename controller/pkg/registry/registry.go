@@ -77,7 +77,9 @@ type ServiceEntryWrapper struct {
 	Source string
 }
 
-// ServiceEntryStore is the store of ServiceEntryWrapper
+// ServiceEntryStore is the store of ServiceEntryWrapper. The service must be a valid k8s service name.
+// It will be used as both the name of the ServiceEntry used by Istio (the unique key in control plane),
+// and the domain of the cluster used by Envoy (the unique key in data plane).
 type ServiceEntryStore interface {
 	Update(service string, se *ServiceEntryWrapper)
 	Delete(service string)

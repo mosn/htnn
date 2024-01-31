@@ -21,7 +21,7 @@ title: Nacos
 
 Nacos 1.x 没有提供订阅当前服务列表的接口，所以只能通过轮询来获取服务列表。配置一个较小的值可以更快得知服务被删除，但是会给 Nacos 带来更大的压力。
 
-注意：由于心跳间隔、网络延迟等原因，服务的变化可能需要几十秒之后才会引起 `ServiceEntry` 改变。尤其是因为 https://github.com/nacos-group/nacos-sdk-go/issues/139，服务中最后一个示例的移除不会导致 `ServiceEntry` 改变，直到所在服务被删除且 HTNN 通过轮询得知该删除事件。
+注意：由于心跳间隔、网络延迟等原因，服务的变化可能需要几十秒之后才会引起 `ServiceEntry` 改变。尤其是因为 https://github.com/nacos-group/nacos-sdk-go/issues/139，服务中最后一个示例的移除不会导致 `ServiceEntry` 改变。另外，为了避免因为轮询失败或 Nacos 暂时不可用导致 `ServiceEntry` 被错误删除，只有在 registry 配置变化时，才会清除生成的 `ServiceEntry`。
 
 ## 用法
 

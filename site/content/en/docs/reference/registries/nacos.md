@@ -20,7 +20,7 @@ The `nacos` registry interfaces with [Nacos](https://nacos.io/) service discover
 
 Nacos 1.x does not provide an API to subscribe to the current service list, so polling is the only way to retrieve the service list. Configuring a smaller value can allow for quicker detection of service deletions, but will place more pressure on Nacos.
 
-Note: Due to heartbeat intervals, network latencies, and other factors, changes to services may take several seconds to result in updates to `ServiceEntry`. Especially due to https://github.com/nacos-group/nacos-sdk-go/issues/139, the removal of the last instance in a service will not lead to changes in `ServiceEntry` until the service is deleted and HTNN discovers this deletion event through polling.
+Note: Due to heartbeat intervals, network latencies, and other factors, it may take several seconds for changes in services to affect the `ServiceEntry`. In particular, because of https://github.com/nacos-group/nacos-sdk-go/issues/139, the removal of the last instance in a service will not lead to a change in `ServiceEntry`. Additionally, to prevent `ServiceEntry` from being mistakenly deleted due to polling failures or temporary unavailability of Nacos, the generated `ServiceEntry` will only be cleared when there are changes to the registry configuration.
 
 ## Usage
 

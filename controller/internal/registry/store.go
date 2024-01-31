@@ -16,7 +16,6 @@ package registry
 
 import (
 	"context"
-	"strings"
 	"sync"
 	"time"
 
@@ -35,7 +34,7 @@ type serviceEntryStore struct {
 	client client.Client
 
 	lock    sync.RWMutex
-	entries map[string]*pkgRegistry.ServiceEntryWrapper
+	entries map[string]*istiov1b1.ServiceEntry
 
 	syncInterval time.Duration
 }
@@ -43,41 +42,40 @@ type serviceEntryStore struct {
 func newServiceEntryStore(client client.Client) *serviceEntryStore {
 	return &serviceEntryStore{
 		client:       client,
-		entries:      make(map[string]*pkgRegistry.ServiceEntryWrapper),
+		entries:      make(map[string]*istiov1b1.ServiceEntry),
 		syncInterval: 20 * time.Second,
 	}
 }
 
-func normalizeK8sName(service string) string {
-	return strings.ToLower(service)
-}
-
 func (store *serviceEntryStore) Update(service string, se *pkgRegistry.ServiceEntryWrapper) {
-	service = normalizeK8sName(service)
-
 	store.lock.Lock()
 	defer store.lock.Unlock()
-	store.entries[service] = se
 
 	ctx := context.Background()
 	var obj istiov1b1.ServiceEntry
-	if err := store.getFromK8s(ctx, service, &obj); err != nil {
-		if !apierrors.IsNotFound(err) {
-			logger.Error(err, "failed to get service entry from k8s", "service", service)
-			return
-		}
+	var latestServiceEntry *istiov1b1.ServiceEntry
 
-		store.addToK8s(ctx, service, &se.ServiceEntry)
+	if prev, ok := store.entries[service]; !ok {
+		if err := store.getFromK8s(ctx, service, &obj); err != nil {
+			if !apierrors.IsNotFound(err) {
+				logger.Error(err, "failed to get service entry from k8s", "service", service)
+				return
+			}
+
+			latestServiceEntry = store.addToK8s(ctx, service, &se.ServiceEntry)
+		} else {
+			latestServiceEntry = store.updateToK8s(ctx, &obj, &se.ServiceEntry)
+		}
 	} else {
-		store.updateToK8s(ctx, &obj, &se.ServiceEntry)
+		latestServiceEntry = store.updateToK8s(ctx, prev, &se.ServiceEntry)
 	}
+
+	store.entries[service] = latestServiceEntry
 }
 
 // Implement ServiceEntryStore interface
 
 func (store *serviceEntryStore) Delete(service string) {
-	service = normalizeK8sName(service)
-
 	store.lock.Lock()
 	defer store.lock.Unlock()
 	if _, ok := store.entries[service]; !ok {
@@ -114,7 +112,7 @@ func (store *serviceEntryStore) deleteFromK8s(ctx context.Context, se *istiov1b1
 	}
 }
 
-func (store *serviceEntryStore) addToK8s(ctx context.Context, service string, entry *istioapi.ServiceEntry) {
+func (store *serviceEntryStore) addToK8s(ctx context.Context, service string, entry *istioapi.ServiceEntry) *istiov1b1.ServiceEntry {
 	c := store.client
 	ns := config.RootNamespace()
 	se := istiov1b1.ServiceEntry{
@@ -131,13 +129,14 @@ func (store *serviceEntryStore) addToK8s(ctx context.Context, service string, en
 	err := c.Create(ctx, &se)
 	if err != nil {
 		logger.Error(err, "failed to create service entry to k8s", "service", service)
-		return
 	}
+
+	return &se
 }
 
-func (store *serviceEntryStore) updateToK8s(ctx context.Context, se *istiov1b1.ServiceEntry, entry *istioapi.ServiceEntry) {
+func (store *serviceEntryStore) updateToK8s(ctx context.Context, se *istiov1b1.ServiceEntry, entry *istioapi.ServiceEntry) *istiov1b1.ServiceEntry {
 	if proto.Equal(&se.Spec, entry) {
-		return
+		return se
 	}
 
 	c := store.client
@@ -146,8 +145,10 @@ func (store *serviceEntryStore) updateToK8s(ctx context.Context, se *istiov1b1.S
 	se.Spec = *entry.DeepCopy()
 	if err := c.Update(ctx, se); err != nil {
 		logger.Error(err, "failed to update service entry to k8s", "service", se.Name)
-		return
+		return se
 	}
+
+	return se
 }
 
 func (store *serviceEntryStore) sync() {
@@ -173,7 +174,7 @@ func (store *serviceEntryStore) sync() {
 	}
 
 	for service, wrp := range store.entries {
-		entry := &wrp.ServiceEntry
+		entry := &wrp.Spec
 		if se, ok := persisted[service]; !ok {
 			store.addToK8s(ctx, service, entry)
 		} else {
