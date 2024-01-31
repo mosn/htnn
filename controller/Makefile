@@ -14,6 +14,10 @@
 
 # Image URL to use all building/pushing image targets
 IMG ?= htnn-controller:latest
+# Use distroless as minimal base image to package the manager binary
+# Refer to https://github.com/GoogleContainerTools/distroless for more details
+CONTROLLER_BASE_IMAGE ?= gcr.io/distroless/static:nonroot
+
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.28.0
 
@@ -97,7 +101,9 @@ run: manifests generate ## Run a controller from your host.
 # More info: https://docs.docker.com/develop/develop-images/build_enhancements/
 .PHONY: docker-build
 docker-build: ## Build docker image with the manager.
-	cd .. && $(CONTAINER_TOOL) build -t ${IMG} --build-arg GOPROXY=${GOPROXY} -f controller/Dockerfile .
+	cd .. && $(CONTAINER_TOOL) build -t ${IMG} \
+		--build-arg GOPROXY=${GOPROXY} --build-arg CONTROLLER_BASE_IMAGE=${CONTROLLER_BASE_IMAGE} \
+		-f controller/Dockerfile .
 
 .PHONY: docker-push
 docker-push: ## Push docker image with the manager.
@@ -116,7 +122,8 @@ docker-buildx: ## Build and push docker image for the manager for cross-platform
 	sed -e '1 s/\(^FROM\)/FROM --platform=\$$\{BUILDPLATFORM\}/; t' -e ' 1,// s//FROM --platform=\$$\{BUILDPLATFORM\}/' Dockerfile > Dockerfile.cross
 	cd .. && $(CONTAINER_TOOL) buildx create --name project-v3-builder; \
 	$(CONTAINER_TOOL) buildx use project-v3-builder && \
-	$(CONTAINER_TOOL) buildx build --push --platform=$(PLATFORMS) --tag ${IMG} --build-arg GOPROXY=${GOPROXY} \
+	$(CONTAINER_TOOL) buildx build --push --platform=$(PLATFORMS) --tag ${IMG} \
+		--build-arg GOPROXY=${GOPROXY} --build-arg CONTROLLER_BASE_IMAGE=${CONTROLLER_BASE_IMAGE} \
 		-f controller/Dockerfile.cross . ; \
 	$(CONTAINER_TOOL) buildx rm project-v3-builder
 	rm Dockerfile.cross
