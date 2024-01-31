@@ -178,14 +178,6 @@ var _ = Describe("Nacos", func() {
 			entries = listServiceEntries()
 			return len(entries[0].Spec.Endpoints) == 1
 		}, timeout, interval).Should(BeTrue())
-
-		deregisterInstance("8848", "test", "1.2.3.5", "8080")
-		deleteService("8848", "test")
-
-		Eventually(func() bool {
-			entries := listServiceEntries()
-			return len(entries) == 0
-		}, timeout, interval).Should(BeTrue())
 	})
 
 	It("stop nacos should remove service entries", func() {
@@ -232,9 +224,17 @@ var _ = Describe("Nacos", func() {
 
 		// refresh & unsubscribe
 		deleteService("8849", "test3")
+		time.Sleep(1 * time.Second)
+		entries = listServiceEntries()
+		Expect(len(entries)).To(Equal(2))
+
+		// ServiceEntry is removed only when the configuration changed
+		base = client.MergeFrom(currNacos.DeepCopy())
+		currNacos.Spec.Config.Raw = []byte(`{"serviceRefreshInterval":"2s", "serverUrl":"http://127.0.0.1:8849"}`)
+		Expect(k8sClient.Patch(ctx, currNacos, base)).Should(Succeed())
 		Eventually(func() bool {
 			entries = listServiceEntries()
-			return len(entries) == 1
+			return len(entries) == 2
 		}, timeout, interval).Should(BeTrue())
 
 		// subscribe change

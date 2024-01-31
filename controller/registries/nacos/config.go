@@ -55,7 +55,7 @@ func init() {
 }
 
 const (
-	defaultFetchPageSize = 50
+	defaultFetchPageSize = 1000
 	defaultNacosPort     = 8848
 	defaultTimeoutMs     = 5 * 1000
 	defaultLogLevel      = "warn"
@@ -94,6 +94,16 @@ func (reg *Nacos) fetchAllServices(client *nacosClient) (map[nacosService]bool, 
 	fetchedServices := make(map[nacosService]bool)
 	for _, groupName := range client.Groups {
 		for page := 1; ; page++ {
+			// Nacos v1 doesn't provide a method to return all services in a call.
+			// We use a large page size to reduce the race but there is still chance
+			// that a service is missed. When the Nacos is starting or down (as discussed
+			// in https://github.com/alibaba/higress/discussions/769), there is also a chance
+			// that the ServiceEntry mismatches the service.
+			//
+			// Missing to add a new service will be solved by the next refresh.
+			// We also use soft-deletion to avoid the ServiceEntry mismatch. The ServiceEntry
+			// will be deleted only when the registry's configuration changes or an empty host list
+			// is returned from the subscription.
 			ss, err := client.namingClient.GetAllServicesInfo(vo.GetAllServiceInfoParam{
 				GroupName: groupName,
 				PageNo:    uint32(page),
@@ -362,7 +372,11 @@ func (reg *Nacos) refresh() error {
 
 	for key := range prevFetchServices {
 		if _, ok := fetchedServices[key]; !ok {
-			reg.removeService(key)
+			err := reg.unsubscribe(key.GroupName, key.ServiceName)
+			if err != nil {
+				logger.Error(err, "failed to unsubscribe service", "service", key)
+				// the upcoming event will be thrown away
+			}
 		}
 	}
 
