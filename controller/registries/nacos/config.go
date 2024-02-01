@@ -46,9 +46,10 @@ var (
 func init() {
 	registry.AddRegistryFactory("nacos", func(store registry.ServiceEntryStore, om metav1.ObjectMeta) (registry.Registry, error) {
 		reg := &Nacos{
-			store: store,
-			name:  om.Name,
-			done:  make(chan struct{}),
+			store:               store,
+			name:                om.Name,
+			softDeletedServices: map[nacosService]bool{},
+			done:                make(chan struct{}),
 		}
 		return reg, nil
 	})
@@ -83,8 +84,9 @@ type Nacos struct {
 	name   string
 	client *nacosClient
 
-	lock             sync.RWMutex
-	watchingServices map[nacosService]bool
+	lock                sync.RWMutex
+	watchingServices    map[nacosService]bool
+	softDeletedServices map[nacosService]bool
 
 	done    chan struct{}
 	stopped atomic.Bool
@@ -351,13 +353,13 @@ func (reg *Nacos) removeService(key nacosService) {
 }
 
 func (reg *Nacos) refresh() error {
+	reg.lock.Lock()
+	defer reg.lock.Unlock()
+
 	fetchedServices, err := reg.fetchAllServices(reg.client)
 	if err != nil {
 		return fmt.Errorf("fetch all services error: %v", err)
 	}
-
-	reg.lock.Lock()
-	defer reg.lock.Unlock()
 
 	for key := range fetchedServices {
 		if _, ok := reg.watchingServices[key]; !ok {
@@ -377,6 +379,7 @@ func (reg *Nacos) refresh() error {
 				logger.Error(err, "failed to unsubscribe service", "service", key)
 				// the upcoming event will be thrown away
 			}
+			reg.softDeletedServices[key] = true
 		}
 	}
 
@@ -390,6 +393,11 @@ func (reg *Nacos) Stop() error {
 	reg.lock.Lock()
 	defer reg.lock.Unlock()
 
+	for key := range reg.softDeletedServices {
+		if _, ok := reg.watchingServices[key]; !ok {
+			reg.store.Delete(reg.getServiceEntryKey(key.GroupName, key.ServiceName))
+		}
+	}
 	for key := range reg.watchingServices {
 		reg.removeService(key)
 	}
@@ -404,13 +412,20 @@ func (reg *Nacos) Reload(c registry.RegistryConfig) error {
 		return err
 	}
 
+	reg.lock.Lock()
+	defer reg.lock.Unlock()
+
 	fetchedServices, err := reg.fetchAllServices(client)
 	if err != nil {
 		return fmt.Errorf("fetch all services error: %v", err)
 	}
 
-	reg.lock.Lock()
-	defer reg.lock.Unlock()
+	for key := range reg.softDeletedServices {
+		if _, ok := fetchedServices[key]; !ok {
+			reg.store.Delete(reg.getServiceEntryKey(key.GroupName, key.ServiceName))
+		}
+	}
+	reg.softDeletedServices = map[nacosService]bool{}
 
 	for key := range reg.watchingServices {
 		// unsubscribe with the previous client
