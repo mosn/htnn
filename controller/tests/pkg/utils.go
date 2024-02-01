@@ -17,15 +17,19 @@ package pkg
 import (
 	"encoding/json"
 	"strings"
+	"testing"
 
+	"github.com/stretchr/testify/require"
 	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	istiov1b1 "istio.io/client-go/pkg/apis/networking/v1beta1"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	mosniov1 "mosn.io/htnn/controller/api/v1"
 )
 
+// MapToObj convert the Go struct to k8s client.Object
 func MapToObj(in map[string]interface{}) client.Object {
 	var out client.Object
 	data, _ := json.Marshal(in)
@@ -61,4 +65,12 @@ func MapToObj(in map[string]interface{}) client.Object {
 	}
 	json.Unmarshal(data, out)
 	return out
+}
+
+// FakeK8sClient returns a fake k8s client that can be mocked for testing
+func FakeK8sClient(t *testing.T) client.Client {
+	cfg := &rest.Config{}
+	k8sClient, err := client.New(cfg, client.Options{})
+	require.NoError(t, err)
+	return k8sClient
 }

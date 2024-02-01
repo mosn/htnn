@@ -28,10 +28,11 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	mosniov1 "mosn.io/htnn/controller/api/v1"
+	"mosn.io/htnn/controller/tests/pkg"
 )
 
 func TestVirtualServiceIndexer(t *testing.T) {
-	r := &mockReader{}
+	r := pkg.FakeK8sClient(t)
 	vsi := &VirtualServiceIndexer{r: r}
 	vs := vsi.CustomerResource()
 	assert.Equal(t, &istiov1b1.VirtualService{}, vs)
