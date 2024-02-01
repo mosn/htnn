@@ -25,7 +25,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	pkgRegistry "mosn.io/htnn/controller/pkg/registry"
 	"mosn.io/htnn/controller/tests/pkg"
 )
 
@@ -69,16 +68,16 @@ func TestSync(t *testing.T) {
 	})
 	defer patches.Reset()
 
-	store.entries = map[string]*pkgRegistry.ServiceEntryWrapper{
+	store.entries = map[string]*istiov1b1.ServiceEntry{
 		// To update
 		"update": {
-			ServiceEntry: istioapi.ServiceEntry{
+			Spec: istioapi.ServiceEntry{
 				Hosts: []string{"after"},
 			},
 		},
 		// To add
 		"add": {
-			ServiceEntry: istioapi.ServiceEntry{
+			Spec: istioapi.ServiceEntry{
 				Hosts: []string{"add"},
 			},
 		},

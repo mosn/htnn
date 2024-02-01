@@ -41,7 +41,23 @@ type filter struct {
 func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {
 	config := f.config
 
-	key := request.GetRemoteIP(f.callbacks.StreamInfo())
+	var key string
+	if config.script != nil {
+		res, err := config.script.EvalWithRequest(f.callbacks, headers)
+		if err != nil {
+			api.LogErrorf("failed to eval script with request: %v", err)
+			return &api.LocalResponse{Code: 503}
+		}
+
+		key = res.(string)
+		if key == "" {
+			api.LogInfof("limitReq filter uses client IP as key because the configured key is empty")
+			key = request.GetRemoteIP(f.callbacks.StreamInfo())
+		}
+
+	} else {
+		key = request.GetRemoteIP(f.callbacks.StreamInfo())
+	}
 
 	// Get also extends the ttl
 	bucket := config.buckets.Get(key)

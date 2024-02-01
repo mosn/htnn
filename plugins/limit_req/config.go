@@ -18,9 +18,11 @@ import (
 	"runtime"
 	"time"
 
+	"github.com/google/cel-go/cel"
 	"github.com/jellydator/ttlcache/v3"
 	"golang.org/x/time/rate"
 
+	"mosn.io/htnn/pkg/expr"
 	"mosn.io/htnn/pkg/filtermanager/api"
 	"mosn.io/htnn/pkg/plugins"
 )
@@ -62,6 +64,23 @@ type config struct {
 	// Like traefik, we also require a max delay to avoid holding the requests for unlimited time.
 	// The delay is 1/(2*rps) by default, and 500ms if the rps is less than 1.
 	maxDelay time.Duration
+
+	script expr.Script
+}
+
+func (conf *config) Validate() error {
+	err := conf.Config.Validate()
+	if err != nil {
+		return err
+	}
+
+	if conf.Key != "" {
+		_, err = expr.CompileCel(conf.Key, cel.StringType)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (conf *config) Init(cb api.ConfigCallbackHandler) error {
@@ -103,5 +122,8 @@ func (conf *config) Init(cb api.ConfigCallbackHandler) error {
 		conf.buckets.Stop()
 	})
 
+	if conf.Key != "" {
+		conf.script, _ = expr.CompileCel(conf.Key, cel.StringType)
+	}
 	return nil
 }

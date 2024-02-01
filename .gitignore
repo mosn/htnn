@@ -25,9 +25,5 @@ site/resources/
 site/.hugo_build.lock
 # dev files
 controller/config/config.yaml
-controller/cache
-controller/log
-controller/tests/integration/controller/cache
-controller/tests/integration/controller/log
-controller/tests/integration/registries/cache
-controller/tests/integration/registries/log
+controller/**/cache
+controller/**/log

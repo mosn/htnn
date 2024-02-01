@@ -143,4 +143,4 @@ spec:
 
 If the authentication result is for a prestigious VIP member, then the `average` configuration would be 10. If it's a regular member, then the corresponding configuration would be just 1.
 
-Unlike consumers in Kong/APISIX, HTNN's consumers are at the `namespace` level. Consumers from different `namespaces` will only apply to the Routes within their respective `namespace` configurations (HTTPRoute, VirtualService, etc.). This design prevents consumer conflicts between different business units.
+Unlike consumers in some gateways, HTNN's consumers are at the `namespace` level. Consumers from different `namespaces` will only apply to the Routes within their respective `namespace` configurations (HTTPRoute, VirtualService, etc.). This design prevents consumer conflicts between different business units.

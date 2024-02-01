@@ -37,7 +37,7 @@ func (f *filter) reject(msg string) api.ResultAction {
 	return &api.LocalResponse{Code: 403, Msg: msg}
 }
 
-func (f *filter) DecodeHeaders(header api.RequestHeaderMap, endStream bool) api.ResultAction {
+func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {
 	consumer := f.callbacks.GetConsumer()
 	if consumer == nil {
 		api.LogInfo("consumerRestriction: consumer not found")

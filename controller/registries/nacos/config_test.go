@@ -15,9 +15,12 @@
 package nacos
 
 import (
+	"errors"
 	"testing"
 
+	"github.com/agiledragon/gomonkey/v2"
 	"github.com/nacos-group/nacos-sdk-go/model"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
 	istioapi "istio.io/api/networking/v1beta1"
@@ -67,4 +70,43 @@ func TestGenerateServiceEntry(t *testing.T) {
 			require.True(t, proto.Equal(se.ServiceEntry.Endpoints[0], tt.endpoint))
 		})
 	}
+}
+
+func TestUnsubscribeInReload(t *testing.T) {
+	prevClient := &nacosClient{}
+	reg := &Nacos{
+		store:  registry.FakeServiceEntryStore(),
+		client: prevClient,
+		watchingServices: map[nacosService]bool{
+			{
+				GroupName:   "g",
+				ServiceName: "s",
+			}: true,
+		},
+	}
+
+	unsubscribed := false
+	patches := gomonkey.ApplyPrivateMethod(reg, "fetchAllServices", func(client *nacosClient) (map[nacosService]bool, error) {
+		return map[nacosService]bool{
+			{
+				GroupName:   "g",
+				ServiceName: "s",
+			}: true,
+		}, nil
+	})
+	patches.ApplyPrivateMethod(reg, "subscribe", func(groupName string, serviceName string) error { return nil })
+	patches.ApplyPrivateMethod(reg, "unsubscribe", func(groupName string, serviceName string) error {
+		unsubscribed = true
+		// use prev client to unsubscribe
+		assert.Equal(t, prevClient, reg.client)
+		// unsubscribe error should not affect the result
+		return errors.New("always error")
+	})
+	defer patches.Reset()
+
+	err := reg.Reload(&Config{
+		ServerUrl: "http://127.0.0.1:8848",
+	})
+	assert.Nil(t, err)
+	assert.True(t, unsubscribed)
 }

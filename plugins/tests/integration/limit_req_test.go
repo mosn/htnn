@@ -15,6 +15,7 @@
 package integration
 
 import (
+	"net/http"
 	"testing"
 	"time"
 
@@ -72,6 +73,50 @@ func TestLimitReq(t *testing.T) {
 			run: func(t *testing.T) {
 				resp, _ := dp.Head("/echo", nil)
 				assert.Equal(t, 200, resp.StatusCode)
+				resp, _ = dp.Head("/echo", nil)
+				assert.Equal(t, 429, resp.StatusCode)
+			},
+		},
+		{
+			name: "by header, fallback to source ip",
+			config: control_plane.NewSinglePluinConfig("limitReq", map[string]interface{}{
+				"average": 1,
+				"key":     `request.header("x-key")`,
+			}),
+			run: func(t *testing.T) {
+				hdr := http.Header{}
+				hdr.Add("x-key", "1")
+				hdr2 := http.Header{}
+				hdr2.Add("x-key", "2")
+				resp, _ := dp.Head("/echo", hdr)
+				assert.Equal(t, 200, resp.StatusCode)
+				resp, _ = dp.Head("/echo", nil)
+				assert.Equal(t, 200, resp.StatusCode)
+				resp, _ = dp.Head("/echo", hdr2)
+				assert.Equal(t, 200, resp.StatusCode)
+				resp, _ = dp.Head("/echo", hdr)
+				assert.Equal(t, 429, resp.StatusCode)
+				resp, _ = dp.Head("/echo", nil)
+				assert.Equal(t, 429, resp.StatusCode)
+				resp, _ = dp.Head("/echo", hdr2)
+				assert.Equal(t, 429, resp.StatusCode)
+			},
+		},
+		{
+			name: "complex key",
+			config: control_plane.NewSinglePluinConfig("limitReq", map[string]interface{}{
+				"average": 1,
+				"key":     `request.header("x-key") != "" ? request.header("x-key") : source.ip()`,
+			}),
+			run: func(t *testing.T) {
+				hdr := http.Header{}
+				hdr.Add("x-key", "1")
+				resp, _ := dp.Head("/echo", hdr)
+				assert.Equal(t, 200, resp.StatusCode)
+				resp, _ = dp.Head("/echo", nil)
+				assert.Equal(t, 200, resp.StatusCode)
+				resp, _ = dp.Head("/echo", hdr)
+				assert.Equal(t, 429, resp.StatusCode)
 				resp, _ = dp.Head("/echo", nil)
 				assert.Equal(t, 429, resp.StatusCode)
 			},

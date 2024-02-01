@@ -220,6 +220,7 @@ lint-editorconfig: $(LOCALBIN)
 
 .PHONY: lint-remain
 lint-remain:
+	grep '>>>>>>' $(shell git ls-files .) | grep -v 'Makefile:' && exit 1 || true
 	go run tools/cmd/linter/main.go
 
 .PHONY: lint

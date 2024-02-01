@@ -45,6 +45,11 @@ func TestConfig(t *testing.T) {
 			err:   "invalid value for uint32 type",
 		},
 		{
+			name:  "bad expr",
+			input: `{"average":1,"key":"request.header"}`,
+			err:   "unexpected failed resolution",
+		},
+		{
 			name:     "pass",
 			input:    `{"average":1}`,
 			maxDelay: 500 * time.Millisecond,

@@ -18,7 +18,6 @@
 package nacos
 
 import (
-	"errors"
 	"fmt"
 	"net/url"
 	"strconv"
@@ -32,6 +31,7 @@ import (
 	"github.com/nacos-group/nacos-sdk-go/common/constant"
 	"github.com/nacos-group/nacos-sdk-go/model"
 	"github.com/nacos-group/nacos-sdk-go/vo"
+	"gopkg.in/natefinch/lumberjack.v2"
 	istioapi "istio.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -55,11 +55,13 @@ func init() {
 }
 
 const (
-	defaultFetchPageSize = 50
+	defaultFetchPageSize = 1000
 	defaultNacosPort     = 8848
 	defaultTimeoutMs     = 5 * 1000
 	defaultLogLevel      = "warn"
 	defaultNotLoadCache  = true
+	defaultLogMaxDays    = 3
+	defaultLogMaxSizeMB  = 100
 
 	RegistryType = "nacos"
 )
@@ -92,6 +94,16 @@ func (reg *Nacos) fetchAllServices(client *nacosClient) (map[nacosService]bool, 
 	fetchedServices := make(map[nacosService]bool)
 	for _, groupName := range client.Groups {
 		for page := 1; ; page++ {
+			// Nacos v1 doesn't provide a method to return all services in a call.
+			// We use a large page size to reduce the race but there is still chance
+			// that a service is missed. When the Nacos is starting or down (as discussed
+			// in https://github.com/alibaba/higress/discussions/769), there is also a chance
+			// that the ServiceEntry mismatches the service.
+			//
+			// Missing to add a new service will be solved by the next refresh.
+			// We also use soft-deletion to avoid the ServiceEntry mismatch. The ServiceEntry
+			// will be deleted only when the registry's configuration changes or an empty host list
+			// is returned from the subscription.
 			ss, err := client.namingClient.GetAllServicesInfo(vo.GetAllServiceInfoParam{
 				GroupName: groupName,
 				PageNo:    uint32(page),
@@ -153,7 +165,7 @@ func (reg *Nacos) getServiceEntryKey(groupName string, serviceName string) strin
 	suffix := strings.Join([]string{groupName, reg.client.Namespace, reg.name, RegistryType}, ".")
 	suffix = strings.ReplaceAll(suffix, "_", "-")
 	host := strings.Join([]string{serviceName, suffix}, ".")
-	return host
+	return strings.ToLower(host)
 }
 
 func (reg *Nacos) getSubscribeCallback(groupName string, serviceName string) func(services []model.SubscribeService, err error) {
@@ -227,12 +239,10 @@ func (reg *Nacos) generateServiceEntry(host string, services []model.SubscribeSe
 	}
 }
 
-func (reg *Nacos) Start(c registry.RegistryConfig) error {
-	config := c.(*Config)
-
+func (reg *Nacos) newClient(config *Config) (*nacosClient, error) {
 	uri, err := url.Parse(config.ServerUrl)
 	if err != nil {
-		return fmt.Errorf("invalid server url: %s", config.ServerUrl)
+		return nil, fmt.Errorf("invalid server url: %s", config.ServerUrl)
 	}
 
 	domain := uri.Hostname()
@@ -246,6 +256,10 @@ func (reg *Nacos) Start(c registry.RegistryConfig) error {
 		constant.WithTimeoutMs(defaultTimeoutMs),
 		constant.WithLogLevel(defaultLogLevel),
 		constant.WithNotLoadCacheAtStart(defaultNotLoadCache),
+		constant.WithLogRollingConfig(&lumberjack.Logger{
+			MaxSize: defaultLogMaxSizeMB,
+			MaxAge:  defaultLogMaxDays,
+		}),
 		// To simplify the permissions, use the path under current work dir to store log & cache
 	)
 
@@ -260,7 +274,7 @@ func (reg *Nacos) Start(c registry.RegistryConfig) error {
 		ServerConfigs: sc,
 	})
 	if err != nil {
-		return fmt.Errorf("can not create naming client, err: %v", err)
+		return nil, fmt.Errorf("can not create naming client, err: %v", err)
 	}
 
 	if config.Namespace == "" {
@@ -269,17 +283,26 @@ func (reg *Nacos) Start(c registry.RegistryConfig) error {
 	if len(config.Groups) == 0 {
 		config.Groups = []string{"DEFAULT_GROUP"}
 	}
-	client := &nacosClient{
+	return &nacosClient{
 		Groups:       config.Groups,
 		Namespace:    config.Namespace,
 		namingClient: namingClient,
+	}, nil
+}
+
+func (reg *Nacos) Start(c registry.RegistryConfig) error {
+	config := c.(*Config)
+
+	client, err := reg.newClient(config)
+	if err != nil {
+		return err
 	}
-	reg.client = client
 
 	fetchedServices, err := reg.fetchAllServices(client)
 	if err != nil {
 		return fmt.Errorf("fetch all services error: %v", err)
 	}
+	reg.client = client
 
 	for key := range fetchedServices {
 		err = reg.subscribe(key.GroupName, key.ServiceName)
@@ -349,7 +372,11 @@ func (reg *Nacos) refresh() error {
 
 	for key := range prevFetchServices {
 		if _, ok := fetchedServices[key]; !ok {
-			reg.removeService(key)
+			err := reg.unsubscribe(key.GroupName, key.ServiceName)
+			if err != nil {
+				logger.Error(err, "failed to unsubscribe service", "service", key)
+				// the upcoming event will be thrown away
+			}
 		}
 	}
 
@@ -369,8 +396,45 @@ func (reg *Nacos) Stop() error {
 	return nil
 }
 
-func (reg *Nacos) Reload(registry.RegistryConfig) error {
-	return errors.New("TODO")
+func (reg *Nacos) Reload(c registry.RegistryConfig) error {
+	config := c.(*Config)
+
+	client, err := reg.newClient(config)
+	if err != nil {
+		return err
+	}
+
+	fetchedServices, err := reg.fetchAllServices(client)
+	if err != nil {
+		return fmt.Errorf("fetch all services error: %v", err)
+	}
+
+	reg.lock.Lock()
+	defer reg.lock.Unlock()
+
+	for key := range reg.watchingServices {
+		// unsubscribe with the previous client
+		if _, ok := fetchedServices[key]; !ok {
+			reg.removeService(key)
+		} else {
+			err = reg.unsubscribe(key.GroupName, key.ServiceName)
+			if err != nil {
+				logger.Error(err, "failed to unsubscribe service", "service", key)
+			}
+		}
+	}
+
+	reg.client = client
+
+	for key := range fetchedServices {
+		err = reg.subscribe(key.GroupName, key.ServiceName)
+		if err != nil {
+			logger.Error(err, "failed to subscribe service", "service", key)
+		}
+	}
+	reg.watchingServices = fetchedServices
+
+	return nil
 }
 
 func (reg *Nacos) Config() registry.RegistryConfig {

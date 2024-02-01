@@ -132,7 +132,7 @@ func (f *filter) sign(value []byte) string {
 	return base64.StdEncoding.EncodeToString(hash.Sum(nil))
 }
 
-func (f *filter) DecodeHeaders(header api.RequestHeaderMap, endStream bool) api.ResultAction {
+func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {
 	config := f.config
 	akh := AccessKeyHeader
 	if config.AccessKeyHeader != "" {
@@ -145,7 +145,7 @@ func (f *filter) DecodeHeaders(header api.RequestHeaderMap, endStream bool) api.
 
 	// We only cares about one of the headers if multiple is given.
 	// The others will be dropped.
-	accessKey, ok := header.Get(akh)
+	accessKey, ok := headers.Get(akh)
 	if !ok {
 		return api.Continue
 	}
@@ -157,8 +157,8 @@ func (f *filter) DecodeHeaders(header api.RequestHeaderMap, endStream bool) api.
 	}
 
 	f.consumer = c.PluginConfig(Name).(*ConsumerConfig)
-	signature, _ := header.Get(sh)
-	signContent := f.getSignContent(header, accessKey)
+	signature, _ := headers.Get(sh)
+	signContent := f.getSignContent(headers, accessKey)
 	generatedSign := f.sign([]byte(signContent))
 	if signature != generatedSign {
 		api.LogInfof("signature mismatch: expected %s != actual %s, source: %q",
@@ -167,8 +167,8 @@ func (f *filter) DecodeHeaders(header api.RequestHeaderMap, endStream bool) api.
 	}
 
 	// drop sensitive headers
-	header.Del(akh)
-	header.Del(sh)
+	headers.Del(akh)
+	headers.Del(sh)
 	f.callbacks.SetConsumer(c)
 	return api.Continue
 }

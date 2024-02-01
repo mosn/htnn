@@ -1,4 +1,4 @@
-This directory shows how to import the Envoy Go plugin hub to your project.
+This directory shows how to write HTNN Go plugin in your project.
 
 To present how this work, follow the steps:
 
