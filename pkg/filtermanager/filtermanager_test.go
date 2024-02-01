@@ -76,26 +76,28 @@ func TestParse(t *testing.T) {
 
 func TestPassThrough(t *testing.T) {
 	cb := envoy.NewFilterCallbackHandler()
-	m := FilterManagerConfigFactory(&filterManagerConfig{
-		current: []*model.ParsedFilterConfig{
-			{
-				Name:          "passthrough",
-				ConfigFactory: PassThroughFactory,
-			},
+	config := initFilterManagerConfig("ns")
+	config.current = []*model.ParsedFilterConfig{
+		{
+			Name:          "passthrough",
+			ConfigFactory: PassThroughFactory,
 		},
-	})(cb)
-	hdr := envoy.NewRequestHeaderMap(http.Header{})
-	m.DecodeHeaders(hdr, false)
-	cb.WaitContinued()
-	buf := envoy.NewBufferInstance([]byte{})
-	m.DecodeData(buf, true)
-	cb.WaitContinued()
-	respHdr := envoy.NewResponseHeaderMap(http.Header{})
-	m.EncodeHeaders(respHdr, false)
-	cb.WaitContinued()
-	m.EncodeData(buf, true)
-	cb.WaitContinued()
-	m.OnLog()
+	}
+	for i := 0; i < 2; i++ {
+		m := FilterManagerConfigFactory(config)(cb).(*filterManager)
+		hdr := envoy.NewRequestHeaderMap(http.Header{})
+		m.DecodeHeaders(hdr, false)
+		cb.WaitContinued()
+		buf := envoy.NewBufferInstance([]byte{})
+		m.DecodeData(buf, true)
+		cb.WaitContinued()
+		respHdr := envoy.NewResponseHeaderMap(http.Header{})
+		m.EncodeHeaders(respHdr, false)
+		cb.WaitContinued()
+		m.EncodeData(buf, true)
+		cb.WaitContinued()
+		m.OnLog()
+	}
 }
 
 func TestLocalReplyJSON_UseReqHeader(t *testing.T) {
@@ -143,14 +145,14 @@ func TestLocalReplyJSON_UseReqHeader(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cb := envoy.NewFilterCallbackHandler()
-			m := FilterManagerConfigFactory(&filterManagerConfig{
-				current: []*model.ParsedFilterConfig{
-					{
-						Name:          "test",
-						ConfigFactory: PassThroughFactory,
-					},
+			config := initFilterManagerConfig("ns")
+			config.current = []*model.ParsedFilterConfig{
+				{
+					Name:          "test",
+					ConfigFactory: PassThroughFactory,
 				},
-			})(cb).(*filterManager)
+			}
+			m := FilterManagerConfigFactory(config)(cb).(*filterManager)
 			patches := gomonkey.ApplyMethodReturn(m.filters[0].Filter, "DecodeHeaders", &api.LocalResponse{
 				Code: 200,
 				Msg:  "msg",
@@ -216,14 +218,14 @@ func TestLocalReplyJSON_UseRespHeader(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cb := envoy.NewFilterCallbackHandler()
-			m := FilterManagerConfigFactory(&filterManagerConfig{
-				current: []*model.ParsedFilterConfig{
-					{
-						Name:          "test",
-						ConfigFactory: PassThroughFactory,
-					},
+			config := initFilterManagerConfig("ns")
+			config.current = []*model.ParsedFilterConfig{
+				{
+					Name:          "test",
+					ConfigFactory: PassThroughFactory,
 				},
-			})(cb).(*filterManager)
+			}
+			m := FilterManagerConfigFactory(config)(cb).(*filterManager)
 			patches := gomonkey.ApplyMethodReturn(m.filters[0].Filter, "EncodeHeaders", &api.LocalResponse{
 				Code: 200,
 				Msg:  "msg",
@@ -252,14 +254,14 @@ func TestLocalReplyJSON_UseRespHeader(t *testing.T) {
 
 func TestLocalReplyJSON_DoNotChangeMsgIfContentTypeIsGiven(t *testing.T) {
 	cb := envoy.NewFilterCallbackHandler()
-	m := FilterManagerConfigFactory(&filterManagerConfig{
-		current: []*model.ParsedFilterConfig{
-			{
-				Name:          "test",
-				ConfigFactory: PassThroughFactory,
-			},
+	config := initFilterManagerConfig("ns")
+	config.current = []*model.ParsedFilterConfig{
+		{
+			Name:          "test",
+			ConfigFactory: PassThroughFactory,
 		},
-	})(cb).(*filterManager)
+	}
+	m := FilterManagerConfigFactory(config)(cb).(*filterManager)
 	patches := gomonkey.ApplyMethodReturn(m.filters[0].Filter, "DecodeHeaders", &api.LocalResponse{
 		Msg:    "msg",
 		Header: http.Header(map[string][]string{"Content-Type": {"text/plain"}}),
@@ -349,32 +351,34 @@ func (f *addReqFilter) DecodeHeaders(headers api.RequestHeaderMap, endStream boo
 
 func TestFiltersFromConsumer(t *testing.T) {
 	cb := envoy.NewFilterCallbackHandler()
-	m := FilterManagerConfigFactory(&filterManagerConfig{
-		authnFiltersEndAt: 1,
-		current: []*model.ParsedFilterConfig{
-			{
-				Name:          "set_consumer",
-				ConfigFactory: setConsumerFactory,
-			},
-			{
-				Name:          "add_req",
-				ConfigFactory: addReqFactory,
-				ParsedConfig: addReqConf{
-					hdrName: "x-htnn-route",
-				},
+	config := initFilterManagerConfig("ns")
+	config.authnFiltersEndAt = 1
+	config.current = []*model.ParsedFilterConfig{
+		{
+			Name:          "set_consumer",
+			ConfigFactory: setConsumerFactory,
+		},
+		{
+			Name:          "add_req",
+			ConfigFactory: addReqFactory,
+			ParsedConfig: addReqConf{
+				hdrName: "x-htnn-route",
 			},
 		},
-	})(cb).(*filterManager)
-	assert.Equal(t, true, m.canSkipOnLog)
-	assert.Equal(t, 1, len(m.filters))
-	hdr := envoy.NewRequestHeaderMap(http.Header{})
-	m.DecodeHeaders(hdr, true)
-	cb.WaitContinued()
-	assert.Equal(t, false, m.canSkipOnLog)
-	assert.Equal(t, 2, len(m.filters))
+	}
+	for i := 0; i < 2; i++ {
+		m := FilterManagerConfigFactory(config)(cb).(*filterManager)
+		assert.Equal(t, true, m.canSkipOnLog)
+		assert.Equal(t, 1, len(m.filters))
+		hdr := envoy.NewRequestHeaderMap(http.Header{})
+		m.DecodeHeaders(hdr, true)
+		cb.WaitContinued()
+		assert.Equal(t, false, m.canSkipOnLog)
+		assert.Equal(t, 2, len(m.filters))
 
-	_, ok := hdr.Get("x-htnn-route")
-	assert.False(t, ok)
-	_, ok = hdr.Get("x-htnn-consumer")
-	assert.True(t, ok)
+		_, ok := hdr.Get("x-htnn-route")
+		assert.False(t, ok)
+		_, ok = hdr.Get("x-htnn-consumer")
+		assert.True(t, ok)
+	}
 }
