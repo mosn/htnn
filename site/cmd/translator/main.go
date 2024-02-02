@@ -128,6 +128,12 @@ func main() {
 				start = i + 1
 			}
 		}
+		chunks = append(chunks, Chunk{
+			id:    len(chunks),
+			text:  strings.Join(lines[start:], "\n"),
+			start: start,
+			end:   len(lines),
+		})
 
 		parsed, _ := diffparser.Parse(diff)
 		hunks := parsed.Files[0].Hunks
