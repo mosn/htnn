@@ -18,7 +18,7 @@ TARGET_SO       = libgolang.so
 PROJECT_NAME    = mosn.io/htnn
 # Both images use glibc 2.31. Ensure libc in the images match each other.
 BUILD_IMAGE     ?= golang:1.21-bullseye
-PROXY_IMAGE     ?= envoyproxy/envoy:contrib-debug-dev
+PROXY_IMAGE     ?= envoyproxy/envoy:contrib-v1.29-latest
 
 
 .PHONY: build-so-local
