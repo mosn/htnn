@@ -69,6 +69,35 @@ var (
 	pkgMatcher = regexp.MustCompile(`^package\s+(\w+)\s`)
 )
 
+func (conf *config) Validate() error {
+	err := conf.Config.Validate()
+	if err != nil {
+		return err
+	}
+
+	local := conf.GetLocal()
+	if local != nil {
+		module := local.Text
+		match := pkgMatcher.FindStringSubmatch(module)
+		if len(match) < 2 {
+			return errors.New("invalid Local.Text: bad package name")
+		}
+		policy := match[1]
+
+		ctx := context.Background()
+
+		_, err := rego.New(
+			rego.Query(fmt.Sprintf("allow = data.%s.allow", policy)),
+			rego.Module(fmt.Sprintf("%s.rego", policy), module),
+		).PrepareForEval(ctx)
+
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (conf *config) Init(cb api.ConfigCallbackHandler) error {
 	remote := conf.GetRemote()
 	if remote != nil {
@@ -79,22 +108,14 @@ func (conf *config) Init(cb api.ConfigCallbackHandler) error {
 	local := conf.GetLocal()
 	module := local.Text
 	match := pkgMatcher.FindStringSubmatch(module)
-	if len(match) < 2 {
-		return errors.New("invalid Local.Text: bad package name")
-	}
 	policy := match[1]
 
 	ctx := context.Background()
 
-	query, err := rego.New(
+	query, _ := rego.New(
 		rego.Query(fmt.Sprintf("allow = data.%s.allow", policy)),
 		rego.Module(fmt.Sprintf("%s.rego", policy), module),
 	).PrepareForEval(ctx)
-
-	if err != nil {
-		return err
-	}
-
 	conf.query = query
 	return nil
 }
