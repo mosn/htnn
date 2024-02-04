@@ -49,7 +49,7 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 					Filters: map[string]HTTPPlugin{
 						"animal": {
 							Config: runtime.RawExtension{
-								Raw: []byte(`{"pet":"cat"}`),
+								Raw: []byte(`{"pet":"cat", "unknown_fields":"should be ignored"}`),
 							},
 						},
 					},
@@ -69,7 +69,7 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 					Filters: map[string]HTTPPlugin{
 						"animal": {
 							Config: runtime.RawExtension{
-								Raw: []byte(`{"pet":"cat"}`),
+								Raw: []byte(`{"pet":"cat", "unknown_fields":"should be ignored"}`),
 							},
 						},
 					},
@@ -216,14 +216,14 @@ func TestValidateConsumer(t *testing.T) {
 					Auth: map[string]ConsumerPlugin{
 						"keyAuth": {
 							Config: runtime.RawExtension{
-								Raw: []byte(`{"key":"cat"}`),
+								Raw: []byte(`{"key":"cat", "unknown_fields":"should be ignored"}`),
 							},
 						},
 					},
 					Filters: map[string]HTTPPlugin{
 						"animal": {
 							Config: runtime.RawExtension{
-								Raw: []byte(`{"pet":"cat"}`),
+								Raw: []byte(`{"pet":"cat", "unknown_fields":"should be ignored"}`),
 							},
 						},
 					},
@@ -252,13 +252,13 @@ func TestValidateConsumer(t *testing.T) {
 					Auth: map[string]ConsumerPlugin{
 						"keyAuth": {
 							Config: runtime.RawExtension{
-								Raw: []byte(`{"keys":"cat"}`),
+								Raw: []byte(`{"key":1}`),
 							},
 						},
 					},
 				},
 			},
-			err: "unknown field \"keys\"",
+			err: "invalid value for string type",
 		},
 		{
 			name: "invalid config for filter",
@@ -330,7 +330,7 @@ func TestValidateServiceRegistry(t *testing.T) {
 				Spec: ServiceRegistrySpec{
 					Type: "nacos",
 					Config: runtime.RawExtension{
-						Raw: []byte(`{"serverUrl":"http://nacos.io"}`),
+						Raw: []byte(`{"serverUrl":"http://nacos.io", "unknown_fields":"should be ignored"}`),
 					},
 				},
 			},

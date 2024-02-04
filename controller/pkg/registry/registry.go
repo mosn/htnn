@@ -18,12 +18,12 @@ import (
 	"fmt"
 	"strings"
 
-	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/reflect/protoreflect"
 	istioapi "istio.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"mosn.io/htnn/pkg/log"
+	"mosn.io/htnn/pkg/proto"
 )
 
 var (
@@ -124,7 +124,7 @@ func CreateRegistry(name string, store ServiceEntryStore, om metav1.ObjectMeta) 
 func ParseConfig(reg Registry, data []byte) (RegistryConfig, error) {
 	conf := reg.Config()
 
-	err := protojson.Unmarshal(data, conf)
+	err := proto.UnmarshalJSON(data, conf)
 	if err != nil {
 		return nil, err
 	}
