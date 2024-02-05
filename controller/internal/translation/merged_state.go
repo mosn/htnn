@@ -114,6 +114,10 @@ func toMergedPolicy(rp *routePolicy) *mergedPolicy {
 		if !ok {
 			goFilterManager.Plugins = append(goFilterManager.Plugins, plugin)
 		} else {
+			if wrapper, ok := p.(plugins.NativePluginHasRouteConfigWrapper); ok {
+				plugin.Config = wrapper.ToRouteConfig(plugin.Config.(map[string]interface{}))
+			}
+
 			m := plugin.Config.(map[string]interface{})
 			m["@type"] = url
 			nativeFilters = append(nativeFilters, plugin)

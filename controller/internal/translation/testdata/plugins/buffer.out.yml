@@ -1,0 +1,45 @@
+- metadata:
+    creationTimestamp: null
+    name: htnn-h-default.local
+  spec:
+    configPatches:
+    - applyTo: HTTP_ROUTE
+      match:
+        routeConfiguration:
+          vhost:
+            name: default.local:80
+            route:
+              name: default/default
+      patch:
+        operation: MERGE
+        value:
+          typed_per_filter_config:
+            envoy.filters.http.buffer:
+              '@type': type.googleapis.com/envoy.extensions.filters.http.buffer.v3.BufferPerRoute
+              buffer:
+                maxRequestBytes: 1024000
+  status: {}
+- metadata:
+    creationTimestamp: null
+    name: htnn-http-filter
+  spec:
+    configPatches:
+    - applyTo: HTTP_FILTER
+      match:
+        context: GATEWAY
+        listener:
+          filterChain:
+            filter:
+              name: envoy.filters.network.http_connection_manager
+              subFilter:
+                name: envoy.filters.http.golang
+      patch:
+        operation: INSERT_BEFORE
+        value:
+          disabled: true
+          name: envoy.filters.http.buffer
+          typed_config:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.buffer.v3.Buffer
+            maxRequestBytes: 42
+    priority: 100
+  status: {}

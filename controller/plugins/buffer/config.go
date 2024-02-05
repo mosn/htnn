@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//	http://www.apache.org/licenses/LICENSE-2.0
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -12,17 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package local_ratelimit
+package buffer
 
 import (
-	local_ratelimit "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/local_ratelimit/v3"
+	buffer "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/buffer/v3"
 
 	"mosn.io/htnn/pkg/filtermanager/api"
 	"mosn.io/htnn/pkg/plugins"
 )
 
 const (
-	Name = "localRatelimit"
+	Name = "buffer"
 )
 
 func init() {
@@ -34,7 +34,7 @@ type plugin struct {
 }
 
 func (p *plugin) Type() plugins.PluginType {
-	return plugins.TypeTraffic
+	return plugins.TypeGeneral
 }
 
 func (p *plugin) Order() plugins.PluginOrder {
@@ -43,23 +43,30 @@ func (p *plugin) Order() plugins.PluginOrder {
 	}
 }
 
-// Each Native plugin need to implement the methods below
-
 func (p *plugin) Config() api.PluginConfig {
-	return &local_ratelimit.LocalRateLimit{}
+	return &buffer.Buffer{}
 }
 
-// RouteConfigTypeURL returns the type url of per-route config
+// The BufferPerRoute has two fields: `disabled` and `buffer`:
+// https://www.envoyproxy.io/docs/envoy/latest/api-v3/extensions/filters/http/buffer/v3/buffer.proto#extensions-filters-http-buffer-v3-bufferperroute
+// The `disabled` is useless for us. And it's ugly to use another `buffer` field in the `buffer` plugin.
+// So here we introduce a conversion function to make the configuration more friendly.
+func (p *plugin) ToRouteConfig(config map[string]interface{}) map[string]interface{} {
+	return map[string]interface{}{
+		// v3.Buffer -> v3.BufferPerRoute
+		"buffer": config,
+	}
+}
+
 func (p *plugin) RouteConfigTypeURL() string {
-	return "type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit"
+	return "type.googleapis.com/envoy.extensions.filters.http.buffer.v3.BufferPerRoute"
 }
 
-// HTTPFilterConfigPlaceholder returns the placeholder config for http filter
 func (p *plugin) HTTPFilterConfigPlaceholder() map[string]interface{} {
 	return map[string]interface{}{
 		"typed_config": map[string]interface{}{
-			"@type":      p.RouteConfigTypeURL(),
-			"statPrefix": "http_local_rate_limiter",
+			"@type":           "type.googleapis.com/envoy.extensions.filters.http.buffer.v3.Buffer",
+			"maxRequestBytes": 42,
 		},
 	}
 }

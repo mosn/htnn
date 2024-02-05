@@ -15,6 +15,7 @@
 package plugins
 
 import (
+	_ "mosn.io/htnn/controller/plugins/buffer"
 	_ "mosn.io/htnn/controller/plugins/local_ratelimit"
 	_ "mosn.io/htnn/controller/plugins/lua"
 	_ "mosn.io/htnn/plugins" // register Go plugins

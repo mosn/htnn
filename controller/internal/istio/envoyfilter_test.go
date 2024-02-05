@@ -51,7 +51,7 @@ func (p *pluginFirst) Order() plugins.PluginOrder {
 	}
 }
 
-func (p *pluginFirst) DefaultHTTPFilterConfig() map[string]interface{} {
+func (p *pluginFirst) HTTPFilterConfigPlaceholder() map[string]interface{} {
 	return map[string]interface{}{
 		"typed_config": map[string]interface{}{
 			"@type":      p.RouteConfigTypeURL(),
@@ -71,7 +71,7 @@ func (p *pluginPre) Order() plugins.PluginOrder {
 	}
 }
 
-func (p *pluginPre) DefaultHTTPFilterConfig() map[string]interface{} {
+func (p *pluginPre) HTTPFilterConfigPlaceholder() map[string]interface{} {
 	return map[string]interface{}{
 		"typed_config": map[string]interface{}{
 			"@type":      p.RouteConfigTypeURL(),
@@ -91,7 +91,7 @@ func (p *pluginPost) Order() plugins.PluginOrder {
 	}
 }
 
-func (p *pluginPost) DefaultHTTPFilterConfig() map[string]interface{} {
+func (p *pluginPost) HTTPFilterConfigPlaceholder() map[string]interface{} {
 	return map[string]interface{}{
 		"typed_config": map[string]interface{}{
 			"@type":      p.RouteConfigTypeURL(),
@@ -112,7 +112,7 @@ func (p *pluginLast) Order() plugins.PluginOrder {
 	}
 }
 
-func (p *pluginLast) DefaultHTTPFilterConfig() map[string]interface{} {
+func (p *pluginLast) HTTPFilterConfigPlaceholder() map[string]interface{} {
 	return map[string]interface{}{
 		"typed_config": map[string]interface{}{
 			"@type":      p.RouteConfigTypeURL(),
