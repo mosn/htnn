@@ -19,11 +19,11 @@ import (
 	"fmt"
 	"strings"
 
-	"google.golang.org/protobuf/encoding/protojson"
 	istiov1b1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 
 	"mosn.io/htnn/controller/pkg/registry"
 	"mosn.io/htnn/pkg/plugins"
+	"mosn.io/htnn/pkg/proto"
 )
 
 func ValidateHTTPFilterPolicy(policy *HTTPFilterPolicy) error {
@@ -54,7 +54,7 @@ func ValidateHTTPFilterPolicy(policy *HTTPFilterPolicy) error {
 
 		data := filter.Config.Raw
 		conf := p.Config()
-		if err := protojson.Unmarshal(data, conf); err != nil {
+		if err := proto.UnmarshalJSON(data, conf); err != nil {
 			return fmt.Errorf("failed to unmarshal for filter %s: %w", name, err)
 		}
 
@@ -109,7 +109,7 @@ func ValidateConsumer(c *Consumer) error {
 
 		data := filter.Config.Raw
 		conf := p.ConsumerConfig()
-		if err := protojson.Unmarshal(data, conf); err != nil {
+		if err := proto.UnmarshalJSON(data, conf); err != nil {
 			return fmt.Errorf("failed to unmarshal for filter %s: %w", name, err)
 		}
 
@@ -131,7 +131,7 @@ func ValidateConsumer(c *Consumer) error {
 
 		data := filter.Config.Raw
 		conf := p.Config()
-		if err := protojson.Unmarshal(data, conf); err != nil {
+		if err := proto.UnmarshalJSON(data, conf); err != nil {
 			return fmt.Errorf("failed to unmarshal for filter %s: %w", name, err)
 		}
 

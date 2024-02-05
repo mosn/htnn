@@ -28,6 +28,7 @@ import (
 
 	"mosn.io/htnn/pkg/filtermanager"
 	"mosn.io/htnn/pkg/filtermanager/model"
+	"mosn.io/htnn/plugins/tests/integration/control_plane"
 	"mosn.io/htnn/plugins/tests/integration/data_plane"
 )
 
@@ -890,4 +891,22 @@ func TestFilterManagerEncodeLocalReply(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestFilterManagerIgnoreUnknownFields(t *testing.T) {
+	dp, err := data_plane.StartDataPlane(t, nil)
+	if err != nil {
+		t.Fatalf("failed to start data plane: %v", err)
+		return
+	}
+	defer dp.Stop()
+
+	config := control_plane.NewSinglePluinConfig("demo", map[string]interface{}{
+		"hostName": "Tom",
+		"unknown":  "blah",
+	})
+	controlPlane.UseGoPluginConfig(config, dp)
+	resp, err := dp.Get("/echo", nil)
+	require.Nil(t, err)
+	assert.Equal(t, "hello,", resp.Header.Get("Echo-Tom"), resp)
 }

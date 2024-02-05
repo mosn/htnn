@@ -16,6 +16,7 @@ package plugins
 
 import (
 	_ "mosn.io/htnn/plugins/casbin"
+	_ "mosn.io/htnn/plugins/cel_script"
 	_ "mosn.io/htnn/plugins/consumer_restriction"
 	_ "mosn.io/htnn/plugins/demo"
 	_ "mosn.io/htnn/plugins/ext_auth"

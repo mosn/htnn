@@ -12,24 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package opa
+package cel_script
 
 import (
-	"context"
-	"errors"
-	"fmt"
-	"net/http"
-	"regexp"
-	"time"
+	"github.com/google/cel-go/cel"
 
-	"github.com/open-policy-agent/opa/rego"
-
+	"mosn.io/htnn/pkg/expr"
 	"mosn.io/htnn/pkg/filtermanager/api"
 	"mosn.io/htnn/pkg/plugins"
 )
 
 const (
-	Name = "opa"
+	Name = "celScript"
 )
 
 func init() {
@@ -41,12 +35,12 @@ type plugin struct {
 }
 
 func (p *plugin) Type() plugins.PluginType {
-	return plugins.TypeAuthz
+	return plugins.TypeTraffic
 }
 
 func (p *plugin) Order() plugins.PluginOrder {
 	return plugins.PluginOrder{
-		Position: plugins.OrderPositionAuthz,
+		Position: plugins.OrderPositionTraffic,
 	}
 }
 
@@ -61,13 +55,8 @@ func (p *plugin) Config() api.PluginConfig {
 type config struct {
 	Config
 
-	client *http.Client
-	query  rego.PreparedEvalQuery
+	allowIfScript expr.Script
 }
-
-var (
-	pkgMatcher = regexp.MustCompile(`^package\s+(\w+)\s`)
-)
 
 func (conf *config) Validate() error {
 	err := conf.Config.Validate()
@@ -75,22 +64,8 @@ func (conf *config) Validate() error {
 		return err
 	}
 
-	local := conf.GetLocal()
-	if local != nil {
-		module := local.Text
-		match := pkgMatcher.FindStringSubmatch(module)
-		if len(match) < 2 {
-			return errors.New("invalid Local.Text: bad package name")
-		}
-		policy := match[1]
-
-		ctx := context.Background()
-
-		_, err := rego.New(
-			rego.Query(fmt.Sprintf("allow = data.%s.allow", policy)),
-			rego.Module(fmt.Sprintf("%s.rego", policy), module),
-		).PrepareForEval(ctx)
-
+	if conf.AllowIf != "" {
+		_, err = expr.CompileCel(conf.AllowIf, cel.BoolType)
 		if err != nil {
 			return err
 		}
@@ -99,23 +74,9 @@ func (conf *config) Validate() error {
 }
 
 func (conf *config) Init(cb api.ConfigCallbackHandler) error {
-	remote := conf.GetRemote()
-	if remote != nil {
-		conf.client = &http.Client{Timeout: 200 * time.Millisecond}
-		return nil
+	if conf.AllowIf != "" {
+		s, _ := expr.CompileCel(conf.AllowIf, cel.BoolType)
+		conf.allowIfScript = s
 	}
-
-	local := conf.GetLocal()
-	module := local.Text
-	match := pkgMatcher.FindStringSubmatch(module)
-	policy := match[1]
-
-	ctx := context.Background()
-
-	query, _ := rego.New(
-		rego.Query(fmt.Sprintf("allow = data.%s.allow", policy)),
-		rego.Module(fmt.Sprintf("%s.rego", policy), module),
-	).PrepareForEval(ctx)
-	conf.query = query
 	return nil
 }

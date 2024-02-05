@@ -12,21 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package controller
+syntax = "proto3";
 
-import (
-	"context"
+package plugins.cel_script;
 
-	"sigs.k8s.io/controller-runtime/pkg/client"
-)
+option go_package = "mosn.io/htnn/plugins/cel_script";
 
-type mockReader struct{}
-
-func (r *mockReader) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
-	return nil
+message Config {
+  string allow_if = 1;
 }
-func (r *mockReader) List(ctx context.Context, list client.ObjectList, opts ...client.ListOption) error {
-	return nil
-}
-
-var _ client.Reader = &mockReader{}
