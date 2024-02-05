@@ -71,7 +71,8 @@ func TestConfig(t *testing.T) {
 			if tt.err == "" {
 				assert.Nil(t, err)
 
-				conf.Init(nil)
+				err = conf.Init(nil)
+				assert.Nil(t, err)
 				assert.Equal(t, tt.maxDelay, conf.maxDelay)
 			} else {
 				assert.ErrorContains(t, err, tt.err)

@@ -45,6 +45,9 @@ func TestBadConfig(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			conf := &config{}
 			err := protojson.Unmarshal([]byte(tt.input), conf)
+			if err == nil {
+				err = conf.Validate()
+			}
 			assert.NotNil(t, err)
 			assert.ErrorContains(t, err, tt.err)
 		})

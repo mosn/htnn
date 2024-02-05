@@ -37,15 +37,17 @@ func TestConfig(t *testing.T) {
 			input: `{
 				"keys": [{"name": "x", "source": "body"}]
 			}`,
-			err: "invalid Config.Keys: value must contain at least 1 item",
+			err: `invalid value for enum type: "body"`,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			conf := &config{}
-			protojson.Unmarshal([]byte(tt.input), conf)
-			err := conf.Validate()
+			err := protojson.Unmarshal([]byte(tt.input), conf)
+			if err == nil {
+				err = conf.Validate()
+			}
 			if tt.err == "" {
 				assert.Nil(t, err)
 			} else {
