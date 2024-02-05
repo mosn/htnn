@@ -111,14 +111,15 @@ func TestConsumerInitConfigs(t *testing.T) {
 			name: "ok",
 			consumer: Consumer{
 				Auth: map[string]string{
-					"keyAuth": "{\"key\": \"test\"}",
+					"keyAuth": `{"key": "test", "unknown_fields":"should be ignored"}`,
 				},
 				Filters: map[string]*model.FilterConfig{
 					"opa": {
 						Config: map[string]interface{}{
 							"remote": map[string]interface{}{
-								"url":    "http://opa:8181",
-								"policy": "t",
+								"url":            "http://opa:8181",
+								"policy":         "t",
+								"unknown_fields": "should be ignored",
 							},
 						},
 					},
@@ -141,7 +142,7 @@ func TestConsumerInitConfigs(t *testing.T) {
 					"keyAuth": "{\"key2\": \"test\"}",
 				},
 			},
-			err: "failed to unmarshal consumer config for plugin keyAuth",
+			err: "invalid ConsumerConfig.Key",
 		},
 		{
 			name: "unknown plugin",

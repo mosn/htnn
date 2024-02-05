@@ -18,10 +18,9 @@ import (
 	"cmp"
 	"encoding/json"
 
-	"google.golang.org/protobuf/encoding/protojson"
-
 	"mosn.io/htnn/pkg/filtermanager/api"
 	"mosn.io/htnn/pkg/log"
+	"mosn.io/htnn/pkg/proto"
 )
 
 var (
@@ -120,7 +119,7 @@ func (cp *PluginConfigParser) Parse(any interface{}, callbacks api.ConfigCallbac
 			return nil, err
 		}
 
-		err = protojson.Unmarshal(data, conf)
+		err = proto.UnmarshalJSON(data, conf)
 		if err != nil {
 			return nil, err
 		}

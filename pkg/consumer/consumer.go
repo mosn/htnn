@@ -18,13 +18,13 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/structpb"
 
 	"mosn.io/htnn/pkg/filtermanager/api"
 	"mosn.io/htnn/pkg/filtermanager/model"
 	"mosn.io/htnn/pkg/log"
 	"mosn.io/htnn/pkg/plugins"
+	"mosn.io/htnn/pkg/proto"
 )
 
 var (
@@ -67,7 +67,7 @@ func (c *Consumer) InitConfigs() error {
 		}
 
 		conf := p.ConsumerConfig()
-		err := protojson.Unmarshal([]byte(data), conf)
+		err := proto.UnmarshalJSON([]byte(data), conf)
 		if err != nil {
 			return fmt.Errorf("failed to unmarshal consumer config for plugin %s: %w", name, err)
 		}

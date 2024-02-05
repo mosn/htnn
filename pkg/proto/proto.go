@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/encoding/prototext"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
@@ -53,4 +54,11 @@ func MessageToAny(msg proto.Message) *anypb.Any {
 		return nil
 	}
 	return out
+}
+
+// UnmarshalJSON should be used instead of protojson.Unmarshal. The first one contains custom options.
+func UnmarshalJSON(data []byte, conf proto.Message) error {
+	// Don't throw an error when there is unknown field. Therefore, we can rollback to previous
+	// version quickly under the same configurations, and make A/B test easier.
+	return protojson.UnmarshalOptions{DiscardUnknown: true}.Unmarshal(data, conf)
 }
