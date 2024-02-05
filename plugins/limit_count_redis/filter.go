@@ -20,9 +20,9 @@ import (
 	"net/http"
 
 	"mosn.io/htnn/pkg/expr"
-	"mosn.io/htnn/pkg/ext"
 	"mosn.io/htnn/pkg/filtermanager/api"
 	"mosn.io/htnn/pkg/request"
+	"mosn.io/htnn/pkg/stringx"
 )
 
 func configFactory(c interface{}) api.FilterFactory {
@@ -58,7 +58,7 @@ func (f *filter) getKey(script expr.Script, headers api.RequestHeaderMap) string
 }
 
 var (
-	redisScript = ext.CutSpace(`
+	redisScript = stringx.CutSpace(`
 	local res={}
 	for i=1,%d do
 		local ttl=redis.call('ttl',KEYS[i])
