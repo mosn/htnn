@@ -158,6 +158,10 @@ func allowRoute(logger *logr.Logger, cond *gwapiv1.AllowedRoutes, route *gwapiv1
 	return true
 }
 
+var (
+	wildcardHostnams = []gwapiv1.Hostname{"*"}
+)
+
 func toDataPlaneState(ctx *Ctx, state *InitState) (*FinalState, error) {
 	s := &dataPlaneState{
 		Hosts: make(map[string]*hostPolicy),
@@ -243,7 +247,12 @@ func toDataPlaneState(ctx *Ctx, state *InitState) (*FinalState, error) {
 					continue
 				}
 
-				for _, hostName := range spec.Hostnames {
+				hostnames := spec.Hostnames
+				if len(hostnames) == 0 {
+					// This is how Istio handles empty Hostnames
+					hostnames = wildcardHostnams
+				}
+				for _, hostName := range hostnames {
 					vhs := buildVirtualHostsWithK8sGw(string(hostName), &ls, gwNsName)
 					if len(vhs) == 0 {
 						// It's acceptable to have an unmatched hostname, which is already
