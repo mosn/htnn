@@ -12,13 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package limit_req
+package cel_script
 
 import (
-	"time"
-
 	"mosn.io/htnn/pkg/filtermanager/api"
-	"mosn.io/htnn/pkg/request"
 )
 
 func configFactory(c interface{}) api.FilterFactory {
@@ -40,36 +37,18 @@ type filter struct {
 
 func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {
 	config := f.config
-
-	var key string
-	if config.script != nil {
-		res, err := config.script.EvalWithRequest(f.callbacks, headers)
+	if config.allowIfScript != nil {
+		res, err := config.allowIfScript.EvalWithRequest(f.callbacks, headers)
 		if err != nil {
 			api.LogErrorf("failed to eval script with request: %v", err)
 			return &api.LocalResponse{Code: 503}
 		}
 
-		key = res.(string)
-		if key == "" {
-			api.LogInfo("limitReq uses client IP as key because the configured key is empty")
-			key = request.GetRemoteIP(f.callbacks.StreamInfo())
+		allowed := res.(bool)
+		if !allowed {
+			api.LogInfo("celScript rejects request")
+			return &api.LocalResponse{Code: 403}
 		}
-
-	} else {
-		key = request.GetRemoteIP(f.callbacks.StreamInfo())
 	}
-
-	// Get also extends the ttl
-	bucket := config.buckets.Get(key)
-	res := bucket.Value().Reserve()
-	delay := res.Delay()
-
-	api.LogInfof("limitReq filter, key: %s, delay: %s", key, delay)
-
-	if delay > config.maxDelay {
-		res.Cancel()
-		return &api.LocalResponse{Code: 429}
-	}
-	time.Sleep(delay)
 	return api.Continue
 }

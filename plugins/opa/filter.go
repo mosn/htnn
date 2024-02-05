@@ -19,6 +19,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"strings"
 
 	"github.com/open-policy-agent/opa/rego"
 
@@ -49,18 +50,35 @@ type opaResponse struct {
 	} `json:"result"`
 }
 
+func mapStrsToMapStr(strs map[string][]string) map[string]string {
+	m := make(map[string]string)
+	for k, v := range strs {
+		n := len(v)
+		if n > 0 {
+			if n > 1 {
+				m[k] = strings.Join(v, ",")
+			} else {
+				m[k] = v[0]
+			}
+		}
+	}
+	return m
+}
+
 func (f *filter) buildInput(header api.RequestHeaderMap) map[string]interface{} {
 	uri := request.GetUrl(header)
 	headers := request.GetHeaders(header)
 	req := map[string]interface{}{
-		"method":  header.Method(),
-		"scheme":  header.Scheme(),
-		"host":    header.Host(),
-		"path":    uri.Path,
-		"headers": headers,
+		"method": header.Method(),
+		"scheme": header.Scheme(),
+		"host":   header.Host(),
+		"path":   uri.Path,
+		// It's inconvenient and error-proning to use []string in rego.
+		// Dapr, APISIX, Kong all use a single string to represent header in their example.
+		"headers": mapStrsToMapStr(headers),
 	}
 	if uri.RawQuery != "" {
-		req["query"] = map[string][]string(uri.Query())
+		req["query"] = mapStrsToMapStr(uri.Query())
 	}
 
 	return map[string]interface{}{

@@ -47,14 +47,14 @@ Here is the JSON data HTNN sends to the OPA:
             "scheme": "http",
             "path": "/",
             "query": {
-                "a": ["1"],
-                "b": [""]
+                "a": "1",
+                "b": ""
             },
             "method": "GET",
             "host": "localhost:10000",
             "headers": {
-                "fruit": ["apple", "banana"],
-                "pet": ["dog"]
+                "fruit": "apple,banana",
+                "pet": "dog"
             }
         }
     }
@@ -65,7 +65,7 @@ Note that:
 
 * `method` is always uppercase, while `host`, `headers` and `scheme` are always lowecase.
 * `host` will contain the port if the `:authority` header sent by the client has the port.
-* Multiple `headers` and `query` in the same name will be passed in an array.
+* Multiple `headers` and `query` in the same name will be concatenated with ','.
 
 The data can be read as `input` document in OPA. It's the same if you use the local mode.
 
