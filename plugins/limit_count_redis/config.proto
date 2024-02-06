@@ -39,4 +39,5 @@ message Config {
   // put a max limit as the rules are sent as one lua script
   repeated Rule rules = 2 [(validate.rules).repeated = {min_items: 1, max_items: 8}];
   bool failure_mode_deny = 3;
+  bool enable_limit_quota_headers = 4;
 }

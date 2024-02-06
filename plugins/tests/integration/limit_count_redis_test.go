@@ -110,6 +110,79 @@ func TestLimitCountRedis(t *testing.T) {
 				assert.Equal(t, 200, resp.StatusCode)
 			},
 		},
+		{
+			name: "single rule, with limit quota headers enabled",
+			config: control_plane.NewSinglePluinConfig("limitCountRedis", map[string]interface{}{
+				"address":                 "redis:6379",
+				"enableLimitQuotaHeaders": true,
+				"rules": []interface{}{
+					map[string]interface{}{
+						"count":      1,
+						"timeWindow": "1s",
+						"key":        `request.header("x-key")`,
+					},
+				},
+			}),
+			run: func(t *testing.T) {
+				hdr := http.Header{}
+				hdr.Add("x-key", "1")
+				resp, _ := dp.Head("/echo", hdr)
+				assert.Equal(t, 200, resp.StatusCode)
+				assert.Equal(t, "1, 1;w=1", resp.Header.Get("X-Ratelimit-Limit"))
+				assert.Equal(t, "0", resp.Header.Get("X-Ratelimit-Remaining"))
+				assert.Equal(t, "1", resp.Header.Get("X-Ratelimit-Reset"))
+				resp, _ = dp.Head("/echo", hdr)
+				assert.Equal(t, 429, resp.StatusCode)
+				assert.Equal(t, "1, 1;w=1", resp.Header.Get("X-Ratelimit-Limit"))
+				assert.Equal(t, "0", resp.Header.Get("X-Ratelimit-Remaining"))
+				assert.Equal(t, "1", resp.Header.Get("X-Ratelimit-Reset"))
+			},
+		},
+		{
+			name: "multiple rules, with limit quota headers enabled",
+			config: control_plane.NewSinglePluinConfig("limitCountRedis", map[string]interface{}{
+				"address":                 "redis:6379",
+				"enableLimitQuotaHeaders": true,
+				"rules": []interface{}{
+					map[string]interface{}{
+						"count":      2,
+						"timeWindow": "10s",
+						"key":        `request.header("x-key")`,
+					},
+					map[string]interface{}{
+						"count":      2,
+						"timeWindow": "1s",
+					},
+					map[string]interface{}{
+						"count":      3,
+						"timeWindow": "1s",
+					},
+				},
+			}),
+			run: func(t *testing.T) {
+				hdr := http.Header{}
+				hdr.Add("x-key", "1")
+				resp, _ := dp.Head("/echo", hdr)
+				assert.Equal(t, 200, resp.StatusCode)
+				assert.Equal(t, "2, 2;w=10, 2;w=1, 3;w=1", resp.Header.Get("X-Ratelimit-Limit"))
+				assert.Equal(t, "1", resp.Header.Get("X-Ratelimit-Remaining"))
+				assert.Equal(t, "10", resp.Header.Get("X-Ratelimit-Reset"))
+
+				hdr2 := http.Header{}
+				hdr2.Add("x-key", "2")
+				resp, _ = dp.Head("/echo", hdr2)
+				assert.Equal(t, 200, resp.StatusCode)
+				assert.Equal(t, "2, 2;w=10, 2;w=1, 3;w=1", resp.Header.Get("X-Ratelimit-Limit"))
+				assert.Equal(t, "0", resp.Header.Get("X-Ratelimit-Remaining"))
+				assert.Equal(t, "1", resp.Header.Get("X-Ratelimit-Reset"))
+
+				resp, _ = dp.Head("/echo", nil)
+				assert.Equal(t, 429, resp.StatusCode)
+				assert.Equal(t, "2, 2;w=10, 2;w=1, 3;w=1", resp.Header.Get("X-Ratelimit-Limit"))
+				assert.Equal(t, "0", resp.Header.Get("X-Ratelimit-Remaining"))
+				assert.Equal(t, "1", resp.Header.Get("X-Ratelimit-Reset"))
+			},
+		},
 	}
 
 	for _, tt := range tests {

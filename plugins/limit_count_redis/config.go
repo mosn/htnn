@@ -17,6 +17,7 @@ package limit_count_redis
 import (
 	"fmt"
 	"net"
+	"strings"
 
 	"github.com/google/cel-go/cel"
 	"github.com/google/uuid"
@@ -60,8 +61,9 @@ func (p *plugin) Config() api.PluginConfig {
 type config struct {
 	Config
 
-	client   *redis.Client
-	limiters []*Limiter
+	client      *redis.Client
+	limiters    []*Limiter
+	quotaPolicy string
 }
 
 type Limiter struct {
@@ -108,18 +110,22 @@ func (conf *config) Init(cb api.ConfigCallbackHandler) error {
 	api.LogInfof("limitCountRedis filter uses %s as prefix, config: %v", prefix, &conf.Config)
 
 	conf.limiters = make([]*Limiter, len(conf.Rules))
+	quotaPolicy := make([]string, len(conf.Rules))
 	for i, rule := range conf.Rules {
 		conf.limiters[i] = &Limiter{
 			count:      rule.Count,
 			timeWindow: rule.TimeWindow.Seconds,
 			prefix:     fmt.Sprintf("%s|%d", prefix, i),
 		}
+		quotaPolicy[i] = fmt.Sprintf("%d;w=%d", rule.Count, rule.TimeWindow.Seconds)
+
 		if rule.Key == "" {
 			continue
 		}
 		script, _ := expr.CompileCel(rule.Key, cel.StringType)
 		conf.limiters[i].script = script
 	}
+	conf.quotaPolicy = strings.Join(quotaPolicy, ", ")
 
 	return nil
 }
