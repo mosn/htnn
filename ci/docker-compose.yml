@@ -1,6 +1,7 @@
 version: "3.8"
 
 services:
+  # names in alphabetical order
   opa:
     image: openpolicyagent/opa:0.58.0
     restart: unless-stopped
@@ -11,6 +12,13 @@ services:
       - type: bind
         source: ./opa/test.rego
         target: /test.rego
+    networks:
+      service:
+  redis:
+    image: redis:latest
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
     networks:
       service:
 

@@ -12,17 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package plugins
+package stringx
 
 import (
-	_ "mosn.io/htnn/plugins/casbin"
-	_ "mosn.io/htnn/plugins/cel_script"
-	_ "mosn.io/htnn/plugins/consumer_restriction"
-	_ "mosn.io/htnn/plugins/demo"
-	_ "mosn.io/htnn/plugins/ext_auth"
-	_ "mosn.io/htnn/plugins/hmac_auth"
-	_ "mosn.io/htnn/plugins/key_auth"
-	_ "mosn.io/htnn/plugins/limit_count_redis"
-	_ "mosn.io/htnn/plugins/limit_req"
-	_ "mosn.io/htnn/plugins/opa"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
+
+func TestCutSpace(t *testing.T) {
+	assert.Equal(t, "a b c", CutSpace(" a b   \tc\t"))
+}
