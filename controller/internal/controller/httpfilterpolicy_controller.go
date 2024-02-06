@@ -321,6 +321,14 @@ func (r *HTTPFilterPolicyReconciler) policyToTranslationState(ctx context.Contex
 	return initState, nil
 }
 
+func fillEnvoyFilterMeta(ef *istiov1a3.EnvoyFilter) {
+	ef.Namespace = config.RootNamespace()
+	if ef.Labels == nil {
+		ef.Labels = map[string]string{}
+	}
+	ef.Labels[model.LabelCreatedBy] = "HTTPFilterPolicy"
+}
+
 func (r *HTTPFilterPolicyReconciler) translationStateToCustomResource(ctx context.Context, logger *logr.Logger,
 	finalState *translation.FinalState) error {
 
@@ -329,6 +337,7 @@ func (r *HTTPFilterPolicyReconciler) translationStateToCustomResource(ctx contex
 		return fmt.Errorf("failed to list EnvoyFilter: %w", err)
 	}
 
+	preEnvoyFilterMap := make(map[string]*istiov1a3.EnvoyFilter, len(envoyfilters.Items))
 	for _, ef := range envoyfilters.Items {
 		if _, ok := finalState.EnvoyFilters[ef.Name]; !ok || ef.Namespace != config.RootNamespace() {
 			logger.Info("delete EnvoyFilter", "name", ef.Name, "namespace", ef.Namespace)
@@ -336,28 +345,19 @@ func (r *HTTPFilterPolicyReconciler) translationStateToCustomResource(ctx contex
 				return fmt.Errorf("failed to delete EnvoyFilter: %w, namespacedName: %v",
 					err, types.NamespacedName{Name: ef.Name, Namespace: ef.Namespace})
 			}
+		} else {
+			preEnvoyFilterMap[ef.Name] = ef
 		}
 	}
 
 	for _, ef := range finalState.EnvoyFilters {
-		ef.Namespace = config.RootNamespace()
-		if ef.Labels == nil {
-			ef.Labels = map[string]string{}
-		}
-		ef.Labels[model.LabelCreatedBy] = "HTTPFilterPolicy"
-
-		var envoyfilter istiov1a3.EnvoyFilter
-		nsName := types.NamespacedName{Name: ef.Name, Namespace: ef.Namespace}
-		err := r.Get(ctx, nsName, &envoyfilter)
-		if err != nil {
-			if !apierrors.IsNotFound(err) {
-				// If part of EnvoyFilters is already written, retry later is OK as we generate all EnvoyFilters in one reconcile.
-				return fmt.Errorf("failed to get EnvoyFilter: %w, namespacedName: %v", err, nsName)
-			}
-
+		envoyfilter, ok := preEnvoyFilterMap[ef.Name]
+		if !ok {
 			logger.Info("create EnvoyFilter", "name", ef.Name, "namespace", ef.Namespace)
+			fillEnvoyFilterMeta(ef)
 
-			if err = r.Create(ctx, ef); err != nil {
+			if err := r.Create(ctx, ef); err != nil {
+				nsName := types.NamespacedName{Name: ef.Name, Namespace: ef.Namespace}
 				return fmt.Errorf("failed to create EnvoyFilter: %w, namespacedName: %v", err, nsName)
 			}
 
@@ -367,9 +367,11 @@ func (r *HTTPFilterPolicyReconciler) translationStateToCustomResource(ctx contex
 			}
 
 			logger.Info("update EnvoyFilter", "name", ef.Name, "namespace", ef.Namespace)
+			fillEnvoyFilterMeta(ef)
 			// Address metadata.resourceVersion: Invalid value: 0x0 error
 			ef.SetResourceVersion(envoyfilter.ResourceVersion)
-			if err = r.Update(ctx, ef); err != nil {
+			if err := r.Update(ctx, ef); err != nil {
+				nsName := types.NamespacedName{Name: ef.Name, Namespace: ef.Namespace}
 				return fmt.Errorf("failed to update EnvoyFilter: %w, namespacedName: %v", err, nsName)
 			}
 		}

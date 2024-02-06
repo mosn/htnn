@@ -19,7 +19,9 @@ package benchmark
 import (
 	"context"
 	"fmt"
+	"os"
 	"runtime"
+	"runtime/pprof"
 	"strconv"
 	"sync"
 	"time"
@@ -201,6 +203,22 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 				}
 			}()
 
+			var err error
+			var cpuProfFile, memProfFile *os.File
+			if enableProfile {
+				cpuprofile := "cpuprofile.out"
+				cpuProfFile, err = os.Create(cpuprofile)
+				Expect(err).ShouldNot(HaveOccurred())
+				defer cpuProfFile.Close()
+				Expect(pprof.StartCPUProfile(cpuProfFile)).Should(Succeed())
+				defer pprof.StopCPUProfile()
+
+				memprofile := "memprofile.out"
+				memProfFile, err = os.Create(memprofile)
+				Expect(err).ShouldNot(HaveOccurred())
+				defer memProfFile.Close()
+			}
+
 			num := 10
 			start := time.Now()
 			for i := 0; i < num; i++ {
@@ -217,6 +235,10 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 				peakMemAlloc = memStats.Alloc
 			}
 			fmt.Printf("Allocated memory: %d MB\n", peakMemAlloc/1024/1024)
+
+			if enableProfile {
+				Expect(pprof.WriteHeapProfile(memProfFile)).Should(Succeed())
+			}
 		})
 	})
 })

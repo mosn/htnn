@@ -68,7 +68,7 @@ func (s *InitState) AddPolicyForVirtualService(policy *mosniov1.HTTPFilterPolicy
 	vsp, ok := s.VirtualServicePolicies[nn]
 	if !ok {
 		vsp = &VirtualServicePolicies{
-			VirtualService: vs.DeepCopy(),
+			VirtualService: vs,
 			RoutePolicies:  map[string][]*HTTPFilterPolicyWrapper{},
 		}
 		s.VirtualServicePolicies[nn] = vsp
@@ -78,14 +78,14 @@ func (s *InitState) AddPolicyForVirtualService(policy *mosniov1.HTTPFilterPolicy
 		for _, httpRoute := range vs.Spec.Http {
 			routeName := httpRoute.Name
 			vsp.RoutePolicies[routeName] = append(vsp.RoutePolicies[routeName], &HTTPFilterPolicyWrapper{
-				HTTPFilterPolicy: policy.DeepCopy(),
+				HTTPFilterPolicy: policy,
 				scope:            PolicyScopeRoute,
 			})
 		}
 	} else {
 		routeName := string(*policy.Spec.TargetRef.SectionName)
 		vsp.RoutePolicies[routeName] = append(vsp.RoutePolicies[routeName], &HTTPFilterPolicyWrapper{
-			HTTPFilterPolicy: policy.DeepCopy(),
+			HTTPFilterPolicy: policy,
 			scope:            PolicyScopeRule,
 		})
 	}
@@ -94,7 +94,7 @@ func (s *InitState) AddPolicyForVirtualService(policy *mosniov1.HTTPFilterPolicy
 	if !ok {
 		gws = make([]*istiov1b1.Gateway, 0)
 	}
-	s.VsToGateway[nn] = append(gws, gw.DeepCopy())
+	s.VsToGateway[nn] = append(gws, gw)
 }
 
 func (s *InitState) AddPolicyForHTTPRoute(policy *mosniov1.HTTPFilterPolicy, route *gwapiv1.HTTPRoute, gw *gwapiv1.Gateway) {
@@ -105,12 +105,6 @@ func (s *InitState) AddPolicyForHTTPRoute(policy *mosniov1.HTTPFilterPolicy, rou
 
 	hp, ok := s.HTTPRoutePolicies[nn]
 	if !ok {
-		route := route.DeepCopy()
-		if len(route.Spec.Hostnames) == 0 {
-			// This is how Istio handles empty Hostnames
-			route.Spec.Hostnames = []gwapiv1.Hostname{"*"}
-		}
-
 		hp = &HTTPRoutePolicies{
 			HTTPRoute:     route,
 			RoutePolicies: map[string][]*HTTPFilterPolicyWrapper{},
@@ -121,7 +115,7 @@ func (s *InitState) AddPolicyForHTTPRoute(policy *mosniov1.HTTPFilterPolicy, rou
 	for i := range route.Spec.Rules {
 		name := fmt.Sprintf("%s.%s.%d", route.Namespace, route.Name, i)
 		hp.RoutePolicies[name] = append(hp.RoutePolicies[name], &HTTPFilterPolicyWrapper{
-			HTTPFilterPolicy: policy.DeepCopy(),
+			HTTPFilterPolicy: policy,
 			scope:            PolicyScopeRoute,
 		})
 	}
@@ -130,7 +124,7 @@ func (s *InitState) AddPolicyForHTTPRoute(policy *mosniov1.HTTPFilterPolicy, rou
 	if !ok {
 		gws = make([]*gwapiv1.Gateway, 0)
 	}
-	s.HrToGateway[nn] = append(gws, gw.DeepCopy())
+	s.HrToGateway[nn] = append(gws, gw)
 }
 
 func (s *InitState) Process(original_ctx context.Context) (*FinalState, error) {

@@ -74,6 +74,8 @@ const (
 var (
 	timeout time.Duration
 	scale   int
+
+	enableProfile = false
 )
 
 func init() {
@@ -91,6 +93,10 @@ func init() {
 	timeout = 5 * time.Second * time.Duration(scale/100)
 	if timeout < 10*time.Second {
 		timeout = 10 * time.Second
+	}
+
+	if os.Getenv("ENABLE_PROFILE") != "" {
+		enableProfile = true
 	}
 }
 
