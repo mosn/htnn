@@ -140,8 +140,7 @@ var _ = Describe("Nacos", func() {
 			}
 		}
 
-		helper.WaitServiceUp(":8848",
-			"Nacos is unavailble. Please run `make start-controller-service` in controller directory to make it up.")
+		helper.WaitServiceUp(":8848", "Nacos")
 	})
 
 	It("service life cycle", func() {

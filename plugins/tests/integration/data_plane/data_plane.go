@@ -187,7 +187,7 @@ func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 		go func() { done <- cmd.Wait() }()
 	}()
 
-	helper.WaitServiceUp(t, ":10000", "failed to start data plane")
+	helper.WaitServiceUp(t, ":10000", "")
 
 	select {
 	case err := <-done:

@@ -15,6 +15,7 @@
 package helper
 
 import (
+	"fmt"
 	"math/rand"
 	"net"
 	"os"
@@ -35,7 +36,7 @@ func MustReadInput(fn string, out *[]map[string]interface{}) {
 	})
 }
 
-func WaitServiceUp(port string, msg string) {
+func WaitServiceUp(port string, service string) {
 	Eventually(func() bool {
 		c, err := net.DialTimeout("tcp", port, 10*time.Millisecond)
 		if err != nil {
@@ -43,5 +44,6 @@ func WaitServiceUp(port string, msg string) {
 		}
 		c.Close()
 		return true
-	}, 10*time.Second, 50*time.Millisecond, msg)
+	}, 10*time.Second, 50*time.Millisecond,
+		fmt.Sprintf("%s is unavailble. Please run `make start-controller-service` in ./controller to make it up.", service))
 }

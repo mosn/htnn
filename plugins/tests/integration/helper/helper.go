@@ -31,6 +31,10 @@ func WriteTempFile(s string) *os.File {
 }
 
 func WaitServiceUp(t *testing.T, port string, service string) {
+	msg := ""
+	if service != "" {
+		msg = fmt.Sprintf("Service is unavailble. Please run `docker-compose up %s` under ./plugins/tests/integration/testdata/services and ensure it is started", service)
+	}
 	require.Eventually(t, func() bool {
 		c, err := net.DialTimeout("tcp", port, 10*time.Millisecond)
 		if err != nil {
@@ -38,6 +42,5 @@ func WaitServiceUp(t *testing.T, port string, service string) {
 		}
 		c.Close()
 		return true
-	}, 10*time.Second, 50*time.Millisecond,
-		fmt.Sprintf("Service is unavailble. Please run `docker-compose up %s` under ./plugins/tests/integration/testdata/services and ensure it is started", service))
+	}, 10*time.Second, 50*time.Millisecond, msg)
 }
