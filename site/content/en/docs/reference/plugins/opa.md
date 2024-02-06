@@ -90,7 +90,7 @@ Here is the JSON data OPA sends back to HTNN, set by the configured policy:
 First of all, launch the Open Policy Agent:
 
 ```shell
-cd ci/
+cd ./plugins/tests/integration/testdata/services
 docker-compose up opa
 ```
 

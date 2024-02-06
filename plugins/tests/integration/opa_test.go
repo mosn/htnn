@@ -34,8 +34,7 @@ func TestOpa(t *testing.T) {
 	}
 	defer dp.Stop()
 
-	helper.WaitServiceUp(t, ":8181",
-		"Service is unavailble. Please run `docker-compose up opa` under ci/ and ensure it is started")
+	helper.WaitServiceUp(t, ":8181", "opa")
 
 	tests := []struct {
 		name   string

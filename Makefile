@@ -235,7 +235,7 @@ verify-example:
 
 .PHONY: start-service
 start-service:
-	cd ./ci/ && docker-compose up -d
+	cd ./plugins/tests/integration/testdata/services && docker-compose up -d
 
 # E2E
 KUBECTL ?= $(LOCALBIN)/kubectl
