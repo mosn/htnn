@@ -15,6 +15,7 @@
 package limit_count_redis
 
 import (
+	"crypto/tls"
 	"fmt"
 	"net"
 	"strings"
@@ -97,14 +98,27 @@ func (conf *config) Validate() error {
 		}
 	}
 
+	if conf.Username != "" && conf.Password == "" {
+		return fmt.Errorf("password is required when username is set")
+	}
+
 	return nil
 }
 
 func (conf *config) Init(cb api.ConfigCallbackHandler) error {
 	addr := conf.GetAddress()
-	conf.client = redis.NewClient(&redis.Options{
-		Addr: addr,
-	})
+	opt := &redis.Options{
+		Addr:     addr,
+		Username: conf.Username,
+		Password: conf.Password,
+	}
+	if conf.Tls {
+		opt.TLSConfig = &tls.Config{
+			InsecureSkipVerify: conf.TlsSkipVerify,
+		}
+	}
+
+	conf.client = redis.NewClient(opt)
 
 	prefix := uuid.NewString()[:8] // enough for millions configurations
 	api.LogInfof("limitCountRedis filter uses %s as prefix, config: %v", prefix, &conf.Config)

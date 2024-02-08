@@ -182,6 +182,52 @@ func TestLimitCountRedis(t *testing.T) {
 				assert.Equal(t, "1", resp.Header.Get("X-Ratelimit-Reset"))
 			},
 		},
+		{
+			name: "passwd",
+			config: control_plane.NewSinglePluinConfig("limitCountRedis", map[string]interface{}{
+				"address": "redis:6379",
+				"rules": []interface{}{
+					map[string]interface{}{
+						"count":      1,
+						"timeWindow": "1s",
+						"key":        `request.header("x-key")`,
+					},
+				},
+				"username": "user",
+				"password": "passwd",
+			}),
+			run: func(t *testing.T) {
+				hdr := http.Header{}
+				hdr.Add("x-key", "1")
+				resp, _ := dp.Head("/echo", hdr)
+				assert.Equal(t, 200, resp.StatusCode)
+				resp, _ = dp.Head("/echo", hdr)
+				assert.Equal(t, 429, resp.StatusCode)
+			},
+		},
+		{
+			name: "tls",
+			config: control_plane.NewSinglePluinConfig("limitCountRedis", map[string]interface{}{
+				"address": "redis:6380",
+				"rules": []interface{}{
+					map[string]interface{}{
+						"count":      1,
+						"timeWindow": "1s",
+						"key":        `request.header("x-key")`,
+					},
+				},
+				"tls":           true,
+				"tlsSkipVerify": true,
+			}),
+			run: func(t *testing.T) {
+				hdr := http.Header{}
+				hdr.Add("x-key", "1")
+				resp, _ := dp.Head("/echo", hdr)
+				assert.Equal(t, 200, resp.StatusCode)
+				resp, _ = dp.Head("/echo", hdr)
+				assert.Equal(t, 429, resp.StatusCode)
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -234,6 +280,43 @@ func TestLimitCountRedisBadService(t *testing.T) {
 						"timeWindow": "1s",
 					},
 				},
+			}),
+			run: func(t *testing.T) {
+				resp, _ := dp.Head("/echo", nil)
+				assert.Equal(t, 503, resp.StatusCode)
+			},
+		},
+		{
+			name: "bad redis, wrong passwd",
+			config: control_plane.NewSinglePluinConfig("limitCountRedis", map[string]interface{}{
+				"address":         "redis:6379",
+				"username":        "user",
+				"password":        "x",
+				"failureModeDeny": true,
+				"rules": []interface{}{
+					map[string]interface{}{
+						"count":      1,
+						"timeWindow": "1s",
+					},
+				},
+			}),
+			run: func(t *testing.T) {
+				resp, _ := dp.Head("/echo", nil)
+				assert.Equal(t, 503, resp.StatusCode)
+			},
+		},
+		{
+			name: "bad redis, tls verify",
+			config: control_plane.NewSinglePluinConfig("limitCountRedis", map[string]interface{}{
+				"address":         "redis:6380",
+				"failureModeDeny": true,
+				"rules": []interface{}{
+					map[string]interface{}{
+						"count":      1,
+						"timeWindow": "1s",
+					},
+				},
+				"tls": true,
 			}),
 			run: func(t *testing.T) {
 				resp, _ := dp.Head("/echo", nil)

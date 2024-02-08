@@ -27,6 +27,9 @@ linters-settings:
       - style
       - experimental
       - opinionated
+  gosec:
+    excludes:
+      - G402 # TLS InsecureSkipVerify may be true.
   unparam:
     check-exported: false
 
