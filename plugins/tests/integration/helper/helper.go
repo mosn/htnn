@@ -15,6 +15,7 @@
 package helper
 
 import (
+	"fmt"
 	"net"
 	"os"
 	"testing"
@@ -29,7 +30,11 @@ func WriteTempFile(s string) *os.File {
 	return tmpfile
 }
 
-func WaitServiceUp(t *testing.T, port string, msg string) {
+func WaitServiceUp(t *testing.T, port string, service string) {
+	msg := ""
+	if service != "" {
+		msg = fmt.Sprintf("Service is unavailble. Please run `docker-compose up %s` under ./plugins/tests/integration/testdata/services and ensure it is started", service)
+	}
 	require.Eventually(t, func() bool {
 		c, err := net.DialTimeout("tcp", port, 10*time.Millisecond)
 		if err != nil {

@@ -50,8 +50,7 @@ var _ = Describe("ServiceRegistry controller", func() {
 				}
 			}
 
-			helper.WaitServiceUp(":8848",
-				"Nacos is unavailble. Please run `make start-controller-service` in controller directory to make it up.")
+			helper.WaitServiceUp(":8848", "Nacos")
 		})
 
 		It("deal with invalid serviceregistry crd", func() {

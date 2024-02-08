@@ -11,7 +11,7 @@ Assumed you are at the root of this project:
 
 The test framework will start Envoy to run the Go plugins. The stdout/stderr of the Envoy can be found in `./test-envoy/$test_name`.
 
-Some tests require third-party services. You can start them via running `docker-compose up $service` under `./ci/`.
+Some tests require third-party services. You can start them via running `docker-compose up $service` under `./plugins/tests/integration/testdata/services`.
 
 ## Port usage
 

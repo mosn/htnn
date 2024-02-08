@@ -35,8 +35,7 @@ func TestLimitCountRedis(t *testing.T) {
 	}
 	defer dp.Stop()
 
-	helper.WaitServiceUp(t, ":6379",
-		"Service is unavailble. Please run `docker-compose up redis` under ci/ and ensure it is started")
+	helper.WaitServiceUp(t, ":6379", "redis")
 
 	tests := []struct {
 		name   string
