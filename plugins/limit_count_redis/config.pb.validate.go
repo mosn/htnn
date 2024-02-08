@@ -255,6 +255,8 @@ func (m *Config) validate(all bool) error {
 
 	// no validation rules for FailureModeDeny
 
+	// no validation rules for EnableLimitQuotaHeaders
+
 	oneofSourcePresent := false
 	switch v := m.Source.(type) {
 	case *Config_Address:
