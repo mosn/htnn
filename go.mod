@@ -9,7 +9,7 @@ toolchain go1.21.5
 
 require (
 	github.com/agiledragon/gomonkey/v2 v2.11.0
-	github.com/casbin/casbin/v2 v2.81.0
+	github.com/casbin/casbin/v2 v2.82.0
 	github.com/cncf/xds/go v0.0.0-20231109132714-523115ebc101
 	github.com/envoyproxy/envoy v1.29.0
 	github.com/envoyproxy/go-control-plane v0.11.2-0.20231019082134-6e4589f570e1 // version used by istio 1.20
