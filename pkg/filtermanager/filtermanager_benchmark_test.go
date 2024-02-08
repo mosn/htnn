@@ -31,8 +31,8 @@ func BenchmarkFilterManagerAllPhase(b *testing.B) {
 	config := initFilterManagerConfig("ns")
 	config.current = []*model.ParsedFilterConfig{
 		{
-			Name:          "allPhase",
-			ConfigFactory: PassThroughFactory,
+			Name:    "allPhase",
+			Factory: PassThroughFactory,
 		},
 	}
 	reqHdr := envoy.NewRequestHeaderMap(http.Header{})
@@ -41,7 +41,7 @@ func BenchmarkFilterManagerAllPhase(b *testing.B) {
 	respBuf := envoy.NewBufferInstance([]byte{})
 
 	for n := 0; n < b.N; n++ {
-		m := FilterManagerConfigFactory(config)(cb)
+		m := FilterManagerFactory(config, cb)
 		m.DecodeHeaders(reqHdr, false)
 		cb.WaitContinued()
 		m.DecodeData(reqBuf, true)
@@ -54,10 +54,8 @@ func BenchmarkFilterManagerAllPhase(b *testing.B) {
 	}
 }
 
-func regularFactory(c interface{}) api.FilterFactory {
-	return func(callbacks api.FilterCallbackHandler) api.Filter {
-		return &regularFilter{}
-	}
+func regularFactory(c interface{}, callbacks api.FilterCallbackHandler) api.Filter {
+	return &regularFilter{}
 }
 
 type regularFilter struct {
@@ -78,14 +76,14 @@ func BenchmarkFilterManagerRegular(b *testing.B) {
 	config := initFilterManagerConfig("ns")
 	config.current = []*model.ParsedFilterConfig{
 		{
-			Name:          "regular",
-			ConfigFactory: regularFactory,
+			Name:    "regular",
+			Factory: regularFactory,
 		},
 	}
 	reqHdr := envoy.NewRequestHeaderMap(http.Header{})
 
 	for n := 0; n < b.N; n++ {
-		m := FilterManagerConfigFactory(config)(cb)
+		m := FilterManagerFactory(config, cb)
 		m.DecodeHeaders(reqHdr, false)
 		cb.WaitContinued()
 		m.OnLog()

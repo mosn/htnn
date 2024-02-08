@@ -22,8 +22,8 @@ type MockPlugin struct {
 	PluginMethodDefaultImpl
 }
 
-func (m *MockPlugin) ConfigFactory() api.FilterConfigFactory {
-	return func(interface{}) api.FilterFactory { return nil }
+func (m *MockPlugin) Factory() api.FilterFactory {
+	return func(interface{}, api.FilterCallbackHandler) api.Filter { return nil }
 }
 
 func (m *MockPlugin) Config() api.PluginConfig {

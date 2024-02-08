@@ -42,6 +42,8 @@ github.com/dustin/go-humanize v1.0.0 h1:VSnTsYCnlFHaM2/igO1h6X3HA71jcobQuxemgkq4
 github.com/dustin/go-humanize v1.0.0/go.mod h1:HtrtbFcZ19U5GC7JDqmcUSB87Iq5E25KnS6fMYU6eOk=
 github.com/envoyproxy/envoy v1.29.0 h1:nTylh1h+Q+FfPi1YVOMWwd+7u/Mu5UQEw3ZI1ULtcgU=
 github.com/envoyproxy/envoy v1.29.0/go.mod h1:c2OGLXJVY9BaTYPiWFRz6eUNaC+3TfqFKmkWS9brdKo=
+github.com/envoyproxy/envoy v1.29.1-0.20240208055117-b788e1a92347 h1:WzZYszFnkdPdwQXv75W7pKM0dNCisJbffwbNr4BwKKM=
+github.com/envoyproxy/envoy v1.29.1-0.20240208055117-b788e1a92347/go.mod h1:c2OGLXJVY9BaTYPiWFRz6eUNaC+3TfqFKmkWS9brdKo=
 github.com/envoyproxy/go-control-plane v0.9.0/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
 github.com/envoyproxy/protoc-gen-validate v0.1.0/go.mod h1:iSmxcyjqTsJpI2R4NaDN7+kN2VEUnK/pcBlmesArF7c=
 github.com/envoyproxy/protoc-gen-validate v1.0.2 h1:QkIBuU5k+x7/QXPvPPnWXWlCdaBFApVqftFV6k087DA=

@@ -79,12 +79,12 @@ func TestPassThrough(t *testing.T) {
 	config := initFilterManagerConfig("ns")
 	config.current = []*model.ParsedFilterConfig{
 		{
-			Name:          "passthrough",
-			ConfigFactory: PassThroughFactory,
+			Name:    "passthrough",
+			Factory: PassThroughFactory,
 		},
 	}
 	for i := 0; i < 2; i++ {
-		m := FilterManagerConfigFactory(config)(cb).(*filterManager)
+		m := FilterManagerFactory(config, cb).(*filterManager)
 		hdr := envoy.NewRequestHeaderMap(http.Header{})
 		m.DecodeHeaders(hdr, false)
 		cb.WaitContinued()
@@ -148,11 +148,11 @@ func TestLocalReplyJSON_UseReqHeader(t *testing.T) {
 			config := initFilterManagerConfig("ns")
 			config.current = []*model.ParsedFilterConfig{
 				{
-					Name:          "test",
-					ConfigFactory: PassThroughFactory,
+					Name:    "test",
+					Factory: PassThroughFactory,
 				},
 			}
-			m := FilterManagerConfigFactory(config)(cb).(*filterManager)
+			m := FilterManagerFactory(config, cb).(*filterManager)
 			patches := gomonkey.ApplyMethodReturn(m.filters[0].Filter, "DecodeHeaders", &api.LocalResponse{
 				Code: 200,
 				Msg:  "msg",
@@ -221,11 +221,11 @@ func TestLocalReplyJSON_UseRespHeader(t *testing.T) {
 			config := initFilterManagerConfig("ns")
 			config.current = []*model.ParsedFilterConfig{
 				{
-					Name:          "test",
-					ConfigFactory: PassThroughFactory,
+					Name:    "test",
+					Factory: PassThroughFactory,
 				},
 			}
-			m := FilterManagerConfigFactory(config)(cb).(*filterManager)
+			m := FilterManagerFactory(config, cb).(*filterManager)
 			patches := gomonkey.ApplyMethodReturn(m.filters[0].Filter, "EncodeHeaders", &api.LocalResponse{
 				Code: 200,
 				Msg:  "msg",
@@ -257,11 +257,11 @@ func TestLocalReplyJSON_DoNotChangeMsgIfContentTypeIsGiven(t *testing.T) {
 	config := initFilterManagerConfig("ns")
 	config.current = []*model.ParsedFilterConfig{
 		{
-			Name:          "test",
-			ConfigFactory: PassThroughFactory,
+			Name:    "test",
+			Factory: PassThroughFactory,
 		},
 	}
-	m := FilterManagerConfigFactory(config)(cb).(*filterManager)
+	m := FilterManagerFactory(config, cb).(*filterManager)
 	patches := gomonkey.ApplyMethodReturn(m.filters[0].Filter, "DecodeHeaders", &api.LocalResponse{
 		Msg:    "msg",
 		Header: http.Header(map[string][]string{"Content-Type": {"text/plain"}}),
@@ -281,11 +281,9 @@ func TestLocalReplyJSON_DoNotChangeMsgIfContentTypeIsGiven(t *testing.T) {
 	}, lr)
 }
 
-func setConsumerFactory(interface{}) api.FilterFactory {
-	return func(callbacks api.FilterCallbackHandler) api.Filter {
-		return &setConsumerFilter{
-			callbacks: callbacks,
-		}
+func setConsumerFactory(c interface{}, callbacks api.FilterCallbackHandler) api.Filter {
+	return &setConsumerFilter{
+		callbacks: callbacks,
 	}
 }
 
@@ -298,12 +296,12 @@ func (f *setConsumerFilter) DecodeHeaders(headers api.RequestHeaderMap, endStrea
 	f.callbacks.SetConsumer(&pkgConsumer.Consumer{
 		FilterConfigs: map[string]*model.ParsedFilterConfig{
 			"on_log": {
-				Name:          "on_log",
-				ConfigFactory: onLogFactory,
+				Name:    "on_log",
+				Factory: onLogFactory,
 			},
 			"add_req": {
-				Name:          "add_req",
-				ConfigFactory: addReqFactory,
+				Name:    "add_req",
+				Factory: addReqFactory,
 				ParsedConfig: addReqConf{
 					hdrName: "x-htnn-consumer",
 				},
@@ -313,10 +311,8 @@ func (f *setConsumerFilter) DecodeHeaders(headers api.RequestHeaderMap, endStrea
 	return api.Continue
 }
 
-func onLogFactory(interface{}) api.FilterFactory {
-	return func(callbacks api.FilterCallbackHandler) api.Filter {
-		return &onLogFilter{}
-	}
+func onLogFactory(c interface{}, callbacks api.FilterCallbackHandler) api.Filter {
+	return &onLogFilter{}
 }
 
 type onLogFilter struct {
@@ -330,11 +326,9 @@ type addReqConf struct {
 	hdrName string
 }
 
-func addReqFactory(c interface{}) api.FilterFactory {
-	return func(callbacks api.FilterCallbackHandler) api.Filter {
-		return &addReqFilter{
-			conf: c.(addReqConf),
-		}
+func addReqFactory(c interface{}, callbacks api.FilterCallbackHandler) api.Filter {
+	return &addReqFilter{
+		conf: c.(addReqConf),
 	}
 }
 
@@ -355,19 +349,19 @@ func TestFiltersFromConsumer(t *testing.T) {
 	config.authnFiltersEndAt = 1
 	config.current = []*model.ParsedFilterConfig{
 		{
-			Name:          "set_consumer",
-			ConfigFactory: setConsumerFactory,
+			Name:    "set_consumer",
+			Factory: setConsumerFactory,
 		},
 		{
-			Name:          "add_req",
-			ConfigFactory: addReqFactory,
+			Name:    "add_req",
+			Factory: addReqFactory,
 			ParsedConfig: addReqConf{
 				hdrName: "x-htnn-route",
 			},
 		},
 	}
 	for i := 0; i < 2; i++ {
-		m := FilterManagerConfigFactory(config)(cb).(*filterManager)
+		m := FilterManagerFactory(config, cb).(*filterManager)
 		assert.Equal(t, true, m.canSkipOnLog)
 		assert.Equal(t, 1, len(m.filters))
 		hdr := envoy.NewRequestHeaderMap(http.Header{})

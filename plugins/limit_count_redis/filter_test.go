@@ -28,7 +28,7 @@ import (
 
 func TestGetKey(t *testing.T) {
 	cb := envoy.NewFilterCallbackHandler()
-	f := configFactory(&config{})(cb).(*filter)
+	f := factory(&config{}, cb).(*filter)
 	h := http.Header{}
 	h.Set("pet", "cat")
 	hdr := envoy.NewRequestHeaderMap(h)

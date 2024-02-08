@@ -99,7 +99,7 @@ type NativePlugin interface {
 type GoPlugin interface {
 	Plugin
 
-	ConfigFactory() api.FilterConfigFactory
+	Factory() api.FilterFactory
 }
 
 type ConsumerPlugin interface {

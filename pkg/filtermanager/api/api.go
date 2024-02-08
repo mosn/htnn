@@ -153,8 +153,7 @@ type FilterCallbackHandler interface {
 	GetConsumer() Consumer
 }
 
-type FilterFactory func(callbacks FilterCallbackHandler) Filter
-type FilterConfigFactory func(config interface{}) FilterFactory
+type FilterFactory func(config interface{}, callbacks FilterCallbackHandler) Filter
 
 // DynamicMetadata operates the Envoy's dynamic metadata
 type DynamicMetadata = api.DynamicMetadata

@@ -22,7 +22,7 @@ type FilterConfig struct {
 }
 
 type ParsedFilterConfig struct {
-	Name          string
-	ParsedConfig  interface{}
-	ConfigFactory api.FilterConfigFactory
+	Name         string
+	ParsedConfig interface{}
+	Factory      api.FilterFactory
 }

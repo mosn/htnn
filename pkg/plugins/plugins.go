@@ -26,8 +26,8 @@ import (
 var (
 	logger = log.DefaultLogger.WithName("plugins")
 
-	httpPlugins                      = map[string]Plugin{}
-	httpFilterConfigFactoryAndParser = map[string]*FilterConfigFactoryAndParser{}
+	httpPlugins                = map[string]Plugin{}
+	httpFilterFactoryAndParser = map[string]*FilterFactoryAndParser{}
 )
 
 // Here we introduce extra struct to avoid cyclic import between pkg/filtermanager and pkg/plugins
@@ -36,23 +36,23 @@ type FilterConfigParser interface {
 	Merge(parentConfig interface{}, childConfig interface{}) interface{}
 }
 
-type FilterConfigFactoryAndParser struct {
-	ConfigParser  FilterConfigParser
-	ConfigFactory api.FilterConfigFactory
+type FilterFactoryAndParser struct {
+	ConfigParser FilterConfigParser
+	Factory      api.FilterFactory
 }
 
-func RegisterHttpFilterConfigFactoryAndParser(name string, factory api.FilterConfigFactory, parser FilterConfigParser) {
+func RegisterHttpFilterFactoryAndParser(name string, factory api.FilterFactory, parser FilterConfigParser) {
 	if factory == nil {
 		panic("config factory should not be nil")
 	}
-	httpFilterConfigFactoryAndParser[name] = &FilterConfigFactoryAndParser{
+	httpFilterFactoryAndParser[name] = &FilterFactoryAndParser{
 		parser,
 		factory,
 	}
 }
 
-func LoadHttpFilterConfigFactoryAndParser(name string) *FilterConfigFactoryAndParser {
-	return httpFilterConfigFactoryAndParser[name]
+func LoadHttpFilterFactoryAndParser(name string) *FilterFactoryAndParser {
+	return httpFilterFactoryAndParser[name]
 }
 
 func RegisterHttpPlugin(name string, plugin Plugin) {
@@ -67,8 +67,8 @@ func RegisterHttpPlugin(name string, plugin Plugin) {
 		if order.Position == OrderPositionOuter || order.Position == OrderPositionInner {
 			panic("invalid plugin order position: Go plugin should not use OrderPositionOuter or OrderPositionInner")
 		}
-		RegisterHttpFilterConfigFactoryAndParser(name,
-			goPlugin.ConfigFactory(),
+		RegisterHttpFilterFactoryAndParser(name,
+			goPlugin.Factory(),
 			NewPluginConfigParser(goPlugin))
 	}
 	if _, ok := plugin.(NativePlugin); ok {

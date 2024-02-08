@@ -74,7 +74,7 @@ func TestCasbin(t *testing.T) {
 				},
 			}
 			c.Init(nil)
-			f := configFactory(c)(cb)
+			f := factory(c, cb)
 			hdr := envoy.NewRequestHeaderMap(tt.header)
 
 			wg := sync.WaitGroup{}

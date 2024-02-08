@@ -35,13 +35,10 @@ type streamPlugin struct {
 	basePlugin
 }
 
-func streamConfigFactory(c interface{}) api.FilterFactory {
-	conf := c.(*Config)
-	return func(callbacks api.FilterCallbackHandler) api.Filter {
-		return &streamFilter{
-			callbacks: callbacks,
-			config:    conf,
-		}
+func streamFactory(c interface{}, callbacks api.FilterCallbackHandler) api.Filter {
+	return &streamFilter{
+		callbacks: callbacks,
+		config:    c.(*Config),
 	}
 }
 
@@ -81,8 +78,8 @@ func (f *streamFilter) EncodeData(data api.BufferInstance, endStream bool) api.R
 	return api.Continue
 }
 
-func (p *streamPlugin) ConfigFactory() api.FilterConfigFactory {
-	return streamConfigFactory
+func (p *streamPlugin) Factory() api.FilterFactory {
+	return streamFactory
 }
 
 type bufferPlugin struct {
@@ -90,13 +87,10 @@ type bufferPlugin struct {
 	basePlugin
 }
 
-func bufferConfigFactory(c interface{}) api.FilterFactory {
-	conf := c.(*Config)
-	return func(callbacks api.FilterCallbackHandler) api.Filter {
-		return &bufferFilter{
-			callbacks: callbacks,
-			config:    conf,
-		}
+func bufferFactory(c interface{}, callbacks api.FilterCallbackHandler) api.Filter {
+	return &bufferFilter{
+		callbacks: callbacks,
+		config:    c.(*Config),
 	}
 }
 
@@ -163,8 +157,8 @@ func (f *bufferFilter) EncodeData(data api.BufferInstance, endStream bool) api.R
 	return api.Continue
 }
 
-func (p *bufferPlugin) ConfigFactory() api.FilterConfigFactory {
-	return bufferConfigFactory
+func (p *bufferPlugin) Factory() api.FilterFactory {
+	return bufferFactory
 }
 
 type localReplyPlugin struct {
@@ -172,13 +166,10 @@ type localReplyPlugin struct {
 	basePlugin
 }
 
-func localReplyConfigFactory(c interface{}) api.FilterFactory {
-	conf := c.(*Config)
-	return func(callbacks api.FilterCallbackHandler) api.Filter {
-		return &localReplyFilter{
-			callbacks: callbacks,
-			config:    conf,
-		}
+func localReplyFactory(c interface{}, callbacks api.FilterCallbackHandler) api.Filter {
+	return &localReplyFilter{
+		callbacks: callbacks,
+		config:    c.(*Config),
 	}
 }
 
@@ -259,8 +250,8 @@ func (f *localReplyFilter) EncodeData(data api.BufferInstance, endStream bool) a
 	return api.Continue
 }
 
-func (p *localReplyPlugin) ConfigFactory() api.FilterConfigFactory {
-	return localReplyConfigFactory
+func (p *localReplyPlugin) Factory() api.FilterFactory {
+	return localReplyFactory
 }
 
 func init() {

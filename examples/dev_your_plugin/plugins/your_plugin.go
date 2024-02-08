@@ -33,25 +33,25 @@ type plugin struct {
 	plugins.PluginMethodDefaultImpl
 }
 
-func (p *plugin) ConfigFactory() api.FilterConfigFactory {
-	return configFactory
+func (p *plugin) Factory() api.FilterFactory {
+	return factory
 }
 
 func (p *plugin) Config() api.PluginConfig {
 	return &Config{}
 }
 
-func configFactory(c interface{}) api.FilterFactory {
-	return func(callbacks api.FilterCallbackHandler) api.Filter {
-		return &filter{
-			callbacks: callbacks,
-		}
+func factory(c interface{}, callbacks api.FilterCallbackHandler) api.Filter {
+	return &filter{
+		callbacks: callbacks,
+		config:    c.(*Config),
 	}
 }
 
 type filter struct {
 	api.PassThroughFilter
 
+	config    *Config
 	callbacks api.FilterCallbackHandler
 }
 

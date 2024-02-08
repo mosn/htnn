@@ -82,7 +82,7 @@ func (c *Consumer) InitConfigs() error {
 
 	c.FilterConfigs = make(map[string]*model.ParsedFilterConfig, len(c.Filters))
 	for name, data := range c.Filters {
-		p := plugins.LoadHttpFilterConfigFactoryAndParser(name)
+		p := plugins.LoadHttpFilterFactoryAndParser(name)
 		if p == nil {
 			return fmt.Errorf("plugin %s not found", name)
 		}
@@ -93,9 +93,9 @@ func (c *Consumer) InitConfigs() error {
 		}
 
 		c.FilterConfigs[name] = &model.ParsedFilterConfig{
-			Name:          name,
-			ParsedConfig:  conf,
-			ConfigFactory: p.ConfigFactory,
+			Name:         name,
+			ParsedConfig: conf,
+			Factory:      p.Factory,
 		}
 	}
 
