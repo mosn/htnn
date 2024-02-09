@@ -55,12 +55,12 @@ func (p *plugin) Order() plugins.PluginOrder {
 
 // Each Go plugin need to implement the two methods below
 
-// ConfigFactory returns api.ConfigFactory's implementation used during request processing
-func (p *plugin) ConfigFactory() api.FilterConfigFactory {
-	return configFactory
+// Factory returns api.Factory's implementation used during request processing
+func (p *plugin) Factory() api.FilterFactory {
+	return factory
 }
 
-// ConfigFactory returns api.PluginConfig's implementation used during configuration processing
+// Factory returns api.PluginConfig's implementation used during configuration processing
 func (p *plugin) Config() api.PluginConfig {
 	return &config{}
 }

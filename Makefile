@@ -20,10 +20,10 @@ TARGET_SO       = libgolang.so
 PROJECT_NAME    = mosn.io/htnn
 # Both images use glibc 2.31. Ensure libc in the images match each other.
 BUILD_IMAGE     ?= golang:1.21-bullseye
-# This is the envoyproxy/envoy:contrib-v1.29-latest
-# Use docker inspect --format='{{index .RepoDigests 0}}' envoyproxy/envoy:contrib-v1.29-latest
+# This is the envoyproxy/envoy:contrib-dev fetched in 2024-02-08
+# Use docker inspect --format='{{index .RepoDigests 0}}' envoyproxy/envoy:contrib-dev
 # to get the sha256 ID
-PROXY_IMAGE     ?= envoyproxy/envoy@sha256:98ed3d86ff8b86dc12ddf54b7bb67ddf5506f80769038b3e2ab7bf402730fb4d
+PROXY_IMAGE     ?= envoyproxy/envoy@sha256:4ac92ea7095c787b6d1d74ea7d27a5c776ded08a0dee9b6737f2105f790fa384
 # We may need to use timestamp if we need to update the image in one PR
 DEV_TOOLS_IMAGE ?= ghcr.io/mosn/htnn-dev-tools:2024-01-18
 

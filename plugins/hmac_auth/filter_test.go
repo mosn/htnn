@@ -100,7 +100,7 @@ func TestHmacAuth(t *testing.T) {
 			if tt.conf != "" {
 				protojson.Unmarshal([]byte(tt.conf), conf)
 			}
-			f := configFactory(conf)(cb)
+			f := factory(conf, cb)
 			defaultHdr := map[string][]string{
 				":authority": {"test.local"},
 				":method":    {"GET"},

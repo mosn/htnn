@@ -30,8 +30,8 @@ var (
 )
 
 func init() {
-	http.RegisterHttpFilterConfigFactoryAndParser("fm", filtermanager.FilterManagerConfigFactory, &filtermanager.FilterManagerConfigParser{})
-	http.RegisterHttpFilterConfigFactoryAndParser("cm", consumer.ConsumerManagerConfigFactory, &consumer.ConsumerManagerConfigParser{})
+	http.RegisterHttpFilterFactoryAndConifgParser("fm", filtermanager.FilterManagerFactory, &filtermanager.FilterManagerConfigParser{})
+	http.RegisterHttpFilterFactoryAndConfigParser("cm", consumer.ConsumerManagerFactory, &consumer.ConsumerManagerConfigParser{})
 }
 
 func main() {}

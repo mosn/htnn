@@ -124,10 +124,10 @@ func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 		}
 	}
 
-	// This is the envoyproxy/envoy:contrib-v1.29-latest
-	// Use docker inspect --format='{{index .RepoDigests 0}}' envoyproxy/envoy:contrib-v1.29-latest
+	// This is the envoyproxy/envoy:contrib-dev fetched in 2024-02-08
+	// Use docker inspect --format='{{index .RepoDigests 0}}' envoyproxy/envoy:contrib-dev
 	// to get the sha256 ID
-	image := "envoyproxy/envoy@sha256:98ed3d86ff8b86dc12ddf54b7bb67ddf5506f80769038b3e2ab7bf402730fb4d"
+	image := "envoyproxy/envoy@sha256:4ac92ea7095c787b6d1d74ea7d27a5c776ded08a0dee9b6737f2105f790fa384"
 	pwd, _ := os.Getwd()
 	projectRoot := filepath.Join(pwd, "..", "..", "..")
 	cmdline := "docker run" +

@@ -18,13 +18,10 @@ import (
 	"mosn.io/htnn/pkg/filtermanager/api"
 )
 
-func configFactory(c interface{}) api.FilterFactory {
-	conf := c.(*config)
-	return func(callbacks api.FilterCallbackHandler) api.Filter {
-		return &filter{
-			callbacks: callbacks,
-			config:    conf,
-		}
+func factory(c interface{}, callbacks api.FilterCallbackHandler) api.Filter {
+	return &filter{
+		callbacks: callbacks,
+		config:    c.(*config),
 	}
 }
 

@@ -36,8 +36,8 @@ import (
 
 // We can't import package below here that will cause build failure in Mac
 // "github.com/envoyproxy/envoy/contrib/golang/filters/http/source/go/pkg/http"
-// Therefore, the FilterManagerConfigParser & FilterManagerConfigFactory need to be exportable.
-// The http.RegisterHttpFilterConfigFactoryAndParser will be called in the main.go when building
+// Therefore, the FilterManagerConfigParser & FilterManagerFactory need to be exportable.
+// The http.RegisterHttpFilterFactoryAndParser will be called in the main.go when building
 // the shared library in Linux.
 
 type FilterManagerConfigParser struct {
@@ -114,7 +114,7 @@ func (p *FilterManagerConfigParser) Parse(any *anypb.Any, callbacks capi.ConfigC
 
 	for _, proto := range plugins {
 		name := proto.Name
-		if plugin := pkgPlugins.LoadHttpFilterConfigFactoryAndParser(name); plugin != nil {
+		if plugin := pkgPlugins.LoadHttpFilterFactoryAndParser(name); plugin != nil {
 			// For now, we have nothing to provide as config callbacks
 			config, err := plugin.ConfigParser.Parse(proto.Config, nil)
 			if err != nil {
@@ -122,9 +122,9 @@ func (p *FilterManagerConfigParser) Parse(any *anypb.Any, callbacks capi.ConfigC
 			}
 
 			conf.current = append(conf.current, &model.ParsedFilterConfig{
-				Name:          proto.Name,
-				ParsedConfig:  config,
-				ConfigFactory: plugin.ConfigFactory,
+				Name:         proto.Name,
+				ParsedConfig: config,
+				Factory:      plugin.Factory,
 			})
 
 			p := pkgPlugins.LoadHttpPlugin(name)
@@ -285,55 +285,53 @@ func newSkipMethodsMap() map[string]bool {
 	}
 }
 
-func FilterManagerConfigFactory(c interface{}) capi.StreamFilterFactory {
+func FilterManagerFactory(c interface{}, cb capi.FilterCallbackHandler) capi.StreamFilter {
 	conf := c.(*filterManagerConfig)
 	newConfig := conf.current
 
-	return func(cb capi.FilterCallbackHandler) capi.StreamFilter {
-		fm := conf.pool.Get().(*filterManager)
-		fm.callbacks.FilterCallbackHandler = cb
+	fm := conf.pool.Get().(*filterManager)
+	fm.callbacks.FilterCallbackHandler = cb
 
-		filters := make([]*filterWrapper, len(newConfig))
-		for i, fc := range newConfig {
-			factory := fc.ConfigFactory
-			config := fc.ParsedConfig
-			f := factory(config)(fm.callbacks)
-			// Technically, the factory might create different f for different calls. We don't support this edge case for now.
-			if fm.canSkipMethod == nil {
-				canSkipMethod := newSkipMethodsMap()
-				for meth := range canSkipMethod {
-					ok, err := isMethodFromPassThroughFilter(f, meth)
-					if err != nil {
-						api.LogErrorf("failed to check method %s in filter: %v", meth, err)
-						// canSkipMethod[meth] will be false
-					}
-					canSkipMethod[meth] = canSkipMethod[meth] && ok
+	filters := make([]*filterWrapper, len(newConfig))
+	for i, fc := range newConfig {
+		factory := fc.Factory
+		config := fc.ParsedConfig
+		f := factory(config, fm.callbacks)
+		// Technically, the factory might create different f for different calls. We don't support this edge case for now.
+		if fm.canSkipMethod == nil {
+			canSkipMethod := newSkipMethodsMap()
+			for meth := range canSkipMethod {
+				ok, err := isMethodFromPassThroughFilter(f, meth)
+				if err != nil {
+					api.LogErrorf("failed to check method %s in filter: %v", meth, err)
+					// canSkipMethod[meth] will be false
 				}
-				fm.canSkipMethod = canSkipMethod
+				canSkipMethod[meth] = canSkipMethod[meth] && ok
 			}
-			filters[i] = newFilterWrapper(fc.Name, f)
+			fm.canSkipMethod = canSkipMethod
 		}
-
-		fm.filters = filters
-
-		if conf.authnFiltersEndAt != 0 {
-			authnFiltersEndAt := conf.authnFiltersEndAt
-			authnFilters := filters[:authnFiltersEndAt]
-			fm.authnFilters = authnFilters
-			fm.filters = filters[authnFiltersEndAt:]
-		}
-
-		// The skip check is based on the compiled code. So if the DecodeRequest is defined,
-		// even it is not called, DecodeData will not be skipped. Same as EncodeResponse.
-		fm.canSkipDecodeHeaders = fm.canSkipMethod["DecodeHeaders"]
-		fm.canSkipDecodeData = fm.canSkipMethod["DecodeData"] && fm.canSkipMethod["DecodeRequest"]
-		fm.canSkipEncodeHeaders = fm.canSkipMethod["EncodeHeaders"]
-		fm.canSkipEncodeData = fm.canSkipMethod["EncodeData"] && fm.canSkipMethod["EncodeResponse"]
-		fm.canSkipOnLog = fm.canSkipMethod["OnLog"]
-		// TODO: add cache for consumer so that we can also cache the skip result too
-
-		return fm
+		filters[i] = newFilterWrapper(fc.Name, f)
 	}
+
+	fm.filters = filters
+
+	if conf.authnFiltersEndAt != 0 {
+		authnFiltersEndAt := conf.authnFiltersEndAt
+		authnFilters := filters[:authnFiltersEndAt]
+		fm.authnFilters = authnFilters
+		fm.filters = filters[authnFiltersEndAt:]
+	}
+
+	// The skip check is based on the compiled code. So if the DecodeRequest is defined,
+	// even it is not called, DecodeData will not be skipped. Same as EncodeResponse.
+	fm.canSkipDecodeHeaders = fm.canSkipMethod["DecodeHeaders"]
+	fm.canSkipDecodeData = fm.canSkipMethod["DecodeData"] && fm.canSkipMethod["DecodeRequest"]
+	fm.canSkipEncodeHeaders = fm.canSkipMethod["EncodeHeaders"]
+	fm.canSkipEncodeData = fm.canSkipMethod["EncodeData"] && fm.canSkipMethod["EncodeResponse"]
+	fm.canSkipOnLog = fm.canSkipMethod["OnLog"]
+	// TODO: add cache for consumer so that we can also cache the skip result too
+
+	return fm
 }
 
 func (m *filterManager) handleAction(res api.ResultAction, phase phase) (needReturn bool) {
@@ -446,9 +444,9 @@ func (m *filterManager) DecodeHeaders(headers api.RequestHeaderMap, endStream bo
 				for name, fc := range c.FilterConfigs {
 					names = append(names, name)
 
-					factory := fc.ConfigFactory
+					factory := fc.Factory
 					config := fc.ParsedConfig
-					f := factory(config)(m.callbacks)
+					f := factory(config, m.callbacks)
 					for meth := range canSkipMethod {
 						ok, err := isMethodFromPassThroughFilter(f, meth)
 						if err != nil {

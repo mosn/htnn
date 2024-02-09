@@ -32,7 +32,7 @@ import (
 func TestOpaRemote(t *testing.T) {
 	cb := envoy.NewFilterCallbackHandler()
 	cli := http.DefaultClient
-	f := configFactory(&config{
+	f := factory(&config{
 		Config: Config{
 			ConfigType: &Config_Remote{
 				Remote: &Remote{
@@ -42,7 +42,7 @@ func TestOpaRemote(t *testing.T) {
 			},
 		},
 		client: cli,
-	})(cb)
+	}, cb)
 	hdr := envoy.NewRequestHeaderMap(http.Header(map[string][]string{
 		":path": {"/?a=1&b&c=true&c=foo"},
 		"pet":   {"cat"},
@@ -183,7 +183,7 @@ func TestOpaLocal(t *testing.T) {
 			}
 			err := c.Init(nil)
 			require.NoError(t, err)
-			f := configFactory(c)(cb)
+			f := factory(c, cb)
 			lr, ok := f.DecodeHeaders(hdr, true).(*api.LocalResponse)
 			if !ok {
 				assert.Equal(t, tt.status, 0)

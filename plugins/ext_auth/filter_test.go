@@ -194,7 +194,7 @@ func TestExtAuth(t *testing.T) {
 			conf.Init(nil)
 			patches := gomonkey.ApplyMethodFunc(conf.client, "Do", tt.server)
 			defer patches.Reset()
-			f := configFactory(conf)(cb)
+			f := factory(conf, cb)
 			defaultHdr := map[string][]string{
 				":authority": {"test.local"},
 				":method":    {"DELETE"},

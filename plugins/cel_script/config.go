@@ -44,8 +44,8 @@ func (p *plugin) Order() plugins.PluginOrder {
 	}
 }
 
-func (p *plugin) ConfigFactory() api.FilterConfigFactory {
-	return configFactory
+func (p *plugin) Factory() api.FilterFactory {
+	return factory
 }
 
 func (p *plugin) Config() api.PluginConfig {

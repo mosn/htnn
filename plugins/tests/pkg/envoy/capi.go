@@ -372,6 +372,10 @@ func (i *StreamInfo) GetProperty(key string) (string, bool) {
 	return "", false
 }
 
+func (i *StreamInfo) WorkerID() uint32 {
+	return 0
+}
+
 var _ api.StreamInfo = (*StreamInfo)(nil)
 
 type LocalResponse struct {

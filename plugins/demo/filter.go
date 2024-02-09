@@ -20,15 +20,12 @@ import (
 	"mosn.io/htnn/pkg/filtermanager/api"
 )
 
-// configFactory returns a factory that produces per-request Filter.
+// factory returns a factory that produces per-request Filter.
 // You can use it to bind the configuration and do per-request initialization.
-func configFactory(c interface{}) api.FilterFactory {
-	conf := c.(*config)
-	return func(callbacks api.FilterCallbackHandler) api.Filter {
-		return &filter{
-			callbacks: callbacks,
-			config:    conf,
-		}
+func factory(c interface{}, callbacks api.FilterCallbackHandler) api.Filter {
+	return &filter{
+		callbacks: callbacks,
+		config:    c.(*config),
 	}
 }
 
