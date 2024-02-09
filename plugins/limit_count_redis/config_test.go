@@ -53,6 +53,11 @@ func TestConfig(t *testing.T) {
 			err:   "unexpected failed resolution",
 		},
 		{
+			name:  "passwd",
+			input: `{"address":"127.0.0.1:6479", "rules":[{"count":1,"timeWindow":"1s"}], "username":"user"}`,
+			err:   "password is required when username is set",
+		},
+		{
 			name:  "pass",
 			input: `{"address":"127.0.0.1:6479", "rules":[{"count":1,"timeWindow":"1s"}]}`,
 		},

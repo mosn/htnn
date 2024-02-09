@@ -257,6 +257,14 @@ func (m *Config) validate(all bool) error {
 
 	// no validation rules for EnableLimitQuotaHeaders
 
+	// no validation rules for Username
+
+	// no validation rules for Password
+
+	// no validation rules for Tls
+
+	// no validation rules for TlsSkipVerify
+
 	oneofSourcePresent := false
 	switch v := m.Source.(type) {
 	case *Config_Address:
