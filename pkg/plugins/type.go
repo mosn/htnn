@@ -93,7 +93,15 @@ type NativePlugin interface {
 	Plugin
 
 	RouteConfigTypeURL() string
-	DefaultHTTPFilterConfig() map[string]interface{}
+	HTTPFilterConfigPlaceholder() map[string]interface{}
+}
+
+type NativePluginHasRouteConfigWrapper interface {
+	// ToRouteConfig converts the raw config to the real RouteConfig. It's used in some native plugin
+	// for better user experience.
+	// The input `raw` is the configuration user provides in the CRD, the returned value is the
+	// configuration that will be delivered in the xDS.
+	ToRouteConfig(raw map[string]interface{}) map[string]interface{}
 }
 
 type GoPlugin interface {
