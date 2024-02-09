@@ -18,7 +18,6 @@ import (
 	"time"
 
 	"mosn.io/htnn/pkg/filtermanager/api"
-	"mosn.io/htnn/pkg/request"
 )
 
 func factory(c interface{}, callbacks api.FilterCallbackHandler) api.Filter {
@@ -49,11 +48,10 @@ func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api
 		key = res.(string)
 		if key == "" {
 			api.LogInfo("limitReq uses client IP as key because the configured key is empty")
-			key = request.GetRemoteIP(f.callbacks.StreamInfo())
 		}
-
-	} else {
-		key = request.GetRemoteIP(f.callbacks.StreamInfo())
+	}
+	if key == "" {
+		key = f.callbacks.StreamInfo().DownstreamRemoteParsedAddress().IP
 	}
 
 	// Get also extends the ttl

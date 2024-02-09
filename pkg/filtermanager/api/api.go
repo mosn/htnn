@@ -102,13 +102,55 @@ func (f *PassThroughFilter) EncodeResponse(headers api.ResponseHeaderMap, data a
 	return Continue
 }
 
+type HeaderMap = api.HeaderMap
 type RequestHeaderMap = api.RequestHeaderMap
 type ResponseHeaderMap = api.ResponseHeaderMap
+type DataBufferBase = api.DataBufferBase
 type BufferInstance = api.BufferInstance
 type RequestTrailerMap = api.RequestTrailerMap
 type ResponseTrailerMap = api.ResponseTrailerMap
 
-type StreamInfo = api.StreamInfo
+type IPAddress struct {
+	Address string
+	IP      string
+	Port    int
+}
+
+type StreamInfo interface {
+	GetRouteName() string
+	FilterChainName() string
+	// Protocol return the request's protocol.
+	Protocol() (string, bool)
+	// ResponseCode return the response code.
+	ResponseCode() (uint32, bool)
+	// ResponseCodeDetails return the response code details.
+	ResponseCodeDetails() (string, bool)
+	// AttemptCount return the number of times the request was attempted upstream.
+	AttemptCount() uint32
+	// Get the dynamic metadata of the request
+	DynamicMetadata() DynamicMetadata
+	// DownstreamLocalAddress return the downstream local address.
+	DownstreamLocalAddress() string
+	// DownstreamRemoteAddress return the downstream remote address.
+	DownstreamRemoteAddress() string
+	// UpstreamLocalAddress return the upstream local address.
+	UpstreamLocalAddress() (string, bool)
+	// UpstreamRemoteAddress return the upstream remote address.
+	UpstreamRemoteAddress() (string, bool)
+	// UpstreamClusterName return the upstream host cluster.
+	UpstreamClusterName() (string, bool)
+	// FilterState return the filter state interface.
+	FilterState() FilterState
+	// VirtualClusterName returns the name of the virtual cluster which got matched
+	VirtualClusterName() (string, bool)
+	// WorkerID returns the ID of the Envoy worker thread
+	WorkerID() uint32
+
+	// Methods added by HTNN
+
+	// DownstreamRemoteParsedAddress returns the downstream remote address, in the IPAddress struct
+	DownstreamRemoteParsedAddress() *IPAddress
+}
 
 type PluginConfig interface {
 	ProtoReflect() protoreflect.Message

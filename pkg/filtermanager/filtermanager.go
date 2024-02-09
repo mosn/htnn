@@ -18,10 +18,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"net"
 	"reflect"
 	"runtime"
 	"runtime/debug"
 	"sort"
+	"strconv"
 	"sync"
 
 	xds "github.com/cncf/xds/go/xds/type/v3"
@@ -213,7 +215,35 @@ func (m *filterManager) Reset() {
 	m.canSkipEncodeData = false
 	m.canSkipOnLog = false
 
-	m.callbacks.FilterCallbackHandler = nil
+	m.callbacks.Reset()
+}
+
+type filterManagerStreamInfo struct {
+	capi.StreamInfo
+
+	ipAddress *api.IPAddress
+}
+
+func (s *filterManagerStreamInfo) DownstreamRemoteParsedAddress() *api.IPAddress {
+	if s.ipAddress == nil {
+		ipport := s.StreamInfo.DownstreamRemoteAddress()
+		// the IPPort given by Envoy must be valid
+		ip, port, _ := net.SplitHostPort(ipport)
+		p, _ := strconv.Atoi(port)
+		s.ipAddress = &api.IPAddress{
+			Address: ipport,
+			IP:      ip,
+			Port:    p,
+		}
+	}
+	return s.ipAddress
+}
+
+func (s *filterManagerStreamInfo) DownstreamRemoteAddress() string {
+	if s.ipAddress != nil {
+		return s.ipAddress.Address
+	}
+	return s.StreamInfo.DownstreamRemoteAddress()
 }
 
 type filterManagerCallbackHandler struct {
@@ -221,6 +251,25 @@ type filterManagerCallbackHandler struct {
 
 	namespace string
 	consumer  api.Consumer
+
+	streamInfo *filterManagerStreamInfo
+}
+
+func (cb *filterManagerCallbackHandler) Reset() {
+	cb.FilterCallbackHandler = nil
+	// We don't reset namespace, as filterManager will only be reused in the same route,
+	// which must have the same namespace.
+	cb.consumer = nil
+	cb.streamInfo = nil
+}
+
+func (cb *filterManagerCallbackHandler) StreamInfo() api.StreamInfo {
+	if cb.streamInfo == nil {
+		cb.streamInfo = &filterManagerStreamInfo{
+			StreamInfo: cb.FilterCallbackHandler.StreamInfo(),
+		}
+	}
+	return cb.streamInfo
 }
 
 func (cb *filterManagerCallbackHandler) LookupConsumer(pluginName, key string) (api.Consumer, bool) {

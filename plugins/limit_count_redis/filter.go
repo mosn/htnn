@@ -23,7 +23,6 @@ import (
 
 	"mosn.io/htnn/pkg/expr"
 	"mosn.io/htnn/pkg/filtermanager/api"
-	"mosn.io/htnn/pkg/request"
 	"mosn.io/htnn/pkg/stringx"
 )
 
@@ -50,10 +49,12 @@ func (f *filter) getKey(script expr.Script, headers api.RequestHeaderMap) string
 		if err == nil {
 			key = res.(string)
 		}
+		if key == "" {
+			api.LogInfo("limitCountRedis filter uses client IP as key because the configured key is empty")
+		}
 	}
 	if key == "" {
-		api.LogInfo("limitCountRedis filter uses client IP as key because the configured key is empty")
-		key = request.GetRemoteIP(f.callbacks.StreamInfo())
+		key = f.callbacks.StreamInfo().DownstreamRemoteParsedAddress().IP
 	}
 	return key
 }

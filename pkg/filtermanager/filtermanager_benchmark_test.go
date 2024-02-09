@@ -27,7 +27,7 @@ import (
 // go test -v -cpu=1 -run=none -bench=. -benchmem -memprofile memprofile.out -cpuprofile cpuprofile.out ./pkg/filtermanager/
 
 func BenchmarkFilterManagerAllPhase(b *testing.B) {
-	cb := envoy.NewFilterCallbackHandler()
+	cb := envoy.NewCAPIFilterCallbackHandler()
 	config := initFilterManagerConfig("ns")
 	config.current = []*model.ParsedFilterConfig{
 		{
@@ -72,7 +72,7 @@ func (f *regularFilter) OnLog() {
 }
 
 func BenchmarkFilterManagerRegular(b *testing.B) {
-	cb := envoy.NewFilterCallbackHandler()
+	cb := envoy.NewCAPIFilterCallbackHandler()
 	config := initFilterManagerConfig("ns")
 	config.current = []*model.ParsedFilterConfig{
 		{
