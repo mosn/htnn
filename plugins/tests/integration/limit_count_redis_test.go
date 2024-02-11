@@ -228,6 +228,28 @@ func TestLimitCountRedis(t *testing.T) {
 				assert.Equal(t, 429, resp.StatusCode)
 			},
 		},
+		{
+			name: "statusOnError",
+			config: control_plane.NewSinglePluinConfig("limitCountRedis", map[string]interface{}{
+				"address": "redis:6379",
+				"rules": []interface{}{
+					map[string]interface{}{
+						"count":      1,
+						"timeWindow": "1s",
+						"key":        `request.header("x-key")`,
+					},
+				},
+				"statusOnError": 503,
+			}),
+			run: func(t *testing.T) {
+				hdr := http.Header{}
+				hdr.Add("x-key", "1")
+				resp, _ := dp.Head("/echo", hdr)
+				assert.Equal(t, 200, resp.StatusCode)
+				resp, _ = dp.Head("/echo", hdr)
+				assert.Equal(t, 503, resp.StatusCode)
+			},
+		},
 	}
 
 	for _, tt := range tests {

@@ -113,7 +113,11 @@ func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api
 			hdr := http.Header{}
 			// TODO: add option to disable x-envoy-ratelimited
 			hdr.Set("x-envoy-ratelimited", "true")
-			return &api.LocalResponse{Code: 429, Header: hdr}
+			status := 429
+			if config.StatusOnError != 0 {
+				status = int(config.StatusOnError)
+			}
+			return &api.LocalResponse{Code: status, Header: hdr}
 		}
 	}
 
