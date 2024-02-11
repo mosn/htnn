@@ -24,6 +24,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 	istioapi "istio.io/api/networking/v1alpha3"
 	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	istiov1b1 "istio.io/client-go/pkg/apis/networking/v1beta1"
@@ -149,7 +151,7 @@ func TestTranslate(t *testing.T) {
 func snakeToCamel(s string) string {
 	words := strings.Split(s, "_")
 	for i := 1; i < len(words); i++ {
-		words[i] = strings.Title(words[i])
+		words[i] = cases.Title(language.Und, cases.NoLower).String(words[i])
 	}
 	return strings.Join(words, "")
 }
