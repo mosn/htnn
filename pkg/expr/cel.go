@@ -305,8 +305,8 @@ func defineSource() cel.EnvOption {
 func (s *source) Receive(function string, overload string, args []ref.Val) ref.Val {
 	switch function {
 	case "ip":
-		ip := pkgRequest.GetRemoteIP(s.callback.StreamInfo())
-		return types.String(ip)
+		addr := s.callback.StreamInfo().DownstreamRemoteParsedAddress()
+		return types.String(addr.IP)
 	case "address":
 		ipport := s.callback.StreamInfo().DownstreamRemoteAddress()
 		return types.String(ipport)

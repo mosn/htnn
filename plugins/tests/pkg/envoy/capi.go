@@ -23,27 +23,27 @@ import (
 	"strconv"
 	"sync"
 
-	"github.com/envoyproxy/envoy/contrib/golang/common/go/api"
+	capi "github.com/envoyproxy/envoy/contrib/golang/common/go/api"
 
-	fmapi "mosn.io/htnn/pkg/filtermanager/api"
+	"mosn.io/htnn/pkg/filtermanager/api"
 )
 
 func init() {
 	// replace the implementation of methods like api.LogXXX
-	api.SetCommonCAPI(&capi{})
+	capi.SetCommonCAPI(&fakeCapi{})
 }
 
-func logInGo(level api.LogType, message string) {
+func logInGo(level capi.LogType, message string) {
 	log.Printf("[%s] %s\n", level, message)
 }
 
-type capi struct{}
+type fakeCapi struct{}
 
-func (a *capi) Log(level api.LogType, message string) {
+func (a *fakeCapi) Log(level capi.LogType, message string) {
 	logInGo(level, message)
 }
 
-func (a *capi) LogLevel() api.LogType {
+func (a *fakeCapi) LogLevel() capi.LogType {
 	return 0
 }
 
@@ -289,7 +289,7 @@ func NewFilterState(data map[string]string) api.FilterState {
 	}
 }
 
-func (i *FilterState) SetString(key, value string, stateType api.StateType, lifeSpan api.LifeSpan, streamSharing api.StreamSharing) {
+func (i *FilterState) SetString(key, value string, stateType capi.StateType, lifeSpan capi.LifeSpan, streamSharing capi.StreamSharing) {
 	i.store[key] = value
 }
 
@@ -376,6 +376,14 @@ func (i *StreamInfo) WorkerID() uint32 {
 	return 0
 }
 
+func (i *StreamInfo) DownstreamRemoteParsedAddress() *api.IPAddress {
+	return &api.IPAddress{
+		Address: "183.128.130.43:54321",
+		IP:      "183.128.130.43",
+		Port:    54321,
+	}
+}
+
 var _ api.StreamInfo = (*StreamInfo)(nil)
 
 type LocalResponse struct {
@@ -390,7 +398,7 @@ type filterCallbackHandler struct {
 
 	streamInfo api.StreamInfo
 	resp       LocalResponse
-	consumer   fmapi.Consumer
+	consumer   api.Consumer
 	ch         chan struct{}
 }
 
@@ -416,7 +424,7 @@ func (i *filterCallbackHandler) SetStreamInfo(data api.StreamInfo) {
 	i.streamInfo = data
 }
 
-func (i *filterCallbackHandler) Continue(status api.StatusType) {
+func (i *filterCallbackHandler) Continue(status capi.StatusType) {
 	i.ch <- struct{}{}
 }
 
@@ -429,7 +437,7 @@ func (i *filterCallbackHandler) SendLocalReply(responseCode int, bodyText string
 	defer i.lock.Unlock()
 	i.resp = LocalResponse{Code: responseCode, Body: bodyText, Headers: headers}
 
-	i.Continue(api.LocalReply)
+	i.Continue(capi.LocalReply)
 }
 
 func (i *filterCallbackHandler) LocalResponse() LocalResponse {
@@ -441,11 +449,11 @@ func (i *filterCallbackHandler) LocalResponse() LocalResponse {
 func (i *filterCallbackHandler) RecoverPanic() {
 }
 
-func (i *filterCallbackHandler) Log(level api.LogType, msg string) {
+func (i *filterCallbackHandler) Log(level capi.LogType, msg string) {
 	logInGo(level, msg)
 }
 
-func (i *filterCallbackHandler) LogLevel() api.LogType {
+func (i *filterCallbackHandler) LogLevel() capi.LogType {
 	return 0
 }
 
@@ -453,16 +461,32 @@ func (i *filterCallbackHandler) GetProperty(key string) (string, error) {
 	return "", nil
 }
 
-func (i *filterCallbackHandler) LookupConsumer(_, _ string) (fmapi.Consumer, bool) {
+func (i *filterCallbackHandler) LookupConsumer(_, _ string) (api.Consumer, bool) {
 	return nil, false
 }
 
-func (i *filterCallbackHandler) GetConsumer() fmapi.Consumer {
+func (i *filterCallbackHandler) GetConsumer() api.Consumer {
 	return i.consumer
 }
 
-func (i *filterCallbackHandler) SetConsumer(c fmapi.Consumer) {
+func (i *filterCallbackHandler) SetConsumer(c api.Consumer) {
 	i.consumer = c
 }
 
 var _ api.FilterCallbackHandler = (*filterCallbackHandler)(nil)
+
+type capiFilterCallbackHandler struct {
+	*filterCallbackHandler
+}
+
+func (cb *capiFilterCallbackHandler) StreamInfo() capi.StreamInfo {
+	return cb.filterCallbackHandler.StreamInfo()
+}
+
+var _ capi.FilterCallbackHandler = (*capiFilterCallbackHandler)(nil)
+
+func NewCAPIFilterCallbackHandler() *capiFilterCallbackHandler {
+	return &capiFilterCallbackHandler{
+		filterCallbackHandler: NewFilterCallbackHandler(),
+	}
+}

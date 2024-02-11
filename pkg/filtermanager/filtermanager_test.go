@@ -75,7 +75,7 @@ func TestParse(t *testing.T) {
 }
 
 func TestPassThrough(t *testing.T) {
-	cb := envoy.NewFilterCallbackHandler()
+	cb := envoy.NewCAPIFilterCallbackHandler()
 	config := initFilterManagerConfig("ns")
 	config.current = []*model.ParsedFilterConfig{
 		{
@@ -144,7 +144,7 @@ func TestLocalReplyJSON_UseReqHeader(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cb := envoy.NewFilterCallbackHandler()
+			cb := envoy.NewCAPIFilterCallbackHandler()
 			config := initFilterManagerConfig("ns")
 			config.current = []*model.ParsedFilterConfig{
 				{
@@ -217,7 +217,7 @@ func TestLocalReplyJSON_UseRespHeader(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			cb := envoy.NewFilterCallbackHandler()
+			cb := envoy.NewCAPIFilterCallbackHandler()
 			config := initFilterManagerConfig("ns")
 			config.current = []*model.ParsedFilterConfig{
 				{
@@ -253,7 +253,7 @@ func TestLocalReplyJSON_UseRespHeader(t *testing.T) {
 }
 
 func TestLocalReplyJSON_DoNotChangeMsgIfContentTypeIsGiven(t *testing.T) {
-	cb := envoy.NewFilterCallbackHandler()
+	cb := envoy.NewCAPIFilterCallbackHandler()
 	config := initFilterManagerConfig("ns")
 	config.current = []*model.ParsedFilterConfig{
 		{
@@ -344,7 +344,7 @@ func (f *addReqFilter) DecodeHeaders(headers api.RequestHeaderMap, endStream boo
 }
 
 func TestFiltersFromConsumer(t *testing.T) {
-	cb := envoy.NewFilterCallbackHandler()
+	cb := envoy.NewCAPIFilterCallbackHandler()
 	config := initFilterManagerConfig("ns")
 	config.authnFiltersEndAt = 1
 	config.current = []*model.ParsedFilterConfig{
