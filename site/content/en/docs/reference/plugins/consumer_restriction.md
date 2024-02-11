@@ -17,8 +17,8 @@ The `consumerRestriction` plugin determines whether the current consumer has acc
 
 | Name  | Type  | Required | Validation | Description                          |
 |-------|-------|----------|------------|--------------------------------------|
-| allow | Rules | No       |            | List of rules allowing access access |
-| deny  | Rules | No       |            | List of rules denying access access  |
+| allow | Rules | False    |            | List of rules allowing access access |
+| deny  | Rules | False    |            | List of rules denying access access  |
 
 Only one of `allow` or `deny` can be configured.
 
@@ -26,13 +26,13 @@ Only one of `allow` or `deny` can be configured.
 
 | Name  | Type   | Required | Validation     | Description        |
 |-------|--------|----------|----------------|--------------------|
-| rules | Rule[] | Yes      | min_items: 1   | List of rules      |
+| rules | Rule[] | True     | min_items: 1   | List of rules      |
 
 ## Rule
 
 | Name | Type   | Required | Validation   | Description          |
 |------|--------|----------|--------------|----------------------|
-| name | string | Yes      | min_len: 1   | Name of the Consumer |
+| name | string | True     | min_len: 1   | Name of the Consumer |
 
 
 ## Usage
