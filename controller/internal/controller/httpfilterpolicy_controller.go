@@ -152,49 +152,63 @@ func (r *HTTPFilterPolicyReconciler) resolveVirtualService(ctx context.Context, 
 	}
 
 	accepted := false
-	for _, gw := range virtualService.Spec.Gateways {
-		if gw == "mesh" {
-			logger.Info("skip unsupported mesh gateway", "name", virtualService.Name, "namespace", virtualService.Namespace)
-			continue
-		}
-		if strings.Contains(gw, "/") {
-			logger.Info("skip gateway from other namespace", "name", virtualService.Name, "namespace", virtualService.Namespace)
-			continue
+	gws := initState.GetGatewaysWithVirtualService(&virtualService)
+	if len(gws) > 0 {
+		for _, gateway := range gws {
+			key := k8s.GetObjectKey(&gateway.ObjectMeta)
+			gwIdx[key] = append(gwIdx[key], policy)
 		}
 
-		var gateway istiov1b1.Gateway
-		err = r.Get(ctx, types.NamespacedName{Name: gw, Namespace: virtualService.Namespace}, &gateway)
-		if err != nil {
-			if !apierrors.IsNotFound(err) {
-				return false, err
+		accepted = true
+
+	} else {
+		gws = make([]*istiov1b1.Gateway, 0, len(virtualService.Spec.Gateways))
+		for _, gw := range virtualService.Spec.Gateways {
+			if gw == "mesh" {
+				logger.Info("skip unsupported mesh gateway", "name", virtualService.Name, "namespace", virtualService.Namespace)
+				continue
 			}
-			logger.Info("gateway not found", "gateway", gw,
-				"name", virtualService.Name, "namespace", virtualService.Namespace)
-			continue
-		}
+			if strings.Contains(gw, "/") {
+				logger.Info("skip gateway from other namespace", "name", virtualService.Name, "namespace", virtualService.Namespace)
+				continue
+			}
 
-		err = mosniov1.ValidateGateway(&gateway)
-		if err != nil {
-			logger.Info("unsupported Gateway", "name", gateway.Name, "namespace", gateway.Namespace, "reason", err.Error())
-			continue
-		}
+			var gateway istiov1b1.Gateway
+			err = r.Get(ctx, types.NamespacedName{Name: gw, Namespace: virtualService.Namespace}, &gateway)
+			if err != nil {
+				if !apierrors.IsNotFound(err) {
+					return false, err
+				}
+				logger.Info("gateway not found", "gateway", gw,
+					"name", virtualService.Name, "namespace", virtualService.Namespace)
+				continue
+			}
 
-		initState.AddPolicyForVirtualService(policy, &virtualService, &gateway)
+			err = mosniov1.ValidateGateway(&gateway)
+			if err != nil {
+				logger.Info("unsupported Gateway", "name", gateway.Name, "namespace", gateway.Namespace, "reason", err.Error())
+				continue
+			}
+
+			gws = append(gws, &gateway)
+
+			key := k8s.GetObjectKey(&gateway.ObjectMeta)
+			gwIdx[key] = append(gwIdx[key], policy)
+
+			accepted = true
+		}
+	}
+
+	if accepted {
+		initState.AddPolicyForVirtualService(policy, &virtualService, gws)
 		// For reducing the write to K8S API server and reconciliation,
 		// we don't add `gateway.networking.k8s.io/PolicyAffected` to the affected resource.
 		// If people want to check whether the VirtualService/HTTPRoute is affected, they can
 		// check whether there is an EnvoyFilter named `httn-h-$host` (the `$host` is one of the resources' hosts).
 		// For wildcard host, the `*.` is converted to `-`. For example, `*.example.com` results in
 		// EnvoyFilter name `htnn-h--example.com`, and `www.example.com` results in `httn-h-www.example.com`.
-
-		key := k8s.GetObjectKey(&gateway.ObjectMeta)
-		if _, ok := gwIdx[key]; !ok {
-			gwIdx[key] = []*mosniov1.HTTPFilterPolicy{}
-		}
-		gwIdx[key] = append(gwIdx[key], policy)
-
-		accepted = true
 	}
+
 	return accepted, nil
 }
 
@@ -215,44 +229,59 @@ func (r *HTTPFilterPolicyReconciler) resolveHTTPRoute(ctx context.Context, logge
 	}
 
 	accepted := false
-	for _, pr := range route.Status.Parents {
-		// Consider it is valid once the listener is attached
-		ref := pr.ParentRef
-		if ref.Group != nil && *ref.Group != gwapiv1.GroupName {
-			continue
-		}
-		if ref.Kind != nil && *ref.Kind != gwapiv1.Kind("Gateway") {
-			continue
+	gws := initState.GetGatewaysWithHTTPRoute(&route)
+	if len(gws) > 0 {
+		for _, gateway := range gws {
+			key := k8s.GetObjectKey(&gateway.ObjectMeta)
+			gwIdx[key] = append(gwIdx[key], policy)
 		}
 
-		ns := route.Namespace
-		if ref.Namespace != nil {
-			ns = string(*ref.Namespace)
-		}
-		var gateway gwapiv1.Gateway
-		err = r.Get(ctx, types.NamespacedName{Name: string(ref.Name), Namespace: ns}, &gateway)
-		if err != nil {
-			if !apierrors.IsNotFound(err) {
-				return false, err
+		accepted = true
+
+	} else {
+		gws = make([]*gwapiv1.Gateway, 0, len(route.Status.Parents))
+		for _, pr := range route.Status.Parents {
+			// Consider it is valid once the listener is attached
+			ref := pr.ParentRef
+			if ref.Group != nil && *ref.Group != gwapiv1.GroupName {
+				continue
 			}
-			logger.Info("gateway not found", "gateway", ref,
-				"name", route.Name, "namespace", route.Namespace)
-			continue
-		}
+			if ref.Kind != nil && *ref.Kind != gwapiv1.Kind("Gateway") {
+				continue
+			}
 
+			ns := route.Namespace
+			if ref.Namespace != nil {
+				ns = string(*ref.Namespace)
+			}
+			var gateway gwapiv1.Gateway
+			err = r.Get(ctx, types.NamespacedName{Name: string(ref.Name), Namespace: ns}, &gateway)
+			if err != nil {
+				if !apierrors.IsNotFound(err) {
+					return false, err
+				}
+				logger.Info("gateway not found", "gateway", ref,
+					"name", route.Name, "namespace", route.Namespace)
+				continue
+			}
+
+			gws = append(gws, &gateway)
+
+			key := k8s.GetObjectKey(&gateway.ObjectMeta)
+			gwIdx[key] = append(gwIdx[key], policy)
+
+			accepted = true
+		}
+	}
+
+	if accepted {
 		// The CRD status only tells us which gateways are referenced & how many attached routes per listener.
 		// But we don't know which listerner is referenced by a specific HTTPRoute.
 		// So we have to keep the whole gateway and filter the listener by ourselves.
-		initState.AddPolicyForHTTPRoute(policy, &route, &gateway)
+		initState.AddPolicyForHTTPRoute(policy, &route, gws)
 
-		key := k8s.GetObjectKey(&gateway.ObjectMeta)
-		if _, ok := gwIdx[key]; !ok {
-			gwIdx[key] = []*mosniov1.HTTPFilterPolicy{}
-		}
-		gwIdx[key] = append(gwIdx[key], policy)
-
-		accepted = true
 	}
+
 	return accepted, nil
 }
 

@@ -168,7 +168,7 @@ func toDataPlaneState(ctx *Ctx, state *InitState) (*FinalState, error) {
 	}
 	for id, vsp := range state.VirtualServicePolicies {
 		id := id // the copied id will be referenced by address later
-		gws := state.VsToGateway[id]
+		gws := vsp.Gateways
 		spec := &vsp.VirtualService.Spec
 		routes := make(map[string]*routePolicy)
 		for name, policies := range vsp.RoutePolicies {
@@ -206,7 +206,7 @@ func toDataPlaneState(ctx *Ctx, state *InitState) (*FinalState, error) {
 
 	for id, route := range state.HTTPRoutePolicies {
 		id := id // the copied id will be referenced by address later
-		gws := state.HrToGateway[id]
+		gws := route.Gateways
 		spec := &route.HTTPRoute.Spec
 		routes := make(map[string]*routePolicy)
 		for name, policies := range route.RoutePolicies {

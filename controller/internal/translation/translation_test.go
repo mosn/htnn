@@ -69,42 +69,65 @@ func TestTranslate(t *testing.T) {
 			s := NewInitState(nil)
 
 			// set up resources
+			type gwapiWrapper struct {
+				hr  *gwapiv1.HTTPRoute
+				gws []*gwapiv1.Gateway
+			}
+			hrToGws := map[string]gwapiWrapper{}
 			for _, gw := range input.Gateway {
+				// fulfill default fields
+				if gw.Namespace == "" {
+					gw.SetNamespace("default")
+				}
 				hrs := input.HTTPRoute[gw.Name]
 				for _, hr := range hrs {
-					hfps := input.HTTPFilterPolicy[hr.Name]
-					for _, hfp := range hfps {
-						// fulfill default fields
-						if hfp.Namespace == "" {
-							hfp.SetNamespace("default")
-						}
-						if hr.Namespace == "" {
-							hr.SetNamespace("default")
-						}
-						if gw.Namespace == "" {
-							gw.SetNamespace("default")
-						}
-						s.AddPolicyForHTTPRoute(hfp, hr, gw)
+					if hr.Namespace == "" {
+						hr.SetNamespace("default")
+					}
+					hrToGws[hr.Name] = gwapiWrapper{
+						hr:  hr,
+						gws: append(hrToGws[hr.Name].gws, gw),
 					}
 				}
 			}
+			for name, wrapper := range hrToGws {
+				hfps := input.HTTPFilterPolicy[name]
+				for _, hfp := range hfps {
+					if hfp.Namespace == "" {
+						hfp.SetNamespace("default")
+					}
+					s.AddPolicyForHTTPRoute(hfp, wrapper.hr, wrapper.gws)
+				}
+			}
+
+			type istioWrapper struct {
+				vs  *istiov1b1.VirtualService
+				gws []*istiov1b1.Gateway
+			}
+			vsToGws := map[string]istioWrapper{}
 			for _, gw := range input.IstioGateway {
+				// fulfill default fields
+				if gw.Namespace == "" {
+					gw.SetNamespace("default")
+				}
 				vss := input.VirtualService[gw.Name]
 				for _, vs := range vss {
-					hfps := input.HTTPFilterPolicy[vs.Name]
-					for _, hfp := range hfps {
-						// fulfill default fields
-						if hfp.Namespace == "" {
-							hfp.SetNamespace("default")
-						}
-						if vs.Namespace == "" {
-							vs.SetNamespace("default")
-						}
-						if gw.Namespace == "" {
-							gw.SetNamespace("default")
-						}
-						s.AddPolicyForVirtualService(hfp, vs, gw)
+					if vs.Namespace == "" {
+						vs.SetNamespace("default")
 					}
+					vsToGws[vs.Name] = istioWrapper{
+						vs:  vs,
+						gws: append(vsToGws[vs.Name].gws, gw),
+					}
+				}
+			}
+			for name, wrapper := range vsToGws {
+				hfps := input.HTTPFilterPolicy[name]
+				for _, hfp := range hfps {
+					if hfp.Namespace == "" {
+						hfp.SetNamespace("default")
+					}
+					s.AddPolicyForVirtualService(hfp, wrapper.vs, wrapper.gws)
 				}
 			}
 
@@ -180,7 +203,7 @@ func TestPlugins(t *testing.T) {
 			mustUnmarshal(t, inputFile, &hfp)
 
 			s := NewInitState(nil)
-			s.AddPolicyForVirtualService(&hfp, vs, gw)
+			s.AddPolicyForVirtualService(&hfp, vs, []*istiov1b1.Gateway{gw})
 
 			fs, err := s.Process(context.Background())
 			require.NoError(t, err)
