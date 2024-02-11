@@ -271,6 +271,8 @@ func (m *Config) validate(all bool) error {
 
 	// no validation rules for StatusOnError
 
+	// no validation rules for RateLimitedStatus
+
 	oneofSourcePresent := false
 	switch v := m.Source.(type) {
 	case *Config_Address:

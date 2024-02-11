@@ -50,4 +50,5 @@ message Config {
   bool tls_skip_verify = 8;
 
   api.v1.StatusCode status_on_error = 9;
+  api.v1.StatusCode rate_limited_status = 10;
 }
