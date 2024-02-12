@@ -184,28 +184,36 @@ var _ = Describe("Consumer controller", func() {
 			}
 
 			var envoyfilters istiov1a3.EnvoyFilterList
+			marshaledCfg := map[string]map[string]map[string]interface{}{}
 			Eventually(func() bool {
 				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
 					return false
 				}
-				return len(envoyfilters.Items) == 1
+				if len(envoyfilters.Items) != 1 {
+					return false
+				}
+				ef := envoyfilters.Items[0]
+				if ef.Namespace != "istio-system" || ef.Name != "htnn-consumer" {
+					return false
+				}
+				if len(ef.Spec.ConfigPatches) != 2 {
+					return false
+				}
+				cp := ef.Spec.ConfigPatches[0]
+				if cp.ApplyTo != istioapi.EnvoyFilter_EXTENSION_CONFIG {
+					return false
+				}
+				value := cp.Patch.Value.AsMap()
+				if value["name"] != "htnn-consumer" {
+					return false
+				}
+				typedCfg := value["typed_config"].(map[string]interface{})
+				pluginCfg := typedCfg["plugin_config"].(map[string]interface{})
+
+				b, _ := json.Marshal(pluginCfg["value"])
+				json.Unmarshal(b, &marshaledCfg)
+				return marshaledCfg["default"]["spacewander"] != nil
 			}, timeout, interval).Should(BeTrue())
-
-			ef := envoyfilters.Items[0]
-			Expect(ef.Namespace).To(Equal("istio-system"))
-			Expect(ef.Name).To(Equal("htnn-consumer"))
-			Expect(len(ef.Spec.ConfigPatches)).To(Equal(2))
-			cp := ef.Spec.ConfigPatches[0]
-			Expect(cp.ApplyTo).To(Equal(istioapi.EnvoyFilter_EXTENSION_CONFIG))
-			value := cp.Patch.Value.AsMap()
-			Expect(value["name"]).To(Equal("htnn-consumer"))
-			typedCfg := value["typed_config"].(map[string]interface{})
-			pluginCfg := typedCfg["plugin_config"].(map[string]interface{})
-
-			marshaledCfg := map[string]map[string]map[string]interface{}{}
-			b, _ := json.Marshal(pluginCfg["value"])
-			json.Unmarshal(b, &marshaledCfg)
-			Expect(marshaledCfg["default"]["spacewander"]).ToNot(BeNil())
 
 			d := marshaledCfg["default"]["spacewander"]["d"].(string)
 			cfg := map[string]interface{}{}
