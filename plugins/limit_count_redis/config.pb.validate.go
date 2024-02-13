@@ -17,6 +17,8 @@ import (
 	"unicode/utf8"
 
 	"google.golang.org/protobuf/types/known/anypb"
+
+	v1 "mosn.io/htnn/api/v1"
 )
 
 // ensure the imports are used
@@ -33,6 +35,8 @@ var (
 	_ = (*mail.Address)(nil)
 	_ = anypb.Any{}
 	_ = sort.Sort
+
+	_ = v1.StatusCode(0)
 )
 
 // Validate checks the field values on Rule with the rules defined in the proto
@@ -264,6 +268,10 @@ func (m *Config) validate(all bool) error {
 	// no validation rules for Tls
 
 	// no validation rules for TlsSkipVerify
+
+	// no validation rules for StatusOnError
+
+	// no validation rules for RateLimitedStatus
 
 	oneofSourcePresent := false
 	switch v := m.Source.(type) {

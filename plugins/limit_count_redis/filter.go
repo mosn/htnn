@@ -99,7 +99,11 @@ func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api
 		api.LogErrorf("failed to limit count: %v", err)
 
 		if config.FailureModeDeny {
-			return &api.LocalResponse{Code: 503}
+			status := 500 // follow the behavior of Envoy
+			if config.StatusOnError != 0 {
+				status = int(config.StatusOnError)
+			}
+			return &api.LocalResponse{Code: status}
 		}
 		return api.Continue
 	}
@@ -113,7 +117,11 @@ func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api
 			hdr := http.Header{}
 			// TODO: add option to disable x-envoy-ratelimited
 			hdr.Set("x-envoy-ratelimited", "true")
-			return &api.LocalResponse{Code: 429, Header: hdr}
+			status := 429
+			if config.RateLimitedStatus >= 400 { // follow the behavior of Envoy
+				status = int(config.RateLimitedStatus)
+			}
+			return &api.LocalResponse{Code: status, Header: hdr}
 		}
 	}
 

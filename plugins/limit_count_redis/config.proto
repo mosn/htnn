@@ -16,6 +16,8 @@ syntax = "proto3";
 
 package plugins.limit_count_redis;
 
+import "api/v1/http_status.proto";
+
 import "google/protobuf/duration.proto";
 import "validate/validate.proto";
 
@@ -46,4 +48,7 @@ message Config {
 
   bool tls = 7;
   bool tls_skip_verify = 8;
+
+  api.v1.StatusCode status_on_error = 9;
+  api.v1.StatusCode rate_limited_status = 10;
 }

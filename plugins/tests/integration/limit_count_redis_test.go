@@ -228,6 +228,50 @@ func TestLimitCountRedis(t *testing.T) {
 				assert.Equal(t, 429, resp.StatusCode)
 			},
 		},
+		{
+			name: "rateLimitedStatus",
+			config: control_plane.NewSinglePluinConfig("limitCountRedis", map[string]interface{}{
+				"address": "redis:6379",
+				"rules": []interface{}{
+					map[string]interface{}{
+						"count":      1,
+						"timeWindow": "1s",
+						"key":        `request.header("x-key")`,
+					},
+				},
+				"rateLimitedStatus": 503,
+			}),
+			run: func(t *testing.T) {
+				hdr := http.Header{}
+				hdr.Add("x-key", "1")
+				resp, _ := dp.Head("/echo", hdr)
+				assert.Equal(t, 200, resp.StatusCode)
+				resp, _ = dp.Head("/echo", hdr)
+				assert.Equal(t, 503, resp.StatusCode)
+			},
+		},
+		{
+			name: "rateLimitedStatus < 400",
+			config: control_plane.NewSinglePluinConfig("limitCountRedis", map[string]interface{}{
+				"address": "redis:6379",
+				"rules": []interface{}{
+					map[string]interface{}{
+						"count":      1,
+						"timeWindow": "1s",
+						"key":        `request.header("x-key")`,
+					},
+				},
+				"rateLimitedStatus": 200,
+			}),
+			run: func(t *testing.T) {
+				hdr := http.Header{}
+				hdr.Add("x-key", "1")
+				resp, _ := dp.Head("/echo", hdr)
+				assert.Equal(t, 200, resp.StatusCode)
+				resp, _ = dp.Head("/echo", hdr)
+				assert.Equal(t, 429, resp.StatusCode)
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -283,7 +327,44 @@ func TestLimitCountRedisBadService(t *testing.T) {
 			}),
 			run: func(t *testing.T) {
 				resp, _ := dp.Head("/echo", nil)
-				assert.Equal(t, 503, resp.StatusCode)
+				assert.Equal(t, 500, resp.StatusCode)
+			},
+		},
+		{
+			name: "statusOnError",
+			config: control_plane.NewSinglePluinConfig("limitCountRedis", map[string]interface{}{
+				"address": "redisx:6379",
+				"rules": []interface{}{
+					map[string]interface{}{
+						"count":      1,
+						"timeWindow": "1s",
+						"key":        `request.header("x-key")`,
+					},
+				},
+				"failureModeDeny": true,
+				"statusOnError":   502,
+			}),
+			run: func(t *testing.T) {
+				resp, _ := dp.Head("/echo", nil)
+				assert.Equal(t, 502, resp.StatusCode)
+			},
+		},
+		{
+			name: "statusOnError, no failureModeDeny",
+			config: control_plane.NewSinglePluinConfig("limitCountRedis", map[string]interface{}{
+				"address": "redisx:6379",
+				"rules": []interface{}{
+					map[string]interface{}{
+						"count":      1,
+						"timeWindow": "1s",
+						"key":        `request.header("x-key")`,
+					},
+				},
+				"statusOnError": 502,
+			}),
+			run: func(t *testing.T) {
+				resp, _ := dp.Head("/echo", nil)
+				assert.Equal(t, 200, resp.StatusCode)
 			},
 		},
 		{
@@ -302,7 +383,7 @@ func TestLimitCountRedisBadService(t *testing.T) {
 			}),
 			run: func(t *testing.T) {
 				resp, _ := dp.Head("/echo", nil)
-				assert.Equal(t, 503, resp.StatusCode)
+				assert.Equal(t, 500, resp.StatusCode)
 			},
 		},
 		{
@@ -320,7 +401,7 @@ func TestLimitCountRedisBadService(t *testing.T) {
 			}),
 			run: func(t *testing.T) {
 				resp, _ := dp.Head("/echo", nil)
-				assert.Equal(t, 503, resp.StatusCode)
+				assert.Equal(t, 500, resp.StatusCode)
 			},
 		},
 	}
