@@ -133,6 +133,8 @@ var _ = Describe("Nacos", func() {
 	)
 
 	BeforeEach(func() {
+		helper.WaitServiceUp(":8848", "Nacos")
+
 		var registries mosniov1.ServiceRegistryList
 		if err := k8sClient.List(ctx, &registries); err == nil {
 			for _, e := range registries.Items {
@@ -140,7 +142,10 @@ var _ = Describe("Nacos", func() {
 			}
 		}
 
-		helper.WaitServiceUp(":8848", "Nacos")
+		Eventually(func() bool {
+			entries := listServiceEntries()
+			return len(entries) == 0
+		}, timeout, interval).Should(BeTrue())
 	})
 
 	It("service life cycle", func() {
@@ -177,6 +182,8 @@ var _ = Describe("Nacos", func() {
 			entries = listServiceEntries()
 			return len(entries[0].Spec.Endpoints) == 1
 		}, timeout, interval).Should(BeTrue())
+
+		deleteService("8848", "test")
 	})
 
 	It("stop nacos should remove service entries", func() {
@@ -194,6 +201,8 @@ var _ = Describe("Nacos", func() {
 			entries := listServiceEntries()
 			return len(entries) == 0
 		}, timeout, interval).Should(BeTrue())
+
+		deleteService("8848", "test")
 	})
 
 	It("reload", func() {
@@ -250,6 +259,10 @@ var _ = Describe("Nacos", func() {
 			entries := listServiceEntries()
 			return len(entries) == 0
 		}, timeout, interval).Should(BeTrue())
+
+		deleteService("8848", "test1")
+		deleteService("8848", "test2")
+		deleteService("8849", "test")
 	})
 
 })
