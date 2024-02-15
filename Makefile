@@ -51,15 +51,19 @@ ifeq ($(IN_CI), true)
 	MOUNT_GOMOD_CACHE =
 endif
 
+# For some tools, like golangci-lint, we prefer to use the latest version so that we can have the new feature.
+# For the other tools, like kind, we don't upgrade it until there is a strong reason.
+
 LOCALBIN ?= $(shell pwd)/bin
-# Remember to remove tools downloaded into bin directory manually before updating them.
-# If they need to be updated frequently, we can consider to store them in the `Dockerfile.dev`.
 $(LOCALBIN):
 	@mkdir -p $(LOCALBIN)
 
+GO_FMTTER_VERSION = 0.3.8
 .PHONY: install-go-fmtter
 install-go-fmtter: $(LOCALBIN)
-	test -x $(LOCALBIN)/gosimports || GOBIN=$(LOCALBIN) go install github.com/rinchsan/gosimports/cmd/gosimports@v0.3.8
+	if ! test -x $(LOCALBIN)/gosimports || ! $(LOCALBIN)/gosimports -version | grep $(GO_FMTTER_VERSION) >/dev/null; then \
+		GOBIN=$(LOCALBIN) go install github.com/rinchsan/gosimports/cmd/gosimports@v$(GO_FMTTER_VERSION); \
+	fi
 
 .PHONY: gen-proto
 gen-proto: dev-tools install-go-fmtter $(GO_TARGETS)
@@ -152,9 +156,12 @@ build-dev-tools-local:
 
 # For lint-go/fmt-go: we don't cover examples/dev_your_plugin which is just an example
 
+GOLANGCI_LINT_VERSION = 1.56.1
 .PHONY: lint-go
 lint-go:
-	test -x $(LOCALBIN)/golangci-lint || GOBIN=$(LOCALBIN) go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.51.2
+	if ! test -x $(LOCALBIN)/golangci-lint || ! $(LOCALBIN)/golangci-lint --version | grep $(GOLANGCI_LINT_VERSION) >/dev/null; then \
+		GOBIN=$(LOCALBIN) go install github.com/golangci/golangci-lint/cmd/golangci-lint@v$(GOLANGCI_LINT_VERSION); \
+	fi
 	$(LOCALBIN)/golangci-lint run --config=.golangci.yml
 
 .PHONY: fmt-go
