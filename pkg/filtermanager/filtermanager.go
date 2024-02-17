@@ -17,7 +17,6 @@ package filtermanager
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net"
 	"reflect"
 	"runtime"
@@ -120,18 +119,28 @@ func (p *FilterManagerConfigParser) Parse(any *anypb.Any, callbacks capi.ConfigC
 			// For now, we have nothing to provide as config callbacks
 			config, err := plugin.ConfigParser.Parse(proto.Config, nil)
 			if err != nil {
-				return nil, fmt.Errorf("%w during parsing plugin %s in filtermanager", err, name)
-			}
+				api.LogErrorf("%w during parsing plugin %s in filtermanager", err, name)
 
-			conf.current = append(conf.current, &model.ParsedFilterConfig{
-				Name:         proto.Name,
-				ParsedConfig: config,
-				Factory:      plugin.Factory,
-			})
+				// Return an error from the Parse method will cause assertion failure.
+				// See https://github.com/envoyproxy/envoy/blob/f301eebf7acc680e27e03396a1be6be77e1ae3a5/contrib/golang/filters/http/source/golang_filter.cc#L1736-L1737
+				// As we can't control what is returned from a plugin, we need to
+				// avoid the failure by providing a special factory, which also
+				// indicates something is wrong.
+				conf.current = append(conf.current, &model.ParsedFilterConfig{
+					Name:    proto.Name,
+					Factory: InternalErrorFactory,
+				})
+			} else {
+				conf.current = append(conf.current, &model.ParsedFilterConfig{
+					Name:         proto.Name,
+					ParsedConfig: config,
+					Factory:      plugin.Factory,
+				})
 
-			p := pkgPlugins.LoadHttpPlugin(name)
-			if p.Order().Position == pkgPlugins.OrderPositionAuthn {
-				authnFiltersEndAt = i + 1
+				p := pkgPlugins.LoadHttpPlugin(name)
+				if p.Order().Position == pkgPlugins.OrderPositionAuthn {
+					authnFiltersEndAt = i + 1
+				}
 			}
 			i++
 
