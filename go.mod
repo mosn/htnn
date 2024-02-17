@@ -17,7 +17,7 @@ require (
 	github.com/go-logr/logr v1.4.1
 	github.com/go-logr/zapr v1.3.0
 	github.com/golang/protobuf v1.5.3
-	github.com/google/cel-go v0.19.0
+	github.com/google/cel-go v0.20.0
 	github.com/google/uuid v1.6.0
 	github.com/jellydator/ttlcache/v3 v3.1.1
 	github.com/nacos-group/nacos-sdk-go v1.1.4
