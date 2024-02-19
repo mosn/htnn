@@ -106,7 +106,11 @@ func NewRequestHeaderMap(hdr http.Header) *RequestHeaderMap {
 }
 
 func (i *RequestHeaderMap) Scheme() string {
-	return "http"
+	scheme, ok := i.Get(":scheme")
+	if !ok {
+		return "http"
+	}
+	return scheme
 }
 
 func (i *RequestHeaderMap) Method() string {

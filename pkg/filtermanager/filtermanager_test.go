@@ -346,7 +346,7 @@ func (f *addReqFilter) DecodeHeaders(headers api.RequestHeaderMap, endStream boo
 func TestFiltersFromConsumer(t *testing.T) {
 	cb := envoy.NewCAPIFilterCallbackHandler()
 	config := initFilterManagerConfig("ns")
-	config.authnFiltersEndAt = 1
+	config.consumerFiltersEndAt = 1
 	config.current = []*model.ParsedFilterConfig{
 		{
 			Name:    "set_consumer",

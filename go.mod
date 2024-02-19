@@ -11,6 +11,7 @@ require (
 	github.com/agiledragon/gomonkey/v2 v2.11.0
 	github.com/casbin/casbin/v2 v2.82.0
 	github.com/cncf/xds/go v0.0.0-20231109132714-523115ebc101
+	github.com/coreos/go-oidc/v3 v3.9.0
 	github.com/envoyproxy/envoy v1.29.1-0.20240208055117-b788e1a92347
 	github.com/envoyproxy/go-control-plane v0.11.2-0.20231019082134-6e4589f570e1 // version used by istio 1.20
 	github.com/envoyproxy/protoc-gen-validate v1.0.2
@@ -19,6 +20,7 @@ require (
 	github.com/golang/protobuf v1.5.3
 	github.com/google/cel-go v0.20.0
 	github.com/google/uuid v1.6.0
+	github.com/gorilla/securecookie v1.1.2
 	github.com/jellydator/ttlcache/v3 v3.1.1
 	github.com/nacos-group/nacos-sdk-go v1.1.4
 	github.com/onsi/ginkgo/v2 v2.15.0
@@ -29,6 +31,8 @@ require (
 	github.com/spf13/viper v1.18.2
 	github.com/stretchr/testify v1.8.4
 	go.uber.org/zap v1.26.0
+	golang.org/x/net v0.19.0
+	golang.org/x/oauth2 v0.15.0
 	golang.org/x/text v0.14.0
 	golang.org/x/time v0.5.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20231106174013-bbf56f31fb17
@@ -63,6 +67,7 @@ require (
 	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/go-errors/errors v1.0.1 // indirect
 	github.com/go-ini/ini v1.67.0 // indirect
+	github.com/go-jose/go-jose/v3 v3.0.1 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
 	github.com/go-openapi/jsonpointer v0.20.0 // indirect
 	github.com/go-openapi/jsonreference v0.20.2 // indirect
@@ -114,9 +119,8 @@ require (
 	go.opentelemetry.io/otel/sdk v1.21.0 // indirect
 	go.opentelemetry.io/otel/trace v1.21.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
+	golang.org/x/crypto v0.16.0 // indirect
 	golang.org/x/exp v0.0.0-20231219180239-dc181d75b848 // indirect
-	golang.org/x/net v0.19.0 // indirect
-	golang.org/x/oauth2 v0.15.0 // indirect
 	golang.org/x/sync v0.5.0 // indirect
 	golang.org/x/sys v0.16.0 // indirect
 	golang.org/x/term v0.15.0 // indirect

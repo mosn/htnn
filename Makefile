@@ -134,7 +134,7 @@ run-demo:
 		-v $(PWD)/libgolang.so:/etc/libgolang.so \
 		-p 10000:10000 \
 		${PROXY_IMAGE} \
-		envoy -c /etc/demo.yaml --log-level debug
+		envoy -c /etc/demo.yaml --log-level info
 
 .PHONY: dev-tools
 dev-tools:
@@ -242,7 +242,7 @@ verify-example:
 
 .PHONY: start-service
 start-service:
-	cd ./plugins/tests/integration/testdata/services && docker-compose up -d
+	cd ./plugins/tests/integration/testdata/services && docker-compose up -d --build
 
 # E2E
 KUBECTL ?= $(LOCALBIN)/kubectl

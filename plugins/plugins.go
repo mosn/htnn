@@ -24,5 +24,6 @@ import (
 	_ "mosn.io/htnn/plugins/key_auth"
 	_ "mosn.io/htnn/plugins/limit_count_redis"
 	_ "mosn.io/htnn/plugins/limit_req"
+	_ "mosn.io/htnn/plugins/oidc"
 	_ "mosn.io/htnn/plugins/opa"
 )
