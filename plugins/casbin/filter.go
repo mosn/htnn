@@ -50,7 +50,7 @@ func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api
 
 			e, err := casbin.NewEnforcer(conf.Rule.Model, conf.Rule.Policy)
 			if err != nil {
-				api.LogErrorf("failed to update Enforcer: %w", err)
+				api.LogErrorf("failed to update Enforcer: %v", err)
 				// next request will retry
 			} else {
 				conf.lock.Lock()
@@ -68,7 +68,7 @@ func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api
 
 	if !ok {
 		if err != nil {
-			api.LogErrorf("failed to enforece %s: %w", role, err)
+			api.LogErrorf("failed to enforece %s: %v", role, err)
 		}
 		api.LogInfof("reject forbidden user %s", role)
 		return &api.LocalResponse{
