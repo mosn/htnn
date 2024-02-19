@@ -910,3 +910,22 @@ func TestFilterManagerIgnoreUnknownFields(t *testing.T) {
 	require.Nil(t, err)
 	assert.Equal(t, "hello,", resp.Header.Get("Echo-Tom"), resp)
 }
+
+func TestFilterManagerPluginReturnsErrorInParse(t *testing.T) {
+	dp, err := data_plane.StartDataPlane(t, &data_plane.Option{
+		NoErrorLogCheck: true,
+	})
+	if err != nil {
+		t.Fatalf("failed to start data plane: %v", err)
+		return
+	}
+	defer dp.Stop()
+
+	config := control_plane.NewSinglePluinConfig("demo", map[string]interface{}{
+		"hostName": []string{"wrong type"},
+	})
+	controlPlane.UseGoPluginConfig(config, dp)
+	resp, err := dp.Get("/echo", nil)
+	require.Nil(t, err)
+	assert.Equal(t, 500, resp.StatusCode, resp)
+}
