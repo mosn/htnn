@@ -25,7 +25,7 @@ import (
 )
 
 func init() {
-	http.RegisterHttpFilterFactoryAndParser("fm", filtermanager.FilterManagerFactory, &filtermanager.FilterManagerConfigParser{})
+	http.RegisterHttpFilterFactoryAndConfigParser("fm", filtermanager.FilterManagerFactory, &filtermanager.FilterManagerConfigParser{})
 }
 
 func main() {}
