@@ -45,7 +45,8 @@ func TestOIDC(t *testing.T) {
 	hydraCmd := "hydra create client --response-type code,id_token " +
 		"--grant-type authorization_code,refresh_token -e http://127.0.0.1:4445 " +
 		"--redirect-uri " + redirectUrl + " --format json"
-	cmdline := "docker exec services-hydra-1 " + hydraCmd
+	cmdline := "docker compose -f ./testdata/services/docker-compose.yml " +
+		"exec --no-TTY hydra " + hydraCmd
 	cmds := strings.Fields(cmdline)
 	cmd := exec.Command(cmds[0], cmds[1:]...)
 	stdout, err := cmd.Output()

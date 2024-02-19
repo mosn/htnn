@@ -200,7 +200,7 @@ func (f *filter) attachInfo(headers api.RequestHeaderMap, encodedToken string) a
 	value := Tokens{}
 	err := config.cookieEncoding.Decode("htnn_oidc_token", encodedToken, &value)
 	if err != nil {
-		api.LogInfof("bad oidc cookie: %s, err: %w", encodedToken, err)
+		api.LogInfof("bad oidc cookie: %s, err: %s", encodedToken, err.Error())
 		return &api.LocalResponse{Code: 403, Msg: "bad oidc cookie"}
 	}
 	headers.Set("authorization", fmt.Sprintf("Bearer %s", value.IDToken))
