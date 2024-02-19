@@ -71,11 +71,16 @@ func TestOIDC(t *testing.T) {
 		"issuer":       "http://hydra:4444",
 	})
 	controlPlane.UseGoPluginConfig(config, dp)
-	time.Sleep(4 * time.Second)
 
-	resp, err := dp.Get("/echo?a=1", nil)
-	require.Nil(t, err)
-	uri := resp.Header.Get("Location")
+	uri := ""
+	var resp *http.Response
+	require.Eventually(t, func() bool {
+		resp, err = dp.Get("/echo?a=1", nil)
+		require.Nil(t, err)
+		uri = resp.Header.Get("Location")
+		return uri != ""
+	}, 5*time.Second, 1*time.Second)
+
 	u, err := url.ParseRequestURI(uri)
 	require.NoError(t, err)
 	require.Equal(t, "hydra:4444", u.Host)
