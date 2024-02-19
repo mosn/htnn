@@ -119,7 +119,7 @@ func (p *FilterManagerConfigParser) Parse(any *anypb.Any, callbacks capi.ConfigC
 			// For now, we have nothing to provide as config callbacks
 			config, err := plugin.ConfigParser.Parse(proto.Config, nil)
 			if err != nil {
-				api.LogErrorf("%w during parsing plugin %s in filtermanager", err, name)
+				api.LogErrorf("%s during parsing plugin %s in filtermanager", err, name)
 
 				// Return an error from the Parse method will cause assertion failure.
 				// See https://github.com/envoyproxy/envoy/blob/f301eebf7acc680e27e03396a1be6be77e1ae3a5/contrib/golang/filters/http/source/golang_filter.cc#L1736-L1737

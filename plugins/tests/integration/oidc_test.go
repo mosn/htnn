@@ -68,15 +68,17 @@ func TestOIDC(t *testing.T) {
 		"clientId":     hydra.ClientId,
 		"clientSecret": hydra.ClientSecret,
 		"redirectUrl":  redirectUrl,
-		"issuer":       "http://host.docker.internal:4444",
+		"issuer":       "http://hydra:4444",
 	})
 	controlPlane.UseGoPluginConfig(config, dp)
+	time.Sleep(4 * time.Second)
+
 	resp, err := dp.Get("/echo?a=1", nil)
 	require.Nil(t, err)
 	uri := resp.Header.Get("Location")
 	u, err := url.ParseRequestURI(uri)
 	require.NoError(t, err)
-	require.Equal(t, "host.docker.internal:4444", u.Host)
+	require.Equal(t, "hydra:4444", u.Host)
 	require.Equal(t, hydra.ClientId, u.Query().Get("client_id"))
 	require.Equal(t, redirectUrl, u.Query().Get("redirect_uri"))
 	encodedUrl := strings.Split(u.Query().Get("state"), ".")[1]
@@ -88,6 +90,8 @@ func TestOIDC(t *testing.T) {
 	cookie := resp.Header.Get("Set-Cookie")
 	require.Regexp(t, `^htnn_oidc_nonce=[^;]+; Max-Age=3600; HttpOnly$`, cookie)
 
+	// the request is sent from the host
+	uri = strings.Replace(uri, "http://hydra:4444", "http://127.0.0.1:4444", 1)
 	req, err := http.NewRequest("GET", uri, nil)
 	require.NoError(t, err)
 
