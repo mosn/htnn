@@ -31,33 +31,11 @@ static_resources:
                         "@type": type.googleapis.com/xds.type.v3.TypedStruct
                         value:
                           ns:
-                            rick:
+                            placeholder:
                               d: |
                                 {
                                   "auth":{
-                                    "keyAuth":"{\"key\":\"rick\"}",
-                                    "hmacAuth": "{\"accessKey\":\"ak\",\"secretKey\":\"sk\",\"signedHeaders\":[\"x-custom-a\"],\"algorithm\":\"HMAC_SHA256\"}"
-                                  }
-                                }
-                              v: 4355415
-                            tom:
-                              d: |
-                                {
-                                  "auth":{
-                                    "keyAuth":"{\"key\":\"tom\"}"
-                                  }
-                                }
-                              v: 4355415
-                            with_filter:
-                              d: |
-                                {
-                                  "auth":{
-                                    "keyAuth":"{\"key\":\"marvin\"}"
-                                  },
-                                  "filters":{
-                                    "demo":{
-                                      "config":{"hostName":"Mike"}
-                                    }
+                                    "keyAuth":"{\"key\":\"placeholder\"}"
                                   }
                                 }
                               v: 4355415
