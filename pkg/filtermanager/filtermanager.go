@@ -51,7 +51,7 @@ type FilterManagerConfig struct {
 }
 
 type filterManagerConfig struct {
-	authnFiltersEndAt int
+	consumerFiltersEndAt int
 
 	current []*model.ParsedFilterConfig
 	pool    *sync.Pool
@@ -110,7 +110,7 @@ func (p *FilterManagerConfigParser) Parse(any *anypb.Any, callbacks capi.ConfigC
 	conf := initFilterManagerConfig(fmConfig.Namespace)
 	conf.current = make([]*model.ParsedFilterConfig, 0, len(plugins))
 
-	authnFiltersEndAt := 0
+	consumerFiltersEndAt := 0
 	i := 0
 
 	for _, proto := range plugins {
@@ -119,7 +119,7 @@ func (p *FilterManagerConfigParser) Parse(any *anypb.Any, callbacks capi.ConfigC
 			// For now, we have nothing to provide as config callbacks
 			config, err := plugin.ConfigParser.Parse(proto.Config, nil)
 			if err != nil {
-				api.LogErrorf("%w during parsing plugin %s in filtermanager", err, name)
+				api.LogErrorf("%s during parsing plugin %s in filtermanager", err, name)
 
 				// Return an error from the Parse method will cause assertion failure.
 				// See https://github.com/envoyproxy/envoy/blob/f301eebf7acc680e27e03396a1be6be77e1ae3a5/contrib/golang/filters/http/source/golang_filter.cc#L1736-L1737
@@ -137,9 +137,9 @@ func (p *FilterManagerConfigParser) Parse(any *anypb.Any, callbacks capi.ConfigC
 					Factory:      plugin.Factory,
 				})
 
-				p := pkgPlugins.LoadHttpPlugin(name)
-				if p.Order().Position == pkgPlugins.OrderPositionAuthn {
-					authnFiltersEndAt = i + 1
+				_, ok := pkgPlugins.LoadHttpPlugin(name).(pkgPlugins.ConsumerPlugin)
+				if ok {
+					consumerFiltersEndAt = i + 1
 				}
 			}
 			i++
@@ -148,7 +148,7 @@ func (p *FilterManagerConfigParser) Parse(any *anypb.Any, callbacks capi.ConfigC
 			api.LogErrorf("plugin %s not found, ignored", name)
 		}
 	}
-	conf.authnFiltersEndAt = authnFiltersEndAt
+	conf.consumerFiltersEndAt = consumerFiltersEndAt
 
 	return conf, nil
 }
@@ -181,8 +181,8 @@ func newFilterWrapper(name string, f api.Filter) *filterWrapper {
 }
 
 type filterManager struct {
-	filters      []*filterWrapper
-	authnFilters []*filterWrapper
+	filters         []*filterWrapper
+	consumerFilters []*filterWrapper
 
 	decodeRequestNeeded bool
 	decodeIdx           int
@@ -208,7 +208,7 @@ type filterManager struct {
 
 func (m *filterManager) Reset() {
 	m.filters = nil
-	m.authnFilters = nil
+	m.consumerFilters = nil
 
 	m.decodeRequestNeeded = false
 	m.decodeIdx = -1
@@ -373,11 +373,11 @@ func FilterManagerFactory(c interface{}, cb capi.FilterCallbackHandler) capi.Str
 
 	fm.filters = filters
 
-	if conf.authnFiltersEndAt != 0 {
-		authnFiltersEndAt := conf.authnFiltersEndAt
-		authnFilters := filters[:authnFiltersEndAt]
-		fm.authnFilters = authnFilters
-		fm.filters = filters[authnFiltersEndAt:]
+	if conf.consumerFiltersEndAt != 0 {
+		consumerFiltersEndAt := conf.consumerFiltersEndAt
+		consumerFilters := filters[:consumerFiltersEndAt]
+		fm.consumerFilters = consumerFilters
+		fm.filters = filters[consumerFiltersEndAt:]
 	}
 
 	// The skip check is based on the compiled code. So if the DecodeRequest is defined,
@@ -474,9 +474,9 @@ func (m *filterManager) DecodeHeaders(headers api.RequestHeaderMap, endStream bo
 		var res api.ResultAction
 
 		m.reqHdr = headers
-		if len(m.authnFilters) > 0 {
-			for _, f := range m.authnFilters {
-				// Authn plugins only use DecodeHeaders for now
+		if len(m.consumerFilters) > 0 {
+			for _, f := range m.consumerFilters {
+				// Consumer plugins only use DecodeHeaders for now
 				res = f.DecodeHeaders(headers, endStream)
 				if m.handleAction(res, phaseDecodeHeaders) {
 					return

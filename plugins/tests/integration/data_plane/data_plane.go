@@ -294,7 +294,12 @@ func (dp *DataPlane) do(method string, path string, header http.Header, body io.
 		return net.DialTimeout("tcp", ":10000", 1*time.Second)
 	}}
 
-	client := &http.Client{Transport: tr, Timeout: 10 * time.Second}
+	client := &http.Client{Transport: tr,
+		Timeout: 10 * time.Second,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
 	resp, err := client.Do(req)
 	return resp, err
 }

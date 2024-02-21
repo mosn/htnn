@@ -2,6 +2,54 @@ version: "3.8"
 
 services:
   # names in alphabetical order
+  hydra:
+    image: oryd/hydra:v2.2.0-rc.3
+    ports:
+      - "4444:4444" # Public port
+      - "4445:4445" # Admin port
+      - "5555:5555" # Port for hydra token user
+    command: serve -c /etc/config/hydra/hydra.yml all --dev
+    volumes:
+      - type: volume
+        source: hydra-sqlite
+        target: /var/lib/sqlite
+        read_only: false
+      - type: bind
+        source: ./hydra
+        target: /etc/config/hydra
+    environment:
+      - DSN=sqlite:///var/lib/sqlite/db.sqlite?_fk=true
+    restart: unless-stopped
+    depends_on:
+      - hydra-migrate
+    networks:
+      service:
+  hydra-consent:
+    environment:
+      - HYDRA_ADMIN_URL=http://hydra:4445
+    image: oryd/hydra-login-consent-node:v2.2.0-rc.3
+    ports:
+      - "3000:3000"
+    restart: unless-stopped
+    networks:
+      service:
+  hydra-migrate:
+    image: oryd/hydra:v2.2.0-rc.3
+    environment:
+      - DSN=sqlite:///var/lib/sqlite/db.sqlite?_fk=true
+    command: migrate -c /etc/config/hydra/hydra.yml sql -e --yes
+    volumes:
+      - type: volume
+        source: hydra-sqlite
+        target: /var/lib/sqlite
+        read_only: false
+      - type: bind
+        source: ./hydra
+        target: /etc/config/hydra
+    restart: on-failure
+    networks:
+      service:
+
   opa:
     image: openpolicyagent/opa:0.58.0
     restart: unless-stopped
@@ -14,6 +62,7 @@ services:
         target: /test.rego
     networks:
       service:
+
   redis:
     image: redis:latest
     restart: unless-stopped
@@ -35,3 +84,6 @@ services:
 
 networks:
   service:
+
+volumes:
+  hydra-sqlite:
