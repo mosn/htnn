@@ -346,7 +346,6 @@ func (f *addReqFilter) DecodeHeaders(headers api.RequestHeaderMap, endStream boo
 func TestSkipMethodWhenThereAreMultiFilters(t *testing.T) {
 	cb := envoy.NewCAPIFilterCallbackHandler()
 	config := initFilterManagerConfig("ns")
-	config.authnFiltersEndAt = 1
 	config.current = []*model.ParsedFilterConfig{
 		{
 			Name:    "add_req",
