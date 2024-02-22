@@ -4,28 +4,31 @@ title: Plugin development
 
 ## How to write a plugin
 
+There are two types of HTNN plugins: Native plugins, which are converted to Envoy's Filter configuration at runtime, and Go plugins, which run in the Go runtime embedded in the Envoy. Unless otherwise noted, plugins in the following text refer to Go plugins.
+
 Assume you are at the root of this project.
 
 1. Create a directory under `./plugins/`. The file name must be in snake style, like `key_auth`.
 2. Think about the configuration and write down it into `./plugins/$your_plugin/config.proto`. Then run `make gen-proto`. The `proto` file uses [proto-gen-valdate](https://github.com/bufbuild/protoc-gen-validate?tab=readme-ov-file#constraint-rules) to define validation. The plugin name must be in camel style, like `keyAuth`. The configuration fields must be in snake style, like `connect_timeout`. The enum value must be in upper snake style, like `HEADER`. See the [official protobuf style](https://protobuf.dev/programming-guides/style/) for the details.
-3. Finish the plugin. Don't forget to write tests. You can take `./plugins/demo` as an example. If your plugin is simple, you can write integration test only.
+3. Refer to plugins of the same type and decide on the type and order of your plugin. Finish the plugin. Don't forget to write tests. If your plugin is simple, you can write integration test only. You can take `./plugins/demo` as an example. The doc of the API used in the plugin is in their comments.
 4. Add the doc of the plugin in the `site/content/$your_language/docs/reference/plugins/$your_plugin.md`. You can choose to write doc under Simpilified Chinese or English, depends on which is your prime language. We have [tool](https://github.com/mosn/htnn/tree/main/site#cmdtranslator) to translate it to other languages.
 5. Add your plugin's package into `./plugins/plugins.go`. Run `make build-so`. Now the plugin is compiled into `libgolang.so`.
-6. Add integration test in the `./plugins/tests/integration/`. For how to run the integration test, please read `site/content/en/docs/developer-guide/plugin_integration_test_framework.md`.
+6. Add integration test in the `./plugins/tests/integration/`. For how to run the integration test, please read [Plugin Integration Test Framework](../plugin_integration_test_framework).
 
 You can also write the plugin outside HTNN project, please see https://github.com/mosn/htnn/tree/main/examples/dev_your_plugin.
+(FIXME: the example may be broken because it doesn't use the latest dependencies. We must pin the version once htnn is released.)
 
 ### Plugin types
 
 Each plugin should belong to one type. You can specify the plugin's type in its `Type` method. Here are the types:
 
-* Security: Plugins like WAF, request validation, etc.
-* Authn: Plugins do authentication
-* Authz: Plugins do authorization
-* Traffic: Plugins do traffic control
-* Transform: Plugins do request/response transform
-* Observability: Plugins do observability
-* General: Else plugins
+* `Security`: Plugins like WAF, request validation, etc.
+* `Authn`: Plugins do authentication
+* `Authz`: Plugins do authorization
+* `Traffic`: Plugins do traffic control
+* `Transform`: Plugins do request/response transform
+* `Observability`: Plugins do observability
+* `General`: Else plugins
 
 ### Plugin order
 
@@ -36,23 +39,23 @@ For plugins which have the same operation, they are sorted by alphabetical order
 
 Here are the order group (sorted from first to last):
 
-* Outer: First position. It's reserved for Native plugins.
+* `Outer`: First position. It's reserved for Native plugins.
 
 Now goes the Go plugins:
 
-* Access
-* Authn
-* Authz
-* Traffic
-* Transform
-* Unspecified
-* BeforeUpstream
-* Stats
+* `Access`
+* `Authn`
+* `Authz`
+* `Traffic`
+* `Transform`
+* `Unspecified`
+* `BeforeUpstream`
+* `Stats`
 
 End of the Go plugins.
 
 * Istio's extensions go here
-* Inner: Last position. It's reserved for Native plugins.
+* `Inner`: Last position. It's reserved for Native plugins.
 
 There are three kinds of operation: `OrderOperationInsertFirst `, `OrderOperationInsertLast` and `OrderOperationNop`. Each kind means `First`, `Last` and `Middle`.
 
@@ -112,12 +115,13 @@ In some situations, we need to stop the iteration of header filter, then read th
 
 Therefore, we introduce a group of new types:
 
-* WaitAllData: a ResultAction returns from the EncodeHeaders
-* DecodeRequest(headers api.RequestHeaderMap, data api.BufferInstance, trailers api.RequestTrailerMap) ResultAction
+* `WaitAllData`: a `ResultAction` returns from the `DecodeHeaders` or `EncodeHeaders`
+* `DecodeRequest(headers api.RequestHeaderMap, data api.BufferInstance, trailers api.RequestTrailerMap) ResultAction`
+* `EncodeResponse(headers ResponseHeaderMap, data BufferInstance, trailers ResponseTrailerMap) ResultAction`
 
 `WaitAllData` can be used to decide if the body needs to be buffered, according to the configuration and the headers.
 
-If `WaitAllData` is returned, we will:
+If `WaitAllData` is returned from `DecodeHeaders`, we will:
 
 1. buffer the whole body
 2. execute the `DecodeData` of previous plugins
