@@ -31,13 +31,10 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	istiov1b1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/gateway-api/conformance/utils/roundtripper"
 
-	mosniov1 "mosn.io/htnn/controller/api/v1"
 	"mosn.io/htnn/e2e/pkg/k8s"
 	"mosn.io/htnn/pkg/log"
 )
@@ -145,42 +142,7 @@ func (suite *Suite) stopPortForward(t *testing.T) {
 }
 
 func (suite *Suite) cleanup(t *testing.T) {
-	c := suite.Opt.Client
-	ctx := context.Background()
-	var policies mosniov1.HTTPFilterPolicyList
-	err := c.List(ctx, &policies)
-	require.NoError(t, err)
-	for _, e := range policies.Items {
-		// DeepCopy here is to satisfy the requirement of gosec
-		require.NoError(t, c.Delete(ctx, e.DeepCopy()))
-		logger.Info("Deleted", "name", e.GetName(), "kind", e.GetObjectKind())
-	}
-
-	var consumers mosniov1.ConsumerList
-	err = c.List(ctx, &consumers)
-	require.NoError(t, err)
-	for _, e := range consumers.Items {
-		// DeepCopy here is to satisfy the requirement of gosec
-		require.NoError(t, c.Delete(ctx, e.DeepCopy()))
-		logger.Info("Deleted", "name", e.GetName(), "kind", e.GetObjectKind())
-	}
-
-	var httproutes gwapiv1.HTTPRouteList
-	err = c.List(ctx, &httproutes)
-	require.NoError(t, err)
-	for _, e := range httproutes.Items {
-		require.NoError(t, c.Delete(ctx, e.DeepCopy()))
-		logger.Info("Deleted", "name", e.GetName(), "kind", e.GetObjectKind())
-	}
-
-	var virtualservices istiov1b1.VirtualServiceList
-	err = c.List(ctx, &virtualservices)
-	require.NoError(t, err)
-	for _, e := range virtualservices.Items {
-		require.NoError(t, c.Delete(ctx, e))
-		logger.Info("Deleted", "name", e.GetName(), "kind", e.GetObjectKind())
-	}
-	// let HTNN to clean up EnvoyFilter
+	k8s.CleanUp(t, suite.Opt.Client)
 }
 
 func (suite *Suite) K8sClient() client.Client {

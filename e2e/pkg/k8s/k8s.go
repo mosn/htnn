@@ -24,12 +24,15 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	istiov1b1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/yaml"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	mosniov1 "mosn.io/htnn/controller/api/v1"
 	"mosn.io/htnn/pkg/log"
 )
 
@@ -99,4 +102,44 @@ func readResources(decoder *yaml.YAMLOrJSONDecoder) ([]unstructured.Unstructured
 	}
 
 	return resources, nil
+}
+
+func deleteResource(t *testing.T, ctx context.Context, k8sClient client.Client, obj client.Object, opts ...client.DeleteOption) {
+	err := k8sClient.Delete(ctx, obj, opts...)
+	if err != nil && !apierrors.IsNotFound(err) {
+		require.NoError(t, err)
+	}
+	logger.Info("Deleted", "name", obj.GetName(), "kind", obj.GetObjectKind())
+}
+
+func CleanUp(t *testing.T, c client.Client) {
+	ctx := context.Background()
+	var policies mosniov1.HTTPFilterPolicyList
+	err := c.List(ctx, &policies)
+	require.NoError(t, err)
+	for _, e := range policies.Items {
+		deleteResource(t, ctx, c, &e)
+	}
+
+	var consumers mosniov1.ConsumerList
+	err = c.List(ctx, &consumers)
+	require.NoError(t, err)
+	for _, e := range consumers.Items {
+		deleteResource(t, ctx, c, &e)
+	}
+
+	var httproutes gwapiv1.HTTPRouteList
+	err = c.List(ctx, &httproutes)
+	require.NoError(t, err)
+	for _, e := range httproutes.Items {
+		deleteResource(t, ctx, c, &e)
+	}
+
+	var virtualservices istiov1b1.VirtualServiceList
+	err = c.List(ctx, &virtualservices)
+	require.NoError(t, err)
+	for _, e := range virtualservices.Items {
+		deleteResource(t, ctx, c, e)
+	}
+	// let HTNN to clean up EnvoyFilter
 }

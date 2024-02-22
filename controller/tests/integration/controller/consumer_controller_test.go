@@ -50,14 +50,14 @@ var _ = Describe("Consumer controller", func() {
 			var consumers mosniov1.ConsumerList
 			if err := k8sClient.List(ctx, &consumers); err == nil {
 				for _, e := range consumers.Items {
-					Expect(k8sClient.Delete(ctx, &e)).Should(Succeed())
+					pkg.DeleteK8sResource(ctx, k8sClient, &e)
 				}
 			}
 
 			var envoyfilters istiov1a3.EnvoyFilterList
 			if err := k8sClient.List(ctx, &envoyfilters); err == nil {
 				for _, e := range envoyfilters.Items {
-					Expect(k8sClient.Delete(ctx, e)).Should(Succeed())
+					pkg.DeleteK8sResource(ctx, k8sClient, e)
 				}
 			}
 		})

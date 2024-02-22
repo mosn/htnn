@@ -138,7 +138,7 @@ var _ = Describe("Nacos", func() {
 		var registries mosniov1.ServiceRegistryList
 		if err := k8sClient.List(ctx, &registries); err == nil {
 			for _, e := range registries.Items {
-				Expect(k8sClient.Delete(ctx, &e)).Should(Succeed())
+				pkg.DeleteK8sResource(ctx, k8sClient, &e)
 			}
 		}
 
@@ -242,7 +242,7 @@ var _ = Describe("Nacos", func() {
 		Expect(k8sClient.Patch(ctx, currNacos, base)).Should(Succeed())
 		Eventually(func() bool {
 			entries = listServiceEntries()
-			return len(entries) == 2
+			return len(entries) == 1
 		}, timeout, interval).Should(BeTrue())
 
 		// subscribe change
