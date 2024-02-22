@@ -362,20 +362,22 @@ func (r *HTTPFilterPolicyReconciler) translationStateToCustomResource(ctx contex
 	finalState *translation.FinalState) error {
 
 	var envoyfilters istiov1a3.EnvoyFilterList
-	if err := r.List(ctx, &envoyfilters, client.MatchingLabels{model.LabelCreatedBy: "HTTPFilterPolicy"}); err != nil {
+	if err := r.List(ctx, &envoyfilters,
+		client.MatchingLabels{model.LabelCreatedBy: "HTTPFilterPolicy"},
+	); err != nil {
 		return fmt.Errorf("failed to list EnvoyFilter: %w", err)
 	}
 
 	preEnvoyFilterMap := make(map[string]*istiov1a3.EnvoyFilter, len(envoyfilters.Items))
-	for _, ef := range envoyfilters.Items {
-		if _, ok := finalState.EnvoyFilters[ef.Name]; !ok || ef.Namespace != config.RootNamespace() {
-			logger.Info("delete EnvoyFilter", "name", ef.Name, "namespace", ef.Namespace)
-			if err := r.Delete(ctx, ef); err != nil {
+	for _, e := range envoyfilters.Items {
+		if _, ok := finalState.EnvoyFilters[e.Name]; !ok || e.Namespace != config.RootNamespace() {
+			logger.Info("delete EnvoyFilter", "name", e.Name, "namespace", e.Namespace)
+			if err := r.Delete(ctx, e); err != nil {
 				return fmt.Errorf("failed to delete EnvoyFilter: %w, namespacedName: %v",
-					err, types.NamespacedName{Name: ef.Name, Namespace: ef.Namespace})
+					err, types.NamespacedName{Name: e.Name, Namespace: e.Namespace})
 			}
 		} else {
-			preEnvoyFilterMap[ef.Name] = ef
+			preEnvoyFilterMap[e.Name] = e
 		}
 	}
 
@@ -419,6 +421,7 @@ func (r *HTTPFilterPolicyReconciler) updatePolicies(ctx context.Context,
 		if !policy.Status.IsChanged() {
 			continue
 		}
+		policy.Status.Reset()
 		// Update operation will change the original object in cache, so we need to deepcopy it.
 		if err := r.Status().Update(ctx, policy.DeepCopy()); err != nil {
 			return fmt.Errorf("failed to update HTTPFilterPolicy status: %w, namespacedName: %v",

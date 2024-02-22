@@ -150,28 +150,29 @@ func (r *ConsumerReconciler) generateCustomResource(ctx context.Context, logger 
 	}
 
 	var envoyfilter *istiov1a3.EnvoyFilter
-	for _, ef := range envoyfilters.Items {
-		if ef.Namespace != nsName.Namespace || ef.Name != nsName.Name {
-			logger.Info("delete EnvoyFilter", "name", ef.Name, "namespace", ef.Namespace)
+	for _, e := range envoyfilters.Items {
+		if e.Namespace != nsName.Namespace || e.Name != nsName.Name {
+			logger.Info("delete EnvoyFilter", "name", e.Name, "namespace", e.Namespace)
 
-			if err := r.Delete(ctx, ef); err != nil {
+			if err := r.Delete(ctx, e); err != nil {
 				return fmt.Errorf("failed to delete EnvoyFilter: %w, namespacedName: %v",
-					err, types.NamespacedName{Name: ef.Name, Namespace: ef.Namespace})
+					err, types.NamespacedName{Name: e.Name, Namespace: e.Namespace})
 			}
 		} else {
-			envoyfilter = ef
+			envoyfilter = e
 		}
 	}
 
 	if envoyfilter == nil {
 		logger.Info("create EnvoyFilter", "name", ef.Name, "namespace", ef.Namespace)
 
-		if err := r.Create(ctx, ef); err != nil {
+		if err := r.Create(ctx, ef.DeepCopy()); err != nil {
 			return fmt.Errorf("failed to create EnvoyFilter: %w, namespacedName: %v", err, nsName)
 		}
 	} else {
 		logger.Info("update EnvoyFilter", "name", ef.Name, "namespace", ef.Namespace)
 
+		ef = ef.DeepCopy()
 		ef.SetResourceVersion(envoyfilter.ResourceVersion)
 		if err := r.Update(ctx, ef); err != nil {
 			return fmt.Errorf("failed to update EnvoyFilter: %w, namespacedName: %v", err, nsName)
@@ -187,6 +188,7 @@ func (r *ConsumerReconciler) updateConsumers(ctx context.Context, consumers *mos
 		if !consumer.Status.IsChanged() {
 			continue
 		}
+		consumer.Status.Reset()
 		// Update operation will change the original object in cache, so we need to deepcopy it.
 		if err := r.Status().Update(ctx, consumer.DeepCopy()); err != nil {
 			return fmt.Errorf("failed to update Consumer status: %w, namespacedName: %v",
