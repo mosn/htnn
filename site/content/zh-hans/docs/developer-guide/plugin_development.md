@@ -66,7 +66,7 @@ Go 插件结束。
 
 ## Filter manager
 
-HTNN 项目在 Envoy Go Fitler 和 Go 插件之间引入了 filter manager。
+HTNN 项目在 Envoy Go Filter 和 Go 插件之间引入了 filter manager。
 
 filter manager 实现了以下特性：
 
