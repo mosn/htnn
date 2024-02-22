@@ -149,13 +149,12 @@ func (f *filter) EncodeHeaders(headers api.ResponseHeaderMap, endStream bool) ap
 	}
 
 	// According to the RFC, these headers MUST NOT occur multiple times.
-	headers.Add("x-ratelimit-limit", fmt.Sprintf("%d, %s", minCount, config.quotaPolicy))
+	headers.Set("x-ratelimit-limit", fmt.Sprintf("%d, %s", minCount, config.quotaPolicy))
 	if minRemain <= 0 {
-		headers.Add("x-ratelimit-remaining", "0")
+		headers.Set("x-ratelimit-remaining", "0")
 	} else {
-		headers.Add("x-ratelimit-remaining", strconv.FormatInt(minRemain, 10))
+		headers.Set("x-ratelimit-remaining", strconv.FormatInt(minRemain, 10))
 	}
-	headers.Add("x-ratelimit-remaining", strconv.FormatInt(minRemain, 10))
-	headers.Add("x-ratelimit-reset", strconv.FormatInt(minTTL, 10))
+	headers.Set("x-ratelimit-reset", strconv.FormatInt(minTTL, 10))
 	return api.Continue
 }
