@@ -350,6 +350,11 @@ func FilterManagerFactory(c interface{}, cb capi.FilterCallbackHandler) capi.Str
 	fm := conf.pool.Get().(*filterManager)
 	fm.callbacks.FilterCallbackHandler = cb
 
+	canSkipMethod := fm.canSkipMethod
+	if canSkipMethod == nil {
+		canSkipMethod = newSkipMethodsMap()
+	}
+
 	filters := make([]*filterWrapper, len(newConfig))
 	for i, fc := range newConfig {
 		factory := fc.Factory
@@ -357,7 +362,6 @@ func FilterManagerFactory(c interface{}, cb capi.FilterCallbackHandler) capi.Str
 		f := factory(config, fm.callbacks)
 		// Technically, the factory might create different f for different calls. We don't support this edge case for now.
 		if fm.canSkipMethod == nil {
-			canSkipMethod := newSkipMethodsMap()
 			for meth := range canSkipMethod {
 				ok, err := isMethodFromPassThroughFilter(f, meth)
 				if err != nil {
@@ -366,11 +370,13 @@ func FilterManagerFactory(c interface{}, cb capi.FilterCallbackHandler) capi.Str
 				}
 				canSkipMethod[meth] = canSkipMethod[meth] && ok
 			}
-			fm.canSkipMethod = canSkipMethod
 		}
 		filters[i] = newFilterWrapper(fc.Name, f)
 	}
 
+	if fm.canSkipMethod == nil {
+		fm.canSkipMethod = canSkipMethod
+	}
 	fm.filters = filters
 
 	if conf.consumerFiltersEndAt != 0 {
