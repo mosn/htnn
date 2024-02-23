@@ -79,7 +79,7 @@ func TestOIDC(t *testing.T) {
 		require.Nil(t, err)
 		uri = resp.Header.Get("Location")
 		return uri != ""
-	}, 5*time.Second, 1*time.Second)
+	}, 10*time.Second, 1*time.Second)
 
 	u, err := url.ParseRequestURI(uri)
 	require.NoError(t, err)

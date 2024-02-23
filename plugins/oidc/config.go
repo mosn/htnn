@@ -19,6 +19,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/avast/retry-go"
 	"github.com/coreos/go-oidc/v3/oidc"
 	"github.com/gorilla/securecookie"
 	"golang.org/x/oauth2"
@@ -72,7 +73,21 @@ func ctxWithClient(ctx context.Context) context.Context {
 
 func (conf *config) Init(cb api.ConfigCallbackHandler) error {
 	ctx := ctxWithClient(context.Background())
-	provider, err := oidc.NewProvider(ctx, conf.Issuer)
+	var provider *oidc.Provider
+	var err error
+	err = retry.Do(
+		func() error {
+			provider, err = oidc.NewProvider(ctx, conf.Issuer)
+			return err
+		},
+		retry.RetryIf(func(err error) bool {
+			api.LogWarnf("failed to get oidc provider, err: %v", err)
+			return true
+		}),
+		retry.Attempts(3),
+		// backoff delay
+		retry.Delay(500*time.Millisecond),
+	)
 	if err != nil {
 		return err
 	}
