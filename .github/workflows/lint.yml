@@ -1,8 +1,9 @@
 name: lint
 
 on:
-  push:
-    branches: [ "main" ]
+  #FIXME: uncomment it once open source
+  #push:
+    #branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
 

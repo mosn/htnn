@@ -79,21 +79,21 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 		var policies mosniov1.HTTPFilterPolicyList
 		if err := k8sClient.List(ctx, &policies); err == nil {
 			for _, e := range policies.Items {
-				Expect(k8sClient.Delete(ctx, &e)).Should(Succeed())
+				pkg.DeleteK8sResource(ctx, k8sClient, &e)
 			}
 		}
 
 		var virtualservices istiov1b1.VirtualServiceList
 		if err := k8sClient.List(ctx, &virtualservices); err == nil {
 			for _, e := range virtualservices.Items {
-				Expect(k8sClient.Delete(ctx, e)).Should(Succeed())
+				pkg.DeleteK8sResource(ctx, k8sClient, e)
 			}
 		}
 
 		var gateways istiov1b1.GatewayList
 		if err := k8sClient.List(ctx, &gateways); err == nil {
 			for _, e := range gateways.Items {
-				Expect(k8sClient.Delete(ctx, e)).Should(Succeed())
+				pkg.DeleteK8sResource(ctx, k8sClient, e)
 			}
 		}
 	})

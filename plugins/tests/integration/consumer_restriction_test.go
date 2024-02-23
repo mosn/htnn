@@ -27,7 +27,22 @@ import (
 )
 
 func TestConsumerRestriction(t *testing.T) {
-	dp, err := data_plane.StartDataPlane(t, nil)
+	dp, err := data_plane.StartDataPlane(t, &data_plane.Option{
+		Bootstrap: data_plane.Bootstrap().AddConsumer("tom", map[string]interface{}{
+			"auth": map[string]interface{}{
+				"keyAuth": `{"key":"tom"}`,
+			},
+		}).AddConsumer("with_filter", map[string]interface{}{
+			"auth": map[string]interface{}{
+				"keyAuth": `{"key":"marvin"}`,
+			},
+			"filters": map[string]interface{}{
+				"demo": map[string]interface{}{
+					"config": `{"hostName": "Mike"}`,
+				},
+			},
+		}),
+	})
 	if err != nil {
 		t.Fatalf("failed to start data plane: %v", err)
 		return

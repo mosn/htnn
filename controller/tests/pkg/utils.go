@@ -15,13 +15,16 @@
 package pkg
 
 import (
+	"context"
 	"encoding/json"
 	"strings"
 	"testing"
 
+	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/require"
 	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	istiov1b1 "istio.io/client-go/pkg/apis/networking/v1beta1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -73,4 +76,11 @@ func FakeK8sClient(t *testing.T) client.Client {
 	k8sClient, err := client.New(cfg, client.Options{})
 	require.NoError(t, err)
 	return k8sClient
+}
+
+func DeleteK8sResource(ctx context.Context, k8sClient client.Client, obj client.Object, opts ...client.DeleteOption) {
+	err := k8sClient.Delete(ctx, obj, opts...)
+	if err != nil && !apierrors.IsNotFound(err) {
+		Expect(err).Should(Succeed())
+	}
 }

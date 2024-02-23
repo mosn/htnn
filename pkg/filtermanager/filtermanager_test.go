@@ -343,6 +343,31 @@ func (f *addReqFilter) DecodeHeaders(headers api.RequestHeaderMap, endStream boo
 	return api.Continue
 }
 
+func TestSkipMethodWhenThereAreMultiFilters(t *testing.T) {
+	cb := envoy.NewCAPIFilterCallbackHandler()
+	config := initFilterManagerConfig("ns")
+	config.current = []*model.ParsedFilterConfig{
+		{
+			Name:    "add_req",
+			Factory: addReqFactory,
+			ParsedConfig: addReqConf{
+				hdrName: "x-htnn-route",
+			},
+		},
+		{
+			Name:    "on_log",
+			Factory: onLogFactory,
+		},
+	}
+
+	for i := 0; i < 2; i++ {
+		m := FilterManagerFactory(config, cb).(*filterManager)
+		assert.Equal(t, false, m.canSkipOnLog)
+		assert.Equal(t, false, m.canSkipDecodeHeaders)
+		assert.Equal(t, true, m.canSkipDecodeData)
+	}
+}
+
 func TestFiltersFromConsumer(t *testing.T) {
 	cb := envoy.NewCAPIFilterCallbackHandler()
 	config := initFilterManagerConfig("ns")

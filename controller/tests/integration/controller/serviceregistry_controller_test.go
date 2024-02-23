@@ -46,7 +46,7 @@ var _ = Describe("ServiceRegistry controller", func() {
 			var registries mosniov1.ServiceRegistryList
 			if err := k8sClient.List(ctx, &registries); err == nil {
 				for _, e := range registries.Items {
-					Expect(k8sClient.Delete(ctx, &e)).Should(Succeed())
+					pkg.DeleteK8sResource(ctx, k8sClient, &e)
 				}
 			}
 
