@@ -19,7 +19,6 @@ import (
 
 	"mosn.io/htnn/pkg/file"
 	"mosn.io/htnn/pkg/filtermanager/api"
-	"mosn.io/htnn/pkg/request"
 )
 
 func factory(c interface{}, callbacks api.FilterCallbackHandler) api.Filter {
@@ -39,7 +38,7 @@ type filter struct {
 func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {
 	conf := f.config
 	role, _ := headers.Get(conf.Token.Name) // role can be ""
-	url := request.GetUrl(headers)
+	url := headers.Url()
 
 	policyChanged := file.IsChanged(conf.modelFile, conf.policyFile)
 	if policyChanged && !conf.updating.Load() {

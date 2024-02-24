@@ -15,6 +15,9 @@
 package api
 
 import (
+	"net/http"
+	"net/url"
+
 	"github.com/envoyproxy/envoy/contrib/golang/common/go/api"
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
@@ -94,16 +97,24 @@ func (f *PassThroughFilter) EncodeTrailers(trailers ResponseTrailerMap) ResultAc
 
 func (f *PassThroughFilter) OnLog() {}
 
-func (f *PassThroughFilter) DecodeRequest(headers api.RequestHeaderMap, data api.BufferInstance, trailers api.RequestTrailerMap) ResultAction {
+func (f *PassThroughFilter) DecodeRequest(headers RequestHeaderMap, data BufferInstance, trailers RequestTrailerMap) ResultAction {
 	return Continue
 }
 
-func (f *PassThroughFilter) EncodeResponse(headers api.ResponseHeaderMap, data api.BufferInstance, trailers api.ResponseTrailerMap) ResultAction {
+func (f *PassThroughFilter) EncodeResponse(headers ResponseHeaderMap, data BufferInstance, trailers ResponseTrailerMap) ResultAction {
 	return Continue
 }
 
 type HeaderMap = api.HeaderMap
-type RequestHeaderMap = api.RequestHeaderMap
+type RequestHeaderMap interface {
+	api.RequestHeaderMap
+
+	// Url returns the parsed `url.URL`
+	Url() *url.URL
+	// Cookies returns the HTTP Cookies.
+	// If multiple cookies match the given name, only one cookie will be returned.
+	Cookies() map[string]*http.Cookie
+}
 type ResponseHeaderMap = api.ResponseHeaderMap
 type DataBufferBase = api.DataBufferBase
 type BufferInstance = api.BufferInstance

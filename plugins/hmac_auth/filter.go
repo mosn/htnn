@@ -25,7 +25,6 @@ import (
 	"strings"
 
 	"mosn.io/htnn/pkg/filtermanager/api"
-	"mosn.io/htnn/pkg/request"
 )
 
 func factory(c interface{}, callbacks api.FilterCallbackHandler) api.Filter {
@@ -58,7 +57,7 @@ func (f *filter) getSignContent(header api.RequestHeaderMap, accessKey string) s
 		dh = f.config.DateHeader
 	}
 	date, _ := header.Get(dh)
-	url := request.GetUrl(header)
+	url := header.Url()
 	path := url.Path
 	if path == "" {
 		path = "/"

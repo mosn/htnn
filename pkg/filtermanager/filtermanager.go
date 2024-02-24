@@ -17,12 +17,16 @@ package filtermanager
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net"
+	"net/http"
+	"net/url"
 	"reflect"
 	"runtime"
 	"runtime/debug"
 	"sort"
 	"strconv"
+	"strings"
 	"sync"
 
 	xds "github.com/cncf/xds/go/xds/type/v3"
@@ -33,6 +37,7 @@ import (
 	"mosn.io/htnn/pkg/filtermanager/api"
 	"mosn.io/htnn/pkg/filtermanager/model"
 	pkgPlugins "mosn.io/htnn/pkg/plugins"
+	"mosn.io/htnn/pkg/request"
 )
 
 // We can't import package below here that will cause build failure in Mac
@@ -225,6 +230,60 @@ func (m *filterManager) Reset() {
 	m.canSkipOnLog = false
 
 	m.callbacks.Reset()
+}
+
+type filterManagerRequestHeaderMap struct {
+	capi.RequestHeaderMap
+
+	u       *url.URL
+	cookies map[string]*http.Cookie
+}
+
+func (headers *filterManagerRequestHeaderMap) expire(key string) {
+	switch key {
+	case ":path":
+		headers.u = nil
+	case "cookie":
+		headers.cookies = nil
+	}
+}
+
+func (headers *filterManagerRequestHeaderMap) Set(key, value string) {
+	key = strings.ToLower(key)
+	headers.expire(key)
+	headers.RequestHeaderMap.Set(key, value)
+}
+
+func (headers *filterManagerRequestHeaderMap) Add(key, value string) {
+	key = strings.ToLower(key)
+	headers.expire(key)
+	headers.RequestHeaderMap.Add(key, value)
+}
+
+func (headers *filterManagerRequestHeaderMap) Del(key string) {
+	key = strings.ToLower(key)
+	headers.expire(key)
+	headers.RequestHeaderMap.Del(key)
+}
+
+func (headers *filterManagerRequestHeaderMap) Url() *url.URL {
+	if headers.u == nil {
+		path := headers.Path()
+		u, err := url.ParseRequestURI(path)
+		if err != nil {
+			panic(fmt.Sprintf("unexpected bad request uri given by envoy: %v", err))
+		}
+		headers.u = u
+	}
+	return headers.u
+}
+
+// If multiple cookies match the given name, only one cookie will be returned.
+func (headers *filterManagerRequestHeaderMap) Cookies() map[string]*http.Cookie {
+	if headers.cookies == nil {
+		headers.cookies = request.ParseCookies(headers)
+	}
+	return headers.cookies
 }
 
 type filterManagerStreamInfo struct {
@@ -470,7 +529,7 @@ func (m *filterManager) localReply(v *api.LocalResponse) {
 	m.callbacks.SendLocalReply(v.Code, msg, hdr, 0, "")
 }
 
-func (m *filterManager) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) capi.StatusType {
+func (m *filterManager) DecodeHeaders(headers capi.RequestHeaderMap, endStream bool) capi.StatusType {
 	if m.canSkipDecodeHeaders {
 		return capi.Continue
 	}
@@ -479,6 +538,9 @@ func (m *filterManager) DecodeHeaders(headers api.RequestHeaderMap, endStream bo
 		defer m.callbacks.RecoverPanic()
 		var res api.ResultAction
 
+		headers := &filterManagerRequestHeaderMap{
+			RequestHeaderMap: headers,
+		}
 		m.reqHdr = headers
 		if len(m.consumerFilters) > 0 {
 			for _, f := range m.consumerFilters {
@@ -574,7 +636,7 @@ func (m *filterManager) DecodeHeaders(headers api.RequestHeaderMap, endStream bo
 	return capi.Running
 }
 
-func (m *filterManager) DecodeData(buf api.BufferInstance, endStream bool) capi.StatusType {
+func (m *filterManager) DecodeData(buf capi.BufferInstance, endStream bool) capi.StatusType {
 	if m.canSkipDecodeData {
 		return capi.Continue
 	}
@@ -668,7 +730,7 @@ func (m *filterManager) DecodeData(buf api.BufferInstance, endStream bool) capi.
 	return capi.Running
 }
 
-func (m *filterManager) EncodeHeaders(headers api.ResponseHeaderMap, endStream bool) capi.StatusType {
+func (m *filterManager) EncodeHeaders(headers capi.ResponseHeaderMap, endStream bool) capi.StatusType {
 	if m.canSkipEncodeHeaders {
 		return capi.Continue
 	}
@@ -707,7 +769,7 @@ func (m *filterManager) EncodeHeaders(headers api.ResponseHeaderMap, endStream b
 	return capi.Running
 }
 
-func (m *filterManager) EncodeData(buf api.BufferInstance, endStream bool) capi.StatusType {
+func (m *filterManager) EncodeData(buf capi.BufferInstance, endStream bool) capi.StatusType {
 	if m.canSkipEncodeData {
 		return capi.Continue
 	}

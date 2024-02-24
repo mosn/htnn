@@ -18,7 +18,6 @@ import (
 	"net/url"
 
 	"mosn.io/htnn/pkg/filtermanager/api"
-	"mosn.io/htnn/pkg/request"
 )
 
 func factory(c interface{}, callbacks api.FilterCallbackHandler) api.Filter {
@@ -52,7 +51,7 @@ func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api
 		var vals []string
 		if key.Source == Source_QUERY {
 			if query == nil {
-				query = request.GetUrl(headers).Query()
+				query = headers.Url().Query()
 			}
 			vals = query[key.Name]
 		} else {
