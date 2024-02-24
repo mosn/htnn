@@ -63,6 +63,10 @@ func (s *ConsumerStatus) IsChanged() bool {
 	return s.changed
 }
 
+func (s *ConsumerStatus) Reset() {
+	s.changed = false
+}
+
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 

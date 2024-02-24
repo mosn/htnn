@@ -32,6 +32,7 @@ import (
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -112,11 +113,15 @@ var _ = BeforeSuite(func() {
 	_, err = clientset.CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
 	Expect(err).NotTo(HaveOccurred())
 
+	unsafeDisableDeepCopy := true
 	k8sManager, err := ctrl.NewManager(cfg, ctrl.Options{
 		// Don't listen on ports to avoid port conflict & permission issue
 		Metrics:                metricsserver.Options{BindAddress: "0"},
 		HealthProbeBindAddress: "0",
 		Scheme:                 scheme.Scheme,
+		Cache: cache.Options{
+			DefaultUnsafeDisableDeepCopy: &unsafeDisableDeepCopy,
+		},
 	})
 	Expect(err).ToNot(HaveOccurred())
 

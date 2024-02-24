@@ -32,6 +32,7 @@ import (
 	apimachineryruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
@@ -100,6 +101,7 @@ var _ = BeforeSuite(func() {
 	Expect(k8sClient).NotTo(BeNil())
 
 	// start webhook server using Manager
+	unsafeDisableDeepCopy := true
 	webhookInstallOptions := &testEnv.WebhookInstallOptions
 	mgr, err := ctrl.NewManager(cfg, ctrl.Options{
 		Scheme: scheme,
@@ -111,6 +113,9 @@ var _ = BeforeSuite(func() {
 		LeaderElection:         false,
 		Metrics:                metricsserver.Options{BindAddress: "0"},
 		HealthProbeBindAddress: "0",
+		Cache: cache.Options{
+			DefaultUnsafeDisableDeepCopy: &unsafeDisableDeepCopy,
+		},
 	})
 	Expect(err).NotTo(HaveOccurred())
 
