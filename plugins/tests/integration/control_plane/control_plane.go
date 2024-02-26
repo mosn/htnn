@@ -184,6 +184,30 @@ func (cp *ControlPlane) UseGoPluginConfig(config *filtermanager.FilterManagerCon
 							},
 							{
 								Match: &route.RouteMatch{
+									PathSpecifier: &route.RouteMatch_Path{
+										Path: "/flush_coverage",
+									},
+								},
+								Action: &route.Route_DirectResponse{
+									DirectResponse: &route.DirectResponseAction{
+										Status: 200,
+									},
+								},
+								TypedPerFilterConfig: map[string]*any1.Any{
+									"envoy.filters.http.golang": proto.MessageToAny(&golang.ConfigsPerRoute{
+										PluginsConfig: map[string]*golang.RouterPlugin{
+											"fm": {
+												Override: &golang.RouterPlugin_Config{
+													Config: proto.MessageToAny(
+														FilterManagerConfigToTypedStruct(NewSinglePluinConfig("coverage", nil))),
+												},
+											},
+										},
+									}),
+								},
+							},
+							{
+								Match: &route.RouteMatch{
 									PathSpecifier: &route.RouteMatch_Prefix{
 										Prefix: "/",
 									},

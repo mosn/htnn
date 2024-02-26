@@ -18,6 +18,7 @@ import (
 	"bufio"
 	"context"
 	"crypto/md5"
+	"fmt"
 	"io"
 	"net"
 	"net/http"
@@ -124,6 +125,19 @@ func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 		}
 	}
 
+	coverDir := helper.CoverDir()
+	_, err = os.Stat(coverDir)
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return nil, err
+		}
+		if err := os.MkdirAll(coverDir, 0755); err != nil {
+			return nil, err
+		}
+		// When the integration test is run with `go test ...`, the previous coverage files are not removed.
+		// Since we only care about the coverage in CI, it is fine so far.
+	}
+
 	// This is the envoyproxy/envoy:contrib-dev fetched in 2024-02-08
 	// Use docker inspect --format='{{index .RepoDigests 0}}' envoyproxy/envoy:contrib-dev
 	// to get the sha256 ID
@@ -139,6 +153,7 @@ func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 		projectRoot +
 		"/plugins/tests/integration/libgolang.so:/etc/libgolang.so" +
 		" -v /tmp:/tmp" +
+		" -e GOCOVERDIR=" + coverDir +
 		" -p 10000:10000 -p 9998:9998 " + hostAddr + " " +
 		image
 
@@ -230,9 +245,14 @@ func (dp *DataPlane) cleanup(t *testing.T) error {
 }
 
 func (dp *DataPlane) Stop() {
+	err := dp.FlushCoverage()
+	if err != nil {
+		logger.Error(err, "failed to flush coverage")
+	}
+
 	logger.Info("stop envoy")
 	cmd := exec.Command("docker", "stop", containerName)
-	err := cmd.Run()
+	err = cmd.Run()
 	if err != nil {
 		logger.Error(err, "failed to terminate envoy")
 		return
@@ -305,6 +325,20 @@ func (dp *DataPlane) do(method string, path string, header http.Header, body io.
 }
 
 func (dp *DataPlane) Configured() bool {
-	_, err := dp.Head("/detect_if_the_rds_takes_effect", nil)
-	return err == nil
+	resp, err := dp.Head("/detect_if_the_rds_takes_effect", nil)
+	if err != nil {
+		return false
+	}
+	return resp.StatusCode == 200
+}
+
+func (dp *DataPlane) FlushCoverage() error {
+	resp, err := dp.Post("/flush_coverage", nil, nil)
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+	return nil
 }

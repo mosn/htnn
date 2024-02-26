@@ -16,11 +16,13 @@ package integration
 
 import (
 	"net/http"
+	"runtime/coverage"
 	"runtime/debug"
 	"strings"
 
 	"mosn.io/htnn/pkg/filtermanager/api"
 	"mosn.io/htnn/pkg/plugins"
+	"mosn.io/htnn/plugins/tests/integration/helper"
 )
 
 type basePlugin struct {
@@ -254,8 +256,40 @@ func (p *localReplyPlugin) Factory() api.FilterFactory {
 	return localReplyFactory
 }
 
+type coveragePlugin struct {
+	plugins.PluginMethodDefaultImpl
+	basePlugin
+}
+
+func (p *coveragePlugin) Factory() api.FilterFactory {
+	return coverageFactory
+}
+
+func coverageFactory(c interface{}, callbacks api.FilterCallbackHandler) api.Filter {
+	return &coverageFilter{
+		callbacks: callbacks,
+	}
+}
+
+type coverageFilter struct {
+	api.PassThroughFilter
+
+	callbacks api.FilterCallbackHandler
+}
+
+func (f *coverageFilter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {
+	err := coverage.WriteCountersDir(helper.CoverDir())
+	if err != nil {
+		api.LogErrorf("failed to write coverage: %v", err)
+		return &api.LocalResponse{Code: 500}
+	}
+	return &api.LocalResponse{Code: 200}
+}
+
 func init() {
 	plugins.RegisterHttpPlugin("stream", &streamPlugin{})
 	plugins.RegisterHttpPlugin("buffer", &bufferPlugin{})
 	plugins.RegisterHttpPlugin("localReply", &localReplyPlugin{})
+
+	plugins.RegisterHttpPlugin("coverage", &coveragePlugin{})
 }

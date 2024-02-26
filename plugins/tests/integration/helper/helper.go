@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -43,4 +44,8 @@ func WaitServiceUp(t *testing.T, port string, service string) {
 		c.Close()
 		return true
 	}, 10*time.Second, 50*time.Millisecond, msg)
+}
+
+func CoverDir() string {
+	return filepath.Join("/tmp", "htnn_coverage")
 }

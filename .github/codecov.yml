@@ -3,18 +3,18 @@ coverage:
     project:
       default:
         target: 80%
-        threshold: 5%
+        threshold: 5% # 75%~80% is the yellow zone - ok to merge but should increase it
         if_ci_failed: error
     patch:
       default:
-        target: 80%
-        threshold: 20% # higher threshold for single change
+        target: 70% # lower target for single change
         if_ci_failed: error
 ignore:
   # test files
   - "plugins/tests"
   - "controller/tests"
   - "e2e/"
+  - "**/mock.go"
   # examples
   - "examples/"
   # tools
@@ -23,4 +23,4 @@ ignore:
   # generated code
   - "**/*.pb.go"
   - "**/*.pb.validate.go"
-  - 'zz_generated.deepcopy.go'
+  - '**/zz_generated.deepcopy.go'

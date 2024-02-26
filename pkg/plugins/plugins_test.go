@@ -113,13 +113,33 @@ func TestMerge(t *testing.T) {
 	assert.Equal(t, "parent", res)
 }
 
-type pluginOrderWrapper struct {
-	Plugin
+type goPluginOrderWrapper struct {
+	GoPlugin
 
 	order PluginOrder
 }
 
-func (p *pluginOrderWrapper) Order() PluginOrder {
+func (p *goPluginOrderWrapper) Order() PluginOrder {
+	return p.order
+}
+
+type consumerPluginWrapper struct {
+	ConsumerPlugin
+
+	order PluginOrder
+}
+
+func (p *consumerPluginWrapper) Order() PluginOrder {
+	return p.order
+}
+
+type nativePluginWrapper struct {
+	NativePlugin
+
+	order PluginOrder
+}
+
+func (p *nativePluginWrapper) Order() PluginOrder {
 	return p.order
 }
 
@@ -146,9 +166,9 @@ func TestComparePluginOrder(t *testing.T) {
 		},
 	}
 	for name, po := range pluginOrders {
-		RegisterHttpPlugin(name, &pluginOrderWrapper{
-			Plugin: plugin,
-			order:  po,
+		RegisterHttpPlugin(name, &goPluginOrderWrapper{
+			GoPlugin: plugin,
+			order:    po,
 		})
 	}
 
@@ -169,4 +189,65 @@ func TestComparePluginOrder(t *testing.T) {
 		"authz_third",
 		"authz_last",
 	}, plugins)
+}
+
+func TestRejectBadPluginDef(t *testing.T) {
+	type pluginWrapper struct {
+		Plugin
+	}
+
+	cases := []struct {
+		name  string
+		input Plugin
+		err   string
+	}{
+		{
+			name: "unknown type",
+			input: &pluginWrapper{
+				Plugin: &MockPlugin{},
+			},
+			err: errUnknownPluginType,
+		},
+		{
+			name: "nil plugin",
+			err:  errNilPlugin,
+		},
+		{
+			name: "invalid Go plugin order",
+			input: &goPluginOrderWrapper{
+				GoPlugin: &MockPlugin{},
+				order: PluginOrder{
+					Position: OrderPositionInner,
+				},
+			},
+			err: errInvalidGoPluginOrder,
+		},
+		{
+			name: "invalid Native plugin order",
+			input: &nativePluginWrapper{
+				NativePlugin: &MockNativePlugin{},
+				order: PluginOrder{
+					Position: OrderPositionAuthz,
+				},
+			},
+			err: errInvalidNativePluginOrder,
+		},
+		{
+			name: "invalid Consumer plugin order",
+			input: &consumerPluginWrapper{
+				ConsumerPlugin: &MockConsumerPlugin{},
+				order: PluginOrder{
+					Position: OrderPositionAuthz,
+				},
+			},
+			err: errInvalidConsumerPluginOrder,
+		},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			assert.PanicsWithValue(t, c.err, func() {
+				RegisterHttpPlugin(c.name, c.input)
+			})
+		})
+	}
 }

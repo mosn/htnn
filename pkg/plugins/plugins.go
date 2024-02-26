@@ -55,9 +55,17 @@ func LoadHttpFilterFactoryAndParser(name string) *FilterFactoryAndParser {
 	return httpFilterFactoryAndParser[name]
 }
 
+const (
+	errNilPlugin                  = "plugin should not be nil"
+	errUnknownPluginType          = "a plugin should be either Go plugin or Native plugin"
+	errInvalidGoPluginOrder       = "invalid plugin order position: Go plugin should not use OrderPositionOuter or OrderPositionInner"
+	errInvalidNativePluginOrder   = "invalid plugin order position: Native plugin should use OrderPositionOuter or OrderPositionInner"
+	errInvalidConsumerPluginOrder = "invalid plugin order position: Consumer plugin should use OrderPositionAuthn"
+)
+
 func RegisterHttpPlugin(name string, plugin Plugin) {
 	if plugin == nil {
-		panic("plugin should not be nil")
+		panic(errNilPlugin)
 	}
 
 	logger.Info("register plugin", "name", name)
@@ -65,22 +73,24 @@ func RegisterHttpPlugin(name string, plugin Plugin) {
 	if goPlugin, ok := plugin.(GoPlugin); ok {
 		order := plugin.Order()
 		if order.Position == OrderPositionOuter || order.Position == OrderPositionInner {
-			panic("invalid plugin order position: Go plugin should not use OrderPositionOuter or OrderPositionInner")
+			panic(errInvalidGoPluginOrder)
 		}
 		RegisterHttpFilterFactoryAndParser(name,
 			goPlugin.Factory(),
 			NewPluginConfigParser(goPlugin))
-	}
-	if _, ok := plugin.(NativePlugin); ok {
+	} else if _, ok := plugin.(NativePlugin); ok {
 		order := plugin.Order()
 		if order.Position != OrderPositionOuter && order.Position != OrderPositionInner {
-			panic("invalid plugin order position: Native plugin should use OrderPositionOuter or OrderPositionInner")
+			panic(errInvalidNativePluginOrder)
 		}
+	} else {
+		panic(errUnknownPluginType)
 	}
+
 	if _, ok := plugin.(ConsumerPlugin); ok {
 		order := plugin.Order()
 		if order.Position != OrderPositionAuthn {
-			panic("invalid plugin order position: Consumer plugin should use OrderPositionAuthn")
+			panic(errInvalidConsumerPluginOrder)
 		}
 	}
 

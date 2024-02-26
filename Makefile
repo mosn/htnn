@@ -39,7 +39,7 @@ PROTOC = protoc
 PROTO_FILES = $(call rwildcard,./,*.proto)
 GO_TARGETS = $(patsubst %.proto,%.pb.go,$(PROTO_FILES))
 
-TEST_OPTION ?= -gcflags="all=-N -l" -race $(COVERAGE_OPTION)
+TEST_OPTION ?= -gcflags="all=-N -l" -race -covermode=atomic -coverprofile=cover.out -coverpkg=./...
 
 MOUNT_GOMOD_CACHE = -v $(shell go env GOPATH):/go
 ifeq ($(IN_CI), true)
@@ -92,6 +92,7 @@ build-test-so-local:
 	CGO_ENABLED=1 go build -tags so \
 		-ldflags "-B 0x$(shell head -c20 /dev/urandom|od -An -tx1|tr -d ' \n') -X main.Version=${VERSION}(${GIT_VERSION})" \
 		--buildmode=c-shared \
+		-cover -covermode=atomic -coverpkg=./... \
 		-v -o plugins/tests/integration/${TARGET_SO} \
 		${PROJECT_NAME}/plugins/tests/integration/libgolang
 
@@ -109,6 +110,7 @@ plugins-integration-test:
 	if ! docker images ${PROXY_IMAGE} | grep envoyproxy/envoy > /dev/null; then \
 		docker pull ${PROXY_IMAGE}; \
 	fi
+	test -d /tmp/htnn_coverage && rm -rf /tmp/htnn_coverage || true
 	$(foreach PKG, $(shell go list ./plugins/tests/integration/...), \
 		go test -v ${PKG} || exit 1; \
 	)

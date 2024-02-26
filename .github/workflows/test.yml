@@ -18,7 +18,6 @@ concurrency:
 
 env:
   IN_CI: true
-  COVERAGE_OPTION: "-covermode=atomic -coverprofile=coverage.out"
 
 jobs:
   unit-test:
@@ -35,11 +34,12 @@ jobs:
     - name: Test
       run: make unit-test
     - name: Upload to codecov
+      if: always() # always upload coverage, so the coverage percents won't affect by the failed tests
       uses: codecov/codecov-action@v4.0.1
       with:
         fail_ci_if_error: false # let CI build pass if Codecov runs into an error during upload
-        file: ./coverage.out
-        flags: unittests
+        file: ./cover.out
+        flags: unit-test
         token: ${{ secrets.CODECOV_TOKEN }}
         verbose: true
 
@@ -70,6 +70,19 @@ jobs:
         # upload artifact can be found in https://github.com/mosn/htnn/actions/runs/$id
         name: ci-logs
         path: ./test-envoy
+    - name: Generate coverage
+      if: always()
+      run: |
+        go tool covdata textfmt -i=/tmp/htnn_coverage -o plugins/tests/integration/cover.out -v 2
+    - name: Upload to codecov
+      if: always()
+      uses: codecov/codecov-action@v4.0.1
+      with:
+        fail_ci_if_error: false # let CI build pass if Codecov runs into an error during upload
+        file: plugins/tests/integration/cover.out
+        flags: plugins-integration-test
+        token: ${{ secrets.CODECOV_TOKEN }}
+        verbose: true
 
   controller-test:
     timeout-minutes: 10
@@ -97,3 +110,12 @@ jobs:
 
     - name: Test
       run: make test
+    - name: Upload to codecov
+      if: always()
+      uses: codecov/codecov-action@v4.0.1
+      with:
+        fail_ci_if_error: false # let CI build pass if Codecov runs into an error during upload
+        file: ./controller/cover.out
+        flags: controller-test
+        token: ${{ secrets.CODECOV_TOKEN }}
+        verbose: true
