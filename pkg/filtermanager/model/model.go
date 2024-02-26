@@ -14,6 +14,9 @@
 
 package model
 
+// This package puts filtermanager relative definitions that use across the internal packages.
+// It's not a part of the API, so it's not recommended to use it in plugin code.
+
 import "mosn.io/htnn/pkg/filtermanager/api"
 
 type FilterConfig struct {
@@ -25,4 +28,16 @@ type ParsedFilterConfig struct {
 	Name         string
 	ParsedConfig interface{}
 	Factory      api.FilterFactory
+}
+
+type FilterWrapper struct {
+	api.Filter
+	Name string
+}
+
+func NewFilterWrapper(name string, f api.Filter) *FilterWrapper {
+	return &FilterWrapper{
+		Filter: f,
+		Name:   name,
+	}
 }

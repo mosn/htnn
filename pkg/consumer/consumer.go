@@ -44,6 +44,11 @@ type Consumer struct {
 	generation      int
 	ConsumerConfigs map[string]api.PluginConsumerConfig  `json:"-"`
 	FilterConfigs   map[string]*model.ParsedFilterConfig `json:"-"`
+
+	// fields that generated from the configuration
+	CanSkipMethod  map[string]bool
+	FilterNames    []string
+	FilterWrappers []*model.FilterWrapper
 }
 
 func (c *Consumer) Marshal() string {

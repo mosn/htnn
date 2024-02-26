@@ -33,7 +33,16 @@ func init() {
 	capi.SetCommonCAPI(&fakeCapi{})
 }
 
+var logDisabled bool
+
+func DisableLogInTest() {
+	logDisabled = true
+}
+
 func logInGo(level capi.LogType, message string) {
+	if logDisabled {
+		return
+	}
 	log.Printf("[%s] %s\n", level, message)
 }
 

@@ -15,7 +15,9 @@
 package filtermanager
 
 import (
+	"fmt"
 	"net/http"
+	"strconv"
 	"testing"
 
 	"github.com/agiledragon/gomonkey/v2"
@@ -77,7 +79,7 @@ func TestParse(t *testing.T) {
 func TestPassThrough(t *testing.T) {
 	cb := envoy.NewCAPIFilterCallbackHandler()
 	config := initFilterManagerConfig("ns")
-	config.current = []*model.ParsedFilterConfig{
+	config.parsed = []*model.ParsedFilterConfig{
 		{
 			Name:    "passthrough",
 			Factory: PassThroughFactory,
@@ -146,7 +148,7 @@ func TestLocalReplyJSON_UseReqHeader(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cb := envoy.NewCAPIFilterCallbackHandler()
 			config := initFilterManagerConfig("ns")
-			config.current = []*model.ParsedFilterConfig{
+			config.parsed = []*model.ParsedFilterConfig{
 				{
 					Name:    "test",
 					Factory: PassThroughFactory,
@@ -219,7 +221,7 @@ func TestLocalReplyJSON_UseRespHeader(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cb := envoy.NewCAPIFilterCallbackHandler()
 			config := initFilterManagerConfig("ns")
-			config.current = []*model.ParsedFilterConfig{
+			config.parsed = []*model.ParsedFilterConfig{
 				{
 					Name:    "test",
 					Factory: PassThroughFactory,
@@ -255,7 +257,7 @@ func TestLocalReplyJSON_UseRespHeader(t *testing.T) {
 func TestLocalReplyJSON_DoNotChangeMsgIfContentTypeIsGiven(t *testing.T) {
 	cb := envoy.NewCAPIFilterCallbackHandler()
 	config := initFilterManagerConfig("ns")
-	config.current = []*model.ParsedFilterConfig{
+	config.parsed = []*model.ParsedFilterConfig{
 		{
 			Name:    "test",
 			Factory: PassThroughFactory,
@@ -281,33 +283,27 @@ func TestLocalReplyJSON_DoNotChangeMsgIfContentTypeIsGiven(t *testing.T) {
 	}, lr)
 }
 
+type setConsumerConf struct {
+	Consumers map[string]*pkgConsumer.Consumer
+}
+
 func setConsumerFactory(c interface{}, callbacks api.FilterCallbackHandler) api.Filter {
 	return &setConsumerFilter{
 		callbacks: callbacks,
+		conf:      c.(setConsumerConf),
 	}
 }
 
 type setConsumerFilter struct {
 	api.PassThroughFilter
+	conf      setConsumerConf
 	callbacks api.FilterCallbackHandler
 }
 
 func (f *setConsumerFilter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {
-	f.callbacks.SetConsumer(&pkgConsumer.Consumer{
-		FilterConfigs: map[string]*model.ParsedFilterConfig{
-			"on_log": {
-				Name:    "on_log",
-				Factory: onLogFactory,
-			},
-			"add_req": {
-				Name:    "add_req",
-				Factory: addReqFactory,
-				ParsedConfig: addReqConf{
-					hdrName: "x-htnn-consumer",
-				},
-			},
-		},
-	})
+	key, _ := headers.Get("Consumer")
+	c := f.conf.Consumers[key]
+	f.callbacks.SetConsumer(c)
 	return api.Continue
 }
 
@@ -346,7 +342,7 @@ func (f *addReqFilter) DecodeHeaders(headers api.RequestHeaderMap, endStream boo
 func TestSkipMethodWhenThereAreMultiFilters(t *testing.T) {
 	cb := envoy.NewCAPIFilterCallbackHandler()
 	config := initFilterManagerConfig("ns")
-	config.current = []*model.ParsedFilterConfig{
+	config.parsed = []*model.ParsedFilterConfig{
 		{
 			Name:    "add_req",
 			Factory: addReqFactory,
@@ -372,10 +368,35 @@ func TestFiltersFromConsumer(t *testing.T) {
 	cb := envoy.NewCAPIFilterCallbackHandler()
 	config := initFilterManagerConfig("ns")
 	config.consumerFiltersEndAt = 1
-	config.current = []*model.ParsedFilterConfig{
+
+	consumers := map[string]*pkgConsumer.Consumer{}
+	for i := 0; i < 10; i++ {
+		c := pkgConsumer.Consumer{
+			FilterConfigs: map[string]*model.ParsedFilterConfig{
+				"add_req": {
+					Name:    "add_req",
+					Factory: addReqFactory,
+					ParsedConfig: addReqConf{
+						hdrName: fmt.Sprintf("x-htnn-consumer-%d", i),
+					},
+				},
+			},
+		}
+		if i%2 == 0 {
+			c.FilterConfigs["on_log"] = &model.ParsedFilterConfig{
+				Name:    "on_log",
+				Factory: onLogFactory,
+			}
+		}
+		consumers[strconv.Itoa(i)] = &c
+	}
+	config.parsed = []*model.ParsedFilterConfig{
 		{
 			Name:    "set_consumer",
 			Factory: setConsumerFactory,
+			ParsedConfig: setConsumerConf{
+				Consumers: consumers,
+			},
 		},
 		{
 			Name:    "add_req",
@@ -385,19 +406,27 @@ func TestFiltersFromConsumer(t *testing.T) {
 			},
 		},
 	}
-	for i := 0; i < 2; i++ {
+	for i := 0; i < 20; i++ {
 		m := FilterManagerFactory(config, cb).(*filterManager)
 		assert.Equal(t, true, m.canSkipOnLog)
 		assert.Equal(t, 1, len(m.filters))
-		hdr := envoy.NewRequestHeaderMap(http.Header{})
+		h := http.Header{}
+		idx := i % 10
+		h.Add("consumer", strconv.Itoa(idx))
+		hdr := envoy.NewRequestHeaderMap(h)
 		m.DecodeHeaders(hdr, true)
 		cb.WaitContinued()
-		assert.Equal(t, false, m.canSkipOnLog)
-		assert.Equal(t, 2, len(m.filters))
+		if idx%2 == 0 {
+			assert.Equal(t, false, m.canSkipOnLog)
+			assert.Equal(t, 2, len(m.filters))
+		} else {
+			assert.Equal(t, true, m.canSkipOnLog)
+			assert.Equal(t, 1, len(m.filters))
+		}
 
 		_, ok := hdr.Get("x-htnn-route")
 		assert.False(t, ok)
-		_, ok = hdr.Get("x-htnn-consumer")
+		_, ok = hdr.Get(fmt.Sprintf("x-htnn-consumer-%d", idx))
 		assert.True(t, ok)
 	}
 }
