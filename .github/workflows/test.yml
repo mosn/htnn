@@ -1,12 +1,11 @@
 name: test
 
 on:
-  #FIXME: uncomment it once open source
-  #push:
-    #branches: [ "main" ]
-    #paths-ignore:
-    #- "site/**"
-    #- "**/*.md"
+  push:
+    branches: [ "main" ]
+    paths-ignore:
+    - "site/**"
+    - "**/*.md"
   pull_request:
     branches: [ "main" ]
     paths-ignore:
