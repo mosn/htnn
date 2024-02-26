@@ -39,7 +39,7 @@ PROTOC = protoc
 PROTO_FILES = $(call rwildcard,./,*.proto)
 GO_TARGETS = $(patsubst %.proto,%.pb.go,$(PROTO_FILES))
 
-TEST_OPTION ?= -gcflags="all=-N -l" -race
+TEST_OPTION ?= -gcflags="all=-N -l" -race $(COVERAGE_OPTION)
 
 MOUNT_GOMOD_CACHE = -v $(shell go env GOPATH):/go
 ifeq ($(IN_CI), true)

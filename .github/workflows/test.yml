@@ -18,6 +18,7 @@ concurrency:
 
 env:
   IN_CI: true
+  COVERAGE_OPTION: "-covermode=atomic -coverprofile=coverage.out"
 
 jobs:
   unit-test:
@@ -33,6 +34,14 @@ jobs:
 
     - name: Test
       run: make unit-test
+    - name: Upload to codecov
+      uses: codecov/codecov-action@v4.0.1
+      with:
+        fail_ci_if_error: false # let CI build pass if Codecov runs into an error during upload
+        file: ./coverage.out
+        flags: unittests
+        token: ${{ secrets.CODECOV_TOKEN }}
+        verbose: true
 
   plugins-integration-test:
     timeout-minutes: 10
