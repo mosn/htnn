@@ -11,13 +11,13 @@ Assumed you are at the root of this project:
 
 The test framework will start Envoy to run the Go plugins. The stdout/stderr of the Envoy can be found in `./test-envoy/$test_name`.
 
-Some tests require third-party services. You can start them via running `docker-compose up $service` under `./plugins/tests/integration/testdata/services`.
+Some tests require third-party services. You can start them by running `docker-compose up $service` under `./plugins/tests/integration/testdata/services`.
 
 ## Port usage
 
 The test framework will use:
 
-* `:2023` for invalid port
+* `:2023` to represent invalid port
 * `:9999` for the control plane
 * `:10000` for the Envoy proxy
 * `:10001` for the backend server and mock external server

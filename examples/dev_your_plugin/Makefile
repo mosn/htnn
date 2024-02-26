@@ -18,7 +18,8 @@ TARGET_SO       = libgolang.so
 PROJECT_NAME    = mosn.io/htnn
 # Both images use glibc 2.31. Ensure libc in the images match each other.
 BUILD_IMAGE     ?= golang:1.21-bullseye
-PROXY_IMAGE     ?= envoyproxy/envoy:contrib-v1.29-latest
+# FIXME: pin a version once we release htnn
+PROXY_IMAGE     ?= envoyproxy/envoy@sha256:4ac92ea7095c787b6d1d74ea7d27a5c776ded08a0dee9b6737f2105f790fa384
 
 
 .PHONY: build-so-local
@@ -33,7 +34,7 @@ build-so:
 	docker run --rm -v $(shell go env GOPATH):/go -v $(PWD)/../..:/go/src/${PROJECT_NAME} -w /go/src/${PROJECT_NAME}/examples/dev_your_plugin \
 		-e GOPROXY \
 		${BUILD_IMAGE} \
-		make build-so-local
+		bash -c "git config --global --add safe.directory '*' && make build-so-local"
 
 .PHONY: run-plugin
 run-plugin:
