@@ -1,0 +1,26 @@
+coverage:
+  status:
+    project:
+      default:
+        target: 80%
+        threshold: 5%
+        if_ci_failed: error
+    patch:
+      default:
+        target: 80%
+        threshold: 20% # higher threshold for single change
+        if_ci_failed: error
+ignore:
+  # test files
+  - "plugins/tests"
+  - "controller/tests"
+  - "e2e/"
+  # examples
+  - "examples/"
+  # tools
+  - "./site/"
+  - "./tools/"
+  # generated code
+  - "**/*.pb.go"
+  - "**/*.pb.validate.go"
+  - 'zz_generated.deepcopy.go'
