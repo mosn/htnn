@@ -20,12 +20,14 @@ import (
 	"bytes"
 	"log"
 	"net/http"
+	"net/url"
 	"strconv"
 	"sync"
 
 	capi "github.com/envoyproxy/envoy/contrib/golang/common/go/api"
 
 	"mosn.io/htnn/pkg/filtermanager/api"
+	"mosn.io/htnn/pkg/request"
 )
 
 func init() {
@@ -144,6 +146,16 @@ func (i *RequestHeaderMap) Path() string {
 		return "/"
 	}
 	return path
+}
+
+func (i *RequestHeaderMap) Url() *url.URL {
+	path := i.Path()
+	u, _ := url.ParseRequestURI(path)
+	return u
+}
+
+func (i *RequestHeaderMap) Cookies() map[string]*http.Cookie {
+	return request.ParseCookies(i)
 }
 
 var _ api.RequestHeaderMap = (*RequestHeaderMap)(nil)

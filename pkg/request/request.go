@@ -15,25 +15,13 @@
 package request
 
 import (
-	"fmt"
 	"net/http"
 	"net/textproto"
-	"net/url"
 	"strings"
 
 	"github.com/envoyproxy/envoy/contrib/golang/common/go/api"
 	"golang.org/x/net/http/httpguts"
 )
-
-func GetUrl(headers api.RequestHeaderMap) *url.URL {
-	path := headers.Path()
-	// TODO: cache it
-	uri, err := url.ParseRequestURI(path)
-	if err != nil {
-		panic(fmt.Sprintf("unexpected bad request uri given by envoy: %v", err))
-	}
-	return uri
-}
 
 // The cookie parser is from Go's http/cookie.go, which are not exported
 
@@ -66,7 +54,7 @@ func parseCookieValue(raw string, allowDoubleQuote bool) (string, bool) {
 }
 
 // If multiple cookies match the given name, only one cookie will be returned.
-func GetCookies(headers api.RequestHeaderMap) map[string]*http.Cookie {
+func ParseCookies(headers api.RequestHeaderMap) map[string]*http.Cookie {
 	lines := headers.Values("Cookie")
 	if len(lines) == 0 {
 		return map[string]*http.Cookie{}

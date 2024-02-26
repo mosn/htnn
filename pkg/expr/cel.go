@@ -31,7 +31,6 @@ import (
 
 	"mosn.io/htnn/pkg/filtermanager/api"
 	"mosn.io/htnn/pkg/log"
-	pkgRequest "mosn.io/htnn/pkg/request"
 )
 
 var (
@@ -205,7 +204,7 @@ func (r *request) Receive(function string, overload string, args []ref.Val) ref.
 	case "path":
 		return types.String(r.headers.Path())
 	case "url_path":
-		return types.String(pkgRequest.GetUrl(r.headers).Path)
+		return types.String(r.headers.Url().Path)
 	case "host":
 		return types.String(r.headers.Host())
 	case "scheme":
@@ -216,7 +215,7 @@ func (r *request) Receive(function string, overload string, args []ref.Val) ref.
 		name := args[0].Value().(string)
 		return types.String(r.Header(name))
 	case "query_path":
-		return types.String(pkgRequest.GetUrl(r.headers).RawQuery)
+		return types.String(r.headers.Url().RawQuery)
 	case "query":
 		name := args[0].Value().(string)
 		return types.String(r.Query(name))
@@ -242,7 +241,7 @@ func (r *request) Header(name string) string {
 }
 
 func (r *request) Query(name string) string {
-	query := pkgRequest.GetUrl(r.headers).Query()
+	query := r.headers.Url().Query()
 	v := query[name]
 	n := len(v)
 	if n == 1 {

@@ -29,7 +29,6 @@ import (
 	"golang.org/x/oauth2"
 
 	"mosn.io/htnn/pkg/filtermanager/api"
-	"mosn.io/htnn/pkg/request"
 )
 
 func factory(c interface{}, callbacks api.FilterCallbackHandler) api.Filter {
@@ -152,7 +151,7 @@ func (f *filter) handleCallback(headers api.RequestHeaderMap, query url.Values) 
 	}
 
 	if !config.SkipNonceVerify {
-		nonce, ok := request.GetCookies(headers)["htnn_oidc_nonce"]
+		nonce, ok := headers.Cookies()["htnn_oidc_nonce"]
 		if !ok {
 			api.LogInfof("bad nonce, expected %s", idToken.Nonce)
 			return &api.LocalResponse{Code: 403, Msg: "bad nonce"}
@@ -208,12 +207,12 @@ func (f *filter) attachInfo(headers api.RequestHeaderMap, encodedToken string) a
 }
 
 func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {
-	token, ok := request.GetCookies(headers)["htnn_oidc_token"]
+	token, ok := headers.Cookies()["htnn_oidc_token"]
 	if ok {
 		return f.attachInfo(headers, token.Value)
 	}
 
-	query := request.GetUrl(headers).Query()
+	query := headers.Url().Query()
 	code := query.Get("code")
 	if code == "" {
 		return f.handleInitRequest(headers)
