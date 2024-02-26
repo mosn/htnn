@@ -193,6 +193,7 @@ install-license-checker: $(LOCALBIN)
 .PHONY: lint-license
 lint-license: install-license-checker
 	$(LOCALBIN)/license-eye header check
+	$(LOCALBIN)/license-eye dependency check
 
 .PHONY: fix-license
 fix-license: install-license-checker
