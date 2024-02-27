@@ -45,5 +45,5 @@ func WaitServiceUp(port string, service string) {
 		c.Close()
 		return true
 	}, 10*time.Second, 50*time.Millisecond,
-		fmt.Sprintf("%s is unavailble. Please run `make start-controller-service` in ./controller to make it up.", service))
+		fmt.Sprintf("%s is unavailable. Please run `make start-controller-service` in ./controller to make it up.", service))
 }

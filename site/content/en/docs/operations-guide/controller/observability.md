@@ -54,7 +54,7 @@ The provided metrics can be divided into the following categories according to t
 
 * controller-runtime: see https://book.kubebuilder.io/reference/metrics-reference.
 * prometheus client-go: see https://pkg.go.dev/github.com/prometheus/client_golang/prometheus/collectors
-* htnn: see below
+* HTNN: see below
 
 It's recommended to watch the metrics below:
 
@@ -63,9 +63,9 @@ It's recommended to watch the metrics below:
 * `workqueue_queue_duration_seconds` can be used to detect if the controller is overloaded, or frequently requeuing due to error.
 * `process_cpu_seconds_total` and `process_resident_memory_bytes` can be used to build resource monitor.
 
-, and the metrics provided by htnn:
+, and the metrics provided by HTNN:
 
-* `htnn_translate_duration_seconds_bucket` records the translation part of the reconciliation. A reconciliation can be divided into three parts: building resources from the local cache, translation, and writing to k8s API server. This histogram tracks the time spent in translation.
+* `htnn_translate_duration_seconds_bucket` records the translation part of the reconciliation. A reconciliation can be divided into three parts: building the translation state from the local cache, translation, and writing to K8S API server. This histogram tracks the time spent in translation.
 
 ## Profile
 

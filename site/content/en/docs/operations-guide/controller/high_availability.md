@@ -4,7 +4,7 @@ title: High Availability
 
 ## Readness & Liveness Probe
 
-The controller provides `0.0.0.0:10081/readyz` as a readiness probe and `0.0.0.0:10081/healthz` as a liveness probe. The address of the health check can be modified by specifying the `--health-probe-bind-address $another_addr` option at startup, e.g. `--health-probe-bind-address :11081`.
+The controller provides `0.0.0.0:10081/readyz` as a readiness probe and `0.0.0.0:10081/healthz` as a liveness probe. The address of the health probe can be modified by specifying the `--health-probe-bind-address $another_addr` option at startup, e.g. `--health-probe-bind-address :11081`.
 
 ```
 $ curl 'http://0.0.0.0:10081/readyz' -i
