@@ -37,3 +37,39 @@ func (m *MockPlugin) Merge(parent interface{}, child interface{}) interface{} {
 type MockPluginConfig struct {
 	Config
 }
+
+type MockConsumerPlugin struct {
+	MockPlugin
+}
+
+func (m *MockConsumerPlugin) Order() PluginOrder {
+	return PluginOrder{
+		Position: OrderPositionAuthn,
+	}
+}
+
+func (m *MockConsumerPlugin) ConsumerConfig() api.PluginConsumerConfig {
+	return nil
+}
+
+type MockNativePlugin struct {
+	PluginMethodDefaultImpl
+}
+
+func (m *MockNativePlugin) Config() api.PluginConfig {
+	return &MockPluginConfig{}
+}
+
+func (m *MockNativePlugin) Order() PluginOrder {
+	return PluginOrder{
+		Position: OrderPositionOuter,
+	}
+}
+
+func (m *MockNativePlugin) RouteConfigTypeURL() string {
+	return ""
+}
+
+func (m *MockNativePlugin) HTTPFilterConfigPlaceholder() map[string]interface{} {
+	return nil
+}
