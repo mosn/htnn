@@ -1,0 +1,47 @@
+name: prune stale
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+  schedule:
+  - cron: '0 */4 * * *'
+
+jobs:
+  prune_stale:
+    permissions:
+      issues: write  # for actions/stale to close stale issues
+      pull-requests: write  # for actions/stale to close stale PRs
+    name: Prune stale
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Prune Stale
+      uses: actions/stale@v9
+      with:
+        repo-token: ${{ secrets.GITHUB_TOKEN }}
+        days-before-stale: 30
+        days-before-close: 7
+        stale-issue-message: >
+          This issue has been automatically marked as stale because it has not had activity in the
+          last 30 days. It will be closed in the next 7 days unless it is tagged with no stale labels or other activity
+          occurs. Thank you for your contributions.
+        close-issue-message: >
+          This issue has been automatically closed because it has not had activity in the
+          last 37 days. If this issue is still valid, please ping a maintainer and ask them to label it as no stale.
+          Thank you for your contributions.
+        stale-pr-message: >
+          This pull request has been automatically marked as stale because it has not had
+          activity in the last 30 days. It will be closed in 7 days if no further activity occurs. Please
+          feel free to give a status update now, ping for review, or re-open when it's ready.
+          Thank you for your contributions!
+        close-pr-message: >
+          This pull request has been automatically closed because it has not had
+          activity in the last 37 days. Please feel free to give a status update now, ping for review, or re-open when it's ready.
+          Thank you for your contributions!
+        stale-issue-label: 'stale'
+        exempt-issue-labels: 'no stale,bug,enhancement,good first issue'
+        stale-pr-label: 'stale'
+        operations-per-run: 500
+        ascending: true
