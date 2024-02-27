@@ -111,7 +111,7 @@ type GoPlugin interface {
 }
 
 type ConsumerPlugin interface {
-	Plugin
+	GoPlugin
 
 	ConsumerConfig() api.PluginConsumerConfig
 }

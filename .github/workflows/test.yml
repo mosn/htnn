@@ -18,7 +18,6 @@ concurrency:
 
 env:
   IN_CI: true
-  COVERAGE_OPTION: "-covermode=atomic -coverprofile=coverage.out"
 
 jobs:
   unit-test:
@@ -34,14 +33,12 @@ jobs:
 
     - name: Test
       run: make unit-test
-    - name: Upload to codecov
-      uses: codecov/codecov-action@v4.0.1
+    - name: Upload artifact
+      if: always() # always upload coverage, so the coverage percents won't affect by the failed tests
+      uses: actions/upload-artifact@v4
       with:
-        fail_ci_if_error: false # let CI build pass if Codecov runs into an error during upload
-        file: ./coverage.out
-        flags: unittests
-        token: ${{ secrets.CODECOV_TOKEN }}
-        verbose: true
+        name: unit-test-cover
+        path: ./cover.out
 
   plugins-integration-test:
     timeout-minutes: 10
@@ -70,6 +67,16 @@ jobs:
         # upload artifact can be found in https://github.com/mosn/htnn/actions/runs/$id
         name: ci-logs
         path: ./test-envoy
+    - name: Generate coverage
+      if: always()
+      run: |
+        go tool covdata textfmt -i=/tmp/htnn_coverage -o plugins/tests/integration/cover.out -v 2
+    - name: Upload artifact
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: plugins-integration-test-cover
+        path: plugins/tests/integration/cover.out
 
   controller-test:
     timeout-minutes: 10
@@ -97,3 +104,26 @@ jobs:
 
     - name: Test
       run: make test
+    - name: Upload artifact
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: controller-test-cover
+        path: ./controller/cover.out
+
+  coverage:
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    needs: [unit-test, plugins-integration-test, controller-test]
+    if: always()
+    steps:
+    - uses: actions/checkout@v4
+    - name: Download artifact
+      uses: actions/download-artifact@v4
+    - name: Upload to codecov
+      uses: codecov/codecov-action@v4.0.1
+      with:
+        fail_ci_if_error: true
+        file: ./cover.out,plugins/tests/integration/cover.out,./controller/cover.out
+        token: ${{ secrets.CODECOV_TOKEN }}
+        verbose: true
