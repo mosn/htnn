@@ -121,7 +121,7 @@ jobs:
     - name: Download artifact
       uses: actions/download-artifact@v4
     - name: Upload to codecov
-      uses: codecov/codecov-action@v4.0.1
+      uses: codecov/codecov-action@v4.1.0
       with:
         fail_ci_if_error: true
         file: ./cover.out,plugins/tests/integration/cover.out,./controller/cover.out
