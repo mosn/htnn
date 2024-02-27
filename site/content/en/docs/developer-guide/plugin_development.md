@@ -16,7 +16,6 @@ Assume you are at the root of this project.
 6. Add integration test in the `./plugins/tests/integration/`. For how to run the integration test, please read [Plugin Integration Test Framework](../plugin_integration_test_framework).
 
 You can also write the plugin outside HTNN project, please see https://github.com/mosn/htnn/tree/main/examples/dev_your_plugin.
-(FIXME: the example may be broken because it doesn't use the latest dependencies. We must pin the version once htnn is released.)
 
 ### Plugin types
 

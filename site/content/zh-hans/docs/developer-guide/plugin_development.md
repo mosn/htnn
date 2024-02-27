@@ -16,7 +16,6 @@ HTNN 的插件分成两种：Go 插件和 Native 插件。Native 插件在运行
 6. 在 `./plugins/tests/integration/` 中添加集成测试。有关如何运行集成测试，请阅读[插件集成测试框架](../plugin_integration_test_framework)。
 
 您还可以在 HTNN 项目之外编写插件，请参见 https://github.com/mosn/htnn/tree/main/examples/dev_your_plugin。
-（FIXME：该示例可能会因为没有使用最新的依赖关系而出现问题。一旦 htnn 发布，我们必须固定其版本。）
 
 ### 插件类型
 
