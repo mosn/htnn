@@ -33,4 +33,7 @@ message Config {
 
   // This option is provided to skip the nonce verification. It is designed for local development.
   bool skip_nonce_verify = 6;
+
+  // Default to "x-id-token"
+  string id_token_header = 7;
 }

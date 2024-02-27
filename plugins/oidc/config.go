@@ -72,6 +72,10 @@ func ctxWithClient(ctx context.Context) context.Context {
 }
 
 func (conf *config) Init(cb api.ConfigCallbackHandler) error {
+	if conf.IdTokenHeader == "" {
+		conf.IdTokenHeader = "x-id-token"
+	}
+
 	ctx := ctxWithClient(context.Background())
 	var provider *oidc.Provider
 	var err error
