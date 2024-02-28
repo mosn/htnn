@@ -46,7 +46,8 @@ type filter struct {
 }
 
 type Tokens struct {
-	IDToken string `json:"id_token"`
+	IDToken     string `json:"id_token"`
+	AccessToken string `json:"access_token"`
 }
 
 func generateState(verifier string, secret string, url string) string {
@@ -111,6 +112,13 @@ func (f *filter) handleInitRequest(headers api.RequestHeaderMap) api.ResultActio
 	}
 }
 
+func normalizeExpiry(expiry time.Time, def time.Duration) int {
+	if expiry.IsZero() {
+		return int(def.Seconds())
+	}
+	return int(time.Until(expiry).Seconds())
+}
+
 func (f *filter) handleCallback(headers api.RequestHeaderMap, query url.Values) api.ResultAction {
 	config := f.config
 	o2conf := config.oauth2Config
@@ -170,7 +178,8 @@ func (f *filter) handleCallback(headers api.RequestHeaderMap, query url.Values) 
 	}
 
 	value := Tokens{
-		IDToken: rawIDToken,
+		IDToken:     rawIDToken,
+		AccessToken: oauth2Token.AccessToken,
 	}
 	token, err := config.cookieEncoding.Encode("htnn_oidc_token", &value)
 	if err != nil {
@@ -178,10 +187,20 @@ func (f *filter) handleCallback(headers api.RequestHeaderMap, query url.Values) 
 		return &api.LocalResponse{Code: 503, Msg: "failed to encode cookie"}
 	}
 
+	// Use the min expiry between id token and access token as the expiry
+	// According to https://openid.net/specs/openid-connect-core-1_0.html#IDToken,
+	// the expiry of id token is required.
+	// Meanwhile, the expiry of access token is optional.
+	// To be roburst & security, we assume an empty expiry means a 360-days expiry.
+	fallbackTTL := 360 * 24 * time.Hour
+	ttl := min(
+		normalizeExpiry(idToken.Expiry, fallbackTTL),
+		normalizeExpiry(oauth2Token.Expiry, fallbackTTL),
+	)
 	cookie := &http.Cookie{
 		Name:     "htnn_oidc_token",
 		Value:    token,
-		MaxAge:   int(time.Until(idToken.Expiry).Seconds()),
+		MaxAge:   ttl,
 		HttpOnly: true,
 	}
 	return &api.LocalResponse{
@@ -202,7 +221,8 @@ func (f *filter) attachInfo(headers api.RequestHeaderMap, encodedToken string) a
 		api.LogInfof("bad oidc cookie: %s, err: %s", encodedToken, err.Error())
 		return &api.LocalResponse{Code: 403, Msg: "bad oidc cookie"}
 	}
-	headers.Set("authorization", fmt.Sprintf("Bearer %s", value.IDToken))
+	headers.Set("authorization", fmt.Sprintf("Bearer %s", value.AccessToken))
+	headers.Set(config.IdTokenHeader, value.IDToken)
 	return api.Continue
 }
 

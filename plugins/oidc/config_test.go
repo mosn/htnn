@@ -31,6 +31,17 @@ func TestBadIssuer(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestDefaultValue(t *testing.T) {
+	c := config{
+		Config: Config{
+			Issuer: "http://github.com",
+		},
+	}
+	// we set default value before communicating with the issuer
+	c.Init(nil)
+	assert.Equal(t, c.IdTokenHeader, "x-id-token")
+}
+
 func TestConfig(t *testing.T) {
 	tests := []struct {
 		name  string

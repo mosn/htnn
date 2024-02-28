@@ -122,6 +122,8 @@ func (m *Config) validate(all bool) error {
 
 	// no validation rules for SkipNonceVerify
 
+	// no validation rules for IdTokenHeader
+
 	if len(errors) > 0 {
 		return ConfigMultiError(errors)
 	}

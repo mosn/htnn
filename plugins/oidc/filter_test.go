@@ -34,9 +34,10 @@ import (
 func getCfg() *config {
 	return &config{
 		Config: Config{
-			ClientId:     "9119df09-b20b-4c08-ba08-72472dda2cd2",
-			ClientSecret: "dSYo5hBwjX_DC57_tfZHlfrDel",
-			RedirectUrl:  "http://127.0.0.1:10000",
+			ClientId:      "9119df09-b20b-4c08-ba08-72472dda2cd2",
+			ClientSecret:  "dSYo5hBwjX_DC57_tfZHlfrDel",
+			RedirectUrl:   "http://127.0.0.1:10000",
+			IdTokenHeader: "my-id-token",
 		},
 		oauth2Config:   &oauth2.Config{},
 		verifier:       &oidc.IDTokenVerifier{},
@@ -65,7 +66,10 @@ func TestCallback(t *testing.T) {
 	verifier := oauth2.GenerateVerifier()
 	state := generateState(verifier, conf.ClientSecret, "https://127.0.0.1:2379/x?y=1")
 	rawIDToken := "rawIDToken"
-	token := (&oauth2.Token{}).WithExtra(map[string]interface{}{
+	accessToken := "accessToken"
+	token := (&oauth2.Token{
+		AccessToken: accessToken,
+	}).WithExtra(map[string]interface{}{
 		"id_token": rawIDToken,
 	})
 	nonce, _ := conf.cookieEncoding.Encode("htnn_oidc_nonce", "xxx")
@@ -96,16 +100,16 @@ func TestCallback(t *testing.T) {
 				assert.Contains(t, cookie, "Max-Age=7199;")
 
 				// verify the cookie value
-				v := strings.Split(strings.Split(cookie, ";")[0], "=")[1]
+				v := strings.SplitN(strings.Split(cookie, ";")[0], "=", 2)[1]
 				h := http.Header{}
 				hdr := envoy.NewRequestHeaderMap(h)
 				assert.Equal(t, api.Continue, f.attachInfo(hdr, v))
 				bearer, _ := hdr.Get("authorization")
-				assert.Equal(t, "Bearer rawIDToken", bearer)
+				assert.Equal(t, "Bearer accessToken", bearer)
 			},
 		},
 		{
-			name:   "sanity",
+			name:   "bad state",
 			state:  state + "x",
 			cookie: "htnn_oidc_nonce=" + nonce,
 			res:    &api.LocalResponse{Code: 403, Msg: "bad state"},
@@ -189,7 +193,7 @@ func TestCallback(t *testing.T) {
 	}
 }
 
-func TestAttachInfo(t *testing.T) {
+func TestBadOIDCTokenCookie(t *testing.T) {
 	cb := envoy.NewFilterCallbackHandler()
 	f := factory(getCfg(), cb).(*filter)
 	h := http.Header{}
@@ -199,4 +203,45 @@ func TestAttachInfo(t *testing.T) {
 	resp := res.(*api.LocalResponse)
 	assert.Equal(t, 403, resp.Code)
 	assert.Equal(t, "bad oidc cookie", resp.Msg)
+}
+
+func TestAttachInfo(t *testing.T) {
+	conf := getCfg()
+	verifier := oauth2.GenerateVerifier()
+	state := generateState(verifier, conf.ClientSecret, "https://127.0.0.1:2379/x?y=1")
+	rawIDToken := "rawIDToken"
+	accessToken := "accessToken"
+	token := (&oauth2.Token{
+		AccessToken: accessToken,
+		Expiry:      time.Now().Add(1 * time.Hour),
+	}).WithExtra(map[string]interface{}{
+		"id_token": rawIDToken,
+	})
+	nonce, _ := conf.cookieEncoding.Encode("htnn_oidc_nonce", "xxx")
+
+	patches := gomonkey.ApplyMethodReturn(conf.oauth2Config, "Exchange", token, nil)
+	patches.ApplyMethodReturn(conf.verifier, "Verify", &oidc.IDToken{
+		Nonce: "xxx", Expiry: time.Now().Add(2 * time.Hour),
+	}, nil)
+	defer patches.Reset()
+
+	cb := envoy.NewFilterCallbackHandler()
+	f := factory(getCfg(), cb).(*filter)
+	h := http.Header{}
+	h.Set(":path", "/echo?code=123&state="+state)
+	h.Set("cookie", "htnn_oidc_nonce="+nonce)
+	hdr := envoy.NewRequestHeaderMap(h)
+	res := f.DecodeHeaders(hdr, true)
+	resp := res.(*api.LocalResponse)
+	cookie := resp.Header.Get("Set-Cookie")
+	assert.Contains(t, cookie, "Max-Age=3599;")
+
+	v := strings.SplitN(strings.Split(cookie, ";")[0], "=", 2)[1]
+	h = http.Header{}
+	hdr = envoy.NewRequestHeaderMap(h)
+	assert.Equal(t, api.Continue, f.attachInfo(hdr, v))
+	bearer, _ := hdr.Get("authorization")
+	idTokenSet, _ := hdr.Get("my-id-token")
+	assert.Equal(t, "Bearer accessToken", bearer)
+	assert.Equal(t, rawIDToken, idTokenSet)
 }
