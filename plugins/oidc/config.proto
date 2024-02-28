@@ -16,6 +16,7 @@ syntax = "proto3";
 
 package plugins.oidc;
 
+import "google/protobuf/duration.proto";
 import "validate/validate.proto";
 
 option go_package = "mosn.io/htnn/plugins/oidc";
@@ -36,4 +37,9 @@ message Config {
 
   // Default to "x-id-token"
   string id_token_header = 7;
+
+  // The timeout to wait for the OIDC provider to respond. Default to 3s.
+  google.protobuf.Duration timeout = 8 [(validate.rules).duration = {
+    gt: {},
+  }];
 }

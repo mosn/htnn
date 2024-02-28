@@ -138,7 +138,7 @@ func (f *filter) handleCallback(headers api.RequestHeaderMap, query url.Values) 
 	b, _ := base64.URLEncoding.DecodeString(encodedUrl)
 	originUrl := string(b)
 
-	ctx = ctxWithClient(ctx)
+	ctx = config.ctxWithClient(ctx)
 	oauth2Token, err := o2conf.Exchange(ctx, code, oauth2.VerifierOption(verifier))
 	if err != nil {
 		api.LogErrorf("failed to exchange code to the token: %v", err)
