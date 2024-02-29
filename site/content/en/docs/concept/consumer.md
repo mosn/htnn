@@ -82,9 +82,9 @@ spec:
 
 Without the Consumer layer of abstraction, each route would have to be configured with `key: Leo`. Imagine one day, for example, `Leo` is just a temporary user and we need to revoke their permissions. With the Consumer, we would only need to delete the consumer `Leo`, without any need to alter the route configurations.
 
-Authentication plugins (whose `Type` is `Authn`) can be configured within the `auth` field of a Consumer. There are two types of configurations for each authentication plugin: one is set on the Route, which specifies the source of authentication parameters, such as the `keys` in the previously mentioned HTTPFilterPolicy. The second type is configured on the Consumer, which determines the matching authentication parameters for that specific Consumer, as exemplified by the `key` in the above Consumer.
+[Consumer plugins](../../developer-guide/plugin_development) can be configured within the `auth` field of a Consumer. There are two types of configurations for each Consumer plugin: one is set on the Route, which specifies the source of authentication parameters, such as the `keys` in the previously mentioned HTTPFilterPolicy. The second type is configured on the Consumer, which determines the matching authentication parameters for that specific Consumer, as exemplified by the `key` in the above Consumer.
 
-Each authentication plugin configured on the Route will proceed through the following steps:
+Each Consumer plugin configured on the Route will proceed through the following steps:
 
 1. Retrieve the authentication parameters from the specified source.
 2. If not found, continue to the next plugin.
@@ -92,7 +92,7 @@ Each authentication plugin configured on the Route will proceed through the foll
    1. If the match is unsuccessful, return a 401 HTTP status code.
    2. If the match is successful, move on to the next plugin.
 
-If no Consumer is matched after all the authentication plugins have been executed, a 401 HTTP status code will be returned.
+If no Consumer is matched after all the Consumer plugins have been executed, a 401 HTTP status code will be returned.
 
 Furthermore, we can configure specific plugins for the consumer. These plugins will only execute after the authentication process has passed. Take the following configuration as an example:
 
