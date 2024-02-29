@@ -1,0 +1,15 @@
+apiVersion: mosn.io/v1
+kind: HTTPFilterPolicy
+metadata:
+  name: policy
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: default
+  filters:
+    bandwidthLimit:
+      config:
+        statPrefix: policy_bandwidth_limit
+        enableMode: REQUEST
+        limitKbps: 1
