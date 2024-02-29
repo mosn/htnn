@@ -154,8 +154,8 @@ func (i *RequestHeaderMap) Url() *url.URL {
 	return u
 }
 
-func (i *RequestHeaderMap) Cookies() map[string]*http.Cookie {
-	return request.ParseCookies(i)
+func (i *RequestHeaderMap) Cookie(name string) *http.Cookie {
+	return request.ParseCookies(i)[name]
 }
 
 var _ api.RequestHeaderMap = (*RequestHeaderMap)(nil)

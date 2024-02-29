@@ -105,15 +105,20 @@ func (f *PassThroughFilter) EncodeResponse(headers ResponseHeaderMap, data Buffe
 	return Continue
 }
 
+// The filtermanager will run the Filter one by one. So all the API bound with a request (RequestHeaderMap, StreamInfo, etc.)
+// is not designed to be concurrent safe. All the object returns from the API is read-only by default.
+// If you want to modify the object, please make a copy of it.
+
 type HeaderMap = api.HeaderMap
 type RequestHeaderMap interface {
 	api.RequestHeaderMap
 
-	// Url returns the parsed `url.URL`
+	// Url returns the parsed `url.URL`. Changing the field in the returned `url.URL` will not affect the original path.
+	// Please use `Set(":path", ...)` to change it.
 	Url() *url.URL
-	// Cookies returns the HTTP Cookies.
+	// Cookie returns the HTTP Cookie. If there is no cookie with the given name, nil will be returned.
 	// If multiple cookies match the given name, only one cookie will be returned.
-	Cookies() map[string]*http.Cookie
+	Cookie(name string) *http.Cookie
 }
 type ResponseHeaderMap = api.ResponseHeaderMap
 type DataBufferBase = api.DataBufferBase

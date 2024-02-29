@@ -17,6 +17,7 @@ package consumer
 import (
 	"encoding/json"
 	"fmt"
+	"sync"
 
 	"google.golang.org/protobuf/types/known/structpb"
 
@@ -30,6 +31,7 @@ import (
 var (
 	logger = log.DefaultLogger.WithName("consumer")
 
+	indexMutex    sync.RWMutex
 	resourceIndex = make(map[string]map[string]*Consumer)
 	scopeIndex    map[string]map[string]map[string]*Consumer
 )
@@ -108,6 +110,9 @@ func (c *Consumer) InitConfigs() error {
 }
 
 func updateConsumers(value *structpb.Struct) {
+	indexMutex.Lock()
+	defer indexMutex.Unlock()
+
 	// build the idx for syncing with the control plane
 	for ns, nsValue := range value.GetFields() {
 		currIdx := resourceIndex[ns]
@@ -177,6 +182,9 @@ func updateConsumers(value *structpb.Struct) {
 
 // LookupConsumer returns the consumer config for the given namespace, plugin name and key.
 func LookupConsumer(ns, pluginName, key string) (api.Consumer, bool) {
+	indexMutex.RLock()
+	defer indexMutex.RUnlock()
+
 	if nsIdx, ok := scopeIndex[ns]; ok {
 		if pluginIdx, ok := nsIdx[pluginName]; ok {
 			// return extra bool to indicate whether the key exists so user doesn't need to

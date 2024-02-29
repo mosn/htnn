@@ -159,8 +159,8 @@ func (f *filter) handleCallback(headers api.RequestHeaderMap, query url.Values) 
 	}
 
 	if !config.SkipNonceVerify {
-		nonce, ok := headers.Cookies()["htnn_oidc_nonce"]
-		if !ok {
+		nonce := headers.Cookie("htnn_oidc_nonce")
+		if nonce == nil {
 			api.LogInfof("bad nonce, expected %s", idToken.Nonce)
 			return &api.LocalResponse{Code: 403, Msg: "bad nonce"}
 		}
@@ -227,8 +227,8 @@ func (f *filter) attachInfo(headers api.RequestHeaderMap, encodedToken string) a
 }
 
 func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {
-	token, ok := headers.Cookies()["htnn_oidc_token"]
-	if ok {
+	token := headers.Cookie("htnn_oidc_token")
+	if token != nil {
 		return f.attachInfo(headers, token.Value)
 	}
 

@@ -267,11 +267,11 @@ func (headers *filterManagerRequestHeaderMap) Url() *url.URL {
 }
 
 // If multiple cookies match the given name, only one cookie will be returned.
-func (headers *filterManagerRequestHeaderMap) Cookies() map[string]*http.Cookie {
+func (headers *filterManagerRequestHeaderMap) Cookie(name string) *http.Cookie {
 	if headers.cookies == nil {
 		headers.cookies = request.ParseCookies(headers)
 	}
-	return headers.cookies
+	return headers.cookies[name]
 }
 
 type filterManagerStreamInfo struct {
