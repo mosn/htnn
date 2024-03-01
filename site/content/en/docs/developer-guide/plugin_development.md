@@ -85,18 +85,17 @@ For each plugin, the calling order of callbacks is:
 4. EncodeData
 5. OnLog
 
-Among the plugins, the calling order is decided by the plugin order. Assumed the `A`
-plugin is in `Outer` group, `B` in `Authn` and `C` in `Inner`.
+Between plugins, the order of invocation is determined by the order of the plugins. Suppose plugin `A` is in the `Authn` group, `B` is in `Authz`, and `C` is in `Traffic`.
 
 When processing the request (Decode path), the calling order is `A -> B -> C`.
 When processing the response (Encode path), the calling order is `C -> B -> A`.
-When logging the request, the calling order is `A -> B -> C`.
+When logging the request (OnLog), the calling order is `A -> B -> C`.
 
 By using the plugin order instead of plugin name, we can also say:
 
-When processing the request, the calling order is `Outer -> Authn -> Inner`.
-When processing the response, the calling order is `Inner -> Authn -> Outer`.
-When logging the request, the calling order is `Outer -> Authn -> Inner`.
+When processing a request, the call order is `Authn -> Authz -> Traffic`.
+When processing a response, the call order is `Traffic -> Authz -> Authn`.
+When logging requests, the call order is `Authn -> Authz -> Traffic`.
 
 ![filter manager](/images/filtermanager_main_path.jpg)
 
@@ -129,4 +128,18 @@ If `WaitAllData` is returned from `DecodeHeaders`, we will:
 
 ![filter manager, with DecodeWholeRequestFilter, buffer the whole request](/images/filtermanager_sub_path.jpg)
 
-The same process applies to Encode path, but in a slightly different way. Method `EncodeResponse` is called instead.
+Note: `DecodeRequest` is only executed if `DecodeHeaders` returns `WaitAllData`. So if `DecodeRequest` is defined, `DecodeHeaders` must be defined as well.
+
+The same process applies to the Encode path, but the method is slightly different. This time it requires `EncodeHeaders` to return `WaitAllData` to invoke `EncodeResponse`.
+
+## Consumer Plugins
+
+Consumer plugins are a special type of Go plugin. They locate and set a [consumer](../../concept/consumer) based on the content of the request headers.
+
+A consumer plugin needs to meet the following conditions:
+
+* Both `Type` and `Order` are `Authn`.
+* Implements the [ConsumerPlugin](https://pkg.go.dev/mosn.io/htnn/pkg/plugins#ConsumerPlugin) interface.
+* Defines the `DecodeHeaders` method, and in this method, it calls `LookupConsumer` and `SetConsumer` to complete the setting of the consumer.
+
+You can take the [keyAuth](https://github.com/mosn/htnn/blob/main/plugins/key_auth/filter.go) plugin as an example to write your own consumer plugin.

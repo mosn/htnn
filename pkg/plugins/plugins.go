@@ -61,6 +61,9 @@ const (
 	errInvalidGoPluginOrder       = "invalid plugin order position: Go plugin should not use OrderPositionOuter or OrderPositionInner"
 	errInvalidNativePluginOrder   = "invalid plugin order position: Native plugin should use OrderPositionOuter or OrderPositionInner"
 	errInvalidConsumerPluginOrder = "invalid plugin order position: Consumer plugin should use OrderPositionAuthn"
+	errAuthnPluginOrder           = "Authn plugin should run in the DecodeHeaders phase"
+	errDecodeRequestUnsatified    = "DecodeRequest is run only after DecodeHeaders returns WaitAllData. So DecodeHeaders should be defined in this plugin."
+	errEncodeResponseUnsatified   = "EncodeResponse is run only after EncodeHeaders returns WaitAllData. So EncodeHeaders should be defined in this plugin."
 )
 
 func RegisterHttpPlugin(name string, plugin Plugin) {
@@ -70,8 +73,8 @@ func RegisterHttpPlugin(name string, plugin Plugin) {
 
 	logger.Info("register plugin", "name", name)
 
+	order := plugin.Order()
 	if goPlugin, ok := plugin.(GoPlugin); ok {
-		order := plugin.Order()
 		if order.Position == OrderPositionOuter || order.Position == OrderPositionInner {
 			panic(errInvalidGoPluginOrder)
 		}
@@ -79,7 +82,6 @@ func RegisterHttpPlugin(name string, plugin Plugin) {
 			goPlugin.Factory(),
 			NewPluginConfigParser(goPlugin))
 	} else if _, ok := plugin.(NativePlugin); ok {
-		order := plugin.Order()
 		if order.Position != OrderPositionOuter && order.Position != OrderPositionInner {
 			panic(errInvalidNativePluginOrder)
 		}
@@ -88,7 +90,6 @@ func RegisterHttpPlugin(name string, plugin Plugin) {
 	}
 
 	if _, ok := plugin.(ConsumerPlugin); ok {
-		order := plugin.Order()
 		if order.Position != OrderPositionAuthn {
 			panic(errInvalidConsumerPluginOrder)
 		}

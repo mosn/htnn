@@ -84,19 +84,19 @@ filter manager 实现了以下特性：
 4. EncodeData
 5. OnLog
 
-在插件之间，调用顺序由插件顺序决定。假设 `A` 插件在 `Outer` 组，`B` 在 `Authn`，`C` 在 `Inner`。
+在插件之间，调用顺序由插件顺序决定。假设 `A` 插件在 `Authn` 组，`B` 在 `Authz`，`C` 在 `Traffic`。
 处理请求时（Decode 路径），调用顺序是 `A -> B -> C`。
 处理响应时（Encode 路径），调用顺序是 `C -> B -> A`。
-记录请求时，调用顺序是 `A -> B -> C`。
+记录请求时（OnLog），调用顺序是 `A -> B -> C`。
 
 如果我们使用插件顺序而不是插件名称，则调用顺序可以被描述为：
-处理请求时，调用顺序是 `Outer -> Authn -> Inner`。
-处理响应时，调用顺序是 `Inner -> Authn -> Outer`。
-记录请求时，调用顺序是 `Outer -> Authn -> Inner`。
+处理请求时，调用顺序是 `Authn -> Authz -> Traffic`。
+处理响应时，调用顺序是 `Traffic -> Authz -> Authn`。
+记录请求时，调用顺序是 `Authn -> Authz -> Traffic`。
 
 ![过滤器管理器](/images/filtermanager_main_path.jpg)
 
-请注意，这张图片显示了主路径。执行路径可能有细微差别。例如，
+请注意，这张图片显示的是主路径。实际执行路径可能有细微差别。例如，
 
 * 如果请求没有 body，将不会调用 `DecodeData`。
 * 如果 Envoy 在发送给上游之前回复了请求，我们将离开 Decode 路径并进入 Encode 路径。例如，如果插件 B 用一些自定义头拒绝了请求，Decode 路径是 `A -> B`，Encode 路径是 `C -> B -> A`。自定义头将被该路径上的插件重写。这种行为和 Envoy 的处理方式一致。
@@ -123,4 +123,18 @@ filter manager 实现了以下特性：
 
 ![过滤器管理器，带有 DecodeWholeRequestFilter，缓冲整个请求](/images/filtermanager_sub_path.jpg)
 
+注意：`DecodeRequest` 仅在 `DecodeHeaders` 返回 `WaitAllData` 时才被执行。所以如果定义了 `DecodeRequest`，一定要定义 `DecodeHeaders`。
+
 同样的过程适用于 Encode 路径，但方式略有不同。此时需要由 `EncodeHeaders` 返回 `WaitAllData`，调用方法 `EncodeResponse`。
+
+## 消费者插件
+
+消费者插件是一种特殊的 Go 插件。它根据请求头中的内容查找并设置[消费者](../../concept/consumer)。
+
+一个消费者插件需要满足下面的条件：
+
+* `Type` 和 `Order` 都是 `Authn`。
+* 实现 [ConsumerPlugin](https://pkg.go.dev/mosn.io/htnn/pkg/plugins#ConsumerPlugin) 接口。
+* 定义 `DecodeHeaders` 方法，且在该方法里调用 `LookupConsumer` 和 `SetConsumer` 完成消费者的设置。
+
+您可以以 [keyAuth](https://github.com/mosn/htnn/blob/main/plugins/key_auth/filter.go) 插件为例，编写自己的消费者插件。
