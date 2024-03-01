@@ -48,6 +48,11 @@ func TestBadConfig(t *testing.T) {
 			input: `{"httpService":{"url":"127.0.0.1"}}`,
 			err:   "invalid HttpService.Url: value must be absolute",
 		},
+		{
+			name:  "invalid HttpService.Timeout",
+			input: `{"httpService":{"url":"http://127.0.0.1","timeout":"-1s"}}`,
+			err:   "invalid HttpService.Timeout: value must be greater than 0s",
+		},
 	}
 
 	for _, tt := range tests {

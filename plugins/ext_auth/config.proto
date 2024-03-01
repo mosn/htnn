@@ -39,7 +39,9 @@ message HttpService {
   // We don't use HttpUri like Envoy because we set the Host directly instead of using
   // the result from Cluster.
   string url = 1 [(validate.rules).string = {uri: true}];
-  google.protobuf.Duration timeout = 2;
+  google.protobuf.Duration timeout = 2 [(validate.rules).duration = {
+    gt: {},
+  }];
 
   // Settings used for controlling authorization request metadata.
   AuthorizationRequest authorization_request = 3;

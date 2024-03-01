@@ -238,32 +238,33 @@ func (m *HttpService) validate(all bool) error {
 		errors = append(errors, err)
 	}
 
-	if all {
-		switch v := interface{}(m.GetTimeout()).(type) {
-		case interface{ ValidateAll() error }:
-			if err := v.ValidateAll(); err != nil {
-				errors = append(errors, HttpServiceValidationError{
-					field:  "Timeout",
-					reason: "embedded message failed validation",
-					cause:  err,
-				})
-			}
-		case interface{ Validate() error }:
-			if err := v.Validate(); err != nil {
-				errors = append(errors, HttpServiceValidationError{
-					field:  "Timeout",
-					reason: "embedded message failed validation",
-					cause:  err,
-				})
-			}
-		}
-	} else if v, ok := interface{}(m.GetTimeout()).(interface{ Validate() error }); ok {
-		if err := v.Validate(); err != nil {
-			return HttpServiceValidationError{
+	if d := m.GetTimeout(); d != nil {
+		dur, err := d.AsDuration(), d.CheckValid()
+		if err != nil {
+			err = HttpServiceValidationError{
 				field:  "Timeout",
-				reason: "embedded message failed validation",
+				reason: "value is not a valid duration",
 				cause:  err,
 			}
+			if !all {
+				return err
+			}
+			errors = append(errors, err)
+		} else {
+
+			gt := time.Duration(0*time.Second + 0*time.Nanosecond)
+
+			if dur <= gt {
+				err := HttpServiceValidationError{
+					field:  "Timeout",
+					reason: "value must be greater than 0s",
+				}
+				if !all {
+					return err
+				}
+				errors = append(errors, err)
+			}
+
 		}
 	}
 

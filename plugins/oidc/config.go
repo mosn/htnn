@@ -61,13 +61,14 @@ func (p *plugin) Config() api.PluginConfig {
 type config struct {
 	Config
 
+	opTimeout      time.Duration
 	oauth2Config   *oauth2.Config
 	verifier       *oidc.IDTokenVerifier
 	cookieEncoding *securecookie.SecureCookie
 }
 
-func ctxWithClient(ctx context.Context) context.Context {
-	httpClient := &http.Client{Timeout: 3 * time.Second}
+func (conf *config) ctxWithClient(ctx context.Context) context.Context {
+	httpClient := &http.Client{Timeout: conf.opTimeout}
 	return context.WithValue(ctx, oauth2.HTTPClient, httpClient)
 }
 
@@ -76,7 +77,14 @@ func (conf *config) Init(cb api.ConfigCallbackHandler) error {
 		conf.IdTokenHeader = "x-id-token"
 	}
 
-	ctx := ctxWithClient(context.Background())
+	du := 3 * time.Second
+	timeout := conf.GetTimeout()
+	if timeout != nil {
+		du = timeout.AsDuration()
+	}
+	conf.opTimeout = du
+
+	ctx := conf.ctxWithClient(context.Background())
 	var provider *oidc.Provider
 	var err error
 	err = retry.Do(
