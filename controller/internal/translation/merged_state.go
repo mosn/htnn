@@ -147,7 +147,7 @@ func toMergedPolicy(rp *routePolicy) *mergedPolicy {
 		}
 		v["plugins"] = plugins
 
-		config["envoy.filters.http.golang"] = map[string]interface{}{
+		config["htnn.filters.http.golang"] = map[string]interface{}{
 			"@type": "type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.ConfigsPerRoute",
 			"plugins_config": map[string]interface{}{
 				"fm": map[string]interface{}{
@@ -161,7 +161,7 @@ func toMergedPolicy(rp *routePolicy) *mergedPolicy {
 	}
 
 	for _, filter := range nativeFilters {
-		name := fmt.Sprintf("envoy.filters.http.%s", filter.Name)
+		name := fmt.Sprintf("htnn.filters.http.%s", filter.Name)
 		config[name] = filter.Config
 	}
 

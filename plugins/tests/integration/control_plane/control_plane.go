@@ -194,7 +194,7 @@ func (cp *ControlPlane) UseGoPluginConfig(config *filtermanager.FilterManagerCon
 									},
 								},
 								TypedPerFilterConfig: map[string]*any1.Any{
-									"envoy.filters.http.golang": proto.MessageToAny(&golang.ConfigsPerRoute{
+									"htnn.filters.http.golang": proto.MessageToAny(&golang.ConfigsPerRoute{
 										PluginsConfig: map[string]*golang.RouterPlugin{
 											"fm": {
 												Override: &golang.RouterPlugin_Config{
@@ -220,7 +220,7 @@ func (cp *ControlPlane) UseGoPluginConfig(config *filtermanager.FilterManagerCon
 									},
 								},
 								TypedPerFilterConfig: map[string]*any1.Any{
-									"envoy.filters.http.golang": proto.MessageToAny(&golang.ConfigsPerRoute{
+									"htnn.filters.http.golang": proto.MessageToAny(&golang.ConfigsPerRoute{
 										PluginsConfig: map[string]*golang.RouterPlugin{
 											"fm": {
 												Override: &golang.RouterPlugin_Config{

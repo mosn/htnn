@@ -81,7 +81,7 @@ func DefaultEnvoyFilters() map[string]*istiov1a3.EnvoyFilter {
 			Operation: istioapi.EnvoyFilter_Patch_INSERT_FIRST,
 			Value: MustNewStruct(map[string]interface{}{
 				"disabled": true,
-				"name":     "envoy.filters.http.golang",
+				"name":     "htnn.filters.http.golang",
 				"typed_config": map[string]interface{}{
 					"@type":        "type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.Config",
 					"library_id":   "fm",
@@ -101,7 +101,7 @@ func DefaultEnvoyFilters() map[string]*istiov1a3.EnvoyFilter {
 		}
 
 		filter := nativePlugin.HTTPFilterConfigPlaceholder()
-		filter["name"] = fmt.Sprintf("envoy.filters.http.%s", key)
+		filter["name"] = fmt.Sprintf("htnn.filters.http.%s", key)
 		filter["disabled"] = true
 		configs = append(configs, &configWrapper{
 			name:   key,
@@ -127,7 +127,7 @@ func DefaultEnvoyFilters() map[string]*istiov1a3.EnvoyFilter {
 								Filter: &istioapi.EnvoyFilter_ListenerMatch_FilterMatch{
 									Name: "envoy.filters.network.http_connection_manager",
 									SubFilter: &istioapi.EnvoyFilter_ListenerMatch_SubFilterMatch{
-										Name: "envoy.filters.http.golang",
+										Name: "htnn.filters.http.golang",
 									},
 								},
 							},

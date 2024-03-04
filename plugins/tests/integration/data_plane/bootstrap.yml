@@ -39,7 +39,7 @@ static_resources:
                                   }
                                 }
                               v: 4355415
-                  - name: envoy.filters.http.golang
+                  - name: htnn.filters.http.golang
                     disabled: true
                     typed_config:
                       "@type": type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.Config
@@ -75,7 +75,7 @@ static_resources:
                     typed_config:
                       "@type": type.googleapis.com/envoy.extensions.access_loggers.stream.v3.StdoutAccessLog
                 http_filters:
-                  - name: envoy.filters.http.bandwidth_limit
+                  - name: htnn.filters.http.bandwidth_limit
                     typed_config:
                       "@type": type.googleapis.com/envoy.extensions.filters.http.bandwidth_limit.v3.BandwidthLimit
                       stat_prefix: bandwidth_limiter_custom_route
@@ -83,7 +83,7 @@ static_resources:
                       limit_kbps: 1
                       # dummy config to satisfy Envoy validator, doesn't take effect
                     disabled: true
-                  - name: envoy.filters.http.lua
+                  - name: htnn.filters.http.lua
                     typed_config:
                       "@type": type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
                   - name: envoy.filters.http.router
@@ -102,7 +102,7 @@ static_resources:
                             body:
                               inline_string: ""
                           typed_per_filter_config:
-                            envoy.filters.http.lua:
+                            htnn.filters.http.lua:
                               "@type": type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
                               source_code:
                                 inline_string: |
@@ -143,12 +143,12 @@ static_resources:
                             body:
                               inline_string: ""
                           typed_per_filter_config:
-                            envoy.filters.http.bandwidth_limit:
+                            htnn.filters.http.bandwidth_limit:
                               "@type": type.googleapis.com/envoy.extensions.filters.http.bandwidth_limit.v3.BandwidthLimit
                               stat_prefix: bandwidth_limiter_custom_route
                               enable_mode: RESPONSE
                               limit_kbps: 1
-                            envoy.filters.http.lua:
+                            htnn.filters.http.lua:
                               "@type": type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
                               source_code:
                                 inline_string: |

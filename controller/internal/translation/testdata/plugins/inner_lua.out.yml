@@ -14,7 +14,7 @@
         operation: MERGE
         value:
           typed_per_filter_config:
-            envoy.filters.http.innerLua:
+            htnn.filters.http.innerLua:
               '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
               sourceCode:
                 inlineString: |
@@ -44,7 +44,7 @@
         operation: INSERT_BEFORE
         value:
           disabled: true
-          name: envoy.filters.http.innerLua
+          name: htnn.filters.http.innerLua
           typed_config:
             '@type': type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua
     priority: 100

@@ -14,7 +14,7 @@
         operation: MERGE
         value:
           typed_per_filter_config:
-            envoy.filters.http.buffer:
+            htnn.filters.http.buffer:
               '@type': type.googleapis.com/envoy.extensions.filters.http.buffer.v3.BufferPerRoute
               buffer:
                 maxRequestBytes: 1024000
@@ -32,12 +32,12 @@
             filter:
               name: envoy.filters.network.http_connection_manager
               subFilter:
-                name: envoy.filters.http.golang
+                name: htnn.filters.http.golang
       patch:
         operation: INSERT_BEFORE
         value:
           disabled: true
-          name: envoy.filters.http.buffer
+          name: htnn.filters.http.buffer
           typed_config:
             '@type': type.googleapis.com/envoy.extensions.filters.http.buffer.v3.Buffer
             maxRequestBytes: 42

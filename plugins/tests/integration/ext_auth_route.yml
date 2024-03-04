@@ -5,7 +5,7 @@ direct_response:
   body:
     inline_string: ""
 typed_per_filter_config:
-  envoy.filters.http.lua:
+  htnn.filters.http.lua:
     "@type": type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute
     source_code:
       inline_string: |

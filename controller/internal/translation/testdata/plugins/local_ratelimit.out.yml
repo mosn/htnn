@@ -14,7 +14,7 @@
         operation: MERGE
         value:
           typed_per_filter_config:
-            envoy.filters.http.localRatelimit:
+            htnn.filters.http.localRatelimit:
               '@type': type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
               statPrefix: http_local_rate_limiter
               tokenBucket:
@@ -33,12 +33,12 @@
             filter:
               name: envoy.filters.network.http_connection_manager
               subFilter:
-                name: envoy.filters.http.golang
+                name: htnn.filters.http.golang
       patch:
         operation: INSERT_BEFORE
         value:
           disabled: true
-          name: envoy.filters.http.localRatelimit
+          name: htnn.filters.http.localRatelimit
           typed_config:
             '@type': type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
             statPrefix: http_local_rate_limiter
