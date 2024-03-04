@@ -42,6 +42,7 @@ header:
     - 'site/assets/**'
     - 'site/layouts/**'
     - 'controller/registries/nacos/config.go'
+    - 'internal/cookie/cookie.go'
   comment: on-failure
   # remove below once skywalking-eyes v0.6.0 is released
   language:

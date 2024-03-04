@@ -31,12 +31,12 @@ import (
 	capi "github.com/envoyproxy/envoy/contrib/golang/common/go/api"
 	"google.golang.org/protobuf/types/known/anypb"
 
-	pkgConsumer "mosn.io/htnn/pkg/consumer"
+	internalConsumer "mosn.io/htnn/internal/consumer"
+	"mosn.io/htnn/internal/cookie"
 	"mosn.io/htnn/pkg/filtermanager/api"
 	"mosn.io/htnn/pkg/filtermanager/model"
 	pkgPlugins "mosn.io/htnn/pkg/plugins"
 	"mosn.io/htnn/pkg/reflectx"
-	"mosn.io/htnn/pkg/request"
 )
 
 // We can't import package below here that will cause build failure in Mac
@@ -268,7 +268,7 @@ func (headers *filterManagerRequestHeaderMap) Url() *url.URL {
 // If multiple cookies match the given name, only one cookie will be returned.
 func (headers *filterManagerRequestHeaderMap) Cookie(name string) *http.Cookie {
 	if headers.cookies == nil {
-		headers.cookies = request.ParseCookies(headers)
+		headers.cookies = cookie.ParseCookies(headers)
 	}
 	return headers.cookies[name]
 }
@@ -328,7 +328,7 @@ func (cb *filterManagerCallbackHandler) StreamInfo() api.StreamInfo {
 }
 
 func (cb *filterManagerCallbackHandler) LookupConsumer(pluginName, key string) (api.Consumer, bool) {
-	return pkgConsumer.LookupConsumer(cb.namespace, pluginName, key)
+	return internalConsumer.LookupConsumer(cb.namespace, pluginName, key)
 }
 
 func (cb *filterManagerCallbackHandler) GetConsumer() api.Consumer {
@@ -524,7 +524,7 @@ func (m *filterManager) DecodeHeaders(headers capi.RequestHeaderMap, endStream b
 
 			// we check consumer at the end of authn filters, so we can have multiple authn filters
 			// configured and the consumer will be set by any of them
-			c, ok := m.callbacks.consumer.(*pkgConsumer.Consumer)
+			c, ok := m.callbacks.consumer.(*internalConsumer.Consumer)
 			if !ok {
 				api.LogInfo("reject for consumer not found")
 				m.localReply(&api.LocalResponse{

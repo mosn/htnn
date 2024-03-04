@@ -22,8 +22,8 @@ import (
 	istioapi "istio.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"mosn.io/htnn/internal/proto"
 	"mosn.io/htnn/pkg/log"
-	"mosn.io/htnn/pkg/proto"
 )
 
 var (

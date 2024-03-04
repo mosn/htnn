@@ -22,7 +22,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 
-	pkgConsumer "mosn.io/htnn/pkg/consumer"
+	internalConsumer "mosn.io/htnn/internal/consumer"
 	"mosn.io/htnn/pkg/filtermanager/model"
 )
 
@@ -85,7 +85,7 @@ func (c *Consumer) Marshal() string {
 		auth[k] = string(v.Config.Raw)
 	}
 
-	consumer := &pkgConsumer.Consumer{
+	consumer := &internalConsumer.Consumer{
 		Auth: auth,
 	}
 

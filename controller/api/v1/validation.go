@@ -22,8 +22,8 @@ import (
 	istiov1b1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 
 	"mosn.io/htnn/controller/pkg/registry"
+	"mosn.io/htnn/internal/proto"
 	"mosn.io/htnn/pkg/plugins"
-	"mosn.io/htnn/pkg/proto"
 )
 
 func ValidateHTTPFilterPolicy(policy *HTTPFilterPolicy) error {

@@ -17,167 +17,58 @@ package consumer
 import (
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	xds "github.com/cncf/xds/go/xds/type/v3"
+	"github.com/stretchr/testify/assert"
+	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/structpb"
 
-	"mosn.io/htnn/pkg/filtermanager/model"
-	_ "mosn.io/htnn/plugins/key_auth" // for test
-	_ "mosn.io/htnn/plugins/opa"      // for test
+	"mosn.io/htnn/internal/proto"
 )
 
-type consumerTest struct {
-	values map[string]interface{}
-}
+func TestParse(t *testing.T) {
+	ts := xds.TypedStruct{}
+	ts.Value, _ = structpb.NewStruct(map[string]interface{}{})
+	any1 := proto.MessageToAny(&ts)
+	any2 := proto.MessageToAny(&xds.TypedStruct{})
 
-func newConsumerTest() *consumerTest {
-	return &consumerTest{
-		values: make(map[string]interface{}),
-	}
-}
-
-func (c *consumerTest) Add(ns string, consumer *Consumer) *consumerTest {
-	if c.values[ns] == nil {
-		c.values[ns] = make(map[string]interface{})
-	}
-	idx := c.values[ns].(map[string]interface{})
-	idx[consumer.name] = map[string]interface{}{
-		"d": consumer.Marshal(),
-		"v": consumer.generation,
-	}
-	return c
-}
-
-func (c *consumerTest) Build() *structpb.Struct {
-	st, _ := structpb.NewStruct(c.values)
-	return st
-}
-
-func TestUpdateConsumer(t *testing.T) {
-	// clean index
-	resourceIndex = make(map[string]map[string]*Consumer)
-
-	auth := map[string]string{
-		"keyAuth": "{\"key\": \"test\"}",
-	}
-	c := &Consumer{
-		name:       "me",
-		generation: 1,
-		Auth:       auth,
-	}
-	v := newConsumerTest().Add("ns", c).Build()
-	updateConsumers(v)
-
-	r, _ := LookupConsumer("ns", "keyAuth", "test")
-	require.NotNil(t, r)
-	require.Equal(t, "me", r.Name())
-
-	r, _ = LookupConsumer("ns", "keyAuth", "not_found")
-	require.Nil(t, r)
-
-	// no change
-	c.Auth["keyAuth"] = string("{\"key\": \"two\"}")
-	v = newConsumerTest().Add("ns", c).Build()
-	updateConsumers(v)
-	r, _ = LookupConsumer("ns", "keyAuth", "test")
-	require.Equal(t, "me", r.Name())
-
-	// update
-	c.generation = 2
-	v = newConsumerTest().Add("ns", c).Build()
-	updateConsumers(v)
-	r, _ = LookupConsumer("ns", "keyAuth", "test")
-	require.Nil(t, r)
-	r, _ = LookupConsumer("ns", "keyAuth", "two")
-	require.Equal(t, "me", r.Name())
-
-	// remove
-	c.name = "you"
-	c.generation = 3
-	v = newConsumerTest().Add("ns", c).Build()
-	updateConsumers(v)
-	r, _ = LookupConsumer("ns", "keyAuth", "me")
-	require.Nil(t, r)
-	r, _ = LookupConsumer("ns", "keyAuth", "two")
-	require.Equal(t, "you", r.Name())
-}
-
-func TestConsumerInitConfigs(t *testing.T) {
-	var tests = []struct {
-		name     string
-		consumer Consumer
-		err      string
+	cases := []struct {
+		name    string
+		input   *anypb.Any
+		wantErr bool
 	}{
 		{
-			name: "ok",
-			consumer: Consumer{
-				Auth: map[string]string{
-					"keyAuth": `{"key": "test", "unknown_fields":"should be ignored"}`,
-				},
-				Filters: map[string]*model.FilterConfig{
-					"opa": {
-						Config: map[string]interface{}{
-							"remote": map[string]interface{}{
-								"url":            "http://opa:8181",
-								"policy":         "t",
-								"unknown_fields": "should be ignored",
-							},
-						},
-					},
-				},
-			},
+			name:    "happy path",
+			input:   any1,
+			wantErr: false,
 		},
 		{
-			name: "not consumer plugin",
-			consumer: Consumer{
-				Auth: map[string]string{
-					"demo": "{\"key\": \"test\"}",
-				},
-			},
-			err: "plugin demo is not for consumer",
+			name:    "happy path without config",
+			input:   &anypb.Any{},
+			wantErr: false,
 		},
 		{
-			name: "failed to validate",
-			consumer: Consumer{
-				Auth: map[string]string{
-					"keyAuth": "{\"key2\": \"test\"}",
-				},
+			name: "error UnmarshalTo",
+			input: &anypb.Any{
+				TypeUrl: "aaa",
 			},
-			err: "invalid ConsumerConfig.Key",
+			wantErr: true,
 		},
 		{
-			name: "unknown plugin",
-			consumer: Consumer{
-				Filters: map[string]*model.FilterConfig{
-					"opax": {
-						Config: []byte(""),
-					},
-				},
-			},
-			err: "plugin opax not found",
-		},
-		{
-			name: "failed to validate filters",
-			consumer: Consumer{
-				Filters: map[string]*model.FilterConfig{
-					"opa": {
-						Config: []byte(""),
-					},
-				},
-			},
-			err: "during parsing plugin opa in consumer",
+			name:    "empty value",
+			input:   any2,
+			wantErr: true,
 		},
 	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var c Consumer
-			err := c.Unmarshal(tt.consumer.Marshal())
-			require.NoError(t, err)
 
-			err = c.InitConfigs()
-			if tt.err != "" {
-				require.ErrorContains(t, err, tt.err)
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			parser := &ConsumerManagerConfigParser{}
+
+			_, err := parser.Parse(c.input, nil)
+			if c.wantErr {
+				assert.NotNil(t, err)
 			} else {
-				require.NoError(t, err)
+				assert.Nil(t, err)
 			}
 		})
 	}

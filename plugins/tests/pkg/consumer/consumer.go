@@ -12,26 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package request
+package consumer
 
 import (
-	"github.com/envoyproxy/envoy/contrib/golang/common/go/api"
+	"mosn.io/htnn/internal/consumer"
+	"mosn.io/htnn/pkg/filtermanager/api"
 )
 
-// GetHeaders returns a plain map represents the headers. The returned headers won't
-// contain any pseudo header like `:authority`.
-func GetHeaders(header api.RequestHeaderMap) map[string][]string {
-	hdr := map[string][]string{}
-	header.Range(func(k, v string) bool {
-		if k[0] == ':' {
-			return true
-		}
-		if entry, ok := hdr[k]; !ok {
-			hdr[k] = []string{v}
-		} else {
-			hdr[k] = append(entry, v)
-		}
-		return true
-	})
-	return hdr
+// NewConsumer creates an api.Consumer which can be used to test consumer plugin
+func NewConsumer(pluginConsumerConfig map[string]api.PluginConsumerConfig) api.Consumer {
+	return &consumer.Consumer{
+		ConsumerConfigs: pluginConsumerConfig,
+	}
 }
