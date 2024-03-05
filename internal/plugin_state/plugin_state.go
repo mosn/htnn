@@ -28,18 +28,18 @@ func NewPluginState() api.PluginState {
 	}
 }
 
-func (p *pluginState) Get(pluginName string, key string) any {
-	if pluginStore, ok := p.store[pluginName]; ok {
+func (p *pluginState) Get(namespace string, key string) any {
+	if pluginStore, ok := p.store[namespace]; ok {
 		return pluginStore[key]
 	}
 	return nil
 }
 
-func (p *pluginState) Set(pluginName string, key string, value any) {
-	pluginStore, ok := p.store[pluginName]
+func (p *pluginState) Set(namespace string, key string, value any) {
+	pluginStore, ok := p.store[namespace]
 	if !ok {
 		pluginStore = make(map[string]any)
-		p.store[pluginName] = pluginStore
+		p.store[namespace] = pluginStore
 	}
 	pluginStore[key] = value
 }

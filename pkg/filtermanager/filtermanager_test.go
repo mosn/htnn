@@ -430,3 +430,58 @@ func TestFiltersFromConsumer(t *testing.T) {
 		assert.True(t, ok)
 	}
 }
+
+func setPluginStateFilterFactory(c interface{}, callbacks api.FilterCallbackHandler) api.Filter {
+	return &setPluginStateFilter{
+		callbacks: callbacks,
+	}
+}
+
+type setPluginStateFilter struct {
+	api.PassThroughFilter
+	callbacks api.FilterCallbackHandler
+}
+
+func (f *setPluginStateFilter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {
+	f.callbacks.PluginState().Set("test", "key", "value")
+	return api.Continue
+}
+
+func getPluginStateFilterFactory(c interface{}, callbacks api.FilterCallbackHandler) api.Filter {
+	return &getPluginStateFilter{
+		callbacks: callbacks,
+	}
+}
+
+type getPluginStateFilter struct {
+	api.PassThroughFilter
+	callbacks api.FilterCallbackHandler
+}
+
+func (f *getPluginStateFilter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {
+	v := f.callbacks.PluginState().Get("test", "key")
+	headers.Set("x-htnn-v", v.(string))
+	return api.Continue
+}
+
+func TestPluginState(t *testing.T) {
+	cb := envoy.NewCAPIFilterCallbackHandler()
+	config := initFilterManagerConfig("ns")
+	config.parsed = []*model.ParsedFilterConfig{
+		{
+			Name:    "alice",
+			Factory: setPluginStateFilterFactory,
+		},
+		{
+			Name:    "bob",
+			Factory: getPluginStateFilterFactory,
+		},
+	}
+	m := FilterManagerFactory(config, cb).(*filterManager)
+	h := http.Header{}
+	hdr := envoy.NewRequestHeaderMap(h)
+	m.DecodeHeaders(hdr, true)
+	cb.WaitContinued()
+	v, _ := hdr.Get("x-htnn-v")
+	assert.Equal(t, "value", v)
+}

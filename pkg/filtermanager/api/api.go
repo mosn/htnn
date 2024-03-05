@@ -231,9 +231,9 @@ type FilterState = api.FilterState
 // 3. one can't access the state outside the current Envoy Go filter.
 type PluginState interface {
 	// Get the value. Returns nil if the value doesn't exist.
-	Get(pluginName string, key string) any
+	Get(namespace string, key string) any
 	// Set the value.
-	Set(pluginName string, key string, value any)
+	Set(namespace string, key string, value any)
 }
 
 // ConfigCallbackHandler provides API that is used during initializing configuration
