@@ -25,7 +25,7 @@ BUILD_IMAGE     ?= golang:1.21-bullseye
 # to get the sha256 ID
 PROXY_IMAGE     ?= envoyproxy/envoy@sha256:4ac92ea7095c787b6d1d74ea7d27a5c776ded08a0dee9b6737f2105f790fa384
 # We may need to use timestamp if we need to update the image in one PR
-DEV_TOOLS_IMAGE ?= ghcr.io/mosn/htnn-dev-tools:2024-01-18
+DEV_TOOLS_IMAGE ?= ghcr.io/mosn/htnn-dev-tools:2024-03-05
 
 VERSION   = $(shell cat VERSION)
 GIT_VERSION     = $(shell git log -1 --pretty=format:%h)

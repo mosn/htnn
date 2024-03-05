@@ -19,6 +19,12 @@ FROM --platform=$TARGETPLATFORM golang:1.21-bullseye
 
 # This Docker image provides the command line tools which can't be managed by `go`
 
+# Labels below are consumed by GitHub Container Registry
+# See https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry#labelling-container-images
+LABEL org.opencontainers.image.source=https://github.com/mosn/htnn
+LABEL org.opencontainers.image.description="This image contains tools for the HTNN project."
+LABEL org.opencontainers.image.licenses="Apache-2.0"
+
 #For Chinese developers
 RUN sed -i 's#http://deb.debian.org#https://mirrors.163.com#g' /etc/apt/sources.list
 ARG GOPROXY
@@ -35,7 +41,11 @@ RUN apt install -y --no-install-recommends unzip
 RUN VER=1.0.2 && \
     ARCH=$(dpkg --print-architecture) && \
     set -ex && \
-    git clone https://github.com/bufbuild/protoc-gen-validate -b v${VER} --depth 1 /go/src/protoc-gen-validate && \
+    git clone https://github.com/bufbuild/protoc-gen-validate -b v${VER} --depth 1 /go/src/protoc-gen-validate
+# Break down the git clone & wget so that we can cache git repo early
+RUN VER=1.0.2 && \
+    ARCH=$(dpkg --print-architecture) && \
+    set -ex && \
     wget https://github.com/bufbuild/protoc-gen-validate/releases/download/v${VER}/protoc-gen-validate_${VER}_linux_${ARCH}.tar.gz && \
     tar -zxvpf protoc-gen-validate_${VER}_linux_${ARCH}.tar.gz && \
     mv protoc-gen-validate-go /usr/bin && \
