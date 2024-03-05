@@ -26,10 +26,10 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 	"google.golang.org/protobuf/types/known/structpb"
 
-	pkgConsumer "mosn.io/htnn/pkg/consumer"
+	internalConsumer "mosn.io/htnn/internal/consumer"
+	"mosn.io/htnn/internal/proto"
 	"mosn.io/htnn/pkg/filtermanager/api"
 	"mosn.io/htnn/pkg/filtermanager/model"
-	"mosn.io/htnn/pkg/proto"
 	"mosn.io/htnn/plugins/tests/pkg/envoy"
 )
 
@@ -284,7 +284,7 @@ func TestLocalReplyJSON_DoNotChangeMsgIfContentTypeIsGiven(t *testing.T) {
 }
 
 type setConsumerConf struct {
-	Consumers map[string]*pkgConsumer.Consumer
+	Consumers map[string]*internalConsumer.Consumer
 }
 
 func setConsumerFactory(c interface{}, callbacks api.FilterCallbackHandler) api.Filter {
@@ -369,9 +369,9 @@ func TestFiltersFromConsumer(t *testing.T) {
 	config := initFilterManagerConfig("ns")
 	config.consumerFiltersEndAt = 1
 
-	consumers := map[string]*pkgConsumer.Consumer{}
+	consumers := map[string]*internalConsumer.Consumer{}
 	for i := 0; i < 10; i++ {
-		c := pkgConsumer.Consumer{
+		c := internalConsumer.Consumer{
 			FilterConfigs: map[string]*model.ParsedFilterConfig{
 				"add_req": {
 					Name:    "add_req",

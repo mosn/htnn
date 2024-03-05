@@ -19,7 +19,7 @@ import (
 	"strconv"
 	"testing"
 
-	pkgConsumer "mosn.io/htnn/pkg/consumer"
+	internalConsumer "mosn.io/htnn/internal/consumer"
 	"mosn.io/htnn/pkg/filtermanager/api"
 	"mosn.io/htnn/pkg/filtermanager/model"
 	"mosn.io/htnn/plugins/tests/pkg/envoy"
@@ -98,11 +98,11 @@ func BenchmarkFilterManagerConsumerWithFilter(b *testing.B) {
 	config := initFilterManagerConfig("ns")
 	config.consumerFiltersEndAt = 1
 
-	consumers := map[string]*pkgConsumer.Consumer{}
+	consumers := map[string]*internalConsumer.Consumer{}
 	num := 10
 	reqHdrs := make([]api.RequestHeaderMap, num)
 	for i := 0; i < num; i++ {
-		c := pkgConsumer.Consumer{
+		c := internalConsumer.Consumer{
 			FilterConfigs: map[string]*model.ParsedFilterConfig{
 				"regular": {
 					Name:    "regular",

@@ -23,8 +23,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/encoding/protojson"
 
-	"mosn.io/htnn/pkg/consumer"
 	"mosn.io/htnn/pkg/filtermanager/api"
+	"mosn.io/htnn/plugins/tests/pkg/consumer"
 	"mosn.io/htnn/plugins/tests/pkg/envoy"
 )
 
@@ -32,7 +32,7 @@ func TestHmacAuth(t *testing.T) {
 	tests := []struct {
 		name     string
 		conf     string
-		consumer *consumer.Consumer
+		consumer api.Consumer
 		hdr      map[string][]string
 		status   int
 	}{
@@ -43,17 +43,15 @@ func TestHmacAuth(t *testing.T) {
 				DateHeader:      {"Fri Jan  5 16:10:54 CST 2024"},
 				"extra":         {"2", "1"},
 			},
-			consumer: &consumer.Consumer{
-				ConsumerConfigs: map[string]api.PluginConsumerConfig{
-					Name: &ConsumerConfig{
-						AccessKey: "ak",
-						SecretKey: "sk",
-						SignedHeaders: []string{
-							"extra",
-						},
+			consumer: consumer.NewConsumer(map[string]api.PluginConsumerConfig{
+				Name: &ConsumerConfig{
+					AccessKey: "ak",
+					SecretKey: "sk",
+					SignedHeaders: []string{
+						"extra",
 					},
 				},
-			},
+			}),
 		},
 		{
 			name:   "consumer not found",
@@ -65,15 +63,13 @@ func TestHmacAuth(t *testing.T) {
 				SignatureHeader: {"3QV0rnURMgHkIg6jGJRIgMueAlWMjKnbVX6HhUOw1KtBxbmpe0kyTH/uhxUvaBzb"},
 				DateHeader:      {"Fri Jan  5 16:10:54 CST 2024"},
 			},
-			consumer: &consumer.Consumer{
-				ConsumerConfigs: map[string]api.PluginConsumerConfig{
-					Name: &ConsumerConfig{
-						AccessKey: "ak",
-						SecretKey: "sk",
-						Algorithm: Algorithm_HMAC_SHA384,
-					},
+			consumer: consumer.NewConsumer(map[string]api.PluginConsumerConfig{
+				Name: &ConsumerConfig{
+					AccessKey: "ak",
+					SecretKey: "sk",
+					Algorithm: Algorithm_HMAC_SHA384,
 				},
-			},
+			}),
 		},
 		{
 			name: "sha512",
@@ -81,15 +77,13 @@ func TestHmacAuth(t *testing.T) {
 				SignatureHeader: {"K8cPdrqqcMGkpDP3Oz/6LSOwPUsIS1vMhOgwEh3OPy3Gi1IshAZ38jukAnUR66NWo1/Ela20P7/Bgp/JE7ltKA=="},
 				DateHeader:      {"Fri Jan  5 16:10:54 CST 2024"},
 			},
-			consumer: &consumer.Consumer{
-				ConsumerConfigs: map[string]api.PluginConsumerConfig{
-					Name: &ConsumerConfig{
-						AccessKey: "ak",
-						SecretKey: "sk",
-						Algorithm: Algorithm_HMAC_SHA512,
-					},
+			consumer: consumer.NewConsumer(map[string]api.PluginConsumerConfig{
+				Name: &ConsumerConfig{
+					AccessKey: "ak",
+					SecretKey: "sk",
+					Algorithm: Algorithm_HMAC_SHA512,
 				},
-			},
+			}),
 		},
 	}
 

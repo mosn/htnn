@@ -18,9 +18,9 @@ import (
 	"cmp"
 	"encoding/json"
 
+	"mosn.io/htnn/internal/proto"
 	"mosn.io/htnn/pkg/filtermanager/api"
 	"mosn.io/htnn/pkg/log"
-	"mosn.io/htnn/pkg/proto"
 )
 
 var (

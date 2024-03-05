@@ -26,8 +26,8 @@ import (
 
 	capi "github.com/envoyproxy/envoy/contrib/golang/common/go/api"
 
+	"mosn.io/htnn/internal/cookie"
 	"mosn.io/htnn/pkg/filtermanager/api"
-	"mosn.io/htnn/pkg/request"
 )
 
 func init() {
@@ -155,7 +155,7 @@ func (i *RequestHeaderMap) Url() *url.URL {
 }
 
 func (i *RequestHeaderMap) Cookie(name string) *http.Cookie {
-	return request.ParseCookies(i)[name]
+	return cookie.ParseCookies(i)[name]
 }
 
 var _ api.RequestHeaderMap = (*RequestHeaderMap)(nil)
