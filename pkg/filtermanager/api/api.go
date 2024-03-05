@@ -202,6 +202,8 @@ type FilterCallbackHandler interface {
 	// * ErrValueNotFound
 	GetProperty(key string) (string, error)
 
+	// Methods added by HTNN
+
 	// LookupConsumer is used in the Authn plugins to fetch the corresponding consumer, with
 	// the plugin name and plugin specific key. We return a 'fat' Consumer so that additional
 	// info like `Name` can be retrieved.
@@ -209,6 +211,9 @@ type FilterCallbackHandler interface {
 	// SetConsumer is used in the Authn plugins to set the corresponding consumer after authentication.
 	SetConsumer(c Consumer)
 	GetConsumer() Consumer
+
+	// PluginState returns the PluginState associated to this request.
+	PluginState() PluginState
 }
 
 type FilterFactory func(config interface{}, callbacks FilterCallbackHandler) Filter
@@ -218,6 +223,18 @@ type DynamicMetadata = api.DynamicMetadata
 
 // FilterState operates the Envoy's filter state
 type FilterState = api.FilterState
+
+// PluginState stores the plugin level state shared between Go plugins. Unlike DynamicMetadata,
+// it doesn't do any serialization/deserialization. So:
+// 1. modifying the returned state can affect the internal structure.
+// 2. fields can't be marshalled can be kept in the state.
+// 3. one can't access the state outside the current Envoy Go filter.
+type PluginState interface {
+	// Get the value. Returns nil if the value doesn't exist.
+	Get(pluginName string, key string) any
+	// Set the value.
+	Set(pluginName string, key string, value any)
+}
 
 // ConfigCallbackHandler provides API that is used during initializing configuration
 type ConfigCallbackHandler interface {
