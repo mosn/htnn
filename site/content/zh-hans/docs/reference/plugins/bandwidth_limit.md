@@ -7,6 +7,7 @@ title: Bandwidth Limit
 `bandwidthLimit` 插件通过利用 Envoy 的 `bandwidth_limit` 过滤器限制数据流的最大带宽。注意该限制只涉及请求体或响应体。
 
 ## 属性
+
 |       |         |
 |-------|---------|
 | Type  | Traffic |
