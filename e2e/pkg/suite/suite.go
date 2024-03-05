@@ -153,6 +153,10 @@ func (suite *Suite) Head(path string, header http.Header) (*http.Response, error
 	return suite.do("HEAD", path, header, nil)
 }
 
+func (suite *Suite) Options(path string, header http.Header) (*http.Response, error) {
+	return suite.do("OPTIONS", path, header, nil)
+}
+
 func (suite *Suite) Get(path string, header http.Header) (*http.Response, error) {
 	return suite.do("GET", path, header, nil)
 }

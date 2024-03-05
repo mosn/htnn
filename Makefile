@@ -289,7 +289,7 @@ deploy-cert-manager:
 	$(KUBECTL) wait --timeout=5m -n cert-manager deployment/cert-manager-cainjector --for=condition=Available
 
 .PHONY: deploy-controller
-deploy-controller: kubectl
+deploy-controller: kind kubectl
 	cd controller/ && KIND=$(KIND) KIND_OPTION="-n htnn" KUBECTL=$(KUBECTL) make deploy
 	$(KUBECTL) wait --timeout=5m -n controller-system deployment/controller-controller-manager --for=condition=Available
 

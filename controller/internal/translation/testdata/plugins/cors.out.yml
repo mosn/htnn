@@ -1,0 +1,46 @@
+- metadata:
+    creationTimestamp: null
+    name: htnn-h-default.local
+  spec:
+    configPatches:
+    - applyTo: HTTP_ROUTE
+      match:
+        routeConfiguration:
+          vhost:
+            name: default.local:80
+            route:
+              name: default/default
+      patch:
+        operation: MERGE
+        value:
+          typed_per_filter_config:
+            htnn.filters.http.cors:
+              '@type': type.googleapis.com/envoy.extensions.filters.http.cors.v3.CorsPolicy
+              allowMethods: GET
+              allowOriginStringMatch:
+              - safeRegex:
+                  regex: .*\.envoyproxy\.io
+  status: {}
+- metadata:
+    creationTimestamp: null
+    name: htnn-http-filter
+  spec:
+    configPatches:
+    - applyTo: HTTP_FILTER
+      match:
+        context: GATEWAY
+        listener:
+          filterChain:
+            filter:
+              name: envoy.filters.network.http_connection_manager
+              subFilter:
+                name: htnn.filters.http.golang
+      patch:
+        operation: INSERT_BEFORE
+        value:
+          disabled: true
+          name: htnn.filters.http.cors
+          typed_config:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.cors.v3.Cors
+    priority: 100
+  status: {}
