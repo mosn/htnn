@@ -6,7 +6,7 @@ toolchain go1.21.5
 
 require (
 	github.com/envoyproxy/envoy v1.29.1-0.20240208055117-b788e1a92347
-	google.golang.org/protobuf v1.32.0
+	google.golang.org/protobuf v1.33.0
 	mosn.io/htnn v0.2.0
 )
 
