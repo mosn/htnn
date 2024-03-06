@@ -25,7 +25,7 @@ import (
 func TestBadIssuer(t *testing.T) {
 	c := config{
 		Config: Config{
-			Issuer:  "http://github.com",
+			Issuer:  "http://1.1.1.1",
 			Timeout: &durationpb.Duration{Seconds: 1}, // quick fail
 		},
 	}
@@ -36,7 +36,7 @@ func TestBadIssuer(t *testing.T) {
 func TestDefaultValue(t *testing.T) {
 	c := config{
 		Config: Config{
-			Issuer:  "http://github.com",
+			Issuer:  "http://1.1.1.1",
 			Timeout: &durationpb.Duration{Seconds: 1}, // quick fail
 		},
 	}
@@ -55,6 +55,10 @@ func TestConfig(t *testing.T) {
 			name:  "bad issuer url",
 			input: `{"clientId":"a", "clientSecret":"b", "issuer":"google.com"}`,
 			err:   "invalid Config.Issuer:",
+		},
+		{
+			name:  "leeway can be 0s",
+			input: `{"clientId":"a", "clientSecret":"b", "issuer":"https://google.com", "redirectUrl":"http://127.0.0.1:10000/echo", "accessTokenRefreshLeeway":"0s"}`,
 		},
 	}
 

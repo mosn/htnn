@@ -325,6 +325,9 @@ func (dp *DataPlane) do(method string, path string, header http.Header, body io.
 }
 
 func (dp *DataPlane) Configured() bool {
+	// TODO: this is fine for the first init of the envoy configuration.
+	// But it may be misleading when updating the configuration.
+	// Would be better to switch to Envoy's /config_dump API.
 	resp, err := dp.Head("/detect_if_the_rds_takes_effect", nil)
 	if err != nil {
 		return false

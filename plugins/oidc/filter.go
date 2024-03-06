@@ -41,13 +41,14 @@ func factory(c interface{}, callbacks api.FilterCallbackHandler) api.Filter {
 type filter struct {
 	api.PassThroughFilter
 
-	callbacks api.FilterCallbackHandler
-	config    *config
+	callbacks   api.FilterCallbackHandler
+	config      *config
+	tokenCookie *http.Cookie
 }
 
 type Tokens struct {
-	IDToken     string `json:"id_token"`
-	AccessToken string `json:"access_token"`
+	IDToken     string        `json:"id_token"`
+	Oauth2Token *oauth2.Token `json:"oauth_token"`
 }
 
 func generateState(verifier string, secret string, url string) string {
@@ -74,6 +75,10 @@ func signState(state string, secret string) string {
 	return base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
 }
 
+func (f *filter) CookieName(key string) string {
+	return fmt.Sprintf("htnn_oidc_%s_%s", key, f.config.cookieEntryID)
+}
+
 func (f *filter) handleInitRequest(headers api.RequestHeaderMap) api.ResultAction {
 	config := f.config
 	o2conf := config.oauth2Config
@@ -90,13 +95,14 @@ func (f *filter) handleInitRequest(headers api.RequestHeaderMap) api.ResultActio
 		oauth2.S256ChallengeOption(verifier),
 		oauth2.SetAuthURLParam("nonce", nonce))
 
-	n, err := config.cookieEncoding.Encode("htnn_oidc_nonce", nonce)
+	cookieName := f.CookieName("nonce")
+	n, err := config.cookieEncoding.Encode(cookieName, nonce)
 	if err != nil {
 		api.LogErrorf("failed to encode cookie: %v", err)
 		return &api.LocalResponse{Code: 503, Msg: "failed to encode cookie"}
 	}
 	cookieNonce := &http.Cookie{
-		Name:     "htnn_oidc_nonce",
+		Name:     cookieName,
 		Value:    n,
 		MaxAge:   int(time.Hour.Seconds()),
 		HttpOnly: true,
@@ -112,11 +118,31 @@ func (f *filter) handleInitRequest(headers api.RequestHeaderMap) api.ResultActio
 	}
 }
 
-func normalizeExpiry(expiry time.Time, def time.Duration) int {
-	if expiry.IsZero() {
-		return int(def.Seconds())
+func (f *filter) calculateTokenTTL(accessTokenExpiry time.Time, idTokenExpiry time.Time, refreshEnabled bool) int {
+	if refreshEnabled {
+		// As the access token refresh is enabled, we only need to consider the expiry of id token
+		return int(time.Until(idTokenExpiry).Seconds())
 	}
-	return int(time.Until(expiry).Seconds())
+
+	// Use the min expiry between id token and access token as the expiry
+	if accessTokenExpiry.IsZero() {
+		// According to https://openid.net/specs/openid-connect-core-1_0.html#IDToken,
+		// the expiry of id token is required.
+		// Meanwhile, the expiry of access token is optional.
+		return int(time.Until(idTokenExpiry).Seconds())
+	}
+	return int(min(
+		time.Until(accessTokenExpiry).Seconds(),
+		time.Until(idTokenExpiry).Seconds()))
+}
+
+func getIDToken(token *oauth2.Token) (string, bool) {
+	rawIDToken, ok := token.Extra("id_token").(string)
+	return rawIDToken, ok
+}
+
+func (f *filter) refreshEnabled(token *oauth2.Token) bool {
+	return !f.config.DisableAccessTokenRefresh && token.RefreshToken != ""
 }
 
 func (f *filter) handleCallback(headers api.RequestHeaderMap, query url.Values) api.ResultAction {
@@ -145,8 +171,7 @@ func (f *filter) handleCallback(headers api.RequestHeaderMap, query url.Values) 
 		return &api.LocalResponse{Code: 503, Msg: "failed to exchange code to the token"}
 	}
 
-	// TODO: handle refresh_token
-	rawIDToken, ok := oauth2Token.Extra("id_token").(string)
+	rawIDToken, ok := getIDToken(oauth2Token)
 	if !ok {
 		api.LogErrorf("failed to lookup id token: %v", err)
 		return &api.LocalResponse{Code: 503, Msg: "failed to lookup id token"}
@@ -155,18 +180,19 @@ func (f *filter) handleCallback(headers api.RequestHeaderMap, query url.Values) 
 	idToken, err := config.verifier.Verify(ctx, rawIDToken)
 	if err != nil {
 		api.LogInfof("bad token: %s", err)
-		return &api.LocalResponse{Code: 403, Msg: "bad token"}
+		return &api.LocalResponse{Code: 503, Msg: "bad token"}
 	}
 
 	if !config.SkipNonceVerify {
-		nonce := headers.Cookie("htnn_oidc_nonce")
+		cookieName := f.CookieName("nonce")
+		nonce := headers.Cookie(cookieName)
 		if nonce == nil {
 			api.LogInfof("bad nonce, expected %s", idToken.Nonce)
 			return &api.LocalResponse{Code: 403, Msg: "bad nonce"}
 		}
 
 		var p string
-		err := config.cookieEncoding.Decode("htnn_oidc_nonce", nonce.Value, &p)
+		err := config.cookieEncoding.Decode(cookieName, nonce.Value, &p)
 		if err != nil || p != idToken.Nonce {
 			if err != nil {
 				api.LogInfof("bad nonce: %s, expected %s", err, idToken.Nonce)
@@ -177,32 +203,11 @@ func (f *filter) handleCallback(headers api.RequestHeaderMap, query url.Values) 
 		}
 	}
 
-	value := Tokens{
-		IDToken:     rawIDToken,
-		AccessToken: oauth2Token.AccessToken,
-	}
-	token, err := config.cookieEncoding.Encode("htnn_oidc_token", &value)
+	cookie, err := f.saveTokenAsCookie(ctx, oauth2Token, rawIDToken)
 	if err != nil {
-		api.LogErrorf("failed to encode cookie: %v", err)
-		return &api.LocalResponse{Code: 503, Msg: "failed to encode cookie"}
+		return &api.LocalResponse{Code: 503, Msg: "failed to save token"}
 	}
 
-	// Use the min expiry between id token and access token as the expiry
-	// According to https://openid.net/specs/openid-connect-core-1_0.html#IDToken,
-	// the expiry of id token is required.
-	// Meanwhile, the expiry of access token is optional.
-	// To be roburst & security, we assume an empty expiry means a 360-days expiry.
-	fallbackTTL := 360 * 24 * time.Hour
-	ttl := min(
-		normalizeExpiry(idToken.Expiry, fallbackTTL),
-		normalizeExpiry(oauth2Token.Expiry, fallbackTTL),
-	)
-	cookie := &http.Cookie{
-		Name:     "htnn_oidc_token",
-		Value:    token,
-		MaxAge:   ttl,
-		HttpOnly: true,
-	}
 	return &api.LocalResponse{
 		Code: http.StatusFound,
 		Header: http.Header{
@@ -214,20 +219,58 @@ func (f *filter) handleCallback(headers api.RequestHeaderMap, query url.Values) 
 
 func (f *filter) attachInfo(headers api.RequestHeaderMap, encodedToken string) api.ResultAction {
 	config := f.config
+	ctx := context.Background()
 
-	value := Tokens{}
-	err := config.cookieEncoding.Decode("htnn_oidc_token", encodedToken, &value)
+	tokens := &Tokens{}
+	cookieName := f.CookieName("token")
+	err := config.cookieEncoding.Decode(cookieName, encodedToken, tokens)
 	if err != nil {
-		api.LogInfof("bad oidc cookie: %s, err: %s", encodedToken, err.Error())
+		api.LogInfof("bad oidc cookie: %s, err: %v", encodedToken, err)
 		return &api.LocalResponse{Code: 403, Msg: "bad oidc cookie"}
 	}
-	headers.Set("authorization", fmt.Sprintf("Bearer %s", value.AccessToken))
-	headers.Set(config.IdTokenHeader, value.IDToken)
+
+	oauth2Token := tokens.Oauth2Token
+	rawIDToken := tokens.IDToken
+	if f.refreshEnabled(oauth2Token) {
+		tokenSrc := config.oauth2Config.TokenSource(context.Background(), oauth2Token)
+		tokenSrc = oauth2.ReuseTokenSourceWithExpiry(oauth2Token, tokenSrc, config.refreshLeeway)
+		possibleRefreshedToken, err := tokenSrc.Token()
+		if err != nil {
+			api.LogWarnf("failed to refresh access token %s, err: %v, refresh token: %s",
+				oauth2Token.AccessToken, err, oauth2Token.RefreshToken)
+			return &api.LocalResponse{Code: 401}
+		}
+
+		if possibleRefreshedToken.AccessToken != oauth2Token.AccessToken {
+			// token refreshed
+			oauth2Token = possibleRefreshedToken
+			newIDToken, ok := getIDToken(oauth2Token)
+			if ok {
+				rawIDToken = newIDToken
+			}
+
+			f.tokenCookie, err = f.saveTokenAsCookie(ctx, possibleRefreshedToken, rawIDToken)
+			if err != nil {
+				return &api.LocalResponse{Code: 503, Msg: "failed to save token"}
+			}
+		}
+
+	} else {
+		ok := oauth2Token.Valid()
+		if !ok {
+			api.LogInfo("access token is not valid")
+			return &api.LocalResponse{Code: 401}
+		}
+	}
+
+	headers.Set("authorization", fmt.Sprintf("%s %s", oauth2Token.Type(), oauth2Token.AccessToken))
+	headers.Set(config.IdTokenHeader, rawIDToken)
 	return api.Continue
 }
 
 func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {
-	token := headers.Cookie("htnn_oidc_token")
+	cookieName := f.CookieName("token")
+	token := headers.Cookie(cookieName)
 	if token != nil {
 		return f.attachInfo(headers, token.Value)
 	}
@@ -239,4 +282,40 @@ func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api
 	}
 
 	return f.handleCallback(headers, query)
+}
+
+func (f *filter) saveTokenAsCookie(ctx context.Context, oauth2Token *oauth2.Token, rawIDToken string) (*http.Cookie, error) {
+	idToken, err := f.config.verifier.Verify(ctx, rawIDToken)
+	if err != nil {
+		api.LogErrorf("bad token: %v", err)
+		return nil, err
+	}
+
+	cookieName := f.CookieName("token")
+	token, err := f.config.cookieEncoding.Encode(cookieName, Tokens{
+		Oauth2Token: oauth2Token,
+		IDToken:     rawIDToken,
+	})
+	if err != nil {
+		api.LogErrorf("failed to encode cookie: %v", err)
+		return nil, err
+	}
+
+	ttl := f.calculateTokenTTL(oauth2Token.Expiry, idToken.Expiry, f.refreshEnabled(oauth2Token))
+	cookie := &http.Cookie{
+		Name:     cookieName,
+		Value:    token,
+		MaxAge:   ttl,
+		HttpOnly: true,
+	}
+
+	api.LogInfof("token saved as cookie %+v, client id: %s", cookie, f.config.ClientId)
+	return cookie, nil
+}
+
+func (f *filter) EncodeHeaders(headers api.ResponseHeaderMap, endStream bool) api.ResultAction {
+	if f.tokenCookie != nil {
+		headers.Add("set-cookie", f.tokenCookie.String())
+	}
+	return api.Continue
 }

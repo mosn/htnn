@@ -42,4 +42,12 @@ message Config {
   google.protobuf.Duration timeout = 8 [(validate.rules).duration = {
     gt: {},
   }];
+
+  bool disable_access_token_refresh = 9;
+  // The duration to determines how earlier a token should be considered
+  // expired than its actual expiration time. It is used to avoid late
+  // expirations due to client-server time mismatches. Default to 10s.
+  google.protobuf.Duration access_token_refresh_leeway = 10 [(validate.rules).duration = {
+    gte: {},
+  }];
 }

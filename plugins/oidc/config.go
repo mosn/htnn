@@ -16,6 +16,7 @@ package oidc
 
 import (
 	"context"
+	"encoding/base64"
 	"net/http"
 	"time"
 
@@ -65,6 +66,8 @@ type config struct {
 	oauth2Config   *oauth2.Config
 	verifier       *oidc.IDTokenVerifier
 	cookieEncoding *securecookie.SecureCookie
+	refreshLeeway  time.Duration
+	cookieEntryID  string
 }
 
 func (conf *config) ctxWithClient(ctx context.Context) context.Context {
@@ -83,6 +86,13 @@ func (conf *config) Init(cb api.ConfigCallbackHandler) error {
 		du = timeout.AsDuration()
 	}
 	conf.opTimeout = du
+
+	du = 10 * time.Second
+	leeway := conf.GetAccessTokenRefreshLeeway()
+	if leeway != nil {
+		du = leeway.AsDuration()
+	}
+	conf.refreshLeeway = du
 
 	ctx := conf.ctxWithClient(context.Background())
 	var provider *oidc.Provider
@@ -104,6 +114,9 @@ func (conf *config) Init(cb api.ConfigCallbackHandler) error {
 		return err
 	}
 
+	if !conf.DisableAccessTokenRefresh {
+		conf.Scopes = append(conf.Scopes, oidc.ScopeOfflineAccess)
+	}
 	conf.oauth2Config = &oauth2.Config{
 		ClientID:     conf.ClientId,
 		ClientSecret: conf.ClientSecret,
@@ -116,5 +129,6 @@ func (conf *config) Init(cb api.ConfigCallbackHandler) error {
 	}
 	conf.verifier = provider.Verifier(&oidc.Config{ClientID: conf.ClientId})
 	conf.cookieEncoding = securecookie.New([]byte(conf.ClientSecret), nil)
+	conf.cookieEntryID = base64.RawURLEncoding.EncodeToString([]byte(conf.ClientId))
 	return nil
 }
