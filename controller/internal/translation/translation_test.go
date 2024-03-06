@@ -211,7 +211,7 @@ func TestPlugins(t *testing.T) {
 			require.NoError(t, err)
 
 			defaultEnvoyFilters := istio.DefaultEnvoyFilters()
-			expPlugin := fmt.Sprintf("envoy.filters.http.%s", snakeToCamel(name))
+			expPlugin := fmt.Sprintf("htnn.filters.http.%s", snakeToCamel(name))
 			for name := range defaultEnvoyFilters {
 				for _, ef := range fs.EnvoyFilters {
 					if ef.Name == name {

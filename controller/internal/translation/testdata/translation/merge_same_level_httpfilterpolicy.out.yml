@@ -16,7 +16,7 @@
         operation: MERGE
         value:
           typed_per_filter_config:
-            envoy.filters.http.golang:
+            htnn.filters.http.golang:
               '@type': type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.ConfigsPerRoute
               plugins_config:
                 fm:
