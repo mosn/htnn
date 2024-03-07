@@ -33,6 +33,7 @@ import (
 
 	internalConsumer "mosn.io/htnn/internal/consumer"
 	"mosn.io/htnn/internal/cookie"
+	"mosn.io/htnn/internal/plugin_state"
 	"mosn.io/htnn/pkg/filtermanager/api"
 	"mosn.io/htnn/pkg/filtermanager/model"
 	pkgPlugins "mosn.io/htnn/pkg/plugins"
@@ -304,8 +305,9 @@ func (s *filterManagerStreamInfo) DownstreamRemoteAddress() string {
 type filterManagerCallbackHandler struct {
 	capi.FilterCallbackHandler
 
-	namespace string
-	consumer  api.Consumer
+	namespace   string
+	consumer    api.Consumer
+	pluginState api.PluginState
 
 	streamInfo *filterManagerStreamInfo
 }
@@ -342,6 +344,13 @@ func (cb *filterManagerCallbackHandler) SetConsumer(c api.Consumer) {
 	}
 	api.LogInfof("set consumer, namespace: %s, name: %s", cb.namespace, c.Name())
 	cb.consumer = c
+}
+
+func (cb *filterManagerCallbackHandler) PluginState() api.PluginState {
+	if cb.pluginState == nil {
+		cb.pluginState = plugin_state.NewPluginState()
+	}
+	return cb.pluginState
 }
 
 type phase int

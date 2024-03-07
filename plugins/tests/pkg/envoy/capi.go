@@ -27,6 +27,7 @@ import (
 	capi "github.com/envoyproxy/envoy/contrib/golang/common/go/api"
 
 	"mosn.io/htnn/internal/cookie"
+	"mosn.io/htnn/internal/plugin_state"
 	"mosn.io/htnn/pkg/filtermanager/api"
 )
 
@@ -421,10 +422,11 @@ type filterCallbackHandler struct {
 	// add lock to the test helper to satisfy -race check
 	lock *sync.RWMutex
 
-	streamInfo api.StreamInfo
-	resp       LocalResponse
-	consumer   api.Consumer
-	ch         chan struct{}
+	streamInfo  api.StreamInfo
+	resp        LocalResponse
+	consumer    api.Consumer
+	pluginState api.PluginState
+	ch          chan struct{}
 }
 
 func NewFilterCallbackHandler() *filterCallbackHandler {
@@ -496,6 +498,13 @@ func (i *filterCallbackHandler) GetConsumer() api.Consumer {
 
 func (i *filterCallbackHandler) SetConsumer(c api.Consumer) {
 	i.consumer = c
+}
+
+func (i *filterCallbackHandler) PluginState() api.PluginState {
+	if i.pluginState == nil {
+		i.pluginState = plugin_state.NewPluginState()
+	}
+	return i.pluginState
 }
 
 var _ api.FilterCallbackHandler = (*filterCallbackHandler)(nil)
