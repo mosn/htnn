@@ -68,7 +68,7 @@ func hostMatch(gwHost string, host string) bool {
 	return gwHost == host
 }
 
-func buildVirtualHostsWithIstioGw(host string, gws []*istiov1b1.Gateway) []*model.VirtualHost {
+func buildVirtualHostsWithIstioGw(host string, nsName *types.NamespacedName, gws []*istiov1b1.Gateway) []*model.VirtualHost {
 	vhs := make([]*model.VirtualHost, 0)
 	for _, gw := range gws {
 		for _, svr := range gw.Spec.Servers {
@@ -84,7 +84,8 @@ func buildVirtualHostsWithIstioGw(host string, gws []*istiov1b1.Gateway) []*mode
 							},
 							Port: port,
 						},
-						Name: name,
+						NsName: nsName,
+						Name:   name,
 					})
 				}
 			}
@@ -93,7 +94,7 @@ func buildVirtualHostsWithIstioGw(host string, gws []*istiov1b1.Gateway) []*mode
 	return vhs
 }
 
-func buildVirtualHostsWithK8sGw(host string, ls *gwapiv1.Listener, nsName *types.NamespacedName) []*model.VirtualHost {
+func buildVirtualHostsWithK8sGw(host string, ls *gwapiv1.Listener, nsName, gwNsName *types.NamespacedName) []*model.VirtualHost {
 	vhs := make([]*model.VirtualHost, 0)
 	if ls.Protocol != gwapiv1.HTTPProtocolType && ls.Protocol != gwapiv1.HTTPSProtocolType {
 		return vhs
@@ -105,10 +106,11 @@ func buildVirtualHostsWithK8sGw(host string, ls *gwapiv1.Listener, nsName *types
 		name := net.JoinHostPort(host, fmt.Sprintf("%d", ls.Port))
 		vhs = append(vhs, &model.VirtualHost{
 			Gateway: &model.Gateway{
-				NsName: nsName,
+				NsName: gwNsName,
 				Port:   uint32(ls.Port),
 			},
-			Name: name,
+			NsName: nsName,
+			Name:   name,
 		})
 	}
 	return vhs
@@ -170,6 +172,10 @@ func toDataPlaneState(ctx *Ctx, state *InitState) (*FinalState, error) {
 		id := id // the copied id will be referenced by address later
 		gws := vsp.Gateways
 		spec := &vsp.VirtualService.Spec
+		routeNsName := &types.NamespacedName{
+			Namespace: vsp.VirtualService.Namespace,
+			Name:      vsp.VirtualService.Name,
+		}
 		routes := make(map[string]*routePolicy)
 		for name, policies := range vsp.RoutePolicies {
 			routes[name] = &routePolicy{
@@ -178,7 +184,7 @@ func toDataPlaneState(ctx *Ctx, state *InitState) (*FinalState, error) {
 			}
 		}
 		for _, hostName := range spec.Hosts {
-			vhs := buildVirtualHostsWithIstioGw(hostName, gws)
+			vhs := buildVirtualHostsWithIstioGw(hostName, routeNsName, gws)
 			if len(vhs) == 0 {
 				// maybe a host from an unsupported gateway which is referenced as one of the Hosts
 				ctx.logger.Info("virtual host not found, skipped", "hostname", hostName,
@@ -208,6 +214,10 @@ func toDataPlaneState(ctx *Ctx, state *InitState) (*FinalState, error) {
 		id := id // the copied id will be referenced by address later
 		gws := route.Gateways
 		spec := &route.HTTPRoute.Spec
+		routeNsName := &types.NamespacedName{
+			Namespace: route.HTTPRoute.Namespace,
+			Name:      route.HTTPRoute.Name,
+		}
 		routes := make(map[string]*routePolicy)
 		for name, policies := range route.RoutePolicies {
 			routes[name] = &routePolicy{
@@ -253,7 +263,7 @@ func toDataPlaneState(ctx *Ctx, state *InitState) (*FinalState, error) {
 					hostnames = wildcardHostnams
 				}
 				for _, hostName := range hostnames {
-					vhs := buildVirtualHostsWithK8sGw(string(hostName), &ls, gwNsName)
+					vhs := buildVirtualHostsWithK8sGw(string(hostName), &ls, routeNsName, gwNsName)
 					if len(vhs) == 0 {
 						// It's acceptable to have an unmatched hostname, which is already
 						// reported in the HTTPRoute's status

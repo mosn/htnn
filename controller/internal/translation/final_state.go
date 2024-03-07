@@ -17,9 +17,11 @@ package translation
 import (
 	"fmt"
 	"net"
+	"regexp"
 	"sort"
 	"strings"
 
+	"golang.org/x/net/idna"
 	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 
 	"mosn.io/htnn/controller/internal/istio"
@@ -28,6 +30,10 @@ import (
 
 const (
 	AnnotationInfo = "htnn.mosn.io/info"
+)
+
+var (
+	validEnvoyFilterName = regexp.MustCompile(`^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$`)
 )
 
 // We use the domain as the EnvoyFilter's name, so that:
@@ -50,8 +56,19 @@ func envoyFilterName(vhost *model.VirtualHost) string {
 		// The regex used for validation is '[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*'.
 		domain = "-" + domain[2:]
 	}
+
 	// The `htnn-h` means the HTNN's HTTPFilterPolicy.
-	return fmt.Sprintf("htnn-h-%s", domain)
+	prefix := "htnn-h"
+	domain, err := idna.ToASCII(domain)
+	if err == nil {
+		name := fmt.Sprintf("%s-%s", prefix, domain)
+		if validEnvoyFilterName.MatchString(name) {
+			return name
+		}
+	}
+
+	// Bad domain specified. Fallback to the source of configuration
+	return fmt.Sprintf("%s-%s.%s", prefix, vhost.NsName.Namespace, vhost.NsName.Name)
 }
 
 // finalState is the end of the translation. We convert the state to EnvoyFilter and write it to k8s.
