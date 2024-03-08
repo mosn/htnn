@@ -86,7 +86,7 @@ func TestPassThrough(t *testing.T) {
 		},
 	}
 	for i := 0; i < 2; i++ {
-		m := FilterManagerFactory(config, cb).(*filterManager)
+		m := FilterManagerFactory(config)(cb).(*filterManager)
 		hdr := envoy.NewRequestHeaderMap(http.Header{})
 		m.DecodeHeaders(hdr, false)
 		cb.WaitContinued()
@@ -154,7 +154,7 @@ func TestLocalReplyJSON_UseReqHeader(t *testing.T) {
 					Factory: PassThroughFactory,
 				},
 			}
-			m := FilterManagerFactory(config, cb).(*filterManager)
+			m := FilterManagerFactory(config)(cb).(*filterManager)
 			patches := gomonkey.ApplyMethodReturn(m.filters[0].Filter, "DecodeHeaders", &api.LocalResponse{
 				Code: 200,
 				Msg:  "msg",
@@ -227,7 +227,7 @@ func TestLocalReplyJSON_UseRespHeader(t *testing.T) {
 					Factory: PassThroughFactory,
 				},
 			}
-			m := FilterManagerFactory(config, cb).(*filterManager)
+			m := FilterManagerFactory(config)(cb).(*filterManager)
 			patches := gomonkey.ApplyMethodReturn(m.filters[0].Filter, "EncodeHeaders", &api.LocalResponse{
 				Code: 200,
 				Msg:  "msg",
@@ -263,7 +263,7 @@ func TestLocalReplyJSON_DoNotChangeMsgIfContentTypeIsGiven(t *testing.T) {
 			Factory: PassThroughFactory,
 		},
 	}
-	m := FilterManagerFactory(config, cb).(*filterManager)
+	m := FilterManagerFactory(config)(cb).(*filterManager)
 	patches := gomonkey.ApplyMethodReturn(m.filters[0].Filter, "DecodeHeaders", &api.LocalResponse{
 		Msg:    "msg",
 		Header: http.Header(map[string][]string{"Content-Type": {"text/plain"}}),
@@ -357,7 +357,7 @@ func TestSkipMethodWhenThereAreMultiFilters(t *testing.T) {
 	}
 
 	for i := 0; i < 2; i++ {
-		m := FilterManagerFactory(config, cb).(*filterManager)
+		m := FilterManagerFactory(config)(cb).(*filterManager)
 		assert.Equal(t, false, m.canSkipOnLog)
 		assert.Equal(t, false, m.canSkipDecodeHeaders)
 		assert.Equal(t, true, m.canSkipDecodeData)
@@ -407,7 +407,7 @@ func TestFiltersFromConsumer(t *testing.T) {
 		},
 	}
 	for i := 0; i < 20; i++ {
-		m := FilterManagerFactory(config, cb).(*filterManager)
+		m := FilterManagerFactory(config)(cb).(*filterManager)
 		assert.Equal(t, true, m.canSkipOnLog)
 		assert.Equal(t, 1, len(m.filters))
 		h := http.Header{}
@@ -477,7 +477,7 @@ func TestPluginState(t *testing.T) {
 			Factory: getPluginStateFilterFactory,
 		},
 	}
-	m := FilterManagerFactory(config, cb).(*filterManager)
+	m := FilterManagerFactory(config)(cb).(*filterManager)
 	h := http.Header{}
 	hdr := envoy.NewRequestHeaderMap(h)
 	m.DecodeHeaders(hdr, true)

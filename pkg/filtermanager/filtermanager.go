@@ -378,63 +378,65 @@ func newSkipMethodsMap() map[string]bool {
 	}
 }
 
-func FilterManagerFactory(c interface{}, cb capi.FilterCallbackHandler) capi.StreamFilter {
+func FilterManagerFactory(c interface{}) capi.StreamFilterFactory {
 	conf := c.(*filterManagerConfig)
 	parsedConfig := conf.parsed
 
-	fm := conf.pool.Get().(*filterManager)
-	fm.callbacks.FilterCallbackHandler = cb
+	return func(cb capi.FilterCallbackHandler) capi.StreamFilter {
+		fm := conf.pool.Get().(*filterManager)
+		fm.callbacks.FilterCallbackHandler = cb
 
-	canSkipMethod := fm.canSkipMethod
-	if canSkipMethod == nil {
-		canSkipMethod = newSkipMethodsMap()
-	}
-
-	filters := make([]*model.FilterWrapper, len(parsedConfig))
-	for i, fc := range parsedConfig {
-		factory := fc.Factory
-		config := fc.ParsedConfig
-		f := factory(config, fm.callbacks)
-		// Technically, the factory might create different f for different calls. We don't support this edge case for now.
-		if fm.canSkipMethod == nil {
-			for meth := range canSkipMethod {
-				overridden, err := reflectx.IsMethodOverridden(f, meth)
-				if err != nil {
-					api.LogErrorf("failed to check method %s in filter: %v", meth, err)
-					// canSkipMethod[meth] will be false
-				}
-				canSkipMethod[meth] = canSkipMethod[meth] && !overridden
-			}
-			// Do we need to check if the correct method is defined? For example, the DecodeRequest
-			// requires DecodeHeaders defined. Currently, we just documentate it. Per request check
-			// is expensive and not necessary in most of time.
+		canSkipMethod := fm.canSkipMethod
+		if canSkipMethod == nil {
+			canSkipMethod = newSkipMethodsMap()
 		}
-		filters[i] = model.NewFilterWrapper(fc.Name, f)
+
+		filters := make([]*model.FilterWrapper, len(parsedConfig))
+		for i, fc := range parsedConfig {
+			factory := fc.Factory
+			config := fc.ParsedConfig
+			f := factory(config, fm.callbacks)
+			// Technically, the factory might create different f for different calls. We don't support this edge case for now.
+			if fm.canSkipMethod == nil {
+				for meth := range canSkipMethod {
+					overridden, err := reflectx.IsMethodOverridden(f, meth)
+					if err != nil {
+						api.LogErrorf("failed to check method %s in filter: %v", meth, err)
+						// canSkipMethod[meth] will be false
+					}
+					canSkipMethod[meth] = canSkipMethod[meth] && !overridden
+				}
+				// Do we need to check if the correct method is defined? For example, the DecodeRequest
+				// requires DecodeHeaders defined. Currently, we just documentate it. Per request check
+				// is expensive and not necessary in most of time.
+			}
+			filters[i] = model.NewFilterWrapper(fc.Name, f)
+		}
+
+		if fm.canSkipMethod == nil {
+			fm.canSkipMethod = canSkipMethod
+		}
+
+		// We can't cache the slice of filters as it may be changed by consumer
+		fm.filters = filters
+
+		if conf.consumerFiltersEndAt != 0 {
+			consumerFiltersEndAt := conf.consumerFiltersEndAt
+			consumerFilters := filters[:consumerFiltersEndAt]
+			fm.consumerFilters = consumerFilters
+			fm.filters = filters[consumerFiltersEndAt:]
+		}
+
+		// The skip check is based on the compiled code. So if the DecodeRequest is defined,
+		// even it is not called, DecodeData will not be skipped. Same as EncodeResponse.
+		fm.canSkipDecodeHeaders = fm.canSkipMethod["DecodeHeaders"]
+		fm.canSkipDecodeData = fm.canSkipMethod["DecodeData"] && fm.canSkipMethod["DecodeRequest"]
+		fm.canSkipEncodeHeaders = fm.canSkipMethod["EncodeHeaders"]
+		fm.canSkipEncodeData = fm.canSkipMethod["EncodeData"] && fm.canSkipMethod["EncodeResponse"]
+		fm.canSkipOnLog = fm.canSkipMethod["OnLog"]
+
+		return fm
 	}
-
-	if fm.canSkipMethod == nil {
-		fm.canSkipMethod = canSkipMethod
-	}
-
-	// We can't cache the slice of filters as it may be changed by consumer
-	fm.filters = filters
-
-	if conf.consumerFiltersEndAt != 0 {
-		consumerFiltersEndAt := conf.consumerFiltersEndAt
-		consumerFilters := filters[:consumerFiltersEndAt]
-		fm.consumerFilters = consumerFilters
-		fm.filters = filters[consumerFiltersEndAt:]
-	}
-
-	// The skip check is based on the compiled code. So if the DecodeRequest is defined,
-	// even it is not called, DecodeData will not be skipped. Same as EncodeResponse.
-	fm.canSkipDecodeHeaders = fm.canSkipMethod["DecodeHeaders"]
-	fm.canSkipDecodeData = fm.canSkipMethod["DecodeData"] && fm.canSkipMethod["DecodeRequest"]
-	fm.canSkipEncodeHeaders = fm.canSkipMethod["EncodeHeaders"]
-	fm.canSkipEncodeData = fm.canSkipMethod["EncodeData"] && fm.canSkipMethod["EncodeResponse"]
-	fm.canSkipOnLog = fm.canSkipMethod["OnLog"]
-
-	return fm
 }
 
 func (m *filterManager) handleAction(res api.ResultAction, phase phase) (needReturn bool) {

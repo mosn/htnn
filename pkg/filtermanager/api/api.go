@@ -159,8 +159,6 @@ type StreamInfo interface {
 	FilterState() FilterState
 	// VirtualClusterName returns the name of the virtual cluster which got matched
 	VirtualClusterName() (string, bool)
-	// WorkerID returns the ID of the Envoy worker thread
-	WorkerID() uint32
 
 	// Methods added by HTNN
 
