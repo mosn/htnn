@@ -151,7 +151,6 @@ func (cp *ControlPlane) updateConfig(res Resources) {
 	}
 
 	for _, id := range IDs {
-		logger.Info("dispatch config", "snapshot", snapshot, "id", id)
 		err = cp.snapshotCache.SetSnapshot(context.Background(), id, snapshot)
 		if err != nil {
 			logger.Error(err, "failed to set snapshot")

@@ -93,7 +93,7 @@ func TestOIDC(t *testing.T) {
 	require.NotEmpty(t, u.Query().Get("nonce"))
 	require.NotEmpty(t, u.Query().Get("code_challenge"))
 	cookie := resp.Header.Get("Set-Cookie")
-	require.Regexp(t, `^htnn_oidc_nonce=[^;]+; Max-Age=3600; HttpOnly$`, cookie)
+	require.Regexp(t, `^htnn_oidc_nonce_[^=]+=[^;]+; Max-Age=3600; HttpOnly$`, cookie)
 
 	// the request is sent from the host
 	uri = strings.Replace(uri, "http://hydra:4444", "http://127.0.0.1:4444", 1)
