@@ -1,0 +1,44 @@
+name: website
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+    - "site/**"
+  pull_request:
+    branches: [ "main" ]
+    paths:
+    - "site/**"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref == 'refs/heads/main' && github.run_number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./site
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: cache
+      uses: actions/cache@v4
+      with:
+        # ./tmp is cached for htmltest
+        path: |
+          ./site/bin
+          ./site/tmp
+        key: ${{ runner.os }}-${{ hashFiles('./Makefile') }}
+
+    - name: build
+      run: |
+        set -euo pipefail
+        make build
+        make publish
+
+    - name: lint
+      run: |
+        make lint-website

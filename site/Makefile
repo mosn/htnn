@@ -14,6 +14,12 @@
 
 SHELL = /bin/bash
 
+LOCALBIN ?= $(shell pwd)/bin
+# Remember to remove tools downloaded into bin directory manually before updating them.
+# If they need to be updated frequently, we can consider to store them in the `Dockerfile.dev`.
+$(LOCALBIN):
+	@mkdir -p $(LOCALBIN)
+
 .PHONY: build
 build:
 	docker-compose build
@@ -27,6 +33,12 @@ clean:
 	docker-compose rm
 
 .PHONY: publish
+# The generated files will be under ./public
 publish:
-# change baseURL to real link
-	docker run --rm -v $(PWD):/src --name docsy htnn-docsy -- hugo --minify --gc --baseURL https://htnn.github.io/
+	# FIXME: change baseURL to real link
+	docker run --rm -v $(PWD):/src --name docsy htnn-docsy -- hugo --minify --gc --baseURL https://mosn.io/
+
+.PHONY: lint-website
+lint-website: $(LOCALBIN)
+	test -x $(LOCALBIN)/htmltest || GOBIN=$(LOCALBIN) go install github.com/wjdp/htmltest@v0.17.0
+	$(LOCALBIN)/htmltest --conf ./.htmltest.yml ./public | grep 'target does not exist' && exit 1 || true

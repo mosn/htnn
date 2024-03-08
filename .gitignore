@@ -23,6 +23,7 @@ test-envoy/
 site/public/
 site/resources/
 site/.hugo_build.lock
+site/tmp
 # dev files
 controller/config/config.yaml
 controller/**/cache

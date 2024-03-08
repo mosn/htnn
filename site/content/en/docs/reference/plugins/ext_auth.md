@@ -40,7 +40,7 @@ The `extAuth` plugin sends an authorization request to an authorization service 
 
 | Name                   | Type                                           | Required | Validation   | Description                                                                                                                                                                     |
 | ---------------------- | ---------------------------------------------- | -------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| allowedUpstreamHeaders | [StringMatcher[]](../../type.md#stringmatcher) | False    | min_items: 1 | When this is set, authorization response headers that have a correspondent match will be added to the original client request. Note that coexistent headers will be overridden. |
+| allowedUpstreamHeaders | [StringMatcher[]](../../type#stringmatcher) | False    | min_items: 1 | When this is set, authorization response headers that have a correspondent match will be added to the original client request. Note that coexistent headers will be overridden. |
 | allowedClientHeaders   | [StringMatcher[]](../../type#stringmatcher)    | False    | min_items: 1 | When this is set, authorization response headers that have a correspondent match will be added to the client's response when the request is rejected.                           |
 
 ## Usage
