@@ -26,8 +26,8 @@ import (
 
 	capi "github.com/envoyproxy/envoy/contrib/golang/common/go/api"
 
-	"mosn.io/htnn/internal/cookie"
 	"mosn.io/htnn/internal/plugin_state"
+	"mosn.io/htnn/pkg/cookie"
 	"mosn.io/htnn/pkg/filtermanager/api"
 )
 
