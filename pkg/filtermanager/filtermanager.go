@@ -269,7 +269,11 @@ func (headers *filterManagerRequestHeaderMap) Url() *url.URL {
 // If multiple cookies match the given name, only one cookie will be returned.
 func (headers *filterManagerRequestHeaderMap) Cookie(name string) *http.Cookie {
 	if headers.cookies == nil {
-		headers.cookies = cookie.ParseCookies(headers)
+		cookieList := cookie.ParseCookies(headers)
+		headers.cookies = make(map[string]*http.Cookie, len(cookieList))
+		for _, c := range cookieList {
+			headers.cookies[c.Name] = c
+		}
 	}
 	return headers.cookies[name]
 }
