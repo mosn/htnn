@@ -1,3 +1,3 @@
 ---
-title: Controller
+title: 控制器
 ---
