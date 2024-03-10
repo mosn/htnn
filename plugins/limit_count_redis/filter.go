@@ -21,6 +21,8 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/redis/go-redis/v9"
+
 	"mosn.io/htnn/pkg/expr"
 	"mosn.io/htnn/pkg/filtermanager/api"
 	"mosn.io/htnn/pkg/stringx"
@@ -75,7 +77,35 @@ var (
 	end
 	return res
 	`)
+
+	redisSingleScript = stringx.CutSpace(`
+	local res={}
+	local ttl=redis.call('ttl',KEYS[1])
+	if ttl<0 then
+		redis.call('set',KEYS[1],ARGV[1]-1,'EX',ARGV[2])
+		res[1]=ARGV[1]-1
+		res[2]=tonumber(ARGV[2])
+	else
+		res[1]=redis.call('incrby',KEYS[1],-1)
+		res[2]=ttl
+	end
+	return res
+	`)
 )
+
+func (f *filter) limitCountErr(err error) api.ResultAction {
+	config := f.config
+	api.LogErrorf("failed to limit count: %v", err)
+
+	if config.FailureModeDeny {
+		status := 500 // follow the behavior of Envoy
+		if config.StatusOnError != 0 {
+			status = int(config.StatusOnError)
+		}
+		return &api.LocalResponse{Code: status}
+	}
+	return api.Continue
+}
 
 func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {
 	ctx := context.Background()
@@ -93,22 +123,38 @@ func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api
 		args[i*2+1] = limiter.timeWindow
 	}
 
-	cmd := config.client.Eval(ctx, fmt.Sprintf(redisScript, n), keys, args...)
-	res, err := cmd.Result()
-	if err != nil {
-		api.LogErrorf("failed to limit count: %v", err)
+	var ress []interface{}
 
-		if config.FailureModeDeny {
-			status := 500 // follow the behavior of Envoy
-			if config.StatusOnError != 0 {
-				status = int(config.StatusOnError)
+	if config.GetCluster() != nil {
+		// Redis cluster doesn't support operation across multiple slots, so we have to
+		// use pipeline to send the request one by one. We can't use hash tag because
+		// this will cause the key imbalence.
+		cmds, err := config.clusterClient.Pipelined(ctx, func(pipe redis.Pipeliner) error {
+			for i, k := range keys {
+				pipe.Eval(ctx, redisSingleScript, []string{k}, args[i*2], args[i*2+1])
 			}
-			return &api.LocalResponse{Code: status}
+			return nil
+		})
+		if err != nil {
+			return f.limitCountErr(err)
 		}
-		return api.Continue
-	}
 
-	ress := res.([]interface{})
+		ress = make([]interface{}, 2*len(cmds))
+		for i, cmd := range cmds {
+			res := cmd.(*redis.Cmd).Val().([]interface{})
+			ress[i*2] = res[0]
+			ress[i*2+1] = res[1]
+		}
+
+	} else {
+		cmd := config.client.Eval(ctx, fmt.Sprintf(redisScript, n), keys, args...)
+		res, err := cmd.Result()
+		if err != nil {
+			return f.limitCountErr(err)
+		}
+
+		ress = res.([]interface{})
+	}
 	f.ress = ress
 
 	for i := range config.limiters {

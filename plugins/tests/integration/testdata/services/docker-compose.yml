@@ -73,11 +73,67 @@ services:
       - ./certs:/certs
     command: "--user user on +@all ~* \\&* \\>passwd \
             --tls-port 6380 \
-            --tls-cert-file /certs/cert.crt \
-            --tls-key-file /certs/cert.key \
+            --tls-cert-file /certs/server.crt \
+            --tls-key-file /certs/server.key \
             --tls-ca-cert-file /certs/ca.crt \
             --tls-auth-clients no \
             "
+    networks:
+      service:
+
+  redis-cluster-0:
+    image: docker.io/bitnami/redis-cluster:7.0
+    volumes:
+      - ./certs:/certs
+    environment:
+      - 'ALLOW_EMPTY_PASSWORD=yes'
+      - 'REDIS_NODES=redis-cluster-0 redis-cluster-1 redis-cluster-2'
+      - 'REDIS_TLS_ENABLED=yes'
+      - 'REDIS_TLS_CERT_FILE=/certs/server.crt'
+      - 'REDIS_TLS_KEY_FILE=/certs/server.key'
+      - 'REDIS_TLS_CA_FILE=/certs/ca.crt'
+      - 'REDIS_TLS_AUTH_CLIENTS=no'
+    ports:
+      - '6400:6379'
+    networks:
+      service:
+
+  redis-cluster-1:
+    image: docker.io/bitnami/redis-cluster:7.0
+    volumes:
+      - ./certs:/certs
+    environment:
+      - 'ALLOW_EMPTY_PASSWORD=yes'
+      - 'REDIS_NODES=redis-cluster-0 redis-cluster-1 redis-cluster-2'
+      - 'REDIS_TLS_ENABLED=yes'
+      - 'REDIS_TLS_CERT_FILE=/certs/server.crt'
+      - 'REDIS_TLS_KEY_FILE=/certs/server.key'
+      - 'REDIS_TLS_CA_FILE=/certs/ca.crt'
+      - 'REDIS_TLS_AUTH_CLIENTS=no'
+    ports:
+      - '6401:6379'
+    networks:
+      service:
+
+  redis-cluster-2:
+    image: docker.io/bitnami/redis-cluster:7.0
+    volumes:
+      - ./certs:/certs
+    depends_on:
+      - redis-cluster-0
+      - redis-cluster-1
+    environment:
+      - 'ALLOW_EMPTY_PASSWORD=yes'
+      - 'REDIS_CLUSTER_REPLICAS=0'
+      - 'REDIS_CLUSTER_CREATOR=yes'
+      - 'REDIS_NODES=redis-cluster-0 redis-cluster-1 redis-cluster-2'
+      - 'REDIS_TLS_ENABLED=yes'
+      - 'REDIS_TLS_CERT_FILE=/certs/server.crt'
+      - 'REDIS_TLS_KEY_FILE=/certs/server.key'
+      - 'REDIS_TLS_CA_FILE=/certs/ca.crt'
+      - 'REDIS_TLS_AUTH_CLIENTS=no'
+    ports:
+      - '6402:6379'
     networks:
       service:
 

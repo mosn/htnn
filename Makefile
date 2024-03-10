@@ -247,6 +247,10 @@ verify-example:
 start-service:
 	cd ./plugins/tests/integration/testdata/services && docker-compose up -d --build
 
+.PHONY: stop-service
+stop-service:
+	cd ./plugins/tests/integration/testdata/services && docker-compose down
+
 # E2E
 KUBECTL ?= $(LOCALBIN)/kubectl
 KIND ?= $(LOCALBIN)/kind

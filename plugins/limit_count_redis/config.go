@@ -62,7 +62,9 @@ func (p *plugin) Config() api.PluginConfig {
 type config struct {
 	Config
 
-	client      *redis.Client
+	client        *redis.Client
+	clusterClient *redis.ClusterClient
+
 	limiters    []*Limiter
 	quotaPolicy string
 }
@@ -87,6 +89,16 @@ func (conf *config) Validate() error {
 			return fmt.Errorf("bad address %s: %w", addr, err)
 		}
 	}
+	cluster := conf.GetCluster()
+	if cluster != nil {
+		addrs := cluster.Addresses
+		for _, addr := range addrs {
+			_, _, err = net.SplitHostPort(addr)
+			if err != nil {
+				return fmt.Errorf("bad address %s: %w", addr, err)
+			}
+		}
+	}
 
 	for i, rule := range conf.Rules {
 		if rule.Key == "" {
@@ -107,18 +119,35 @@ func (conf *config) Validate() error {
 
 func (conf *config) Init(cb api.ConfigCallbackHandler) error {
 	addr := conf.GetAddress()
-	opt := &redis.Options{
-		Addr:     addr,
-		Username: conf.Username,
-		Password: conf.Password,
-	}
-	if conf.Tls {
-		opt.TLSConfig = &tls.Config{
-			InsecureSkipVerify: conf.TlsSkipVerify,
+	if addr != "" {
+		opt := &redis.Options{
+			Addr:     addr,
+			Username: conf.Username,
+			Password: conf.Password,
 		}
-	}
+		if conf.Tls {
+			opt.TLSConfig = &tls.Config{
+				InsecureSkipVerify: conf.TlsSkipVerify,
+			}
+		}
 
-	conf.client = redis.NewClient(opt)
+		conf.client = redis.NewClient(opt)
+
+	} else {
+		cluster := conf.GetCluster()
+		opt := &redis.ClusterOptions{
+			Addrs:    cluster.Addresses,
+			Username: conf.Username,
+			Password: conf.Password,
+		}
+		if conf.Tls {
+			opt.TLSConfig = &tls.Config{
+				InsecureSkipVerify: conf.TlsSkipVerify,
+			}
+		}
+
+		conf.clusterClient = redis.NewClusterClient(opt)
+	}
 
 	prefix := uuid.NewString()[:8] // enough for millions configurations
 	api.LogInfof("limitCountRedis filter uses %s as prefix, config: %v", prefix, &conf.Config)
