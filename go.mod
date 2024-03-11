@@ -10,7 +10,7 @@ toolchain go1.21.5
 require (
 	github.com/agiledragon/gomonkey/v2 v2.11.0
 	github.com/avast/retry-go v3.0.0+incompatible
-	github.com/casbin/casbin/v2 v2.82.0
+	github.com/casbin/casbin/v2 v2.84.0
 	github.com/cncf/xds/go v0.0.0-20231109132714-523115ebc101
 	github.com/coreos/go-oidc/v3 v3.9.0
 	github.com/envoyproxy/envoy v1.29.0
