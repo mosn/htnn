@@ -1,0 +1,16 @@
+apiVersion: mosn.io/v1
+kind: HTTPFilterPolicy
+metadata:
+  name: policy
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: default
+  filters:
+    fault:
+      config:
+        abort:
+          http_status: 401
+          percentage:
+            numerator: 100

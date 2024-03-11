@@ -32,6 +32,7 @@ COPY go.mod go.sum ./
 RUN go mod download
 # TODO: find a way to cache controller dependencies
 COPY api/ api/
+COPY internal/ internal/
 COPY pkg/ pkg/
 COPY plugins/ plugins/
 COPY controller/ controller/
