@@ -34,10 +34,13 @@ type consumerManager struct {
 	conf      *consumerManagerConfig
 }
 
-func ConsumerManagerFactory(c interface{}, callbacks capi.FilterCallbackHandler) capi.StreamFilter {
-	return &consumerManager{
-		callbacks: callbacks,
-		conf:      c.(*consumerManagerConfig),
+func ConsumerManagerFactory(c interface{}) capi.StreamFilterFactory {
+	conf := c.(*consumerManagerConfig)
+	return func(callbacks capi.FilterCallbackHandler) capi.StreamFilter {
+		return &consumerManager{
+			callbacks: callbacks,
+			conf:      conf,
+		}
 	}
 }
 

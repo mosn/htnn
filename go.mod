@@ -13,7 +13,7 @@ require (
 	github.com/casbin/casbin/v2 v2.82.0
 	github.com/cncf/xds/go v0.0.0-20231109132714-523115ebc101
 	github.com/coreos/go-oidc/v3 v3.9.0
-	github.com/envoyproxy/envoy v1.29.1-0.20240208055117-b788e1a92347
+	github.com/envoyproxy/envoy v1.29.0
 	github.com/envoyproxy/go-control-plane v0.11.2-0.20231019082134-6e4589f570e1 // version used by istio 1.20
 	github.com/envoyproxy/protoc-gen-validate v1.0.2
 	github.com/go-logr/logr v1.4.1

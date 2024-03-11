@@ -43,7 +43,7 @@ func BenchmarkFilterManagerAllPhase(b *testing.B) {
 	respBuf := envoy.NewBufferInstance([]byte{})
 
 	for n := 0; n < b.N; n++ {
-		m := FilterManagerFactory(config, cb)
+		m := FilterManagerFactory(config)(cb)
 		m.DecodeHeaders(reqHdr, false)
 		cb.WaitContinued()
 		m.DecodeData(reqBuf, true)
@@ -85,7 +85,7 @@ func BenchmarkFilterManagerRegular(b *testing.B) {
 	reqHdr := envoy.NewRequestHeaderMap(http.Header{})
 
 	for n := 0; n < b.N; n++ {
-		m := FilterManagerFactory(config, cb)
+		m := FilterManagerFactory(config)(cb)
 		m.DecodeHeaders(reqHdr, false)
 		cb.WaitContinued()
 		m.OnLog()
@@ -126,7 +126,7 @@ func BenchmarkFilterManagerConsumerWithFilter(b *testing.B) {
 	}
 
 	for n := 0; n < b.N; n++ {
-		m := FilterManagerFactory(config, cb)
+		m := FilterManagerFactory(config)(cb)
 		m.DecodeHeaders(reqHdrs[n%num], false)
 		cb.WaitContinued()
 		m.OnLog()
