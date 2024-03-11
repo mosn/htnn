@@ -25,5 +25,6 @@ type Gateway struct {
 
 type VirtualHost struct {
 	Gateway *Gateway
+	NsName  *types.NamespacedName
 	Name    string
 }
