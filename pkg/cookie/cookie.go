@@ -46,14 +46,13 @@ func parseCookieValue(raw string, allowDoubleQuote bool) (string, bool) {
 	return raw, true
 }
 
-// If multiple cookies match the given name, only one cookie will be returned.
-func ParseCookies(headers api.RequestHeaderMap) map[string]*http.Cookie {
+func ParseCookies(headers api.RequestHeaderMap) []*http.Cookie {
 	lines := headers.Values("Cookie")
 	if len(lines) == 0 {
-		return map[string]*http.Cookie{}
+		return []*http.Cookie{}
 	}
 
-	cookies := make(map[string]*http.Cookie, len(lines)+strings.Count(lines[0], ";"))
+	cookies := make([]*http.Cookie, 0, len(lines)+strings.Count(lines[0], ";"))
 	for _, line := range lines {
 		line = textproto.TrimString(line)
 
@@ -73,7 +72,7 @@ func ParseCookies(headers api.RequestHeaderMap) map[string]*http.Cookie {
 			if !ok {
 				continue
 			}
-			cookies[name] = &http.Cookie{Name: name, Value: val}
+			cookies = append(cookies, &http.Cookie{Name: name, Value: val})
 		}
 	}
 	return cookies

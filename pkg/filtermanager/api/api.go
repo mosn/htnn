@@ -118,6 +118,11 @@ type RequestHeaderMap interface {
 	Url() *url.URL
 	// Cookie returns the HTTP Cookie. If there is no cookie with the given name, nil will be returned.
 	// If multiple cookies match the given name, only one cookie will be returned.
+	// Changing the field in the returned `http.Cookie` will not affect the Cookies sent to the upstream.
+	// Please use `mosn.io/htnn/pkg/cookie.ParseCookies` to get all cookies,
+	// change the target cookie,
+	// then call `String()` to each cookie and join them as a list with `;`,
+	// finally use `Set("cookie", $all-cookies-merged-as-list)` to set the previously fetched cookies back.
 	Cookie(name string) *http.Cookie
 }
 type ResponseHeaderMap = api.ResponseHeaderMap
