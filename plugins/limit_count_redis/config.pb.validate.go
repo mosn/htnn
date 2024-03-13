@@ -191,6 +191,115 @@ var _ interface {
 	ErrorName() string
 } = RuleValidationError{}
 
+// Validate checks the field values on Cluster with the rules defined in the
+// proto definition for this message. If any rules are violated, the first
+// error encountered is returned, or nil if there are no violations.
+func (m *Cluster) Validate() error {
+	return m.validate(false)
+}
+
+// ValidateAll checks the field values on Cluster with the rules defined in the
+// proto definition for this message. If any rules are violated, the result is
+// a list of violation errors wrapped in ClusterMultiError, or nil if none found.
+func (m *Cluster) ValidateAll() error {
+	return m.validate(true)
+}
+
+func (m *Cluster) validate(all bool) error {
+	if m == nil {
+		return nil
+	}
+
+	var errors []error
+
+	if len(m.GetAddresses()) < 1 {
+		err := ClusterValidationError{
+			field:  "Addresses",
+			reason: "value must contain at least 1 item(s)",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
+	if len(errors) > 0 {
+		return ClusterMultiError(errors)
+	}
+
+	return nil
+}
+
+// ClusterMultiError is an error wrapping multiple validation errors returned
+// by Cluster.ValidateAll() if the designated constraints aren't met.
+type ClusterMultiError []error
+
+// Error returns a concatenation of all the error messages it wraps.
+func (m ClusterMultiError) Error() string {
+	var msgs []string
+	for _, err := range m {
+		msgs = append(msgs, err.Error())
+	}
+	return strings.Join(msgs, "; ")
+}
+
+// AllErrors returns a list of validation violation errors.
+func (m ClusterMultiError) AllErrors() []error { return m }
+
+// ClusterValidationError is the validation error returned by Cluster.Validate
+// if the designated constraints aren't met.
+type ClusterValidationError struct {
+	field  string
+	reason string
+	cause  error
+	key    bool
+}
+
+// Field function returns field value.
+func (e ClusterValidationError) Field() string { return e.field }
+
+// Reason function returns reason value.
+func (e ClusterValidationError) Reason() string { return e.reason }
+
+// Cause function returns cause value.
+func (e ClusterValidationError) Cause() error { return e.cause }
+
+// Key function returns key value.
+func (e ClusterValidationError) Key() bool { return e.key }
+
+// ErrorName returns error name.
+func (e ClusterValidationError) ErrorName() string { return "ClusterValidationError" }
+
+// Error satisfies the builtin error interface
+func (e ClusterValidationError) Error() string {
+	cause := ""
+	if e.cause != nil {
+		cause = fmt.Sprintf(" | caused by: %v", e.cause)
+	}
+
+	key := ""
+	if e.key {
+		key = "key for "
+	}
+
+	return fmt.Sprintf(
+		"invalid %sCluster.%s: %s%s",
+		key,
+		e.field,
+		e.reason,
+		cause)
+}
+
+var _ error = ClusterValidationError{}
+
+var _ interface {
+	Field() string
+	Reason() string
+	Key() bool
+	Cause() error
+	ErrorName() string
+} = ClusterValidationError{}
+
 // Validate checks the field values on Config with the rules defined in the
 // proto definition for this message. If any rules are violated, the first
 // error encountered is returned, or nil if there are no violations.
@@ -288,6 +397,48 @@ func (m *Config) validate(all bool) error {
 		}
 		oneofSourcePresent = true
 		// no validation rules for Address
+	case *Config_Cluster:
+		if v == nil {
+			err := ConfigValidationError{
+				field:  "Source",
+				reason: "oneof value cannot be a typed-nil",
+			}
+			if !all {
+				return err
+			}
+			errors = append(errors, err)
+		}
+		oneofSourcePresent = true
+
+		if all {
+			switch v := interface{}(m.GetCluster()).(type) {
+			case interface{ ValidateAll() error }:
+				if err := v.ValidateAll(); err != nil {
+					errors = append(errors, ConfigValidationError{
+						field:  "Cluster",
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			case interface{ Validate() error }:
+				if err := v.Validate(); err != nil {
+					errors = append(errors, ConfigValidationError{
+						field:  "Cluster",
+						reason: "embedded message failed validation",
+						cause:  err,
+					})
+				}
+			}
+		} else if v, ok := interface{}(m.GetCluster()).(interface{ Validate() error }); ok {
+			if err := v.Validate(); err != nil {
+				return ConfigValidationError{
+					field:  "Cluster",
+					reason: "embedded message failed validation",
+					cause:  err,
+				}
+			}
+		}
+
 	default:
 		_ = v // ensures v is used
 	}

@@ -9,15 +9,16 @@ The `limitCountRedis` plugin implements a global fixed window rate-limiting by s
 ## Attribute
 
 |       |         |
-|-------|---------|
+| ----- | ------- |
 | Type  | Traffic |
 | Order | Traffic |
 
 ## Configuration
 
 | Name                    | Type                                | Required | Validation                 | Description                                                                                                                        |
-|-------------------------|-------------------------------------|----------|----------------------------|------------------------------------------------------------------------------------------------------------------------------------|
+| ----------------------- | ----------------------------------- | -------- | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
 | address                 | string                              | True     |                            | Redis address                                                                                                                      |
+| cluster                 | Cluster                             | True     |                            | Redis cluster configuration. Only one of `address` and `cluster` can be configured.                                                |
 | rules                   | Rule                                | True     | min_items: 1, max_items: 8 | Rules                                                                                                                              |
 | failureModeDeny         | boolean                             | False    |                            | By default, if access to Redis fails, the request is allowed through. When true, it denies the request.                            |
 | enableLimitQuotaHeaders | boolean                             | False    |                            | Whether to set response headers related to rate-limiting quotas                                                                    |
@@ -34,13 +35,19 @@ Each rule's count is independent. Rate-limiting action is triggered once any rul
 * `x-ratelimit-remaining`: Represents the remaining quota of the rule with the least remaining quota, with a minimum value of `0`.
 * `x-ratelimit-reset`: Represents when the rule with the least remaining quota will reset, in seconds, e.g., `59`. Note that due to network latency and other factors, this value is not precise.
 
+### Cluster
+
+| Name      | Type     | Required | Validation   | Description   |
+| --------- | -------- | -------- | ------------ | ------------- |
+| addresses | string[] | True     | min_items: 1 | Redis address |
+
 ### Rule
 
-| Name       | Type                              | Required | Validation | Description                                                                                   |
-|------------|-----------------------------------|----------|------------|-----------------------------------------------------------------------------------------------|
-| timeWindow | [Duration](../../type#duration)   | True     | >= 1s      | Time window                                                                                   |
-| count      | uint32                            | True     | >= 1       | Count                                                                                         |
-| key        | string                            | False    |            | The key used for rate limiting. Defaults to client IP. Supports [CEL expressions](../../expr). |
+| Name       | Type                            | Required | Validation | Description                                                                                    |
+| ---------- | ------------------------------- | -------- | ---------- | ---------------------------------------------------------------------------------------------- |
+| timeWindow | [Duration](../../type#duration) | True     | >= 1s      | Time window                                                                                    |
+| count      | uint32                          | True     | >= 1       | Count                                                                                          |
+| key        | string                          | False    |            | The key used for rate limiting. Defaults to client IP. Supports [CEL expressions](../../expr). |
 
 Requests are counted by client IP by default. You can also configure `key` to use other fields. The configuration inside `key` will be interpreted as a CEL expression. For example, `key: request.header("x-key")` means using the request header `x-key` as the dimension for rate limiting. If the value corresponding to `key` is empty, it falls back to counting by client IP.
 

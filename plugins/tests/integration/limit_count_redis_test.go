@@ -413,3 +413,156 @@ func TestLimitCountRedisBadService(t *testing.T) {
 		})
 	}
 }
+
+func TestLimitCountRedisClusterMode(t *testing.T) {
+	dp, err := data_plane.StartDataPlane(t, nil)
+	if err != nil {
+		t.Fatalf("failed to start data plane: %v", err)
+		return
+	}
+	defer dp.Stop()
+
+	helper.WaitServiceUp(t, ":6400", "redis-cluster")
+
+	tests := []struct {
+		name   string
+		config *filtermanager.FilterManagerConfig
+		run    func(t *testing.T)
+	}{
+		{
+			name: "single rules",
+			config: control_plane.NewSinglePluinConfig("limitCountRedis", map[string]interface{}{
+				"cluster": map[string]interface{}{
+					"addresses": []interface{}{
+						"redis-cluster-0:6379",
+						"redis-cluster-1:6379",
+						"redis-cluster-2:6379",
+					},
+				},
+				"rules": []interface{}{
+					map[string]interface{}{
+						"count":      1,
+						"timeWindow": "1s",
+						"key":        `request.header("x-key")`,
+					},
+				},
+				"tls":           true,
+				"tlsSkipVerify": true,
+			}),
+			run: func(t *testing.T) {
+				hdr := http.Header{}
+				hdr.Add("x-key", "1")
+				resp, _ := dp.Head("/echo", hdr)
+				assert.Equal(t, 200, resp.StatusCode)
+				resp, _ = dp.Head("/echo", hdr)
+				assert.Equal(t, 429, resp.StatusCode)
+			},
+		},
+		{
+			name: "multiple rules",
+			config: control_plane.NewSinglePluinConfig("limitCountRedis", map[string]interface{}{
+				"cluster": map[string]interface{}{
+					"addresses": []interface{}{
+						"redis-cluster-0:6379",
+						"redis-cluster-1:6379",
+						"redis-cluster-2:6379",
+					},
+				},
+				"rules": []interface{}{
+					map[string]interface{}{
+						"count":      1,
+						"timeWindow": "1s",
+						"key":        `request.header("x-key")`,
+					},
+					map[string]interface{}{
+						"count":      2,
+						"timeWindow": "1s",
+					},
+					map[string]interface{}{
+						"count":      3,
+						"timeWindow": "1s",
+					},
+				},
+				"tls":           true,
+				"tlsSkipVerify": true,
+			}),
+			run: func(t *testing.T) {
+				hdr := http.Header{}
+				hdr.Add("x-key", "1")
+				resp, _ := dp.Head("/echo", hdr)
+				assert.Equal(t, 200, resp.StatusCode)
+				resp, _ = dp.Head("/echo", nil)
+				assert.Equal(t, 200, resp.StatusCode)
+
+				hdr2 := http.Header{}
+				hdr2.Add("x-key", "2")
+				resp, _ = dp.Head("/echo", hdr2)
+				assert.Equal(t, 429, resp.StatusCode)
+
+				time.Sleep(1 * time.Second)
+				resp, _ = dp.Head("/echo", nil)
+				assert.Equal(t, 200, resp.StatusCode)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			controlPlane.UseGoPluginConfig(tt.config, dp)
+			tt.run(t)
+		})
+	}
+}
+
+func TestLimitCountRedisClusterModeBadService(t *testing.T) {
+	dp, err := data_plane.StartDataPlane(t, &data_plane.Option{
+		NoErrorLogCheck: true,
+	})
+	if err != nil {
+		t.Fatalf("failed to start data plane: %v", err)
+		return
+	}
+	defer dp.Stop()
+
+	helper.WaitServiceUp(t, ":6400", "redis-cluster")
+
+	tests := []struct {
+		name   string
+		config *filtermanager.FilterManagerConfig
+		run    func(t *testing.T)
+	}{
+		{
+			name: "failure mode deny",
+			config: control_plane.NewSinglePluinConfig("limitCountRedis", map[string]interface{}{
+				"cluster": map[string]interface{}{
+					"addresses": []interface{}{
+						"redis-cluster-0:6379",
+						"redis-cluster-1:6379",
+						"redis-cluster-2:6379",
+					},
+				},
+				"rules": []interface{}{
+					map[string]interface{}{
+						"count":      1,
+						"timeWindow": "1s",
+						"key":        `request.header("x-key")`,
+					},
+				},
+				"failureModeDeny": true,
+			}),
+			run: func(t *testing.T) {
+				hdr := http.Header{}
+				hdr.Add("x-key", "1")
+				resp, _ := dp.Head("/echo", hdr)
+				assert.Equal(t, 500, resp.StatusCode)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			controlPlane.UseGoPluginConfig(tt.config, dp)
+			tt.run(t)
+		})
+	}
+}
