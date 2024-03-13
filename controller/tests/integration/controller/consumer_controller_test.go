@@ -17,7 +17,6 @@ package controller
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"path/filepath"
 	"time"
 
@@ -30,6 +29,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	mosniov1 "mosn.io/htnn/controller/api/v1"
+	"mosn.io/htnn/controller/internal/model"
 	"mosn.io/htnn/controller/tests/integration/helper"
 	"mosn.io/htnn/controller/tests/pkg"
 )
@@ -37,6 +37,11 @@ import (
 func mustReadConsumer(fn string, out *[]map[string]interface{}) {
 	fn = filepath.Join("testdata", "consumer", fn+".yml")
 	helper.MustReadInput(fn, out)
+}
+
+func listConsumerEnvoyFilters(ctx context.Context, c client.Client, envoyfilters *istiov1a3.EnvoyFilterList) error {
+	return c.List(ctx, envoyfilters,
+		client.MatchingLabels{model.LabelCreatedBy: "Consumer"})
 }
 
 var _ = Describe("Consumer controller", func() {
@@ -56,7 +61,7 @@ var _ = Describe("Consumer controller", func() {
 			}
 
 			var envoyfilters istiov1a3.EnvoyFilterList
-			if err := k8sClient.List(ctx, &envoyfilters); err == nil {
+			if err := listConsumerEnvoyFilters(ctx, k8sClient, &envoyfilters); err == nil {
 				for _, e := range envoyfilters.Items {
 					pkg.DeleteK8sResource(ctx, k8sClient, e)
 				}
@@ -100,31 +105,41 @@ var _ = Describe("Consumer controller", func() {
 			Expect(cs[0].Reason).To(Equal(string(mosniov1.ReasonAccepted)))
 
 			var envoyfilters istiov1a3.EnvoyFilterList
+			marshaledCfg := map[string]map[string]map[string]interface{}{}
 			Eventually(func() bool {
-				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
+				if err := listConsumerEnvoyFilters(ctx, k8sClient, &envoyfilters); err != nil {
 					return false
 				}
-				return len(envoyfilters.Items) == 1 && envoyfilters.Items[0].Namespace == "istio-system"
+				if len(envoyfilters.Items) != 1 {
+					return false
+				}
+				ef := envoyfilters.Items[0]
+				if ef.Namespace != "istio-system" || ef.Name != "htnn-consumer" {
+					return false
+				}
+
+				if len(ef.Spec.ConfigPatches) != 2 {
+					return false
+				}
+				cp := ef.Spec.ConfigPatches[0]
+				if cp.ApplyTo != istioapi.EnvoyFilter_EXTENSION_CONFIG {
+					return false
+				}
+
+				value := cp.Patch.Value.AsMap()
+				if value["name"] != "htnn-consumer" {
+					return false
+				}
+				typedCfg := value["typed_config"].(map[string]interface{})
+				pluginCfg := typedCfg["plugin_config"].(map[string]interface{})
+
+				b, _ := json.Marshal(pluginCfg["value"])
+				json.Unmarshal(b, &marshaledCfg)
+				// mapping is namespace -> name -> config
+				return marshaledCfg["default"]["spacewander"] != nil &&
+					marshaledCfg["default"]["unchanged"] != nil
 			}, timeout, interval).Should(BeTrue())
 
-			ef := envoyfilters.Items[0]
-			Expect(ef.Namespace).To(Equal("istio-system"))
-			Expect(ef.Name).To(Equal("htnn-consumer"))
-			fmt.Printf("AAA %+v\n", ef.Spec.ConfigPatches)
-			Expect(len(ef.Spec.ConfigPatches)).To(Equal(2))
-			cp := ef.Spec.ConfigPatches[0]
-			Expect(cp.ApplyTo).To(Equal(istioapi.EnvoyFilter_EXTENSION_CONFIG))
-			value := cp.Patch.Value.AsMap()
-			Expect(value["name"]).To(Equal("htnn-consumer"))
-			typedCfg := value["typed_config"].(map[string]interface{})
-			pluginCfg := typedCfg["plugin_config"].(map[string]interface{})
-
-			marshaledCfg := map[string]map[string]map[string]interface{}{}
-			b, _ := json.Marshal(pluginCfg["value"])
-			json.Unmarshal(b, &marshaledCfg)
-			// mapping is namespace -> name -> config
-			Expect(marshaledCfg["default"]["spacewander"]).ToNot(BeNil())
-			Expect(marshaledCfg["default"]["unchanged"]).ToNot(BeNil())
 			d := marshaledCfg["default"]["spacewander"]["d"].(string)
 			cfg := map[string]interface{}{}
 			err := json.Unmarshal([]byte(d), &cfg)
@@ -158,20 +173,22 @@ var _ = Describe("Consumer controller", func() {
 
 			// EnvoyFilter should be updated too
 			Eventually(func() bool {
-				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
+				if err := listConsumerEnvoyFilters(ctx, k8sClient, &envoyfilters); err != nil {
 					return false
 				}
-				return len(envoyfilters.Items) == 1
+				if len(envoyfilters.Items) != 1 {
+					return false
+				}
+				value := envoyfilters.Items[0].Spec.ConfigPatches[0].Patch.Value.AsMap()
+				typedCfg := value["typed_config"].(map[string]interface{})
+				pluginCfg := typedCfg["plugin_config"].(map[string]interface{})
+
+				marshaledCfg = map[string]map[string]map[string]interface{}{}
+				b, _ := json.Marshal(pluginCfg["value"])
+				json.Unmarshal(b, &marshaledCfg)
+				return marshaledCfg["default"]["spacewander"] == nil
 			}, timeout, interval).Should(BeTrue())
 
-			value = envoyfilters.Items[0].Spec.ConfigPatches[0].Patch.Value.AsMap()
-			typedCfg = value["typed_config"].(map[string]interface{})
-			pluginCfg = typedCfg["plugin_config"].(map[string]interface{})
-
-			marshaledCfg = map[string]map[string]map[string]interface{}{}
-			b, _ = json.Marshal(pluginCfg["value"])
-			json.Unmarshal(b, &marshaledCfg)
-			Expect(marshaledCfg["default"]["spacewander"]).To(BeNil())
 			Expect(marshaledCfg["default"]["unchanged"]).ToNot(BeNil())
 			Expect(marshaledCfg["default"]["unchanged"]["v"]).To(Equal(v))
 		})
@@ -188,7 +205,7 @@ var _ = Describe("Consumer controller", func() {
 			var envoyfilters istiov1a3.EnvoyFilterList
 			marshaledCfg := map[string]map[string]map[string]interface{}{}
 			Eventually(func() bool {
-				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
+				if err := listConsumerEnvoyFilters(ctx, k8sClient, &envoyfilters); err != nil {
 					return false
 				}
 				if len(envoyfilters.Items) != 1 {
@@ -221,6 +238,7 @@ var _ = Describe("Consumer controller", func() {
 			cfg := map[string]interface{}{}
 			err := json.Unmarshal([]byte(d), &cfg)
 			Expect(err).To(BeNil())
+			Expect(cfg["filters"]).ToNot(BeNil())
 			filter := cfg["filters"].(map[string]interface{})
 			Expect(filter["demo"]).ToNot(BeNil())
 		})

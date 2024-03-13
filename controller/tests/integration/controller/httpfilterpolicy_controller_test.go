@@ -32,6 +32,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	mosniov1 "mosn.io/htnn/controller/api/v1"
+	"mosn.io/htnn/controller/internal/model"
 	"mosn.io/htnn/controller/tests/integration/helper"
 	"mosn.io/htnn/controller/tests/pkg"
 )
@@ -39,6 +40,11 @@ import (
 func mustReadHTTPFilterPolicy(fn string, out *[]map[string]interface{}) {
 	fn = filepath.Join("testdata", "httpfilterpolicy", fn+".yml")
 	helper.MustReadInput(fn, out)
+}
+
+func listEnvoyFilters(ctx context.Context, c client.Client, envoyfilters *istiov1a3.EnvoyFilterList) error {
+	return c.List(ctx, envoyfilters,
+		client.MatchingLabels{model.LabelCreatedBy: "HTTPFilterPolicy"})
 }
 
 func attachGateway(ctx context.Context, httpRoute *gwapiv1.HTTPRoute, gwName string) {
@@ -178,7 +184,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 			}
 
 			var envoyfilters istiov1a3.EnvoyFilterList
-			if err := k8sClient.List(ctx, &envoyfilters); err == nil {
+			if err := listEnvoyFilters(ctx, k8sClient, &envoyfilters); err == nil {
 				for _, e := range envoyfilters.Items {
 					pkg.DeleteK8sResource(ctx, k8sClient, e)
 				}
@@ -216,7 +222,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 
 			var envoyfilters istiov1a3.EnvoyFilterList
 			Eventually(func() bool {
-				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
+				if err := listEnvoyFilters(ctx, k8sClient, &envoyfilters); err != nil {
 					return false
 				}
 				return len(envoyfilters.Items) == 2
@@ -253,7 +259,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 			err := k8sClient.Update(ctx, virtualService)
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(func() bool {
-				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
+				if err := listEnvoyFilters(ctx, k8sClient, &envoyfilters); err != nil {
 					return false
 				}
 				return len(envoyfilters.Items) == 1
@@ -264,7 +270,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 			err = k8sClient.Update(ctx, virtualService)
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(func() bool {
-				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
+				if err := listEnvoyFilters(ctx, k8sClient, &envoyfilters); err != nil {
 					return false
 				}
 				return len(envoyfilters.Items) == 2
@@ -273,7 +279,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 			// delete virtualservice referred by httpfilterpolicy
 			Expect(k8sClient.Delete(ctx, virtualService)).Should(Succeed())
 			Eventually(func() bool {
-				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
+				if err := listEnvoyFilters(ctx, k8sClient, &envoyfilters); err != nil {
 					return false
 				}
 				return len(envoyfilters.Items) == 1
@@ -304,7 +310,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 
 			var envoyfilters istiov1a3.EnvoyFilterList
 			Eventually(func() bool {
-				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
+				if err := listEnvoyFilters(ctx, k8sClient, &envoyfilters); err != nil {
 					return false
 				}
 				return len(envoyfilters.Items) == 2
@@ -320,7 +326,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 			err := k8sClient.Update(ctx, DefaultIstioGateway)
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(func() bool {
-				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
+				if err := listEnvoyFilters(ctx, k8sClient, &envoyfilters); err != nil {
 					return false
 				}
 				name := ""
@@ -335,7 +341,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 
 			Expect(k8sClient.Delete(ctx, DefaultIstioGateway)).Should(Succeed())
 			Eventually(func() bool {
-				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
+				if err := listEnvoyFilters(ctx, k8sClient, &envoyfilters); err != nil {
 					return false
 				}
 				return len(envoyfilters.Items) == 1
@@ -355,7 +361,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 
 			var envoyfilters istiov1a3.EnvoyFilterList
 			Eventually(func() bool {
-				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
+				if err := listEnvoyFilters(ctx, k8sClient, &envoyfilters); err != nil {
 					return false
 				}
 				return len(envoyfilters.Items) == 2
@@ -369,7 +375,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 
 			Expect(k8sClient.Delete(ctx, DefaultVirtualService)).Should(Succeed())
 			Eventually(func() bool {
-				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
+				if err := listEnvoyFilters(ctx, k8sClient, &envoyfilters); err != nil {
 					return false
 				}
 				return len(envoyfilters.Items) == 1
@@ -472,7 +478,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 
 			var envoyfilters istiov1a3.EnvoyFilterList
 			Eventually(func() bool {
-				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
+				if err := listEnvoyFilters(ctx, k8sClient, &envoyfilters); err != nil {
 					return false
 				}
 				return len(envoyfilters.Items) == 2
@@ -522,7 +528,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 
 			var envoyfilters istiov1a3.EnvoyFilterList
 			Eventually(func() bool {
-				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
+				if err := listEnvoyFilters(ctx, k8sClient, &envoyfilters); err != nil {
 					return false
 				}
 				return len(envoyfilters.Items) == 2
@@ -546,7 +552,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 			err := k8sClient.Update(ctx, virtualService)
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(func() bool {
-				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
+				if err := listEnvoyFilters(ctx, k8sClient, &envoyfilters); err != nil {
 					return false
 				}
 				return len(envoyfilters.Items) == 1
@@ -557,7 +563,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 			err = k8sClient.Update(ctx, virtualService)
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(func() bool {
-				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
+				if err := listEnvoyFilters(ctx, k8sClient, &envoyfilters); err != nil {
 					return false
 				}
 				return len(envoyfilters.Items) == 2
@@ -566,7 +572,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 			// delete virtualservice referred by httpfilterpolicy
 			Expect(k8sClient.Delete(ctx, virtualService)).Should(Succeed())
 			Eventually(func() bool {
-				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
+				if err := listEnvoyFilters(ctx, k8sClient, &envoyfilters); err != nil {
 					return false
 				}
 				return len(envoyfilters.Items) == 1
@@ -604,7 +610,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 			}
 
 			var envoyfilters istiov1a3.EnvoyFilterList
-			if err := k8sClient.List(ctx, &envoyfilters); err == nil {
+			if err := listEnvoyFilters(ctx, k8sClient, &envoyfilters); err == nil {
 				for _, e := range envoyfilters.Items {
 					pkg.DeleteK8sResource(ctx, k8sClient, e)
 				}
@@ -642,7 +648,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 
 			var envoyfilters istiov1a3.EnvoyFilterList
 			Eventually(func() bool {
-				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
+				if err := listEnvoyFilters(ctx, k8sClient, &envoyfilters); err != nil {
 					return false
 				}
 				return len(envoyfilters.Items) == 2
@@ -679,7 +685,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 			err := k8sClient.Update(ctx, httpRoute)
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(func() bool {
-				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
+				if err := listEnvoyFilters(ctx, k8sClient, &envoyfilters); err != nil {
 					return false
 				}
 				return len(envoyfilters.Items) == 1
@@ -690,7 +696,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 			err = k8sClient.Update(ctx, httpRoute)
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(func() bool {
-				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
+				if err := listEnvoyFilters(ctx, k8sClient, &envoyfilters); err != nil {
 					return false
 				}
 				return len(envoyfilters.Items) == 2
@@ -699,7 +705,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 			// delete httproute referred by httpfilterpolicy
 			Expect(k8sClient.Delete(ctx, httpRoute)).Should(Succeed())
 			Eventually(func() bool {
-				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
+				if err := listEnvoyFilters(ctx, k8sClient, &envoyfilters); err != nil {
 					return false
 				}
 				return len(envoyfilters.Items) == 1
@@ -735,7 +741,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 
 			var envoyfilters istiov1a3.EnvoyFilterList
 			Eventually(func() bool {
-				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
+				if err := listEnvoyFilters(ctx, k8sClient, &envoyfilters); err != nil {
 					return false
 				}
 				return len(envoyfilters.Items) == 2
@@ -751,7 +757,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 			err := k8sClient.Update(ctx, DefaultK8sGateway)
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(func() bool {
-				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
+				if err := listEnvoyFilters(ctx, k8sClient, &envoyfilters); err != nil {
 					return false
 				}
 				name := ""
@@ -766,7 +772,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 
 			Expect(k8sClient.Delete(ctx, DefaultK8sGateway)).Should(Succeed())
 			Eventually(func() bool {
-				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
+				if err := listEnvoyFilters(ctx, k8sClient, &envoyfilters); err != nil {
 					return false
 				}
 				return len(envoyfilters.Items) == 1

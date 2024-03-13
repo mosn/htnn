@@ -22,6 +22,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/avast/retry-go"
 	discovery "github.com/envoyproxy/go-control-plane/envoy/service/discovery/v3"
 	. "github.com/onsi/gomega"
 	"google.golang.org/grpc"
@@ -31,6 +32,7 @@ import (
 	istioapi "istio.io/api/networking/v1beta1"
 	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	istiov1b1 "istio.io/client-go/pkg/apis/networking/v1beta1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"mosn.io/htnn/controller/internal/config"
@@ -127,10 +129,20 @@ func (c *mcpClient) Handle() {
 				efs[ef.Name] = ef
 			}
 			if _, ok := efs[model.ConsumerEnvoyFilterName]; ok {
-				c.output.WriteEnvoyFilters(ctx, procession.ConfigSourceConsumer, efs)
+				c.writeEnvoyFiltersWithRetry(ctx, procession.ConfigSourceConsumer, efs)
+				delete(efs, model.ConsumerEnvoyFilterName)
 			} else {
-				c.output.WriteEnvoyFilters(ctx, procession.ConfigSourceHTTPFilterPolicy, efs)
+				// all EnvoyFilters don't contain consumer EnvoyFilter, remove it from k8s
+				var ef istiov1a3.EnvoyFilter
+				ns := config.RootNamespace()
+				err := c.k8sClient.Get(ctx, types.NamespacedName{Name: model.ConsumerEnvoyFilterName, Namespace: ns}, &ef)
+				if err == nil {
+					err = c.k8sClient.Delete(ctx, &ef)
+					Expect(err).NotTo(HaveOccurred())
+				}
 			}
+			// handle EnvoyFilters except the one from consumer
+			c.writeEnvoyFiltersWithRetry(ctx, procession.ConfigSourceHTTPFilterPolicy, efs)
 		case TypeUrlServiceEntry:
 			ses := map[string]*istioapi.ServiceEntry{}
 			for _, resource := range msg.Resources {
@@ -153,6 +165,8 @@ func (c *mcpClient) convertAnyToEnvoyFilter(res *anypb.Any) *istiov1a3.EnvoyFilt
 	ss := strings.Split(mcpRes.Metadata.Name, "/")
 	ef.SetNamespace(ss[0])
 	ef.SetName(ss[1])
+	ef.SetAnnotations(mcpRes.Metadata.Annotations)
+	ef.SetLabels(mcpRes.Metadata.Labels)
 	err = mcpRes.Body.UnmarshalTo(&ef.Spec)
 	Expect(err).NotTo(HaveOccurred())
 	return ef
@@ -170,6 +184,27 @@ func (c *mcpClient) convertAnyToServiceEntry(res *anypb.Any) *istiov1b1.ServiceE
 	err = mcpRes.Body.UnmarshalTo(&se.Spec)
 	Expect(err).NotTo(HaveOccurred())
 	return se
+}
+
+func (c *mcpClient) writeEnvoyFiltersWithRetry(ctx context.Context, src procession.ConfigSource, filters map[string]*istiov1a3.EnvoyFilter) {
+	err := retry.Do(
+		func() error {
+			// Here we simulate the reconcile when the write failed in k8s output
+			// We deepcopy the filters as they are regenerated in the reconcile process
+			efs := make(map[string]*istiov1a3.EnvoyFilter, len(filters))
+			for name, ef := range filters {
+				efs[name] = ef.DeepCopy()
+			}
+			return c.output.WriteEnvoyFilters(ctx, src, efs)
+		},
+		retry.RetryIf(func(err error) bool {
+			return true
+		}),
+		retry.Attempts(3),
+		// backoff delay
+		retry.Delay(500*time.Millisecond),
+	)
+	Expect(err).NotTo(HaveOccurred())
 }
 
 func (c *mcpClient) Close() {

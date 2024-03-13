@@ -92,7 +92,7 @@ func (o *mcpOutput) WriteEnvoyFilters(ctx context.Context, src procession.Config
 	o.envoyFilters.Range(func(_, value interface{}) bool {
 		efs := value.(map[string]*istiov1a3.EnvoyFilter)
 		for name, ef := range efs {
-			res, err := MarshalToMcpPb(name, &ef.Spec)
+			res, err := MarshalToMcpPb(name, &ef.ObjectMeta, &ef.Spec)
 			if err != nil {
 				o.logger.Error(err, "failed to marshal EnvoyFilter", "name", name)
 				// do not push partial configuration, this may cause service unavailable
@@ -113,7 +113,7 @@ func (o *mcpOutput) WriteEnvoyFilters(ctx context.Context, src procession.Config
 func (o *mcpOutput) WriteServiceEntries(ctx context.Context, src procession.ConfigSource, serviceEntries map[string]*istioapi.ServiceEntry) {
 	ress := make([]*anypb.Any, 0, len(serviceEntries))
 	for name, se := range serviceEntries {
-		res, err := MarshalToMcpPb(name, se)
+		res, err := MarshalToMcpPb(name, nil, se)
 		if err != nil {
 			o.logger.Error(err, "failed to marshal ServiceEntry", "name", name)
 			// do not push partial configuration, this may cause service unavailable

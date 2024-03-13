@@ -31,11 +31,12 @@ import (
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/anypb"
 	mcpapi "istio.io/api/mcp/v1alpha1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"mosn.io/htnn/controller/internal/config"
 )
 
-func MarshalToMcpPb(name string, src proto.Message) (*anypb.Any, error) {
+func MarshalToMcpPb(name string, meta *metav1.ObjectMeta, src proto.Message) (*anypb.Any, error) {
 	body := &anypb.Any{}
 	if err := anypb.MarshalFrom(body, src, proto.MarshalOptions{}); err != nil {
 		return nil, fmt.Errorf("failed to marshal mcp body: %w", err)
@@ -47,6 +48,11 @@ func MarshalToMcpPb(name string, src proto.Message) (*anypb.Any, error) {
 			Name: fmt.Sprintf("%s/%s", ns, name),
 		},
 		Body: body,
+	}
+
+	if meta != nil {
+		mcpRes.Metadata.Labels = meta.Labels
+		mcpRes.Metadata.Annotations = meta.Annotations
 	}
 
 	pb := &anypb.Any{}
@@ -149,10 +155,14 @@ func (srv *mcpServer) initSubscriberResource(sub *subscriber) {
 	defer srv.resourceLock.Unlock()
 
 	srv.logger.Info("sending initial conf to subscriber", "id", sub.id)
-	typeUrl := "networking.istio.io/v1beta1/ServiceEntry"
-	srv.send(sub, typeUrl, srv.serviceEntries)
-	typeUrl = "networking.istio.io/v1alpha3/EnvoyFilter"
-	srv.send(sub, typeUrl, srv.envoyFilters)
+	if len(srv.envoyFilters) > 0 {
+		typeUrl := "networking.istio.io/v1alpha3/EnvoyFilter"
+		srv.send(sub, typeUrl, srv.envoyFilters)
+	}
+	if len(srv.serviceEntries) > 0 {
+		typeUrl := "networking.istio.io/v1beta1/ServiceEntry"
+		srv.send(sub, typeUrl, srv.serviceEntries)
+	}
 }
 
 // Implement discovery.AggregatedDiscoveryServiceServer
