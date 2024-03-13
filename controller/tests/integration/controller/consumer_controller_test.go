@@ -17,6 +17,7 @@ package controller
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"path/filepath"
 	"time"
 
@@ -109,6 +110,7 @@ var _ = Describe("Consumer controller", func() {
 			ef := envoyfilters.Items[0]
 			Expect(ef.Namespace).To(Equal("istio-system"))
 			Expect(ef.Name).To(Equal("htnn-consumer"))
+			fmt.Printf("AAA %+v\n", ef.Spec.ConfigPatches)
 			Expect(len(ef.Spec.ConfigPatches)).To(Equal(2))
 			cp := ef.Spec.ConfigPatches[0]
 			Expect(cp.ApplyTo).To(Equal(istioapi.EnvoyFilter_EXTENSION_CONFIG))

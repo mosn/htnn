@@ -44,6 +44,7 @@ import (
 	"mosn.io/htnn/controller/internal/config"
 	"mosn.io/htnn/controller/internal/controller"
 	"mosn.io/htnn/controller/internal/registry"
+	"mosn.io/htnn/controller/tests/integration/helper"
 )
 
 // These tests use Ginkgo (BDD-style Go testing framework). Refer to
@@ -55,6 +56,7 @@ var testEnv *envtest.Environment
 var ctx context.Context
 var cancel context.CancelFunc
 var clientset *kubernetes.Clientset
+var outputSuite = helper.OutputSuite{}
 
 func ptrstr(s string) *string {
 	return &s
@@ -63,7 +65,7 @@ func ptrstr(s string) *string {
 func TestControllers(t *testing.T) {
 	RegisterFailHandler(Fail)
 
-	RunSpecs(t, "Controller Suite")
+	RunSpecs(t, fmt.Sprintf("Controller Suite [%s]", outputSuite.Name()))
 }
 
 var _ = BeforeSuite(func() {
@@ -129,20 +131,23 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).ToNot(HaveOccurred())
 
+	output := outputSuite.Get(ctx, k8sManager.GetClient())
 	err = (&controller.HTTPFilterPolicyReconciler{
 		Client: k8sManager.GetClient(),
 		Scheme: k8sManager.GetScheme(),
+		Output: output,
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
 	err = (&controller.ConsumerReconciler{
 		Client: k8sManager.GetClient(),
 		Scheme: k8sManager.GetScheme(),
+		Output: output,
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
 	registry.InitRegistryManager(&registry.RegistryManagerOption{
-		Client: k8sManager.GetClient(),
+		Output: output,
 	})
 	err = (&controller.ServiceRegistryReconciler{
 		Client: k8sManager.GetClient(),

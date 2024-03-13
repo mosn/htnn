@@ -36,17 +36,15 @@ import (
 	"mosn.io/htnn/controller/internal/config"
 	"mosn.io/htnn/controller/internal/istio"
 	"mosn.io/htnn/controller/internal/model"
+	"mosn.io/htnn/controller/pkg/procession"
 )
 
 // ConsumerReconciler reconciles a Consumer object
 type ConsumerReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
+	Output procession.Output
 }
-
-const (
-	ConsumerEnvoyFilterName = "htnn-consumer"
-)
 
 //+kubebuilder:rbac:groups=mosn.io,resources=consumers,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=mosn.io,resources=consumers/status,verbs=get;update;patch
@@ -68,7 +66,7 @@ func (r *ConsumerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 		return ctrl.Result{}, err
 	}
 
-	err = r.generateCustomResource(ctx, &logger, state)
+	err = r.generateCustomResource(ctx, state)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -120,7 +118,7 @@ func (r *ConsumerReconciler) consumersToState(ctx context.Context, logger *logr.
 	return state, nil
 }
 
-func (r *ConsumerReconciler) generateCustomResource(ctx context.Context, logger *logr.Logger, state *consumerReconcileState) error {
+func (r *ConsumerReconciler) generateCustomResource(ctx context.Context, state *consumerReconcileState) error {
 	consumerData := map[string]interface{}{}
 	for ns, consumers := range state.namespaceToConsumers {
 		data := make(map[string]interface{}, len(consumers))
@@ -137,49 +135,13 @@ func (r *ConsumerReconciler) generateCustomResource(ctx context.Context, logger 
 
 	ef := istio.GenerateConsumers(consumerData)
 	ef.Namespace = config.RootNamespace()
-	ef.Name = ConsumerEnvoyFilterName
+	ef.Name = model.ConsumerEnvoyFilterName
 	if ef.Labels == nil {
 		ef.Labels = map[string]string{}
 	}
 	ef.Labels[model.LabelCreatedBy] = "Consumer"
-
-	nsName := types.NamespacedName{Name: ef.Name, Namespace: ef.Namespace}
-	var envoyfilters istiov1a3.EnvoyFilterList
-	if err := r.List(ctx, &envoyfilters, client.MatchingLabels{model.LabelCreatedBy: "Consumer"}); err != nil {
-		return fmt.Errorf("failed to list EnvoyFilter: %w", err)
-	}
-
-	var envoyfilter *istiov1a3.EnvoyFilter
-	for _, e := range envoyfilters.Items {
-		if e.Namespace != nsName.Namespace || e.Name != nsName.Name {
-			logger.Info("delete EnvoyFilter", "name", e.Name, "namespace", e.Namespace)
-
-			if err := r.Delete(ctx, e); err != nil {
-				return fmt.Errorf("failed to delete EnvoyFilter: %w, namespacedName: %v",
-					err, types.NamespacedName{Name: e.Name, Namespace: e.Namespace})
-			}
-		} else {
-			envoyfilter = e
-		}
-	}
-
-	if envoyfilter == nil {
-		logger.Info("create EnvoyFilter", "name", ef.Name, "namespace", ef.Namespace)
-
-		if err := r.Create(ctx, ef.DeepCopy()); err != nil {
-			return fmt.Errorf("failed to create EnvoyFilter: %w, namespacedName: %v", err, nsName)
-		}
-	} else {
-		logger.Info("update EnvoyFilter", "name", ef.Name, "namespace", ef.Namespace)
-
-		ef = ef.DeepCopy()
-		ef.SetResourceVersion(envoyfilter.ResourceVersion)
-		if err := r.Update(ctx, ef); err != nil {
-			return fmt.Errorf("failed to update EnvoyFilter: %w, namespacedName: %v", err, nsName)
-		}
-	}
-
-	return nil
+	return r.Output.WriteEnvoyFilters(ctx, procession.ConfigSourceConsumer,
+		map[string]*istiov1a3.EnvoyFilter{model.ConsumerEnvoyFilterName: ef})
 }
 
 func (r *ConsumerReconciler) updateConsumers(ctx context.Context, consumers *mosniov1.ConsumerList) error {

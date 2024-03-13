@@ -12,25 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package config
+//go:build !mcp_output
+
+package helper
 
 import (
-	"testing"
+	"context"
 
-	"github.com/spf13/viper"
-	"github.com/stretchr/testify/assert"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	controlleroutput "mosn.io/htnn/controller/internal/controller/output"
+	"mosn.io/htnn/controller/pkg/procession"
 )
 
-func TestInit(t *testing.T) {
-	Init()
+type OutputSuite struct {
+}
 
-	// Check default values
-	assert.Equal(t, "istio-system", RootNamespace())
-	assert.Equal(t, ":15110", McpServerListenAddress())
+func (o *OutputSuite) Name() string {
+	return "k8s"
+}
 
-	viper.AddConfigPath("./testdata")
-	Init()
-
-	assert.Equal(t, "htnn", RootNamespace())
-	assert.Equal(t, ":9989", McpServerListenAddress())
+// nolint: contextcheck
+func (o *OutputSuite) Get(_ context.Context, c client.Client) procession.Output {
+	return controlleroutput.NewK8sOutput(c)
 }

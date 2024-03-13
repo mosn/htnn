@@ -43,6 +43,7 @@ import (
 	mosniov1 "mosn.io/htnn/controller/api/v1"
 	"mosn.io/htnn/controller/internal/config"
 	"mosn.io/htnn/controller/internal/controller"
+	controlleroutput "mosn.io/htnn/controller/internal/controller/output"
 	"mosn.io/htnn/controller/internal/registry"
 )
 
@@ -125,8 +126,9 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).ToNot(HaveOccurred())
 
+	output := controlleroutput.NewK8sOutput(k8sManager.GetClient())
 	registry.InitRegistryManager(&registry.RegistryManagerOption{
-		Client: k8sManager.GetClient(),
+		Output: output,
 	})
 	err = (&controller.ServiceRegistryReconciler{
 		Client: k8sManager.GetClient(),

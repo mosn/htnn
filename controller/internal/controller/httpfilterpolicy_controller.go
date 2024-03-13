@@ -25,8 +25,6 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
-	"google.golang.org/protobuf/proto"
-	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	istiov1b1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/fields"
@@ -43,17 +41,17 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	mosniov1 "mosn.io/htnn/controller/api/v1"
-	"mosn.io/htnn/controller/internal/config"
 	"mosn.io/htnn/controller/internal/k8s"
 	"mosn.io/htnn/controller/internal/metrics"
-	"mosn.io/htnn/controller/internal/model"
 	"mosn.io/htnn/controller/internal/translation"
+	"mosn.io/htnn/controller/pkg/procession"
 )
 
 // HTTPFilterPolicyReconciler reconciles a HTTPFilterPolicy object
 type HTTPFilterPolicyReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
+	Output procession.Output
 
 	istioGatewayIndexer *IstioGatewayIndexer
 	k8sGatewayIndexer   *K8sGatewayIndexer
@@ -102,7 +100,7 @@ func (r *HTTPFilterPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	// We can add a configured concurrency to write to API server in parallel, if
 	// the performance is not good. Note that the API server probably has rate limit.
 
-	err = r.translationStateToCustomResource(ctx, &logger, finalState)
+	err = r.translationStateToCustomResource(ctx, finalState)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -348,65 +346,11 @@ func (r *HTTPFilterPolicyReconciler) policyToTranslationState(ctx context.Contex
 	return initState, nil
 }
 
-func fillEnvoyFilterMeta(ef *istiov1a3.EnvoyFilter) {
-	ef.Namespace = config.RootNamespace()
-	if ef.Labels == nil {
-		ef.Labels = map[string]string{}
-	}
-	ef.Labels[model.LabelCreatedBy] = "HTTPFilterPolicy"
-}
-
-func (r *HTTPFilterPolicyReconciler) translationStateToCustomResource(ctx context.Context, logger *logr.Logger,
+func (r *HTTPFilterPolicyReconciler) translationStateToCustomResource(ctx context.Context,
 	finalState *translation.FinalState) error {
 
-	var envoyfilters istiov1a3.EnvoyFilterList
-	if err := r.List(ctx, &envoyfilters,
-		client.MatchingLabels{model.LabelCreatedBy: "HTTPFilterPolicy"},
-	); err != nil {
-		return fmt.Errorf("failed to list EnvoyFilter: %w", err)
-	}
-
-	preEnvoyFilterMap := make(map[string]*istiov1a3.EnvoyFilter, len(envoyfilters.Items))
-	for _, e := range envoyfilters.Items {
-		if _, ok := finalState.EnvoyFilters[e.Name]; !ok || e.Namespace != config.RootNamespace() {
-			logger.Info("delete EnvoyFilter", "name", e.Name, "namespace", e.Namespace)
-			if err := r.Delete(ctx, e); err != nil {
-				return fmt.Errorf("failed to delete EnvoyFilter: %w, namespacedName: %v",
-					err, types.NamespacedName{Name: e.Name, Namespace: e.Namespace})
-			}
-		} else {
-			preEnvoyFilterMap[e.Name] = e
-		}
-	}
-
-	for _, ef := range finalState.EnvoyFilters {
-		envoyfilter, ok := preEnvoyFilterMap[ef.Name]
-		if !ok {
-			logger.Info("create EnvoyFilter", "name", ef.Name, "namespace", ef.Namespace)
-			fillEnvoyFilterMeta(ef)
-
-			if err := r.Create(ctx, ef); err != nil {
-				nsName := types.NamespacedName{Name: ef.Name, Namespace: ef.Namespace}
-				return fmt.Errorf("failed to create EnvoyFilter: %w, namespacedName: %v", err, nsName)
-			}
-
-		} else {
-			if proto.Equal(&envoyfilter.Spec, &ef.Spec) {
-				continue
-			}
-
-			logger.Info("update EnvoyFilter", "name", ef.Name, "namespace", ef.Namespace)
-			fillEnvoyFilterMeta(ef)
-			// Address metadata.resourceVersion: Invalid value: 0x0 error
-			ef.SetResourceVersion(envoyfilter.ResourceVersion)
-			if err := r.Update(ctx, ef); err != nil {
-				nsName := types.NamespacedName{Name: ef.Name, Namespace: ef.Namespace}
-				return fmt.Errorf("failed to update EnvoyFilter: %w, namespacedName: %v", err, nsName)
-			}
-		}
-	}
-
-	return nil
+	generatedEnvoyFilters := finalState.EnvoyFilters
+	return r.Output.WriteEnvoyFilters(ctx, procession.ConfigSourceHTTPFilterPolicy, generatedEnvoyFilters)
 }
 
 func (r *HTTPFilterPolicyReconciler) updatePolicies(ctx context.Context,

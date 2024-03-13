@@ -1,2 +1,4 @@
 istio:
   rootNamespace: htnn
+mcp:
+  listen: ":9989"

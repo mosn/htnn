@@ -50,6 +50,7 @@ import (
 	mosniov1 "mosn.io/htnn/controller/api/v1"
 	"mosn.io/htnn/controller/internal/config"
 	"mosn.io/htnn/controller/internal/controller"
+	controlleroutput "mosn.io/htnn/controller/internal/controller/output"
 )
 
 var cfg *rest.Config
@@ -178,9 +179,13 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).ToNot(HaveOccurred())
 
+	output, err := controlleroutput.NewMcpOutput(ctx)
+	Expect(err).ToNot(HaveOccurred())
+
 	httpFilterPolicyReconciler = &controller.HTTPFilterPolicyReconciler{
 		Client: k8sManager.GetClient(),
 		Scheme: k8sManager.GetScheme(),
+		Output: output,
 	}
 	err = httpFilterPolicyReconciler.SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())

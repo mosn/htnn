@@ -24,6 +24,13 @@ var (
 	logger = log.DefaultLogger.WithName("config")
 )
 
+// istio's xds server listen address plus 100
+var mcpServerListenAddress = ":15110"
+
+func McpServerListenAddress() string {
+	return mcpServerListenAddress
+}
+
 func GoSoPath() string {
 	return "/etc/libgolang.so"
 }
@@ -53,5 +60,10 @@ func Init() {
 	cfgRootNamespace := viper.GetString("istio.rootNamespace")
 	if cfgRootNamespace != "" {
 		rootNamespace = cfgRootNamespace
+	}
+
+	addr := viper.GetString("mcp.listen")
+	if addr != "" {
+		mcpServerListenAddress = addr
 	}
 }
