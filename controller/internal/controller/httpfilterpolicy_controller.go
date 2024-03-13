@@ -112,7 +112,7 @@ func (r *HTTPFilterPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 }
 
 func (r *HTTPFilterPolicyReconciler) resolveVirtualService(ctx context.Context, logger *logr.Logger,
-	policy *mosniov1.HTTPFilterPolicy, initState *translation.InitState, gwIdx map[string][]*mosniov1.HTTPFilterPolicy) (bool, error) {
+	policy *mosniov1.HTTPFilterPolicy, initState *translation.InitState, gwIdx map[string][]*mosniov1.HTTPFilterPolicy) error {
 
 	ref := policy.Spec.TargetRef
 	nsName := types.NamespacedName{Name: string(ref.Name), Namespace: policy.Namespace}
@@ -120,11 +120,11 @@ func (r *HTTPFilterPolicyReconciler) resolveVirtualService(ctx context.Context, 
 	err := r.Get(ctx, nsName, &virtualService)
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
-			return false, fmt.Errorf("failed to get VirtualService: %w, NamespacedName: %v", err, nsName)
+			return fmt.Errorf("failed to get VirtualService: %w, NamespacedName: %v", err, nsName)
 		}
 
 		policy.SetAccepted(gwapiv1a2.PolicyReasonTargetNotFound)
-		return false, nil
+		return nil
 	}
 
 	err = mosniov1.ValidateVirtualService(&virtualService)
@@ -132,7 +132,7 @@ func (r *HTTPFilterPolicyReconciler) resolveVirtualService(ctx context.Context, 
 		logger.Info("unsupported VirtualService", "name", virtualService.Name, "namespace", virtualService.Namespace, "reason", err.Error())
 		// treat invalid target resource as not found
 		policy.SetAccepted(gwapiv1a2.PolicyReasonTargetNotFound, err.Error())
-		return false, nil
+		return nil
 	}
 
 	if ref.SectionName != nil {
@@ -146,8 +146,8 @@ func (r *HTTPFilterPolicyReconciler) resolveVirtualService(ctx context.Context, 
 		}
 
 		if !found {
-			policy.SetAccepted(gwapiv1a2.PolicyReasonTargetNotFound)
-			return false, nil
+			policy.SetAccepted(gwapiv1a2.PolicyReasonTargetNotFound, fmt.Sprintf("sectionName %s not found", name))
+			return nil
 		}
 	}
 
@@ -177,7 +177,7 @@ func (r *HTTPFilterPolicyReconciler) resolveVirtualService(ctx context.Context, 
 			err = r.Get(ctx, types.NamespacedName{Name: gw, Namespace: virtualService.Namespace}, &gateway)
 			if err != nil {
 				if !apierrors.IsNotFound(err) {
-					return false, err
+					return err
 				}
 				logger.Info("gateway not found", "gateway", gw,
 					"name", virtualService.Name, "namespace", virtualService.Namespace)
@@ -201,19 +201,22 @@ func (r *HTTPFilterPolicyReconciler) resolveVirtualService(ctx context.Context, 
 
 	if accepted {
 		initState.AddPolicyForVirtualService(policy, &virtualService, gws)
+		policy.SetAccepted(gwapiv1a2.PolicyReasonAccepted)
 		// For reducing the write to K8S API server and reconciliation,
 		// we don't add `gateway.networking.k8s.io/PolicyAffected` to the affected resource.
 		// If people want to check whether the VirtualService/HTTPRoute is affected, they can
 		// check whether there is an EnvoyFilter named `httn-h-$host` (the `$host` is one of the resources' hosts).
 		// For wildcard host, the `*.` is converted to `-`. For example, `*.example.com` results in
 		// EnvoyFilter name `htnn-h--example.com`, and `www.example.com` results in `httn-h-www.example.com`.
+	} else {
+		policy.SetAccepted(gwapiv1a2.PolicyReasonTargetNotFound, "invalid target resource")
 	}
 
-	return accepted, nil
+	return nil
 }
 
 func (r *HTTPFilterPolicyReconciler) resolveHTTPRoute(ctx context.Context, logger *logr.Logger,
-	policy *mosniov1.HTTPFilterPolicy, initState *translation.InitState, gwIdx map[string][]*mosniov1.HTTPFilterPolicy) (bool, error) {
+	policy *mosniov1.HTTPFilterPolicy, initState *translation.InitState, gwIdx map[string][]*mosniov1.HTTPFilterPolicy) error {
 
 	ref := policy.Spec.TargetRef
 	nsName := types.NamespacedName{Name: string(ref.Name), Namespace: policy.Namespace}
@@ -221,11 +224,11 @@ func (r *HTTPFilterPolicyReconciler) resolveHTTPRoute(ctx context.Context, logge
 	err := r.Get(ctx, nsName, &route)
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
-			return false, fmt.Errorf("failed to get HTTPRoute: %w, NamespacedName: %v", err, nsName)
+			return fmt.Errorf("failed to get HTTPRoute: %w, NamespacedName: %v", err, nsName)
 		}
 
 		policy.SetAccepted(gwapiv1a2.PolicyReasonTargetNotFound)
-		return false, nil
+		return nil
 	}
 
 	accepted := false
@@ -258,7 +261,7 @@ func (r *HTTPFilterPolicyReconciler) resolveHTTPRoute(ctx context.Context, logge
 			err = r.Get(ctx, types.NamespacedName{Name: string(ref.Name), Namespace: ns}, &gateway)
 			if err != nil {
 				if !apierrors.IsNotFound(err) {
-					return false, err
+					return err
 				}
 				logger.Info("gateway not found", "gateway", ref,
 					"name", route.Name, "namespace", route.Namespace)
@@ -279,10 +282,12 @@ func (r *HTTPFilterPolicyReconciler) resolveHTTPRoute(ctx context.Context, logge
 		// But we don't know which listerner is referenced by a specific HTTPRoute.
 		// So we have to keep the whole gateway and filter the listener by ourselves.
 		initState.AddPolicyForHTTPRoute(policy, &route, gws)
-
+		policy.SetAccepted(gwapiv1a2.PolicyReasonAccepted)
+	} else {
+		policy.SetAccepted(gwapiv1a2.PolicyReasonTargetNotFound, "invalid target resource")
 	}
 
-	return accepted, nil
+	return nil
 }
 
 func (r *HTTPFilterPolicyReconciler) policyToTranslationState(ctx context.Context, logger *logr.Logger,
@@ -326,21 +331,14 @@ func (r *HTTPFilterPolicyReconciler) policyToTranslationState(ctx context.Contex
 			continue
 		}
 
-		accepted := false
 		var err error
 		if ref.Group == "networking.istio.io" && ref.Kind == "VirtualService" {
-			accepted, err = r.resolveVirtualService(ctx, logger, policy, initState, istioGwIdx)
+			err = r.resolveVirtualService(ctx, logger, policy, initState, istioGwIdx)
 		} else if ref.Group == "gateway.networking.k8s.io" && ref.Kind == "HTTPRoute" {
-			accepted, err = r.resolveHTTPRoute(ctx, logger, policy, initState, k8sGwIdx)
+			err = r.resolveHTTPRoute(ctx, logger, policy, initState, k8sGwIdx)
 		}
 		if err != nil {
 			return nil, err
-		}
-
-		if accepted {
-			policy.SetAccepted(gwapiv1a2.PolicyReasonAccepted)
-		} else {
-			policy.SetAccepted(gwapiv1a2.PolicyReasonTargetNotFound, "invalid target resource")
 		}
 	}
 
