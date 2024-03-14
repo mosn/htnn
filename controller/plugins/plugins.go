@@ -17,6 +17,7 @@ package plugins
 import (
 	_ "mosn.io/htnn/controller/plugins/bandwidth_limit"
 	_ "mosn.io/htnn/controller/plugins/buffer"
+	_ "mosn.io/htnn/controller/plugins/cors"
 	_ "mosn.io/htnn/controller/plugins/fault"
 	_ "mosn.io/htnn/controller/plugins/local_ratelimit"
 	_ "mosn.io/htnn/controller/plugins/lua"
