@@ -6,4 +6,5 @@
   spec:
     type: nacos
     config:
-      serverUrl: http://0.0.0.0:8848
+      serverUrl: http://127.0.0.1:8848
+      serviceRefreshInterval: 1s

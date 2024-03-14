@@ -18,6 +18,7 @@ package helper
 
 import (
 	"context"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -43,6 +44,8 @@ func (o *OutputSuite) Get(ctx context.Context, c client.Client) procession.Outpu
 
 		mc := NewMcpClient(c)
 		defer mc.Close()
+		// add a little sleep to simulate a client starts after server gets new conf
+		time.Sleep(5 * time.Second)
 		mc.Init()
 		mc.Handle()
 	}()

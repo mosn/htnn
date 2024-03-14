@@ -16,15 +16,21 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
+	"net/http"
+	"net/url"
 	"path/filepath"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	istiov1b1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	mosniov1 "mosn.io/htnn/controller/api/v1"
+	"mosn.io/htnn/controller/internal/model"
 	"mosn.io/htnn/controller/tests/integration/helper"
 	"mosn.io/htnn/controller/tests/pkg"
 )
@@ -32,6 +38,54 @@ import (
 func mustReadServiceRegistry(fn string, out *[]map[string]interface{}) {
 	fn = filepath.Join("testdata", "serviceregistry", fn+".yml")
 	helper.MustReadInput(fn, out)
+}
+
+func listServiceEntries() []*istiov1b1.ServiceEntry {
+	var entries istiov1b1.ServiceEntryList
+	Expect(k8sClient.List(ctx, &entries, client.MatchingLabels{model.LabelCreatedBy: "ServiceRegistry"})).Should(Succeed())
+	return entries.Items
+}
+
+func registerNacosInstance(nacosPort string, name string, ip string, port string, metadata map[string]any) {
+	nacosServerURL := "http://0.0.0.0:" + nacosPort
+
+	params := url.Values{}
+	params.Set("serviceName", name)
+	params.Set("ip", ip)
+	params.Set("port", port)
+
+	if metadata != nil {
+		b, err := json.Marshal(metadata)
+		Expect(err).To(BeNil())
+		params.Set("metadata", string(b))
+	}
+
+	fullURL := nacosServerURL + "/nacos/v1/ns/instance?" + params.Encode()
+
+	req, err := http.NewRequest("POST", fullURL, strings.NewReader(""))
+	Expect(err).To(BeNil())
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	Expect(err).To(BeNil())
+	Expect(resp.StatusCode).To(Equal(200))
+}
+
+func deregisterNacosInstance(nacosPort string, name string, ip string, port string) {
+	nacosServerURL := "http://0.0.0.0:" + nacosPort
+
+	params := url.Values{}
+	params.Set("serviceName", name)
+	params.Set("ip", ip)
+	params.Set("port", port)
+
+	fullURL := nacosServerURL + "/nacos/v1/ns/instance?" + params.Encode()
+
+	req, err := http.NewRequest("DELETE", fullURL, nil)
+	Expect(err).To(BeNil())
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	Expect(err).To(BeNil())
+	Expect(resp.StatusCode).To(Equal(200))
 }
 
 var _ = Describe("ServiceRegistry controller", func() {
@@ -112,6 +166,19 @@ var _ = Describe("ServiceRegistry controller", func() {
 			Expect(cs[0].Type).To(Equal(string(mosniov1.ConditionAccepted)))
 			Expect(cs[0].Reason).To(Equal(string(mosniov1.ReasonAccepted)))
 
+			// This part of code is a little repeated with the one in registries integration tests.
+			// We add this code to ensure the basic feature is working.
+			registerNacosInstance("8848", "test", "1.2.3.4", "8080", nil)
+
+			var entries []*istiov1b1.ServiceEntry
+			Eventually(func() bool {
+				entries = listServiceEntries()
+				return len(entries) == 1
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(entries[0].Name).To(Equal("test.default-group.public.earth.nacos"))
+			Expect(entries[0].Spec.GetHosts()).To(Equal([]string{"test.default-group.public.earth.nacos"}))
+
 			// to invalid
 			base := client.MergeFrom(r.DeepCopy())
 			r.Spec.Config.Raw = []byte(`{}`)
@@ -128,6 +195,17 @@ var _ = Describe("ServiceRegistry controller", func() {
 					}
 				}
 				return false
+			}, timeout, interval).Should(BeTrue())
+
+			deregisterNacosInstance("8848", "test", "1.2.3.4", "8080")
+			sr := &mosniov1.ServiceRegistry{}
+			sr.SetName("earth")
+			sr.SetNamespace("default")
+			Expect(k8sClient.Delete(context.Background(), sr)).Should(Succeed())
+
+			Eventually(func() bool {
+				entries = listServiceEntries()
+				return len(entries) == 0
 			}, timeout, interval).Should(BeTrue())
 		})
 	})

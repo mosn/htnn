@@ -154,7 +154,8 @@ func (srv *mcpServer) initSubscriberResource(sub *subscriber) {
 	srv.resourceLock.Lock()
 	defer srv.resourceLock.Unlock()
 
-	srv.logger.Info("sending initial conf to subscriber", "id", sub.id)
+	srv.logger.Info("sending initial conf to subscriber", "id", sub.id,
+		"EnvoyFilter", len(srv.envoyFilters), "ServiceEntry", len(srv.serviceEntries))
 	if len(srv.envoyFilters) > 0 {
 		typeUrl := "networking.istio.io/v1alpha3/EnvoyFilter"
 		srv.send(sub, typeUrl, srv.envoyFilters)

@@ -44,6 +44,7 @@ func (store *serviceEntryStore) Update(service string, se *pkgRegistry.ServiceEn
 	store.lock.Lock()
 	defer store.lock.Unlock()
 
+	logger.Info("service entry store update", "service", service, "entry", &se.ServiceEntry)
 	ctx := context.Background()
 	store.entries[service] = &se.ServiceEntry
 
@@ -58,6 +59,7 @@ func (store *serviceEntryStore) Delete(service string) {
 		return
 	}
 
+	logger.Info("service entry store delete", "service", service)
 	delete(store.entries, service)
 	store.output.WriteServiceEntries(context.Background(), procession.ConfigSourceServiceRegistry, store.entries)
 }
