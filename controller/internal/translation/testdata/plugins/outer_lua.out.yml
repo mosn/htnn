@@ -33,7 +33,6 @@
     configPatches:
     - applyTo: HTTP_FILTER
       match:
-        context: GATEWAY
         listener:
           filterChain:
             filter:

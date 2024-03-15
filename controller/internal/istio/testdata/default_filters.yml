@@ -5,7 +5,6 @@
     configPatches:
     - applyTo: HTTP_FILTER
       match:
-        context: GATEWAY
         listener:
           filterChain:
             filter:
@@ -24,7 +23,6 @@
             plugin_name: fm
     - applyTo: HTTP_FILTER
       match:
-        context: GATEWAY
         listener:
           filterChain:
             filter:
@@ -41,7 +39,6 @@
             statPrefix: http_local_rate_limiter
     - applyTo: HTTP_FILTER
       match:
-        context: GATEWAY
         listener:
           filterChain:
             filter:
@@ -58,7 +55,6 @@
             statPrefix: http_local_rate_limiter
     - applyTo: HTTP_FILTER
       match:
-        context: GATEWAY
         listener:
           filterChain:
             filter:
@@ -75,7 +71,6 @@
             statPrefix: http_local_rate_limiter
     - applyTo: HTTP_FILTER
       match:
-        context: GATEWAY
         listener:
           filterChain:
             filter:
