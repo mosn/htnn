@@ -48,7 +48,7 @@ func (store *serviceEntryStore) Update(service string, se *pkgRegistry.ServiceEn
 	ctx := context.Background()
 	store.entries[service] = &se.ServiceEntry
 
-	store.output.WriteServiceEntries(ctx, procession.ConfigSourceServiceRegistry, store.entries)
+	store.output.FromServiceRegistry(ctx, store.entries)
 }
 
 func (store *serviceEntryStore) Delete(service string) {
@@ -61,5 +61,5 @@ func (store *serviceEntryStore) Delete(service string) {
 
 	logger.Info("service entry store delete", "service", service)
 	delete(store.entries, service)
-	store.output.WriteServiceEntries(context.Background(), procession.ConfigSourceServiceRegistry, store.entries)
+	store.output.FromServiceRegistry(context.Background(), store.entries)
 }

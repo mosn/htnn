@@ -21,20 +21,11 @@ import (
 	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 )
 
-// ConfigSource marks the source of the istio configuration
-type ConfigSource int
-
-const (
-	ConfigSourceHTTPFilterPolicy ConfigSource = iota
-	ConfigSourceConsumer
-	ConfigSourceServiceRegistry
-)
-
 type Output interface {
-	// WriteEnvoyFilters writes the generated EnvoyFilters to the output
-	WriteEnvoyFilters(ctx context.Context, src ConfigSource, filters map[string]*istiov1a3.EnvoyFilter) error
-	// WriteServiceEntries writes the generated ServiceEntries to the output. Unlike the EnvoyFilter generators,
-	// the ServiceEntry generators assume the write already succeed, and don't retry on error,
+	FromHTTPFilterPolicy(ctx context.Context, envoyFilters map[string]*istiov1a3.EnvoyFilter) error
+	FromConsumer(ctx context.Context, envoyFilter *istiov1a3.EnvoyFilter) error
+	// FromServiceRegistry writes the generated ServiceEntries to the output. Unlike the other generators,
+	// it assumes the write already succeed, and don't retry on error,
 	// so the output should handle the retry by themselves. That's why the error is not returned here.
-	WriteServiceEntries(ctx context.Context, src ConfigSource, serviceEntries map[string]*istioapi.ServiceEntry)
+	FromServiceRegistry(ctx context.Context, serviceEntries map[string]*istioapi.ServiceEntry)
 }

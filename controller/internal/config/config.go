@@ -25,7 +25,7 @@ var (
 )
 
 // istio's xds server listen address plus 100
-var mcpServerListenAddress = ":15110"
+var mcpServerListenAddress = "127.0.0.1:15110"
 
 func McpServerListenAddress() string {
 	return mcpServerListenAddress

@@ -26,7 +26,7 @@ func TestInit(t *testing.T) {
 
 	// Check default values
 	assert.Equal(t, "istio-system", RootNamespace())
-	assert.Equal(t, ":15110", McpServerListenAddress())
+	assert.Equal(t, "127.0.0.1:15110", McpServerListenAddress())
 
 	viper.AddConfigPath("./testdata")
 	Init()

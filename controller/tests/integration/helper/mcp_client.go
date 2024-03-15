@@ -129,7 +129,7 @@ func (c *mcpClient) Handle() {
 				efs[ef.Name] = ef
 			}
 			if _, ok := efs[model.ConsumerEnvoyFilterName]; ok {
-				c.writeEnvoyFiltersWithRetry(ctx, procession.ConfigSourceConsumer, efs)
+				c.writeEnvoyFiltersWithRetry(ctx, false, efs)
 				delete(efs, model.ConsumerEnvoyFilterName)
 			} else {
 				// all EnvoyFilters don't contain consumer EnvoyFilter, remove it from k8s
@@ -142,14 +142,14 @@ func (c *mcpClient) Handle() {
 				}
 			}
 			// handle EnvoyFilters except the one from consumer
-			c.writeEnvoyFiltersWithRetry(ctx, procession.ConfigSourceHTTPFilterPolicy, efs)
+			c.writeEnvoyFiltersWithRetry(ctx, true, efs)
 		case TypeUrlServiceEntry:
 			ses := map[string]*istioapi.ServiceEntry{}
 			for _, resource := range msg.Resources {
 				se := c.convertAnyToServiceEntry(resource)
 				ses[se.Name] = &se.Spec
 			}
-			c.output.WriteServiceEntries(ctx, procession.ConfigSourceServiceRegistry, ses)
+			c.output.FromServiceRegistry(ctx, ses)
 		default:
 			Expect(false).To(BeTrue(), "unknown type url: %s", msg.TypeUrl)
 		}
@@ -186,7 +186,7 @@ func (c *mcpClient) convertAnyToServiceEntry(res *anypb.Any) *istiov1b1.ServiceE
 	return se
 }
 
-func (c *mcpClient) writeEnvoyFiltersWithRetry(ctx context.Context, src procession.ConfigSource, filters map[string]*istiov1a3.EnvoyFilter) {
+func (c *mcpClient) writeEnvoyFiltersWithRetry(ctx context.Context, fromHTTPFilterPolicy bool, filters map[string]*istiov1a3.EnvoyFilter) {
 	err := retry.Do(
 		func() error {
 			// Here we simulate the reconcile when the write failed in k8s output
@@ -195,7 +195,10 @@ func (c *mcpClient) writeEnvoyFiltersWithRetry(ctx context.Context, src processi
 			for name, ef := range filters {
 				efs[name] = ef.DeepCopy()
 			}
-			return c.output.WriteEnvoyFilters(ctx, src, efs)
+			if fromHTTPFilterPolicy {
+				return c.output.FromHTTPFilterPolicy(ctx, efs)
+			}
+			return c.output.FromConsumer(ctx, efs[model.ConsumerEnvoyFilterName])
 		},
 		retry.RetryIf(func(err error) bool {
 			return true

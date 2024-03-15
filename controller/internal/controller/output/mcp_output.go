@@ -28,6 +28,7 @@ import (
 	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 
 	"mosn.io/htnn/controller/internal/config"
+	"mosn.io/htnn/controller/internal/model"
 	"mosn.io/htnn/controller/pkg/procession"
 	"mosn.io/htnn/pkg/log"
 )
@@ -83,7 +84,24 @@ func NewMcpOutput(ctx context.Context) (procession.Output, error) {
 	}, nil
 }
 
-func (o *mcpOutput) WriteEnvoyFilters(ctx context.Context, src procession.ConfigSource, filters map[string]*istiov1a3.EnvoyFilter) error {
+type configSource int
+
+const (
+	configSourceHTTPFilterPolicy configSource = iota
+	configSourceConsumer
+)
+
+func (o *mcpOutput) FromHTTPFilterPolicy(ctx context.Context, generatedEnvoyFilters map[string]*istiov1a3.EnvoyFilter) error {
+	return o.writeEnvoyFilters(configSourceHTTPFilterPolicy, generatedEnvoyFilters)
+}
+
+func (o *mcpOutput) FromConsumer(ctx context.Context, ef *istiov1a3.EnvoyFilter) error {
+	return o.writeEnvoyFilters(configSourceConsumer, map[string]*istiov1a3.EnvoyFilter{
+		model.ConsumerEnvoyFilterName: ef,
+	})
+}
+
+func (o *mcpOutput) writeEnvoyFilters(src configSource, filters map[string]*istiov1a3.EnvoyFilter) error {
 	// Store the converted Any directly can save memory, but we keep the original EnvoyFilter here
 	// so that we can add observability in the future.
 	o.envoyFilters.Store(src, filters)
@@ -110,7 +128,7 @@ func (o *mcpOutput) WriteEnvoyFilters(ctx context.Context, src procession.Config
 	return nil
 }
 
-func (o *mcpOutput) WriteServiceEntries(ctx context.Context, src procession.ConfigSource, serviceEntries map[string]*istioapi.ServiceEntry) {
+func (o *mcpOutput) FromServiceRegistry(ctx context.Context, serviceEntries map[string]*istioapi.ServiceEntry) {
 	ress := make([]*anypb.Any, 0, len(serviceEntries))
 	for name, se := range serviceEntries {
 		res, err := MarshalToMcpPb(name, nil, se)

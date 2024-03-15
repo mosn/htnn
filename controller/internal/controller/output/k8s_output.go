@@ -55,7 +55,7 @@ func fillEnvoyFilterMeta(ef *istiov1a3.EnvoyFilter) {
 	ef.Labels[model.LabelCreatedBy] = "HTTPFilterPolicy"
 }
 
-func (o *k8sOutput) fromHTTPFilterPolicy(ctx context.Context, generatedEnvoyFilters map[string]*istiov1a3.EnvoyFilter) error {
+func (o *k8sOutput) FromHTTPFilterPolicy(ctx context.Context, generatedEnvoyFilters map[string]*istiov1a3.EnvoyFilter) error {
 	logger := o.logger
 
 	var envoyfilters istiov1a3.EnvoyFilterList
@@ -108,7 +108,7 @@ func (o *k8sOutput) fromHTTPFilterPolicy(ctx context.Context, generatedEnvoyFilt
 	return nil
 }
 
-func (o *k8sOutput) fromConsumer(ctx context.Context, ef *istiov1a3.EnvoyFilter) error {
+func (o *k8sOutput) FromConsumer(ctx context.Context, ef *istiov1a3.EnvoyFilter) error {
 	logger := o.logger
 
 	nsName := types.NamespacedName{Name: ef.Name, Namespace: ef.Namespace}
@@ -150,13 +150,6 @@ func (o *k8sOutput) fromConsumer(ctx context.Context, ef *istiov1a3.EnvoyFilter)
 	return nil
 }
 
-func (o *k8sOutput) WriteEnvoyFilters(ctx context.Context, src procession.ConfigSource, filters map[string]*istiov1a3.EnvoyFilter) error {
-	if src == procession.ConfigSourceHTTPFilterPolicy {
-		return o.fromHTTPFilterPolicy(ctx, filters)
-	}
-	return o.fromConsumer(ctx, filters[model.ConsumerEnvoyFilterName])
-}
-
-func (o *k8sOutput) WriteServiceEntries(ctx context.Context, src procession.ConfigSource, serviceEntries map[string]*istioapi.ServiceEntry) {
+func (o *k8sOutput) FromServiceRegistry(ctx context.Context, serviceEntries map[string]*istioapi.ServiceEntry) {
 	o.serviceEntrySyncer.Update(ctx, serviceEntries)
 }

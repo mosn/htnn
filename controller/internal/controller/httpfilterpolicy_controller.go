@@ -350,7 +350,7 @@ func (r *HTTPFilterPolicyReconciler) translationStateToCustomResource(ctx contex
 	finalState *translation.FinalState) error {
 
 	generatedEnvoyFilters := finalState.EnvoyFilters
-	return r.Output.WriteEnvoyFilters(ctx, procession.ConfigSourceHTTPFilterPolicy, generatedEnvoyFilters)
+	return r.Output.FromHTTPFilterPolicy(ctx, generatedEnvoyFilters)
 }
 
 func (r *HTTPFilterPolicyReconciler) updatePolicies(ctx context.Context,

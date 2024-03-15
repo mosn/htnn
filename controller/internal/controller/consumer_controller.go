@@ -21,7 +21,6 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -140,8 +139,7 @@ func (r *ConsumerReconciler) generateCustomResource(ctx context.Context, state *
 		ef.Labels = map[string]string{}
 	}
 	ef.Labels[model.LabelCreatedBy] = "Consumer"
-	return r.Output.WriteEnvoyFilters(ctx, procession.ConfigSourceConsumer,
-		map[string]*istiov1a3.EnvoyFilter{model.ConsumerEnvoyFilterName: ef})
+	return r.Output.FromConsumer(ctx, ef)
 }
 
 func (r *ConsumerReconciler) updateConsumers(ctx context.Context, consumers *mosniov1.ConsumerList) error {
