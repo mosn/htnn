@@ -14,7 +14,7 @@
 
 # Dockerfile has specific requirement: https://docs.docker.com/engine/reference/builder/#understand-how-arg-and-from-interact
 ARG CONTROLLER_BASE_IMAGE
-# Build the controller binary
+# Build the manager binary
 FROM golang:1.21 as builder
 ARG TARGETOS
 ARG TARGETARCH
@@ -42,11 +42,11 @@ COPY controller/ controller/
 # was called. For example, if we call make docker-build in a local env which has the Apple Silicon M1 SO
 # the docker BUILDPLATFORM arg will be linux/arm64 when for Apple x86 it will be linux/amd64. Therefore,
 # by leaving it empty we can ensure that the container and binary shipped on it will have the same platform.
-RUN cd controller && CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -tags ctrl -a -o /workspace/bin cmd/main.go
+RUN cd controller && CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -a -o /workspace/manager cmd/main.go
 
 FROM ${CONTROLLER_BASE_IMAGE}
 WORKDIR /
-COPY --from=builder /workspace/bin ./controller
+COPY --from=builder /workspace/manager .
 USER 65532:65532
 
-ENTRYPOINT ["/controller"]
+ENTRYPOINT ["/manager"]

@@ -138,10 +138,10 @@ func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 		// Since we only care about the coverage in CI, it is fine so far.
 	}
 
-	// This is the istio/proxyv2:1.21.0
-	// Use docker inspect --format='{{index .RepoDigests 0}}' istio/proxyv2:1.21.0
+	// This is the envoyproxy/envoy:contrib-v1.29.2
+	// Use docker inspect --format='{{index .RepoDigests 0}}' envoyproxy/envoy:contrib-v1.29.2
 	// to get the sha256 ID
-	image := "istio/proxyv2@sha256:1b10ab67aa311bcde7ebc18477d31cc73d8169ad7f3447d86c40a2b056c456e4"
+	image := "envoyproxy/envoy@sha256:98ed3d86ff8b86dc12ddf54b7bb67ddf5506f80769038b3e2ab7bf402730fb4d"
 	pwd, _ := os.Getwd()
 	projectRoot := filepath.Join(pwd, "..", "..", "..")
 	cmdline := "docker run" +
@@ -164,7 +164,7 @@ func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 		cmds := strings.Fields(validateCmd)
 		out, err := exec.Command(cmds[0], cmds[1:]...).CombinedOutput()
 		if err != nil {
-			logger.Info("bad envoy bootstrap configuration", "output", string(out))
+			logger.Info("bad envoy bootstrap configuration", "cmd", validateCmd, "output", string(out))
 			return nil, err
 		}
 

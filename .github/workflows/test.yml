@@ -168,5 +168,11 @@ jobs:
         path: ./controller/bin
         key: ${{ runner.os }}-${{ hashFiles('./controller/Makefile') }}
 
+    - name: Prepare cluster
+      run: make delete-cluster create-cluster deploy-cert-manager e2e-prepare-data-plane-image deploy-istio
+
+    - name: Prepare controller
+      run: make e2e-build-controller-image deploy-controller
+
     - name: Test
-      run: make e2e-ci
+      run: make run-e2e
