@@ -20,10 +20,10 @@ TARGET_SO       = libgolang.so
 PROJECT_NAME    = mosn.io/htnn
 # Both images use glibc 2.31. Ensure libc in the images match each other.
 BUILD_IMAGE     ?= golang:1.21-bullseye
-# This is the envoyproxy/envoy:contrib-v1.29-latest
-# Use docker inspect --format='{{index .RepoDigests 0}}' envoyproxy/envoy:contrib-v1.29-latest
+# This is the istio/proxyv2:1.21.0
+# Use docker inspect --format='{{index .RepoDigests 0}}' istio/proxyv2:1.21.0
 # to get the sha256 ID
-PROXY_IMAGE     ?= envoyproxy/envoy@sha256:98ed3d86ff8b86dc12ddf54b7bb67ddf5506f80769038b3e2ab7bf402730fb4d
+PROXY_IMAGE     ?= istio/proxyv2@sha256:1b10ab67aa311bcde7ebc18477d31cc73d8169ad7f3447d86c40a2b056c456e4
 # We may need to use timestamp if we need to update the image in one PR
 DEV_TOOLS_IMAGE ?= ghcr.io/mosn/htnn-dev-tools:2024-03-05
 
@@ -170,6 +170,7 @@ lint-go:
 fmt-go: install-go-fmtter
 	go mod tidy
 	$(LOCALBIN)/gosimports -w -local ${PROJECT_NAME} .
+	cd examples/dev_your_plugin && go mod tidy && $(LOCALBIN)/gosimports -w -local ${PROJECT_NAME} .
 
 # Don't use `buf format` to format the protobuf files! Buf's code style is different from Envoy.
 # That will break lots of things.
@@ -284,7 +285,7 @@ e2e-prepare-data-plane-image: build-so kind
 
 .PHONY: deploy-istio
 deploy-istio:
-	ISTIO_VERSION=1.20.0 ./e2e/istio.sh install
+	ISTIO_VERSION=1.21.0 ./e2e/istio.sh install
 	$(KUBECTL) wait --timeout=5m -n istio-system deployment/istio-ingressgateway --for=condition=Available
 
 .PHONY: deploy-cert-manager

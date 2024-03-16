@@ -15,7 +15,7 @@ The `fault` plugin supports response and delay injections by leveraging Envoy's 
 
 ## Configuration
 
-See the corresponding [Envoy documentation](https://www.envoyproxy.io/docs/envoy/v1.28.0/configuration/http/http_filters/fault_filter).
+See the corresponding [Envoy documentation](https://www.envoyproxy.io/docs/envoy/v1.29.2/configuration/http/http_filters/fault_filter).
 
 ## Usage
 

@@ -12,6 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM istio/proxyv2:1.20.0
+FROM istio/proxyv2:1.21.0
 COPY libgolang.so /etc/libgolang.so
 CMD ["envoy"]
