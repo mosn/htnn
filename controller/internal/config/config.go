@@ -15,6 +15,8 @@
 package config
 
 import (
+	"strings"
+
 	"github.com/spf13/viper"
 
 	"mosn.io/htnn/pkg/log"
@@ -24,8 +26,10 @@ var (
 	logger = log.DefaultLogger.WithName("config")
 )
 
+var goSoPath = "/etc/libgolang.so"
+
 func GoSoPath() string {
-	return "/etc/libgolang.so"
+	return goSoPath
 }
 
 var rootNamespace = "istio-system"
@@ -34,24 +38,47 @@ func RootNamespace() string {
 	return rootNamespace
 }
 
-func Init() {
-	viper.SetConfigName("config")
-	viper.SetConfigType("yaml")
-	viper.AddConfigPath(".")
-	viper.AddConfigPath("./config")
+var enableWebhooks = true
 
-	if err := viper.ReadInConfig(); err != nil {
+func EnableWebhooks() bool {
+	return enableWebhooks
+}
+
+type envStringReplacer struct {
+}
+
+func (r *envStringReplacer) Replace(s string) string {
+	return strings.ReplaceAll(s, ".", "_")
+}
+
+func Init() {
+	vp := viper.NewWithOptions(viper.EnvKeyReplacer(&envStringReplacer{}))
+	vp.SetEnvPrefix("HTNN")
+	vp.AutomaticEnv()
+	// a config item `envoy.go_So_Path` can be set with env `HTNN_ENVOY_GO_SO_PATH`, which is prior to the value in config file
+
+	vp.SetConfigName("config")
+	vp.SetConfigType("yaml")
+	vp.AddConfigPath(".")
+	vp.AddConfigPath("./config")
+
+	if err := vp.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
 			logger.Error(err, "read config file failed")
 		}
-
-		return
+	} else {
+		logger.Info("use config file", "filename", vp.ConfigFileUsed())
 	}
 
-	logger.Info("use config file", "filename", viper.ConfigFileUsed())
+	cfgGoSoPath := vp.GetString("envoy.go_so_path")
+	if cfgGoSoPath != "" {
+		goSoPath = cfgGoSoPath
+	}
 
-	cfgRootNamespace := viper.GetString("istio.rootNamespace")
+	cfgRootNamespace := vp.GetString("istio.root_namespace")
 	if cfgRootNamespace != "" {
 		rootNamespace = cfgRootNamespace
 	}
+
+	enableWebhooks = vp.GetBool("enable_webhooks")
 }

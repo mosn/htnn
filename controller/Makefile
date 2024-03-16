@@ -39,7 +39,7 @@ CONTAINER_TOOL ?= docker
 SHELL = /usr/bin/env bash -o pipefail
 .SHELLFLAGS = -ec
 
-ENABLE_WEBHOOKS ?= false
+HTNN_ENABLE_WEBHOOKS ?= false
 CONTROLLER_OPTIONS ?=
 
 VERSION = $(shell cat ../VERSION)
@@ -94,7 +94,7 @@ build: manifests generate
 
 .PHONY: run
 run: manifests generate ## Run a controller from your host.
-	ENABLE_WEBHOOKS=$(ENABLE_WEBHOOKS) go run -tags ctrl -race ./cmd/main.go $(CONTROLLER_OPTIONS)
+	HTNN_ENABLE_WEBHOOKS=$(HTNN_ENABLE_WEBHOOKS) go run -tags ctrl -race ./cmd/main.go $(CONTROLLER_OPTIONS)
 
 # If you wish to build the manager image targeting other platforms you can use the --platform flag.
 # (i.e. docker build --platform linux/arm64). However, you must enable docker buildKit for it.
