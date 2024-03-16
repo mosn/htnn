@@ -24,6 +24,8 @@ BUILD_IMAGE     ?= golang:1.21-bullseye
 # Use docker inspect --format='{{index .RepoDigests 0}}' envoyproxy/envoy:contrib-v1.29.2
 # to get the sha256 ID
 PROXY_IMAGE     ?= envoyproxy/envoy@sha256:c47136604751274b30fa7a89132314b8e3586d54d8f8cc30d7a911a9ecc5e11c
+# We don't use istio/proxyv2 because it is not designed to be run separately (need to work around permission issue).
+
 # We may need to use timestamp if we need to update the image in one PR
 DEV_TOOLS_IMAGE ?= ghcr.io/mosn/htnn-dev-tools:2024-03-05
 
