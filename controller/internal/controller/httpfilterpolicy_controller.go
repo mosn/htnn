@@ -455,7 +455,11 @@ func (v *VirtualServiceIndexer) Index(rawObj client.Object) []string {
 	if po.Spec.TargetRef.Group != "networking.istio.io" || po.Spec.TargetRef.Kind != "VirtualService" {
 		return []string{}
 	}
-	return []string{string(po.Spec.TargetRef.Name)}
+	ns := po.Namespace
+	if po.Spec.TargetRef.Namespace != nil {
+		ns = string(*po.Spec.TargetRef.Namespace)
+	}
+	return []string{fmt.Sprintf("%s/%s", ns, po.Spec.TargetRef.Name)}
 }
 
 func (v *VirtualServiceIndexer) RegisterIndexer(ctx context.Context, mgr ctrl.Manager) error {
@@ -487,7 +491,11 @@ func (v *HTTPRouteIndexer) Index(rawObj client.Object) []string {
 	if po.Spec.TargetRef.Group != gwapiv1.GroupName || po.Spec.TargetRef.Kind != "HTTPRoute" {
 		return []string{}
 	}
-	return []string{string(po.Spec.TargetRef.Name)}
+	ns := po.Namespace
+	if po.Spec.TargetRef.Namespace != nil {
+		ns = string(*po.Spec.TargetRef.Namespace)
+	}
+	return []string{fmt.Sprintf("%s/%s", ns, po.Spec.TargetRef.Name)}
 }
 
 func (v *HTTPRouteIndexer) RegisterIndexer(ctx context.Context, mgr ctrl.Manager) error {
@@ -508,7 +516,7 @@ func findAffectedObjects(ctx context.Context, reader client.Reader, obj client.O
 	policies := &mosniov1.HTTPFilterPolicyList{}
 	listOps := &client.ListOptions{
 		// Use the built index
-		FieldSelector: fields.OneTermEqualSelector(idx, obj.GetName()),
+		FieldSelector: fields.OneTermEqualSelector(idx, fmt.Sprintf("%s/%s", obj.GetNamespace(), obj.GetName())),
 	}
 	err := reader.List(ctx, policies, listOps)
 	if err != nil {
