@@ -109,7 +109,9 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: controller-test-cover
-        path: ./controller/cover.out
+        path: |
+          ./controller/cover.out
+          ./controller/cover_mcp_output.out
 
   coverage:
     timeout-minutes: 10
@@ -124,7 +126,10 @@ jobs:
       uses: codecov/codecov-action@v4.1.0
       with:
         fail_ci_if_error: true
-        file: ./cover.out,plugins/tests/integration/cover.out,./controller/cover.out
+        files: ./unit-test-cover/cover.out,
+          ./plugins-integration-test-cover/cover.out,
+          ./controller-test-cover/cover.out,
+          ./controller-test-cover/cover_mcp_output.out
         token: ${{ secrets.CODECOV_TOKEN }}
         verbose: true
 

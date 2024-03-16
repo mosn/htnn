@@ -15,5 +15,6 @@
 package model
 
 const (
-	LabelCreatedBy = "htnn.mosn.io/created-by"
+	ConsumerEnvoyFilterName = "htnn-consumer"
+	LabelCreatedBy          = "htnn.mosn.io/created-by"
 )

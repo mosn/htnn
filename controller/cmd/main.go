@@ -18,6 +18,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"os"
 
 	istioscheme "istio.io/client-go/pkg/clientset/versioned/scheme"
@@ -34,7 +35,9 @@ import (
 	mosniov1 "mosn.io/htnn/controller/api/v1"
 	"mosn.io/htnn/controller/internal/config"
 	"mosn.io/htnn/controller/internal/controller"
+	controlleroutput "mosn.io/htnn/controller/internal/controller/output"
 	"mosn.io/htnn/controller/internal/registry"
+	"mosn.io/htnn/controller/pkg/procession"
 	"mosn.io/htnn/pkg/log"
 )
 
@@ -69,7 +72,16 @@ func main() {
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
+
+	var outputDest string
+	flag.StringVar(&outputDest, "output", "k8s", "The output destination of reconciliation result, mcp or k8s. Default is k8s.")
+
 	flag.Parse()
+
+	if outputDest != "mcp" && outputDest != "k8s" {
+		setupLog.Error(fmt.Errorf("unknown output: %s", outputDest), "unable to start")
+		os.Exit(1)
+	}
 
 	ctrl.SetLogger(log.DefaultLogger)
 
@@ -103,9 +115,22 @@ func main() {
 		os.Exit(1)
 	}
 
+	ctx := ctrl.SetupSignalHandler()
+	var output procession.Output
+	if outputDest == "k8s" {
+		output = controlleroutput.NewK8sOutput(mgr.GetClient())
+	} else {
+		output, err = controlleroutput.NewMcpOutput(ctx)
+		if err != nil {
+			setupLog.Error(err, "unable to new mcp output")
+			os.Exit(1)
+		}
+	}
+
 	if err = (&controller.HTTPFilterPolicyReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
+		Output: output,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "HTTPFilterPolicy")
 		os.Exit(1)
@@ -113,13 +138,14 @@ func main() {
 	if err = (&controller.ConsumerReconciler{
 		Client: mgr.GetClient(),
 		Scheme: mgr.GetScheme(),
+		Output: output,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Consumer")
 		os.Exit(1)
 	}
 
 	registry.InitRegistryManager(&registry.RegistryManagerOption{
-		Client: mgr.GetClient(),
+		Output: output,
 	})
 	if err = (&controller.ServiceRegistryReconciler{
 		Client: mgr.GetClient(),
@@ -159,7 +185,7 @@ func main() {
 	}
 
 	setupLog.Info("starting manager")
-	if err := mgr.Start(ctrl.SetupSignalHandler()); err != nil {
+	if err := mgr.Start(ctx); err != nil {
 		setupLog.Error(err, "problem running manager")
 		os.Exit(1)
 	}

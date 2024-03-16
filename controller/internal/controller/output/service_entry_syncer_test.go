@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package registry
+package output
 
 import (
 	"context"
@@ -26,10 +26,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"mosn.io/htnn/controller/tests/pkg"
+	"mosn.io/htnn/pkg/log"
 )
 
 func TestSync(t *testing.T) {
-	store := newServiceEntryStore(pkg.FakeK8sClient(t))
+	logger := log.DefaultLogger.WithName("test")
+	store := newServiceEntrySyncer(pkg.FakeK8sClient(t), &logger)
 
 	var created, updated, deleted bool
 
