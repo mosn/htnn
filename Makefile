@@ -32,7 +32,7 @@ DEV_TOOLS_IMAGE ?= ghcr.io/mosn/htnn-dev-tools:2024-03-05
 VERSION   = $(shell cat VERSION)
 GIT_VERSION     = $(shell git log -1 --pretty=format:%h)
 
-MIN_K8S_VERSION = 1.25.11
+MIN_K8S_VERSION = 1.26.0
 
 # Define a recursive wildcard function
 rwildcard=$(foreach d,$(wildcard $(addsuffix *,$(1))),$(call rwildcard,$d/,$(2))$(filter $(subst *,%,$(2)),$d))
