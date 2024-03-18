@@ -19,13 +19,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	mosniov1 "mosn.io/htnn/controller/api/v1"
+	"mosn.io/htnn/controller/internal/log"
 	pkgRegistry "mosn.io/htnn/controller/pkg/registry"
-	"mosn.io/htnn/pkg/log"
 )
 
 var (
-	logger = log.DefaultLogger.WithName("registry")
-
 	registries = map[types.NamespacedName]pkgRegistry.Registry{}
 	store      *serviceEntryStore
 )
@@ -52,7 +50,7 @@ func UpdateRegistry(registry *mosniov1.ServiceRegistry) error {
 			return err
 		}
 
-		logger.Info("start registry", "registry", key)
+		log.Infof("start registry %s", key)
 
 		err = reg.Start(conf)
 		if err != nil {
@@ -68,7 +66,7 @@ func UpdateRegistry(registry *mosniov1.ServiceRegistry) error {
 			return err
 		}
 
-		logger.Info("reload registry", "registry", key)
+		log.Infof("reload registry %s", key)
 
 		err = reg.Reload(conf)
 		if err != nil {
@@ -87,6 +85,6 @@ func DeleteRegistry(key types.NamespacedName) error {
 	}
 
 	delete(registries, key)
-	logger.Info("stop registry", "registry", key)
+	log.Infof("stop registry %s", key)
 	return prev.Stop()
 }

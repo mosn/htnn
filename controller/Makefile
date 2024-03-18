@@ -88,13 +88,13 @@ benchmark: manifests generate envtest ## Run benchmarks
 
 .PHONY: build
 build: manifests generate
-	CGO_ENABLED=0 go build -tags ctrl \
+	CGO_ENABLED=0 go build \
 		-ldflags "-B 0x$(shell head -c20 /dev/urandom|od -An -tx1|tr -d ' \n') -X main.Version=${VERSION}(${GIT_VERSION})" \
 		-o bin/manager cmd/main.go
 
 .PHONY: run
 run: manifests generate ## Run a controller from your host.
-	HTNN_ENABLE_WEBHOOKS=$(HTNN_ENABLE_WEBHOOKS) go run -tags ctrl -race ./cmd/main.go $(CONTROLLER_OPTIONS)
+	HTNN_ENABLE_WEBHOOKS=$(HTNN_ENABLE_WEBHOOKS) go run -race ./cmd/main.go $(CONTROLLER_OPTIONS)
 
 # If you wish to build the manager image targeting other platforms you can use the --platform flag.
 # (i.e. docker build --platform linux/arm64). However, you must enable docker buildKit for it.

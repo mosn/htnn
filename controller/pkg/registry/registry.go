@@ -22,12 +22,8 @@ import (
 	istioapi "istio.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"mosn.io/htnn/controller/internal/log"
 	"mosn.io/htnn/internal/proto"
-	"mosn.io/htnn/pkg/log"
-)
-
-var (
-	logger = log.DefaultLogger.WithName("registry")
 )
 
 // RegistryConfig represents the configuration used by the registry
@@ -103,7 +99,7 @@ var (
 
 // AddRegistryFactory will be used by the user to register a new registry
 func AddRegistryFactory(name string, factory RegistryFactory) {
-	logger.Info("register registry", "name", name)
+	log.Infof("register registry %s", name)
 
 	// override plugin is allowed so that we can patch plugin with bugfix if upgrading
 	// the whole htnn is not available

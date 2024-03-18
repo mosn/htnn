@@ -12,37 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build ctrl
-
-// the logger for control plane
 package log
 
 import (
-	"flag"
 	"fmt"
-	"os"
 
+	"github.com/go-logr/logr"
 	"github.com/go-logr/zapr"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 )
 
-var (
-	enc string
-)
+var logger logr.Logger
 
-func init() {
-	flag.CommandLine.StringVar(&enc, "log-encoder", "console", "Log encoding (one of 'json' or 'console', default to 'console')")
-
-	// A minimal parser to work around flag package can be parsed only once.
-	if len(os.Args) > 2 {
-		for i, arg := range os.Args[1 : len(os.Args)-1] {
-			if arg == "--log-encoder" {
-				enc = os.Args[i+2]
-			}
-		}
-	}
-
+func InitLogger(enc string) {
 	cfg := zap.NewProductionConfig()
 	cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 	cfg.Encoding = enc
@@ -53,6 +36,29 @@ func init() {
 		panic(fmt.Sprintf("failed to init logger: %v", err))
 	}
 
-	// Name of this file guarantees that SetLogger runs after DefaultLogger init.
-	SetLogger(zapr.NewLoggerWithOptions(zapLog))
+	logger = zapr.NewLoggerWithOptions(zapLog)
+}
+
+func Logger() logr.Logger {
+	return logger
+}
+
+// Error outputs a message at error level.
+func Error(msg any) {
+	logger.Error(nil, fmt.Sprint(msg))
+}
+
+// Errorf uses fmt.Sprintf to construct and log a message at error level.
+func Errorf(format string, args ...any) {
+	logger.Error(nil, fmt.Sprintf(format, args...))
+}
+
+// Info outputs a message at info level.
+func Info(msg any) {
+	logger.Info(fmt.Sprint(msg))
+}
+
+// Infof uses fmt.Sprintf to construct and log a message at info level.
+func Infof(format string, args ...any) {
+	logger.Info(fmt.Sprintf(format, args...))
 }
