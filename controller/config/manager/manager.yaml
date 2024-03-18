@@ -71,7 +71,7 @@ spec:
         name: manager
         env:
         - name: HTNN_ENABLE_WEBHOOKS
-          value: true
+          value: "true"
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
