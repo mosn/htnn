@@ -15,7 +15,7 @@ The `cors` plugin handles Cross-Origin Resource Sharing requests by leveraging E
 
 ## Configuration
 
-See the corresponding [Envoy documentation](https://www.envoyproxy.io/docs/envoy/v1.28.0/configuration/http/http_filters/cors_filter).
+See the corresponding [Envoy documentation](https://www.envoyproxy.io/docs/envoy/v1.29.2/configuration/http/http_filters/cors_filter).
 
 ## Usage
 

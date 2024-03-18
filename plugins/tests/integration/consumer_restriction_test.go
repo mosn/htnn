@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"mosn.io/htnn/pkg/filtermanager"
 	"mosn.io/htnn/pkg/filtermanager/model"
@@ -81,7 +82,8 @@ func TestConsumerRestriction(t *testing.T) {
 				},
 			}),
 			run: func(t *testing.T) {
-				resp, _ := dp.Get("/echo", http.Header{"Authorization": []string{"marvin"}})
+				resp, err := dp.Get("/echo", http.Header{"Authorization": []string{"marvin"}})
+				require.NoError(t, err)
 				assert.Equal(t, 403, resp.StatusCode)
 				resp, _ = dp.Get("/echo", http.Header{"Authorization": []string{"tom"}})
 				assert.Equal(t, 200, resp.StatusCode)
@@ -114,7 +116,8 @@ func TestConsumerRestriction(t *testing.T) {
 				},
 			}),
 			run: func(t *testing.T) {
-				resp, _ := dp.Get("/echo", http.Header{"Authorization": []string{"marvin"}})
+				resp, err := dp.Get("/echo", http.Header{"Authorization": []string{"marvin"}})
+				require.NoError(t, err)
 				assert.Equal(t, 200, resp.StatusCode)
 				resp, _ = dp.Get("/echo", http.Header{"Authorization": []string{"tom"}})
 				assert.Equal(t, 403, resp.StatusCode)

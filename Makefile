@@ -20,17 +20,19 @@ TARGET_SO       = libgolang.so
 PROJECT_NAME    = mosn.io/htnn
 # Both images use glibc 2.31. Ensure libc in the images match each other.
 BUILD_IMAGE     ?= golang:1.21-bullseye
-# This is the envoyproxy/envoy:contrib-v1.29-latest
-# Use docker inspect --format='{{index .RepoDigests 0}}' envoyproxy/envoy:contrib-v1.29-latest
+# This is the envoyproxy/envoy:contrib-v1.29.2
+# Use docker inspect --format='{{index .RepoDigests 0}}' envoyproxy/envoy:contrib-v1.29.2
 # to get the sha256 ID
-PROXY_IMAGE     ?= envoyproxy/envoy@sha256:98ed3d86ff8b86dc12ddf54b7bb67ddf5506f80769038b3e2ab7bf402730fb4d
+PROXY_IMAGE     ?= envoyproxy/envoy@sha256:c47136604751274b30fa7a89132314b8e3586d54d8f8cc30d7a911a9ecc5e11c
+# We don't use istio/proxyv2 because it is not designed to be run separately (need to work around permission issue).
+
 # We may need to use timestamp if we need to update the image in one PR
 DEV_TOOLS_IMAGE ?= ghcr.io/mosn/htnn-dev-tools:2024-03-05
 
 VERSION   = $(shell cat VERSION)
 GIT_VERSION     = $(shell git log -1 --pretty=format:%h)
 
-MIN_K8S_VERSION = 1.25.11
+MIN_K8S_VERSION = 1.26.0
 
 # Define a recursive wildcard function
 rwildcard=$(foreach d,$(wildcard $(addsuffix *,$(1))),$(call rwildcard,$d/,$(2))$(filter $(subst *,%,$(2)),$d))
@@ -284,7 +286,7 @@ e2e-prepare-data-plane-image: build-so kind
 
 .PHONY: deploy-istio
 deploy-istio:
-	ISTIO_VERSION=1.20.0 ./e2e/istio.sh install
+	ISTIO_VERSION=1.21.0 ./e2e/istio.sh install
 	$(KUBECTL) wait --timeout=5m -n istio-system deployment/istio-ingressgateway --for=condition=Available
 
 .PHONY: deploy-cert-manager
@@ -309,4 +311,5 @@ run-e2e:
 # To update the data plane, run `make e2e-prepare-data-plane-image` to update the image and then delete
 # the ingressgateway pod to trigger restart.
 .PHONY: e2e-ci
-e2e-ci: delete-cluster create-cluster deploy-cert-manager e2e-prepare-data-plane-image deploy-istio e2e-build-controller-image deploy-controller run-e2e
+e2e-ci: delete-cluster create-cluster deploy-cert-manager e2e-prepare-data-plane-image deploy-istio \
+	e2e-build-controller-image deploy-controller run-e2e
