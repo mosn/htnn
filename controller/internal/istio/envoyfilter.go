@@ -58,7 +58,6 @@ func DefaultEnvoyFilters() map[string]*istiov1a3.EnvoyFilter {
 		// And user-defined envoy filter won't apply to mesh because:
 		// 1. We don't support attaching policy to mesh.
 		// 2. Mesh configuration doesn't have Go HTTP filter.
-		Context: istioapi.EnvoyFilter_GATEWAY,
 		ObjectTypes: &istioapi.EnvoyFilter_EnvoyConfigObjectMatch_Listener{
 			Listener: &istioapi.EnvoyFilter_ListenerMatch{
 				FilterChain: &istioapi.EnvoyFilter_ListenerMatch_FilterChainMatch{
@@ -120,7 +119,6 @@ func DefaultEnvoyFilters() map[string]*istiov1a3.EnvoyFilter {
 			patches = append(patches, &istioapi.EnvoyFilter_EnvoyConfigObjectPatch{
 				ApplyTo: istioapi.EnvoyFilter_HTTP_FILTER,
 				Match: &istioapi.EnvoyFilter_EnvoyConfigObjectMatch{
-					Context: istioapi.EnvoyFilter_GATEWAY,
 					ObjectTypes: &istioapi.EnvoyFilter_EnvoyConfigObjectMatch_Listener{
 						Listener: &istioapi.EnvoyFilter_ListenerMatch{
 							FilterChain: &istioapi.EnvoyFilter_ListenerMatch_FilterChainMatch{
@@ -223,7 +221,6 @@ func GenerateConsumers(consumers map[string]interface{}) *istiov1a3.EnvoyFilter 
 				{
 					ApplyTo: istioapi.EnvoyFilter_HTTP_FILTER,
 					Match: &istioapi.EnvoyFilter_EnvoyConfigObjectMatch{
-						Context: istioapi.EnvoyFilter_GATEWAY,
 						ObjectTypes: &istioapi.EnvoyFilter_EnvoyConfigObjectMatch_Listener{
 							Listener: &istioapi.EnvoyFilter_ListenerMatch{
 								FilterChain: &istioapi.EnvoyFilter_ListenerMatch_FilterChainMatch{
