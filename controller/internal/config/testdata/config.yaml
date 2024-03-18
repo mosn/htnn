@@ -1,2 +1,5 @@
+enable_webhooks: true
+envoy:
+  go_so_path: /usr/local/golang.so
 istio:
-  rootNamespace: htnn
+  root_namespace: htnn

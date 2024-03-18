@@ -15,9 +15,9 @@
 package config
 
 import (
+	"os"
 	"testing"
 
-	"github.com/spf13/viper"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -25,10 +25,15 @@ func TestInit(t *testing.T) {
 	Init()
 
 	// Check default values
+	assert.Equal(t, false, EnableWebhooks())
+	assert.Equal(t, "/etc/libgolang.so", GoSoPath())
 	assert.Equal(t, "istio-system", RootNamespace())
 
-	viper.AddConfigPath("./testdata")
+	os.Chdir("./testdata")
 	Init()
+	os.Chdir("..")
 
+	assert.Equal(t, true, EnableWebhooks())
+	assert.Equal(t, "/usr/local/golang.so", GoSoPath())
 	assert.Equal(t, "htnn", RootNamespace())
 }
