@@ -69,6 +69,9 @@ spec:
         # During development, use `make deploy-image` to update image
         imagePullPolicy: IfNotPresent
         name: manager
+        env:
+        - name: HTNN_ENABLE_WEBHOOKS
+          value: true
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:
