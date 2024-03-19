@@ -25,7 +25,7 @@ require (
 	github.com/jellydator/ttlcache/v3 v3.2.0
 	github.com/nacos-group/nacos-sdk-go v1.1.4
 	github.com/onsi/ginkgo/v2 v2.17.0
-	github.com/onsi/gomega v1.31.1
+	github.com/onsi/gomega v1.32.0
 	github.com/open-policy-agent/opa v0.61.0
 	github.com/prometheus/client_golang v1.19.0
 	github.com/redis/go-redis/v9 v9.5.1
