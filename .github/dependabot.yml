@@ -19,14 +19,6 @@ updates:
       - dependency-name: "istio.io/api"
       - dependency-name: "istio.io/client-go"
   - package-ecosystem: "gomod"
-    directory: "/examples/dev_your_plugin"
-    schedule:
-      interval: "daily"
-      time: "06:00"
-    ignore:
-      # the Envoy lib need to be fit with the Envoy we use. So let's disable auto-updates.
-      - dependency-name: "github.com/envoyproxy/envoy"
-  - package-ecosystem: "gomod"
     directory: "/site"
     schedule:
       interval: "daily"
