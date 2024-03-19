@@ -19,11 +19,7 @@ import (
 
 	"github.com/spf13/viper"
 
-	"mosn.io/htnn/pkg/log"
-)
-
-var (
-	logger = log.DefaultLogger.WithName("config")
+	"mosn.io/htnn/controller/internal/log"
 )
 
 var goSoPath = "/etc/libgolang.so"
@@ -64,10 +60,10 @@ func Init() {
 
 	if err := vp.ReadInConfig(); err != nil {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			logger.Error(err, "read config file failed")
+			log.Errorf("read config file failed, err: %v", err)
 		}
 	} else {
-		logger.Info("use config file", "filename", vp.ConfigFileUsed())
+		log.Infof("use config file [%s]", vp.ConfigFileUsed())
 	}
 
 	cfgGoSoPath := vp.GetString("envoy.go_so_path")

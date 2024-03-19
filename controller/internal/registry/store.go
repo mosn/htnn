@@ -26,6 +26,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"mosn.io/htnn/controller/internal/config"
+	"mosn.io/htnn/controller/internal/log"
 	"mosn.io/htnn/controller/internal/model"
 	pkgRegistry "mosn.io/htnn/controller/pkg/registry"
 )
@@ -58,7 +59,7 @@ func (store *serviceEntryStore) Update(service string, se *pkgRegistry.ServiceEn
 	if prev, ok := store.entries[service]; !ok {
 		if err := store.getFromK8s(ctx, service, &obj); err != nil {
 			if !apierrors.IsNotFound(err) {
-				logger.Error(err, "failed to get service entry from k8s", "service", service)
+				log.Errorf("failed to get service entry from k8s, err: %v, service: %s", err, service)
 				return
 			}
 
@@ -88,7 +89,7 @@ func (store *serviceEntryStore) Delete(service string) {
 	ctx := context.Background()
 	var se istiov1b1.ServiceEntry
 	if err := store.getFromK8s(ctx, service, &se); err != nil {
-		logger.Error(err, "failed to get service entry from k8s", "service", service)
+		log.Errorf("failed to get service entry from k8s, err: %v, service: %s", err, service)
 		return
 	}
 	store.deleteFromK8s(ctx, &se)
@@ -104,10 +105,10 @@ func (store *serviceEntryStore) getFromK8s(ctx context.Context, service string, 
 
 func (store *serviceEntryStore) deleteFromK8s(ctx context.Context, se *istiov1b1.ServiceEntry) {
 	c := store.client
-	logger.Info("delete ServiceEntry", "name", se.Name, "namespace", se.Namespace)
+	log.Infof("delete ServiceEntry name %s, namespace %s", se.Name, se.Namespace)
 	err := c.Delete(ctx, se)
 	if err != nil {
-		logger.Error(err, "failed to delete service entry from k8s", "service", se.Name)
+		log.Errorf("failed to delete service entry from k8s, err: %v, service: %s", err, se.Name)
 		return
 	}
 }
@@ -125,10 +126,10 @@ func (store *serviceEntryStore) addToK8s(ctx context.Context, service string, en
 	se.Labels[model.LabelCreatedBy] = "ServiceRegistry"
 	se.Name = service
 
-	logger.Info("create ServiceEntry", "name", service, "namespace", ns)
+	log.Infof("create ServiceEntry name: %s, namespace: %s", service, ns)
 	err := c.Create(ctx, &se)
 	if err != nil {
-		logger.Error(err, "failed to create service entry to k8s", "service", service)
+		log.Errorf("failed to create service entry to k8s, err: %v, service: %s", err, service)
 	}
 
 	return &se
@@ -140,11 +141,11 @@ func (store *serviceEntryStore) updateToK8s(ctx context.Context, se *istiov1b1.S
 	}
 
 	c := store.client
-	logger.Info("update ServiceEntry", "name", se.Name, "namespace", se.Namespace)
+	log.Infof("update ServiceEntry name %s, namespace %s", se.Name, se.Namespace)
 	se.SetResourceVersion(se.ResourceVersion)
 	se.Spec = *entry.DeepCopy()
 	if err := c.Update(ctx, se); err != nil {
-		logger.Error(err, "failed to update service entry to k8s", "service", se.Name)
+		log.Errorf("failed to update service entry to k8s, err: %v, service: %s", err, se.Name)
 		return se
 	}
 
@@ -160,7 +161,7 @@ func (store *serviceEntryStore) sync() {
 	var serviceEntries istiov1b1.ServiceEntryList
 	err := c.List(ctx, &serviceEntries, client.MatchingLabels{model.LabelCreatedBy: "ServiceRegistry"})
 	if err != nil {
-		logger.Error(err, "failed to list service entries")
+		log.Errorf("failed to list service entries, err: %v", err)
 		return
 	}
 

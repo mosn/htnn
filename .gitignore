@@ -28,3 +28,4 @@ site/tmp
 controller/config/config.yaml
 controller/**/cache
 controller/**/log
+!controller/internal/log

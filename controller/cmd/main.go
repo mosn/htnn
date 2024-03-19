@@ -34,8 +34,9 @@ import (
 	mosniov1 "mosn.io/htnn/controller/api/v1"
 	"mosn.io/htnn/controller/internal/config"
 	"mosn.io/htnn/controller/internal/controller"
+	"mosn.io/htnn/controller/internal/log"
 	"mosn.io/htnn/controller/internal/registry"
-	"mosn.io/htnn/pkg/log"
+	pkgLog "mosn.io/htnn/pkg/log"
 )
 
 // Version is specified by build tag, in VERSION file
@@ -63,15 +64,21 @@ func main() {
 	var enableLeaderElection bool
 	var probeAddr string
 	var pprofAddr string
+	var enc string
+
 	flag.StringVar(&metricsAddr, "metrics-bind-address", ":10080", "The address the metric endpoint binds to.")
 	flag.StringVar(&probeAddr, "health-probe-bind-address", ":10081", "The address the probe endpoint binds to.")
 	flag.StringVar(&pprofAddr, "pprof-bind-address", "127.0.0.1:10082", "The address the pprof endpoint binds to. Set it to '0' to disable pprof.")
 	flag.BoolVar(&enableLeaderElection, "leader-elect", false,
 		"Enable leader election for controller manager. "+
 			"Enabling this will ensure there is only one active controller manager.")
+	flag.CommandLine.StringVar(&enc, "log-encoder", "console", "Log encoding (one of 'json' or 'console', default to 'console')")
 	flag.Parse()
 
-	ctrl.SetLogger(log.DefaultLogger)
+	log.InitLogger(enc)
+	logrLogger := log.Logger()
+	pkgLog.SetLogger(logrLogger)
+	ctrl.SetLogger(logrLogger)
 
 	config.Init()
 
