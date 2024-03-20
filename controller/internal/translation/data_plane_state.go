@@ -234,13 +234,6 @@ func toDataPlaneState(ctx *Ctx, state *InitState) (*FinalState, error) {
 				ls := ls
 				matched := false
 				for _, ref := range route.HTTPRoute.Spec.ParentRefs {
-					if ref.Name != gwapiv1.ObjectName(gw.Name) {
-						continue
-					}
-					if ref.Namespace != nil && *ref.Namespace != gwapiv1.Namespace(gw.Namespace) {
-						continue
-					}
-					// no need to check Group & Kind as we already handle Gateway
 					if ref.Port != nil && *ref.Port != ls.Port {
 						continue
 					}

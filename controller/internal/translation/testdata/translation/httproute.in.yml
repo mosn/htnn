@@ -3,7 +3,7 @@ gateway:
   kind: Gateway
   metadata:
     name: gateway
-    namespace: istio-ingress
+    namespace: default
   spec:
     gatewayClassName: istio
     listeners:
@@ -31,8 +31,6 @@ httproute:
         parentRefs:
         - name: gateway
           namespace: default
-        - name: gateway
-          namespace: istio-ingress
           port: 1234
           sectionName: "sub"
         hostnames: ["htnn.exp.com", "default.local"]

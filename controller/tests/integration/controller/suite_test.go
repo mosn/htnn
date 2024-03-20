@@ -56,10 +56,6 @@ var ctx context.Context
 var cancel context.CancelFunc
 var clientset *kubernetes.Clientset
 
-func ptrstr(s string) *string {
-	return &s
-}
-
 func TestControllers(t *testing.T) {
 	RegisterFailHandler(Fail)
 
