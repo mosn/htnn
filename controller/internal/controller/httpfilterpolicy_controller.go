@@ -344,7 +344,10 @@ func (r *HTTPFilterPolicyReconciler) policyToTranslationState(ctx context.Contex
 
 	// only update index when the processing is successful
 	r.istioGatewayIndexer.UpdateIndex(istioGwIdx)
-	r.k8sGatewayIndexer.UpdateIndex(k8sGwIdx)
+	if config.EnableGatewayAPI() {
+		r.k8sGatewayIndexer.UpdateIndex(k8sGwIdx)
+	}
+
 	return initState, nil
 }
 
@@ -644,20 +647,26 @@ func (r *HTTPFilterPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		r: r,
 	}
 	r.istioGatewayIndexer = istioGatewayIndexer
-	k8sGatewayIndexer := &K8sGatewayIndexer{
-		r: r,
-	}
-	r.k8sGatewayIndexer = k8sGatewayIndexer
 	indexers := []CustomerResourceIndexer{
 		&VirtualServiceIndexer{
 			r: r,
 		},
 		istioGatewayIndexer,
-		&HTTPRouteIndexer{
-			r: r,
-		},
-		k8sGatewayIndexer,
 	}
+
+	if config.EnableGatewayAPI() {
+		k8sGatewayIndexer := &K8sGatewayIndexer{
+			r: r,
+		}
+		r.k8sGatewayIndexer = k8sGatewayIndexer
+		indexers = append(indexers,
+			&HTTPRouteIndexer{
+				r: r,
+			},
+			k8sGatewayIndexer,
+		)
+	}
+
 	// IndexField is called per HTTPFilterPolicy
 	for _, idxer := range indexers {
 		if err := idxer.RegisterIndexer(ctx, mgr); err != nil {

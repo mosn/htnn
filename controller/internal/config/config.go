@@ -40,6 +40,12 @@ func EnableWebhooks() bool {
 	return enableWebhooks
 }
 
+var enableGatewayAPI = false
+
+func EnableGatewayAPI() bool {
+	return enableGatewayAPI
+}
+
 type envStringReplacer struct {
 }
 
@@ -77,4 +83,5 @@ func Init() {
 	}
 
 	enableWebhooks = vp.GetBool("enable_webhooks")
+	enableGatewayAPI = vp.GetBool("enable_gateway_api")
 }
