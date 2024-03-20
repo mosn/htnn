@@ -386,7 +386,15 @@ func FilterManagerFactory(c interface{}) capi.StreamFilterFactory {
 	conf := c.(*filterManagerConfig)
 	parsedConfig := conf.parsed
 
-	return func(cb capi.FilterCallbackHandler) capi.StreamFilter {
+	return func(cb capi.FilterCallbackHandler) (streamFilter capi.StreamFilter) {
+		// TODO: remove this protection once we upgrade to the new Envoy version
+		defer func() {
+			if p := recover(); p != nil {
+				api.LogErrorf("panic: %v\n%s", p, debug.Stack())
+				streamFilter = InternalErrorFactoryForCAPI(c, cb)
+			}
+		}()
+
 		fm := conf.pool.Get().(*filterManager)
 		fm.callbacks.FilterCallbackHandler = cb
 
