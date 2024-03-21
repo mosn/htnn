@@ -8,8 +8,7 @@ updates:
   - package-ecosystem: "gomod" # See documentation for possible values
     directory: "/" # Location of package manifests
     schedule:
-      interval: "daily"
-      time: "06:00"
+      interval: "weekly"
     ignore:
       # the Envoy lib need to be fit with the Envoy we use. So let's disable auto-updates.
       - dependency-name: "github.com/envoyproxy/envoy"
@@ -18,23 +17,26 @@ updates:
       # So as the Istio's
       - dependency-name: "istio.io/api"
       - dependency-name: "istio.io/client-go"
+    groups:
+      k8s.io:
+        patterns:
+          - "k8s.io/*" # client-go and her friends
+      onsi:
+        patterns:
+          - "github.com/onsi/*" # onsi/gomega and her friends
   - package-ecosystem: "gomod"
     directory: "/site"
     schedule:
-      interval: "daily"
-      time: "03:00"
+      interval: "weekly"
   - package-ecosystem: "npm"
     directory: "/site"
     schedule:
-      interval: "daily"
-      time: "03:00"
+      interval: "weekly"
   - package-ecosystem: "docker"
     directory: "/site"
     schedule:
-      interval: "daily"
-      time: "03:00"
+      interval: "weekly"
   - package-ecosystem: github-actions
     directory: /
     schedule:
-      interval: "daily"
-      time: "06:00"
+      interval: "weekly"
