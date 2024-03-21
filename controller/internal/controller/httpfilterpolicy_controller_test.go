@@ -36,6 +36,8 @@ func TestVirtualServiceIndexer(t *testing.T) {
 	vsi := &VirtualServiceIndexer{r: r}
 	vs := vsi.CustomerResource()
 	assert.Equal(t, &istiov1b1.VirtualService{}, vs)
+
+	anotherNs := gwapiv1a2.Namespace("another")
 	policies := []*mosniov1.HTTPFilterPolicy{
 		{
 			ObjectMeta: metav1.ObjectMeta{
@@ -63,6 +65,22 @@ func TestVirtualServiceIndexer(t *testing.T) {
 						Group: "networking.istio.io",
 						Kind:  "VirtualService",
 						Name:  "vs",
+					},
+				},
+			},
+		},
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: "ns",
+				Name:      "name2",
+			},
+			Spec: mosniov1.HTTPFilterPolicySpec{
+				TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+					PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+						Group:     "networking.istio.io",
+						Kind:      "VirtualService",
+						Name:      "vs",
+						Namespace: &anotherNs,
 					},
 				},
 			},
@@ -100,11 +118,13 @@ func TestVirtualServiceIndexer(t *testing.T) {
 		assert.Equal(t, ctx, c)
 		policies := list.(*mosniov1.HTTPFilterPolicyList)
 		opt := opts[0].(*client.ListOptions)
+
+		expectedIdx := "ns/vs"
 		assert.Equal(t, &client.ListOptions{
-			FieldSelector: fields.OneTermEqualSelector(vsi.IndexName(), "vs"),
+			FieldSelector: fields.OneTermEqualSelector(vsi.IndexName(), expectedIdx),
 		}, opt)
 
-		policy := cache[vsi.IndexName()]["vs"].(*mosniov1.HTTPFilterPolicy)
+		policy := cache[vsi.IndexName()][expectedIdx].(*mosniov1.HTTPFilterPolicy)
 		policies.Items = []mosniov1.HTTPFilterPolicy{*policy}
 		return nil
 	})
