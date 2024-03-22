@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+PROJECT_NAME    = mosn.io/htnn
 # Image URL to use all building/pushing image targets
 IMG ?= htnn-controller:latest
 # Use distroless as minimal base image to package the manager binary
@@ -196,3 +197,16 @@ $(ENVTEST): $(LOCALBIN)
 .PHONY: start-controller-service
 start-controller-service:
 	cd ./tests/testdata/services && docker-compose up -d
+
+GO_FMTTER_VERSION = 0.3.8
+.PHONY: install-go-fmtter
+install-go-fmtter: $(LOCALBIN)
+	if ! test -x $(LOCALBIN)/gosimports || ! $(LOCALBIN)/gosimports -version | grep $(GO_FMTTER_VERSION) >/dev/null; then \
+		GOBIN=$(LOCALBIN) go install github.com/rinchsan/gosimports/cmd/gosimports@v$(GO_FMTTER_VERSION); \
+	fi
+
+.PHONY: gen-crd-code
+gen-crd-code: $(LOCALBIN) install-go-fmtter
+	test -s $(LOCALBIN)/client-gen || GOBIN=$(LOCALBIN) go install k8s.io/code-generator/cmd/client-gen@v0.29.3
+	LOCALBIN=$(LOCALBIN) ./hack/gen-crd-code.sh
+	$(LOCALBIN)/gosimports -w -local ${PROJECT_NAME} ./pkg/client

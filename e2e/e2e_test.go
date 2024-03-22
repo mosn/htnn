@@ -23,7 +23,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/config"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	mosniov1 "mosn.io/htnn/controller/api/v1"
+	mosniov1 "mosn.io/htnn/controller/apis/v1"
 	"mosn.io/htnn/e2e/pkg/suite"
 	_ "mosn.io/htnn/e2e/tests" // import all tests
 )

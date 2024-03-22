@@ -21,7 +21,7 @@ import (
 
 	"k8s.io/apimachinery/pkg/types"
 
-	mosniov1 "mosn.io/htnn/controller/api/v1"
+	mosniov1 "mosn.io/htnn/controller/apis/v1"
 	"mosn.io/htnn/controller/internal/model"
 	"mosn.io/htnn/pkg/filtermanager"
 	fmModel "mosn.io/htnn/pkg/filtermanager/model"

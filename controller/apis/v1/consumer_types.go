@@ -67,6 +67,7 @@ func (s *ConsumerStatus) Reset() {
 	s.changed = false
 }
 
+//+genclient
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 

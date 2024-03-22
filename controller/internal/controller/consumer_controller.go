@@ -32,7 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	mosniov1 "mosn.io/htnn/controller/api/v1"
+	mosniov1 "mosn.io/htnn/controller/apis/v1"
 	"mosn.io/htnn/controller/internal/config"
 	"mosn.io/htnn/controller/internal/istio"
 	"mosn.io/htnn/controller/internal/model"

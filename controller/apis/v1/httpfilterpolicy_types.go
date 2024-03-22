@@ -65,6 +65,7 @@ func (s *HTTPFilterPolicyStatus) Reset() {
 	s.changed = false
 }
 
+//+genclient
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 //+kubebuilder:metadata:labels=gateway.networking.k8s.io/policy=direct

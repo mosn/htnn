@@ -24,7 +24,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	mosniov1 "mosn.io/htnn/controller/api/v1"
+	mosniov1 "mosn.io/htnn/controller/apis/v1"
 	"mosn.io/htnn/controller/tests/integration/helper"
 	"mosn.io/htnn/controller/tests/pkg"
 )
