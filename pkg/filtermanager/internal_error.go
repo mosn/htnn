@@ -14,7 +14,11 @@
 
 package filtermanager
 
-import "mosn.io/htnn/pkg/filtermanager/api"
+import (
+	capi "github.com/envoyproxy/envoy/contrib/golang/common/go/api"
+
+	"mosn.io/htnn/pkg/filtermanager/api"
+)
 
 type internalErrorFilter struct {
 	api.PassThroughFilter
@@ -28,4 +32,21 @@ func (f *internalErrorFilter) DecodeHeaders(headers api.RequestHeaderMap, endStr
 
 func InternalErrorFactory(interface{}, api.FilterCallbackHandler) api.Filter {
 	return &internalErrorFilter{}
+}
+
+type internalErrorFilterForCAPI struct {
+	capi.PassThroughStreamFilter
+
+	callbacks capi.FilterCallbacks
+}
+
+func (f *internalErrorFilterForCAPI) DecodeHeaders(headers capi.RequestHeaderMap, endStream bool) capi.StatusType {
+	f.callbacks.SendLocalReply(500, "", nil, 0, "")
+	return capi.LocalReply
+}
+
+func InternalErrorFactoryForCAPI(cfg interface{}, callbacks capi.FilterCallbackHandler) capi.StreamFilter {
+	return &internalErrorFilterForCAPI{
+		callbacks: callbacks,
+	}
 }

@@ -25,3 +25,8 @@ message Config {
   bool headers = 4;
   bool data = 5;
 }
+
+message BadPluginConfig {
+  bool panic_in_factory = 1;
+  bool panic_in_parse = 2;
+}
