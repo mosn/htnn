@@ -41,29 +41,6 @@ func mustReadHTTPFilterPolicy(fn string, out *[]map[string]interface{}) {
 	helper.MustReadInput(fn, out)
 }
 
-func attachGateway(ctx context.Context, httpRoute *gwapiv1.HTTPRoute, gwName string) {
-	httpRoute.Status.Parents = []gwapiv1.RouteParentStatus{
-		{
-			ParentRef: gwapiv1.ParentReference{
-				Kind:  (*gwapiv1.Kind)(ptrstr("Gateway")),
-				Group: (*gwapiv1.Group)(ptrstr(gwapiv1.GroupName)),
-				Name:  (gwapiv1.ObjectName)(gwName),
-			},
-			ControllerName: "istio.io/gateway-controller",
-		},
-		{
-			ParentRef: gwapiv1.ParentReference{
-				Kind:      (*gwapiv1.Kind)(ptrstr("Gateway")),
-				Group:     (*gwapiv1.Group)(ptrstr(gwapiv1.GroupName)),
-				Name:      (gwapiv1.ObjectName)(gwName),
-				Namespace: (*gwapiv1.Namespace)(ptrstr("not-found")),
-			},
-			ControllerName: "istio.io/gateway-controller",
-		},
-	}
-	Expect(k8sClient.Status().Update(ctx, httpRoute)).Should(Succeed())
-}
-
 var _ = Describe("HTTPFilterPolicy controller", func() {
 
 	const (
@@ -636,7 +613,6 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 
 				if obj.GetName() == "hr" {
 					httpRoute = obj.(*gwapiv1.HTTPRoute)
-					attachGateway(ctx, httpRoute, DefaultK8sGateway.GetName())
 				}
 			}
 
@@ -726,11 +702,6 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 			for _, in := range input {
 				obj := pkg.MapToObj(in)
 				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
-
-				if obj.GetName() == "hr" {
-					httpRoute := obj.(*gwapiv1.HTTPRoute)
-					attachGateway(ctx, httpRoute, DefaultK8sGateway.GetName())
-				}
 			}
 
 			var envoyfilters istiov1a3.EnvoyFilterList
@@ -777,7 +748,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 		It("deal with unattached httproute", func() {
 			ctx := context.Background()
 			input := []map[string]interface{}{}
-			mustReadHTTPFilterPolicy("httproute", &input)
+			mustReadHTTPFilterPolicy("httproute_without_gateway", &input)
 
 			for _, in := range input {
 				obj := pkg.MapToObj(in)

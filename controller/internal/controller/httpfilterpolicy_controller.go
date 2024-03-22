@@ -169,7 +169,7 @@ func (r *HTTPFilterPolicyReconciler) resolveVirtualService(ctx context.Context, 
 				continue
 			}
 			if strings.Contains(gw, "/") {
-				logger.Info("skip gateway from other namespace", "name", virtualService.Name, "namespace", virtualService.Namespace)
+				logger.Info("skip gateway from other namespace", "name", virtualService.Name, "namespace", virtualService.Namespace, "gateway", gw)
 				continue
 			}
 
@@ -186,7 +186,8 @@ func (r *HTTPFilterPolicyReconciler) resolveVirtualService(ctx context.Context, 
 
 			err = mosniov1.ValidateGateway(&gateway)
 			if err != nil {
-				logger.Info("unsupported Gateway", "name", gateway.Name, "namespace", gateway.Namespace, "reason", err.Error())
+				logger.Info("unsupported Gateway", "name", virtualService.Name, "namespace", virtualService.Namespace,
+					"gateway name", gateway.Name, "gateway namespace", gateway.Namespace, "reason", err.Error())
 				continue
 			}
 
@@ -209,7 +210,7 @@ func (r *HTTPFilterPolicyReconciler) resolveVirtualService(ctx context.Context, 
 		// For wildcard host, the `*.` is converted to `-`. For example, `*.example.com` results in
 		// EnvoyFilter name `htnn-h--example.com`, and `www.example.com` results in `httn-h-www.example.com`.
 	} else {
-		policy.SetAccepted(gwapiv1a2.PolicyReasonTargetNotFound, "invalid target resource")
+		policy.SetAccepted(gwapiv1a2.PolicyReasonTargetNotFound, "all gateways are not found or unsupported")
 	}
 
 	return nil
@@ -242,21 +243,22 @@ func (r *HTTPFilterPolicyReconciler) resolveHTTPRoute(ctx context.Context, logge
 		accepted = true
 
 	} else {
-		gws = make([]*gwapiv1.Gateway, 0, len(route.Status.Parents))
-		for _, pr := range route.Status.Parents {
-			// Consider it is valid once the listener is attached
-			ref := pr.ParentRef
+		gws = make([]*gwapiv1.Gateway, 0, len(route.Spec.ParentRefs))
+		ns := route.Namespace
+
+		for _, ref := range route.Spec.ParentRefs {
 			if ref.Group != nil && *ref.Group != gwapiv1.GroupName {
 				continue
 			}
 			if ref.Kind != nil && *ref.Kind != gwapiv1.Kind("Gateway") {
 				continue
 			}
-
-			ns := route.Namespace
-			if ref.Namespace != nil {
-				ns = string(*ref.Namespace)
+			if ref.Namespace != nil && *ref.Namespace != gwapiv1.Namespace(ns) {
+				logger.Info("skip gateway from other namespace", "name", route.Name, "namespace", route.Namespace, "gateway", ref)
+				continue
 			}
+			// Port & SectionName are checked in the translation of listeners
+
 			var gateway gwapiv1.Gateway
 			err = r.Get(ctx, types.NamespacedName{Name: string(ref.Name), Namespace: ns}, &gateway)
 			if err != nil {
@@ -278,13 +280,10 @@ func (r *HTTPFilterPolicyReconciler) resolveHTTPRoute(ctx context.Context, logge
 	}
 
 	if accepted {
-		// The CRD status only tells us which gateways are referenced & how many attached routes per listener.
-		// But we don't know which listerner is referenced by a specific HTTPRoute.
-		// So we have to keep the whole gateway and filter the listener by ourselves.
 		initState.AddPolicyForHTTPRoute(policy, &route, gws)
 		policy.SetAccepted(gwapiv1a2.PolicyReasonAccepted)
 	} else {
-		policy.SetAccepted(gwapiv1a2.PolicyReasonTargetNotFound, "invalid target resource")
+		policy.SetAccepted(gwapiv1a2.PolicyReasonTargetNotFound, "all gateways are not found or unsupported")
 	}
 
 	return nil
