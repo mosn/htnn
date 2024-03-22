@@ -172,6 +172,41 @@ var _ = Describe("Consumer controller", func() {
 			Expect(marshaledCfg["default"]["spacewander"]).To(BeNil())
 			Expect(marshaledCfg["default"]["unchanged"]).ToNot(BeNil())
 			Expect(marshaledCfg["default"]["unchanged"]["v"]).To(Equal(v))
+
+			// back to valid
+			base = client.MergeFrom(c.DeepCopy())
+			delete(c.Spec.Auth, "unknown")
+			Expect(k8sClient.Patch(ctx, c, base)).Should(Succeed())
+			Eventually(func() bool {
+				if err := k8sClient.List(ctx, &consumers); err != nil {
+					return false
+				}
+				for _, item := range consumers.Items {
+					if item.Name == "spacewander" {
+						c = &consumers.Items[0]
+						cs = c.Status.Conditions
+						return cs[0].Reason == string(mosniov1.ReasonAccepted)
+					}
+				}
+				return false
+			}, timeout, interval).Should(BeTrue())
+
+			// EnvoyFilter should be updated too
+			Eventually(func() bool {
+				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
+					return false
+				}
+				return len(envoyfilters.Items) == 1
+			}, timeout, interval).Should(BeTrue())
+
+			value = envoyfilters.Items[0].Spec.ConfigPatches[0].Patch.Value.AsMap()
+			typedCfg = value["typed_config"].(map[string]interface{})
+			pluginCfg = typedCfg["plugin_config"].(map[string]interface{})
+
+			marshaledCfg = map[string]map[string]map[string]interface{}{}
+			b, _ = json.Marshal(pluginCfg["value"])
+			json.Unmarshal(b, &marshaledCfg)
+			Expect(marshaledCfg["default"]["spacewander"]).ToNot(BeNil())
 		})
 
 		It("with filter", func() {
