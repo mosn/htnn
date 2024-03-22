@@ -23,7 +23,7 @@ import (
 )
 
 type DecodeWholeRequestFilter interface {
-	// DecodeRequest processes the whole request once when WaitAllData is returned
+	// DecodeRequest processes the whole request once when WaitAllData is returned from DecodeHeaders
 	// headers: the request header
 	// data: the whole request body, nil if the request doesn't have body
 	// trailers: TODO, just a placeholder
@@ -31,7 +31,7 @@ type DecodeWholeRequestFilter interface {
 }
 
 type EncodeWholeResponseFilter interface {
-	// EncodeResponse processes the whole response once when WaitAllData is returned
+	// EncodeResponse processes the whole response once when WaitAllData is returned from EncodeHeaders
 	// headers: the response header
 	// data: the whole response body, nil if the response doesn't have body
 	// trailers: TODO, just a placeholder

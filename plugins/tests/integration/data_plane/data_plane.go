@@ -16,6 +16,7 @@ package data_plane
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"crypto/md5"
 	"fmt"
@@ -26,6 +27,7 @@ import (
 	"os/exec"
 	"os/user"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 	"testing"
@@ -54,9 +56,10 @@ type DataPlane struct {
 }
 
 type Option struct {
-	LogLevel        string
-	NoErrorLogCheck bool
-	Bootstrap       *bootstrap
+	LogLevel         string
+	NoErrorLogCheck  bool
+	ExpectLogPattern []string
+	Bootstrap        *bootstrap
 }
 
 func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
@@ -262,10 +265,19 @@ func (dp *DataPlane) Stop() {
 	<-dp.done
 	logger.Info("envoy stopped")
 
-	f := dp.cmd.Stdout.(*os.File)
+	f := dp.cmd.Stderr.(*os.File)
+	f.Close()
+	f = dp.cmd.Stdout.(*os.File)
+	f.Seek(0, 0)
+	text, err := io.ReadAll(f)
+	defer f.Close()
+	if err != nil {
+		logger.Error(err, "failed to read envoy stdout")
+		return
+	}
+
 	if !dp.opt.NoErrorLogCheck {
-		f.Seek(0, 0)
-		sc := bufio.NewScanner(f)
+		sc := bufio.NewScanner(bytes.NewReader(text))
 		for sc.Scan() {
 			s := sc.Text()
 			if strings.Contains(s, "[error]") || strings.Contains(s, "[critical]") {
@@ -275,9 +287,12 @@ func (dp *DataPlane) Stop() {
 		}
 	}
 
-	f.Close()
-	f = dp.cmd.Stderr.(*os.File)
-	f.Close()
+	for _, pattern := range dp.opt.ExpectLogPattern {
+		re := regexp.MustCompile(pattern)
+		if !re.Match(text) {
+			assert.Falsef(dp.t, true, "log pattern %q not found", pattern)
+		}
+	}
 }
 
 func (dp *DataPlane) Head(path string, header http.Header) (*http.Response, error) {

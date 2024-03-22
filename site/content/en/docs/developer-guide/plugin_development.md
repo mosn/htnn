@@ -132,6 +132,8 @@ Note: `DecodeRequest` is only executed if `DecodeHeaders` returns `WaitAllData`.
 
 The same process applies to the Encode path, but the method is slightly different. This time it requires `EncodeHeaders` to return `WaitAllData` to invoke `EncodeResponse`.
 
+Note: `EncodeResponse` is only executed if `EncodeHeaders` returns `WaitAllData`. So if `EncodeResponse` is defined, `EncodeHeaders` must be defined as well.
+
 ## Consumer Plugins
 
 Consumer plugins are a special type of Go plugin. They locate and set a [consumer](../../concept/consumer) based on the content of the request headers.

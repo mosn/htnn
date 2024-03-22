@@ -127,6 +127,8 @@ filter manager 实现了以下特性：
 
 同样的过程适用于 Encode 路径，但方式略有不同。此时需要由 `EncodeHeaders` 返回 `WaitAllData`，调用方法 `EncodeResponse`。
 
+注意：`EncodeResponse` 仅在 `EncodeHeaders` 返回 `WaitAllData` 时才被执行。所以如果定义了 `EncodeResponse`，一定要定义 `EncodeHeaders`。
+
 ## 消费者插件
 
 消费者插件是一种特殊的 Go 插件。它根据请求头中的内容查找并设置[消费者](../../concept/consumer)。
