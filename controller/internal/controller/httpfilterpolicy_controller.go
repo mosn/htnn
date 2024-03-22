@@ -44,11 +44,14 @@ import (
 
 	mosniov1 "mosn.io/htnn/controller/api/v1"
 	"mosn.io/htnn/controller/internal/config"
-	"mosn.io/htnn/controller/internal/k8s"
 	"mosn.io/htnn/controller/internal/metrics"
 	"mosn.io/htnn/controller/internal/model"
 	"mosn.io/htnn/controller/internal/translation"
 )
+
+func getK8sKey(ns, name string) string {
+	return ns + "/" + name
+}
 
 // HTTPFilterPolicyReconciler reconciles a HTTPFilterPolicy object
 type HTTPFilterPolicyReconciler struct {
@@ -155,7 +158,7 @@ func (r *HTTPFilterPolicyReconciler) resolveVirtualService(ctx context.Context, 
 	gws := initState.GetGatewaysWithVirtualService(&virtualService)
 	if len(gws) > 0 {
 		for _, gateway := range gws {
-			key := k8s.GetObjectKey(&gateway.ObjectMeta)
+			key := getK8sKey(gateway.Namespace, gateway.Name)
 			gwIdx[key] = append(gwIdx[key], policy)
 		}
 
@@ -172,6 +175,11 @@ func (r *HTTPFilterPolicyReconciler) resolveVirtualService(ctx context.Context, 
 				logger.Info("skip gateway from other namespace", "name", virtualService.Name, "namespace", virtualService.Namespace, "gateway", gw)
 				continue
 			}
+
+			key := getK8sKey(virtualService.Namespace, gw)
+			// We index the gateway regardless of whether it is valid or not.
+			// Otherwise, we don't know whether the gateway is changed from invalid to valid.
+			gwIdx[key] = append(gwIdx[key], policy)
 
 			var gateway istiov1b1.Gateway
 			err = r.Get(ctx, types.NamespacedName{Name: gw, Namespace: virtualService.Namespace}, &gateway)
@@ -192,9 +200,6 @@ func (r *HTTPFilterPolicyReconciler) resolveVirtualService(ctx context.Context, 
 			}
 
 			gws = append(gws, &gateway)
-
-			key := k8s.GetObjectKey(&gateway.ObjectMeta)
-			gwIdx[key] = append(gwIdx[key], policy)
 
 			accepted = true
 		}
@@ -236,7 +241,7 @@ func (r *HTTPFilterPolicyReconciler) resolveHTTPRoute(ctx context.Context, logge
 	gws := initState.GetGatewaysWithHTTPRoute(&route)
 	if len(gws) > 0 {
 		for _, gateway := range gws {
-			key := k8s.GetObjectKey(&gateway.ObjectMeta)
+			key := getK8sKey(gateway.Namespace, gateway.Name)
 			gwIdx[key] = append(gwIdx[key], policy)
 		}
 
@@ -257,10 +262,15 @@ func (r *HTTPFilterPolicyReconciler) resolveHTTPRoute(ctx context.Context, logge
 				logger.Info("skip gateway from other namespace", "name", route.Name, "namespace", route.Namespace, "gateway", ref)
 				continue
 			}
-			// Port & SectionName are checked in the translation of listeners
 
-			var gateway gwapiv1.Gateway
-			err = r.Get(ctx, types.NamespacedName{Name: string(ref.Name), Namespace: ns}, &gateway)
+			key := getK8sKey(ns, string(ref.Name))
+			// We index the gateway regardless of whether it is valid or not.
+			// Otherwise, we don't know whether the gateway is changed from invalid to valid.
+			gwIdx[key] = append(gwIdx[key], policy)
+
+			var gw gwapiv1.Gateway
+			gwNsName := types.NamespacedName{Name: string(ref.Name), Namespace: ns}
+			err = r.Get(ctx, gwNsName, &gw)
 			if err != nil {
 				if !apierrors.IsNotFound(err) {
 					return err
@@ -270,10 +280,33 @@ func (r *HTTPFilterPolicyReconciler) resolveHTTPRoute(ctx context.Context, logge
 				continue
 			}
 
-			gws = append(gws, &gateway)
+			// This part of code is similar to the code in the translation.
+			// The code in the translation filters out which listeners are matched.
+			// The code here filters out which gateways have at least one matched listeners.
+			atLeastOneListenerMatched := false
+			for _, ls := range gw.Spec.Listeners {
+				if ref.Port != nil && *ref.Port != ls.Port {
+					continue
+				}
+				if ref.SectionName != nil && *ref.SectionName != ls.Name {
+					continue
+				}
 
-			key := k8s.GetObjectKey(&gateway.ObjectMeta)
-			gwIdx[key] = append(gwIdx[key], policy)
+				if !translation.AllowRoute(logger, ls.AllowedRoutes, &route, &gwNsName) {
+					continue
+				}
+
+				atLeastOneListenerMatched = true
+				break
+			}
+
+			if !atLeastOneListenerMatched {
+				logger.Info("no matched listeners in gateway", "gateway", ref,
+					"name", route.Name, "namespace", route.Namespace, "listeners", gw.Spec.Listeners)
+				continue
+			}
+
+			gws = append(gws, &gw)
 
 			accepted = true
 		}
@@ -569,9 +602,8 @@ func (v *IstioGatewayIndexer) UpdateIndex(idx map[string][]*mosniov1.HTTPFilterP
 func (v *IstioGatewayIndexer) FindAffectedObjects(ctx context.Context, obj client.Object) []reconcile.Request {
 	logger := log.FromContext(ctx)
 
-	gw := obj.(*istiov1b1.Gateway)
 	v.lock.RLock()
-	policies, ok := v.index[k8s.GetObjectKey(&gw.ObjectMeta)]
+	policies, ok := v.index[getK8sKey(obj.GetNamespace(), obj.GetName())]
 	v.lock.RUnlock()
 	if !ok {
 		return nil
@@ -622,7 +654,7 @@ func (v *K8sGatewayIndexer) FindAffectedObjects(ctx context.Context, obj client.
 
 	gw := obj.(*gwapiv1.Gateway)
 	v.lock.RLock()
-	policies, ok := v.index[k8s.GetObjectKey(&gw.ObjectMeta)]
+	policies, ok := v.index[getK8sKey(gw.Namespace, gw.Name)]
 	v.lock.RUnlock()
 	if !ok {
 		return nil

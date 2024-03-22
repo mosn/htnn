@@ -116,7 +116,7 @@ func buildVirtualHostsWithK8sGw(host string, ls *gwapiv1.Listener, nsName, gwNsN
 	return vhs
 }
 
-func allowRoute(logger *logr.Logger, cond *gwapiv1.AllowedRoutes, route *gwapiv1.HTTPRoute, gwNsName *types.NamespacedName) bool {
+func AllowRoute(logger *logr.Logger, cond *gwapiv1.AllowedRoutes, route *gwapiv1.HTTPRoute, gwNsName *types.NamespacedName) bool {
 	if cond == nil {
 		return true
 	}
@@ -246,7 +246,7 @@ func toDataPlaneState(ctx *Ctx, state *InitState) (*FinalState, error) {
 					continue
 				}
 
-				if !allowRoute(ctx.logger, ls.AllowedRoutes, route.HTTPRoute, gwNsName) {
+				if !AllowRoute(ctx.logger, ls.AllowedRoutes, route.HTTPRoute, gwNsName) {
 					continue
 				}
 
