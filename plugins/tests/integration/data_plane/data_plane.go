@@ -144,7 +144,7 @@ func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 	// This is the envoyproxy/envoy:contrib-v1.29.2
 	// Use docker inspect --format='{{index .RepoDigests 0}}' envoyproxy/envoy:contrib-v1.29.2
 	// to get the sha256 ID
-	image := "envoyproxy/envoy@sha256:98ed3d86ff8b86dc12ddf54b7bb67ddf5506f80769038b3e2ab7bf402730fb4d"
+	image := "envoyproxy/envoy@sha256:c47136604751274b30fa7a89132314b8e3586d54d8f8cc30d7a911a9ecc5e11c"
 	pwd, _ := os.Getwd()
 	projectRoot := filepath.Join(pwd, "..", "..", "..")
 	cmdline := "docker run" +
@@ -165,6 +165,7 @@ func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 	if _, ok := validationCache[digest]; !ok {
 		validateCmd := cmdline + " " + envoyValidateCmd
 		cmds := strings.Fields(validateCmd)
+		logger.Info("run validate cmd", "cmdline", validateCmd)
 		out, err := exec.Command(cmds[0], cmds[1:]...).CombinedOutput()
 		if err != nil {
 			logger.Info("bad envoy bootstrap configuration", "cmd", validateCmd, "output", string(out))

@@ -977,6 +977,7 @@ func TestFilterManagerPluginPanic(t *testing.T) {
 
 func TestFilterManagerPluginIncorrectMethodDefinition(t *testing.T) {
 	dp, err := data_plane.StartDataPlane(t, &data_plane.Option{
+		LogLevel:        "debug",
 		NoErrorLogCheck: true,
 		ExpectLogPattern: []string{
 			`plugin bad has DecodeRequest but not DecodeHeaders`,

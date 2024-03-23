@@ -260,8 +260,24 @@ var (
 	LogWarnf     = api.LogWarnf
 	LogErrorf    = api.LogErrorf
 	LogCriticalf = api.LogCriticalf
-	GetLogLevel  = api.GetLogLevel
+)
 
+type LogType = api.LogType
+
+var (
+	LogLevelTrace    = api.Trace
+	LogLevelDebug    = api.Debug
+	LogLevelInfo     = api.Info
+	LogLevelWarn     = api.Warn
+	LogLevelError    = api.Error
+	LogLevelCritical = api.Critical
+)
+
+func GetLogLevel() LogType {
+	return api.GetLogLevel()
+}
+
+var (
 	ErrInternalFailure      = api.ErrInternalFailure
 	ErrSerializationFailure = api.ErrSerializationFailure
 	ErrValueNotFound        = api.ErrValueNotFound

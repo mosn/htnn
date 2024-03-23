@@ -435,7 +435,12 @@ func FilterManagerFactory(c interface{}) capi.StreamFilterFactory {
 				// requires DecodeHeaders defined. Currently, we just documentate it. Per request check
 				// is expensive and not necessary in most of time.
 			}
-			filters[i] = model.NewFilterWrapper(fc.Name, f)
+
+			if api.GetLogLevel() <= api.LogLevelDebug {
+				filters[i] = model.NewFilterWrapper(fc.Name, NewLogExecutionFilter(fc.Name, f))
+			} else {
+				filters[i] = model.NewFilterWrapper(fc.Name, f)
+			}
 		}
 
 		if fm.canSkipMethod == nil {
