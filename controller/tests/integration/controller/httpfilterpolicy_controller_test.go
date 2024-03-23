@@ -69,18 +69,36 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 			}
 
 			var policies mosniov1.HTTPFilterPolicyList
+			var p *mosniov1.HTTPFilterPolicy
 			var cs []metav1.Condition
 			Eventually(func() bool {
 				if err := k8sClient.List(ctx, &policies); err != nil {
 					return false
 				}
-				p := policies.Items[0]
+				p = &policies.Items[0]
 				cs = p.Status.Conditions
 				return len(cs) == 1
 			}, timeout, interval).Should(BeTrue())
 			Expect(cs[0].Type).To(Equal(string(gwapiv1a2.PolicyConditionAccepted)))
 			Expect(cs[0].Reason).To(Equal(string(gwapiv1a2.PolicyReasonInvalid)))
-			Expect(policies.Items[0].IsValid()).To(BeFalse())
+			Expect(p.IsValid()).To(BeFalse())
+
+			// to valid
+			base := client.MergeFrom(p.DeepCopy())
+			delete(p.Spec.Filters, "unknown")
+			Expect(k8sClient.Patch(ctx, p, base)).Should(Succeed())
+			Eventually(func() bool {
+				if err := k8sClient.List(ctx, &policies); err != nil {
+					return false
+				}
+				p = &policies.Items[0]
+				cs = p.Status.Conditions
+				if len(cs) != 1 {
+					return false
+				}
+				return cs[0].Reason == string(gwapiv1a2.PolicyReasonTargetNotFound)
+			}, timeout, interval).Should(BeTrue())
+			Expect(p.IsValid()).To(BeTrue())
 		})
 
 		It("deal with valid crd", func() {

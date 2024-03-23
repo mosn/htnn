@@ -12,3 +12,6 @@
       unknown:
         config:
           hostName: goldfish
+      demo:
+        config:
+          hostName: Mary
