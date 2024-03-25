@@ -20,7 +20,7 @@
   spec:
     parentRefs:
     - name: default
-      namespace: istio-ingress # cross namespace is unsupported
+      sectionName: not-matched
     hostnames:
       - default.local
     rules:

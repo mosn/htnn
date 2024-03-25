@@ -163,7 +163,7 @@ func TestAllowRoute(t *testing.T) {
 	for _, tt := range tests {
 		tt := tt
 		t.Run(tt.name, func(t *testing.T) {
-			actual := allowRoute(nil, tt.cond, route, gwNsName)
+			actual := AllowRoute(nil, tt.cond, route, gwNsName)
 			if actual != tt.expected {
 				t.Errorf("(%s): expected %v, actual %v", tt.name, tt.expected, actual)
 			}
