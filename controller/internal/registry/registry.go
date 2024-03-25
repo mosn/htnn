@@ -18,7 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	mosniov1 "mosn.io/htnn/controller/api/v1"
+	mosniov1 "mosn.io/htnn/controller/apis/v1"
 	"mosn.io/htnn/controller/internal/log"
 	pkgRegistry "mosn.io/htnn/controller/pkg/registry"
 )

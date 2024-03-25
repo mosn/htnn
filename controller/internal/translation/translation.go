@@ -22,7 +22,7 @@ import (
 
 	"github.com/go-logr/logr"
 
-	mosniov1 "mosn.io/htnn/controller/api/v1"
+	mosniov1 "mosn.io/htnn/controller/apis/v1"
 )
 
 type Ctx struct {

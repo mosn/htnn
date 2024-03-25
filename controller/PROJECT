@@ -13,7 +13,7 @@ resources:
   controller: true
   group: mosn.io
   kind: HTTPFilterPolicy
-  path: mosn.io/htnn/controller/api/v1
+  path: mosn.io/htnn/controller/apis/v1
   version: v1
   webhooks:
     defaulting: true
@@ -25,7 +25,7 @@ resources:
   controller: true
   group: mosn.io
   kind: Consumer
-  path: mosn.io/htnn/controller/api/v1
+  path: mosn.io/htnn/controller/apis/v1
   version: v1
   webhooks:
     defaulting: true
@@ -37,7 +37,7 @@ resources:
   controller: true
   group: mosn.io
   kind: ServiceRegistry
-  path: mosn.io/htnn/controller/api/v1
+  path: mosn.io/htnn/controller/apis/v1
   version: v1
   webhooks:
     defaulting: true
