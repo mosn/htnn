@@ -24,7 +24,7 @@ import (
 
 	"mosn.io/htnn/api/pkg/filtermanager"
 	"mosn.io/htnn/api/plugins/tests/integration/control_plane"
-	data_plane2 "mosn.io/htnn/api/plugins/tests/integration/data_plane"
+	"mosn.io/htnn/api/plugins/tests/integration/data_plane"
 )
 
 var (
@@ -33,8 +33,8 @@ var (
 )
 
 func TestExtAuth(t *testing.T) {
-	dp, err := data_plane2.StartDataPlane(t, &data_plane2.Option{
-		Bootstrap: data_plane2.Bootstrap().AddBackendRoute(extAuthRoute),
+	dp, err := data_plane.StartDataPlane(t, &data_plane.Option{
+		Bootstrap: data_plane.Bootstrap().AddBackendRoute(extAuthRoute),
 	})
 	if err != nil {
 		t.Fatalf("failed to start data plane: %v", err)

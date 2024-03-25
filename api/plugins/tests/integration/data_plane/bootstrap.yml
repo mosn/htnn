@@ -34,9 +34,6 @@ static_resources:
                             placeholder:
                               d: |
                                 {
-                                  "auth":{
-                                    "keyAuth":"{\"key\":\"placeholder\"}"
-                                  }
                                 }
                               v: 4355415
                   - name: htnn.filters.http.golang

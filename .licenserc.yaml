@@ -25,7 +25,6 @@ header:
     - '**/*.yml'
     - '**/*.toml'
     # ignore file controlled by tools
-    - '**/go.mod'
     - '**/go.sum'
     - 'buf.lock'
     - 'controller/PROJECT'

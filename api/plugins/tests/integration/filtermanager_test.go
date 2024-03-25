@@ -901,14 +901,13 @@ func TestFilterManagerIgnoreUnknownFields(t *testing.T) {
 	}
 	defer dp.Stop()
 
-	config := control_plane.NewSinglePluinConfig("demo", map[string]interface{}{
-		"hostName": "Tom",
-		"unknown":  "blah",
+	config := control_plane.NewSinglePluinConfig("buffer", map[string]interface{}{
+		"unknown": "blah",
 	})
 	controlPlane.UseGoPluginConfig(config, dp)
 	resp, err := dp.Get("/echo", nil)
 	require.Nil(t, err)
-	assert.Equal(t, "hello,", resp.Header.Get("Echo-Tom"), resp)
+	assert.Equal(t, 200, resp.StatusCode, resp)
 }
 
 func TestFilterManagerPluginReturnsErrorInParse(t *testing.T) {
@@ -921,8 +920,8 @@ func TestFilterManagerPluginReturnsErrorInParse(t *testing.T) {
 	}
 	defer dp.Stop()
 
-	config := control_plane.NewSinglePluinConfig("demo", map[string]interface{}{
-		"hostName": []string{"wrong type"},
+	config := control_plane.NewSinglePluinConfig("buffer", map[string]interface{}{
+		"decode": []string{"wrong type"},
 	})
 	controlPlane.UseGoPluginConfig(config, dp)
 	resp, err := dp.Get("/echo", nil)

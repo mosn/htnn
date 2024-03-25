@@ -22,12 +22,12 @@ import (
 
 	"mosn.io/htnn/api/pkg/filtermanager"
 	"mosn.io/htnn/api/plugins/tests/integration/control_plane"
-	data_plane2 "mosn.io/htnn/api/plugins/tests/integration/data_plane"
+	"mosn.io/htnn/api/plugins/tests/integration/data_plane"
 )
 
 func TestKeyAuth(t *testing.T) {
-	dp, err := data_plane2.StartDataPlane(t, &data_plane2.Option{
-		Bootstrap: data_plane2.Bootstrap().AddConsumer("rick", map[string]interface{}{
+	dp, err := data_plane.StartDataPlane(t, &data_plane.Option{
+		Bootstrap: data_plane.Bootstrap().AddConsumer("rick", map[string]interface{}{
 			"auth": map[string]interface{}{
 				"keyAuth":  `{"key":"rick"}`,
 				"hmacAuth": `{"accessKey":"ak","secretKey":"sk","signedHeaders":["x-custom-a"],"algorithm":"HMAC_SHA256"}`,
@@ -94,6 +94,56 @@ func TestKeyAuth(t *testing.T) {
 				assert.Equal(t, 401, resp.StatusCode)
 				resp, _ = dp.Get("/echo?ak=rick", http.Header{"Authorization": []string{"morty"}})
 				assert.Equal(t, 401, resp.StatusCode)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			controlPlane.UseGoPluginConfig(tt.config, dp)
+			tt.run(t)
+		})
+	}
+}
+
+// TODO: move this test under api/plugins/tests/integration
+func TestKeyAuthWithFilter(t *testing.T) {
+	dp, err := data_plane.StartDataPlane(t, &data_plane.Option{
+		Bootstrap: data_plane.Bootstrap().AddConsumer("with_filter", map[string]interface{}{
+			"auth": map[string]interface{}{
+				"keyAuth": `{"key":"marvin"}`,
+			},
+			"filters": map[string]interface{}{
+				"demo": map[string]interface{}{
+					"config": `{"hostName": "Mike"}`,
+				},
+			},
+		}),
+	})
+	if err != nil {
+		t.Fatalf("failed to start data plane: %v", err)
+		return
+	}
+	defer dp.Stop()
+
+	tests := []struct {
+		name   string
+		config *filtermanager.FilterManagerConfig
+		run    func(t *testing.T)
+	}{
+		{
+			name: "authn & exec",
+			config: control_plane.NewSinglePluinConfig("keyAuth", map[string]interface{}{
+				"keys": []interface{}{
+					map[string]interface{}{
+						"name": "Authorization",
+					},
+				},
+			}),
+			run: func(t *testing.T) {
+				resp, _ := dp.Get("/echo", http.Header{"Authorization": []string{"marvin"}})
+				assert.Equal(t, 200, resp.StatusCode)
+				assert.Equal(t, "hello,", resp.Header.Get("Echo-Mike"), resp)
 			},
 		},
 	}
