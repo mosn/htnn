@@ -128,6 +128,9 @@ func (p *HTTPFilterPolicy) SetAccepted(reason gwapiv1a2.PolicyConditionReason, m
 
 func (p *HTTPFilterPolicy) IsValid() bool {
 	for _, cond := range p.Status.Conditions {
+		if cond.ObservedGeneration != p.Generation {
+			continue
+		}
 		if cond.Type == string(gwapiv1a2.PolicyConditionAccepted) && cond.Reason == string(gwapiv1a2.PolicyReasonInvalid) {
 			return false
 		}

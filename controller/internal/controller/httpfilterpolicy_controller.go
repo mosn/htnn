@@ -44,11 +44,14 @@ import (
 
 	mosniov1 "mosn.io/htnn/controller/apis/v1"
 	"mosn.io/htnn/controller/internal/config"
-	"mosn.io/htnn/controller/internal/k8s"
 	"mosn.io/htnn/controller/internal/metrics"
 	"mosn.io/htnn/controller/internal/model"
 	"mosn.io/htnn/controller/internal/translation"
 )
+
+func getK8sKey(ns, name string) string {
+	return ns + "/" + name
+}
 
 // HTTPFilterPolicyReconciler reconciles a HTTPFilterPolicy object
 type HTTPFilterPolicyReconciler struct {
@@ -155,7 +158,7 @@ func (r *HTTPFilterPolicyReconciler) resolveVirtualService(ctx context.Context, 
 	gws := initState.GetGatewaysWithVirtualService(&virtualService)
 	if len(gws) > 0 {
 		for _, gateway := range gws {
-			key := k8s.GetObjectKey(&gateway.ObjectMeta)
+			key := getK8sKey(gateway.Namespace, gateway.Name)
 			gwIdx[key] = append(gwIdx[key], policy)
 		}
 
@@ -169,9 +172,14 @@ func (r *HTTPFilterPolicyReconciler) resolveVirtualService(ctx context.Context, 
 				continue
 			}
 			if strings.Contains(gw, "/") {
-				logger.Info("skip gateway from other namespace", "name", virtualService.Name, "namespace", virtualService.Namespace)
+				logger.Info("skip gateway from other namespace", "name", virtualService.Name, "namespace", virtualService.Namespace, "gateway", gw)
 				continue
 			}
+
+			key := getK8sKey(virtualService.Namespace, gw)
+			// We index the gateway regardless of whether it is valid or not.
+			// Otherwise, we don't know whether the gateway is changed from invalid to valid.
+			gwIdx[key] = append(gwIdx[key], policy)
 
 			var gateway istiov1b1.Gateway
 			err = r.Get(ctx, types.NamespacedName{Name: gw, Namespace: virtualService.Namespace}, &gateway)
@@ -186,14 +194,12 @@ func (r *HTTPFilterPolicyReconciler) resolveVirtualService(ctx context.Context, 
 
 			err = mosniov1.ValidateGateway(&gateway)
 			if err != nil {
-				logger.Info("unsupported Gateway", "name", gateway.Name, "namespace", gateway.Namespace, "reason", err.Error())
+				logger.Info("unsupported Gateway", "name", virtualService.Name, "namespace", virtualService.Namespace,
+					"gateway name", gateway.Name, "gateway namespace", gateway.Namespace, "reason", err.Error())
 				continue
 			}
 
 			gws = append(gws, &gateway)
-
-			key := k8s.GetObjectKey(&gateway.ObjectMeta)
-			gwIdx[key] = append(gwIdx[key], policy)
 
 			accepted = true
 		}
@@ -209,7 +215,7 @@ func (r *HTTPFilterPolicyReconciler) resolveVirtualService(ctx context.Context, 
 		// For wildcard host, the `*.` is converted to `-`. For example, `*.example.com` results in
 		// EnvoyFilter name `htnn-h--example.com`, and `www.example.com` results in `httn-h-www.example.com`.
 	} else {
-		policy.SetAccepted(gwapiv1a2.PolicyReasonTargetNotFound, "invalid target resource")
+		policy.SetAccepted(gwapiv1a2.PolicyReasonTargetNotFound, "all gateways are not found or unsupported")
 	}
 
 	return nil
@@ -235,30 +241,36 @@ func (r *HTTPFilterPolicyReconciler) resolveHTTPRoute(ctx context.Context, logge
 	gws := initState.GetGatewaysWithHTTPRoute(&route)
 	if len(gws) > 0 {
 		for _, gateway := range gws {
-			key := k8s.GetObjectKey(&gateway.ObjectMeta)
+			key := getK8sKey(gateway.Namespace, gateway.Name)
 			gwIdx[key] = append(gwIdx[key], policy)
 		}
 
 		accepted = true
 
 	} else {
-		gws = make([]*gwapiv1.Gateway, 0, len(route.Status.Parents))
-		for _, pr := range route.Status.Parents {
-			// Consider it is valid once the listener is attached
-			ref := pr.ParentRef
+		gws = make([]*gwapiv1.Gateway, 0, len(route.Spec.ParentRefs))
+		ns := route.Namespace
+
+		for _, ref := range route.Spec.ParentRefs {
 			if ref.Group != nil && *ref.Group != gwapiv1.GroupName {
 				continue
 			}
 			if ref.Kind != nil && *ref.Kind != gwapiv1.Kind("Gateway") {
 				continue
 			}
-
-			ns := route.Namespace
-			if ref.Namespace != nil {
-				ns = string(*ref.Namespace)
+			if ref.Namespace != nil && *ref.Namespace != gwapiv1.Namespace(ns) {
+				logger.Info("skip gateway from other namespace", "name", route.Name, "namespace", route.Namespace, "gateway", ref)
+				continue
 			}
-			var gateway gwapiv1.Gateway
-			err = r.Get(ctx, types.NamespacedName{Name: string(ref.Name), Namespace: ns}, &gateway)
+
+			key := getK8sKey(ns, string(ref.Name))
+			// We index the gateway regardless of whether it is valid or not.
+			// Otherwise, we don't know whether the gateway is changed from invalid to valid.
+			gwIdx[key] = append(gwIdx[key], policy)
+
+			var gw gwapiv1.Gateway
+			gwNsName := types.NamespacedName{Name: string(ref.Name), Namespace: ns}
+			err = r.Get(ctx, gwNsName, &gw)
 			if err != nil {
 				if !apierrors.IsNotFound(err) {
 					return err
@@ -268,23 +280,43 @@ func (r *HTTPFilterPolicyReconciler) resolveHTTPRoute(ctx context.Context, logge
 				continue
 			}
 
-			gws = append(gws, &gateway)
+			// This part of code is similar to the code in the translation.
+			// The code in the translation filters out which listeners are matched.
+			// The code here filters out which gateways have at least one matched listeners.
+			atLeastOneListenerMatched := false
+			for _, ls := range gw.Spec.Listeners {
+				if ref.Port != nil && *ref.Port != ls.Port {
+					continue
+				}
+				if ref.SectionName != nil && *ref.SectionName != ls.Name {
+					continue
+				}
 
-			key := k8s.GetObjectKey(&gateway.ObjectMeta)
-			gwIdx[key] = append(gwIdx[key], policy)
+				if !translation.AllowRoute(logger, ls.AllowedRoutes, &route, &gwNsName) {
+					continue
+				}
+
+				atLeastOneListenerMatched = true
+				break
+			}
+
+			if !atLeastOneListenerMatched {
+				logger.Info("no matched listeners in gateway", "gateway", ref,
+					"name", route.Name, "namespace", route.Namespace, "listeners", gw.Spec.Listeners)
+				continue
+			}
+
+			gws = append(gws, &gw)
 
 			accepted = true
 		}
 	}
 
 	if accepted {
-		// The CRD status only tells us which gateways are referenced & how many attached routes per listener.
-		// But we don't know which listerner is referenced by a specific HTTPRoute.
-		// So we have to keep the whole gateway and filter the listener by ourselves.
 		initState.AddPolicyForHTTPRoute(policy, &route, gws)
 		policy.SetAccepted(gwapiv1a2.PolicyReasonAccepted)
 	} else {
-		policy.SetAccepted(gwapiv1a2.PolicyReasonTargetNotFound, "invalid target resource")
+		policy.SetAccepted(gwapiv1a2.PolicyReasonTargetNotFound, "all gateways are not found or unsupported")
 	}
 
 	return nil
@@ -344,7 +376,10 @@ func (r *HTTPFilterPolicyReconciler) policyToTranslationState(ctx context.Contex
 
 	// only update index when the processing is successful
 	r.istioGatewayIndexer.UpdateIndex(istioGwIdx)
-	r.k8sGatewayIndexer.UpdateIndex(k8sGwIdx)
+	if config.EnableGatewayAPI() {
+		r.k8sGatewayIndexer.UpdateIndex(k8sGwIdx)
+	}
+
 	return initState, nil
 }
 
@@ -567,9 +602,8 @@ func (v *IstioGatewayIndexer) UpdateIndex(idx map[string][]*mosniov1.HTTPFilterP
 func (v *IstioGatewayIndexer) FindAffectedObjects(ctx context.Context, obj client.Object) []reconcile.Request {
 	logger := log.FromContext(ctx)
 
-	gw := obj.(*istiov1b1.Gateway)
 	v.lock.RLock()
-	policies, ok := v.index[k8s.GetObjectKey(&gw.ObjectMeta)]
+	policies, ok := v.index[getK8sKey(obj.GetNamespace(), obj.GetName())]
 	v.lock.RUnlock()
 	if !ok {
 		return nil
@@ -620,7 +654,7 @@ func (v *K8sGatewayIndexer) FindAffectedObjects(ctx context.Context, obj client.
 
 	gw := obj.(*gwapiv1.Gateway)
 	v.lock.RLock()
-	policies, ok := v.index[k8s.GetObjectKey(&gw.ObjectMeta)]
+	policies, ok := v.index[getK8sKey(gw.Namespace, gw.Name)]
 	v.lock.RUnlock()
 	if !ok {
 		return nil
@@ -652,20 +686,26 @@ func (r *HTTPFilterPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		r: r,
 	}
 	r.istioGatewayIndexer = istioGatewayIndexer
-	k8sGatewayIndexer := &K8sGatewayIndexer{
-		r: r,
-	}
-	r.k8sGatewayIndexer = k8sGatewayIndexer
 	indexers := []CustomerResourceIndexer{
 		&VirtualServiceIndexer{
 			r: r,
 		},
 		istioGatewayIndexer,
-		&HTTPRouteIndexer{
-			r: r,
-		},
-		k8sGatewayIndexer,
 	}
+
+	if config.EnableGatewayAPI() {
+		k8sGatewayIndexer := &K8sGatewayIndexer{
+			r: r,
+		}
+		r.k8sGatewayIndexer = k8sGatewayIndexer
+		indexers = append(indexers,
+			&HTTPRouteIndexer{
+				r: r,
+			},
+			k8sGatewayIndexer,
+		)
+	}
+
 	// IndexField is called per HTTPFilterPolicy
 	for _, idxer := range indexers {
 		if err := idxer.RegisterIndexer(ctx, mgr); err != nil {

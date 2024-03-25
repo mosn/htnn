@@ -386,7 +386,15 @@ func FilterManagerFactory(c interface{}) capi.StreamFilterFactory {
 	conf := c.(*filterManagerConfig)
 	parsedConfig := conf.parsed
 
-	return func(cb capi.FilterCallbackHandler) capi.StreamFilter {
+	return func(cb capi.FilterCallbackHandler) (streamFilter capi.StreamFilter) {
+		// TODO: remove this protection once we upgrade to the new Envoy version
+		defer func() {
+			if p := recover(); p != nil {
+				api.LogErrorf("panic: %v\n%s", p, debug.Stack())
+				streamFilter = InternalErrorFactoryForCAPI(c, cb)
+			}
+		}()
+
 		fm := conf.pool.Get().(*filterManager)
 		fm.callbacks.FilterCallbackHandler = cb
 
@@ -402,19 +410,37 @@ func FilterManagerFactory(c interface{}) capi.StreamFilterFactory {
 			f := factory(config, fm.callbacks)
 			// Technically, the factory might create different f for different calls. We don't support this edge case for now.
 			if fm.canSkipMethod == nil {
+				definedMethod := make(map[string]bool, len(canSkipMethod))
+				for meth := range canSkipMethod {
+					definedMethod[meth] = false
+				}
 				for meth := range canSkipMethod {
 					overridden, err := reflectx.IsMethodOverridden(f, meth)
 					if err != nil {
-						api.LogErrorf("failed to check method %s in filter: %v", meth, err)
+						api.LogErrorf("failed to check method %s in plugin %s: %v", meth, fc.Name, err)
 						// canSkipMethod[meth] will be false
 					}
 					canSkipMethod[meth] = canSkipMethod[meth] && !overridden
+					definedMethod[meth] = overridden
 				}
+
+				if definedMethod["DecodeRequest"] && !definedMethod["DecodeHeaders"] {
+					api.LogErrorf("plugin %s has DecodeRequest but not DecodeHeaders. To run DecodeRequest, we need to return api.WaitAllData from DecodeHeaders", fc.Name)
+				}
+				if definedMethod["EncodeResponse"] && !definedMethod["EncodeHeaders"] {
+					api.LogErrorf("plugin %s has EncodeResponse but not EncodeHeaders. To run EncodeResponse, we need to return api.WaitAllData from EncodeHeaders", fc.Name)
+				}
+
 				// Do we need to check if the correct method is defined? For example, the DecodeRequest
 				// requires DecodeHeaders defined. Currently, we just documentate it. Per request check
 				// is expensive and not necessary in most of time.
 			}
-			filters[i] = model.NewFilterWrapper(fc.Name, f)
+
+			if api.GetLogLevel() <= api.LogLevelDebug {
+				filters[i] = model.NewFilterWrapper(fc.Name, NewLogExecutionFilter(fc.Name, f))
+			} else {
+				filters[i] = model.NewFilterWrapper(fc.Name, f)
+			}
 		}
 
 		if fm.canSkipMethod == nil {

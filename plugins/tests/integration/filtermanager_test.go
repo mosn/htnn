@@ -929,3 +929,79 @@ func TestFilterManagerPluginReturnsErrorInParse(t *testing.T) {
 	require.Nil(t, err)
 	assert.Equal(t, 500, resp.StatusCode, resp)
 }
+
+func TestFilterManagerPluginPanic(t *testing.T) {
+	dp, err := data_plane.StartDataPlane(t, &data_plane.Option{
+		NoErrorLogCheck: true,
+	})
+	if err != nil {
+		t.Fatalf("failed to start data plane: %v", err)
+		return
+	}
+	defer dp.Stop()
+
+	config := &filtermanager.FilterManagerConfig{
+		Plugins: []*model.FilterConfig{
+			{
+				Name: "bad",
+				Config: &badPluginConfig{
+					BadPluginConfig: BadPluginConfig{
+						PanicInFactory: true,
+					},
+				},
+			},
+		},
+	}
+	controlPlane.UseGoPluginConfig(config, dp)
+	resp, err := dp.Get("/echo", nil)
+	require.Nil(t, err)
+	assert.Equal(t, 500, resp.StatusCode, resp)
+
+	config = &filtermanager.FilterManagerConfig{
+		Plugins: []*model.FilterConfig{
+			{
+				Name: "bad",
+				Config: &badPluginConfig{
+					BadPluginConfig: BadPluginConfig{
+						PanicInParse: true,
+					},
+				},
+			},
+		},
+	}
+	controlPlane.UseGoPluginConfig(config, dp)
+	resp, err = dp.Get("/echo", nil)
+	require.Nil(t, err)
+	assert.Equal(t, 500, resp.StatusCode, resp)
+}
+
+func TestFilterManagerPluginIncorrectMethodDefinition(t *testing.T) {
+	dp, err := data_plane.StartDataPlane(t, &data_plane.Option{
+		LogLevel:        "debug",
+		NoErrorLogCheck: true,
+		ExpectLogPattern: []string{
+			`plugin bad has DecodeRequest but not DecodeHeaders`,
+			`plugin bad has EncodeResponse but not EncodeHeaders`,
+		},
+	})
+	if err != nil {
+		t.Fatalf("failed to start data plane: %v", err)
+		return
+	}
+	defer dp.Stop()
+
+	config := &filtermanager.FilterManagerConfig{
+		Plugins: []*model.FilterConfig{
+			{
+				Name: "bad",
+				Config: &badPluginConfig{
+					BadPluginConfig: BadPluginConfig{},
+				},
+			},
+		},
+	}
+	controlPlane.UseGoPluginConfig(config, dp)
+	resp, err := dp.Get("/echo", nil)
+	require.Nil(t, err)
+	assert.Equal(t, 200, resp.StatusCode, resp)
+}

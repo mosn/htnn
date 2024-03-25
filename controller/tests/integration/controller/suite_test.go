@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"runtime"
 	"testing"
@@ -55,10 +56,6 @@ var testEnv *envtest.Environment
 var ctx context.Context
 var cancel context.CancelFunc
 var clientset *kubernetes.Clientset
-
-func ptrstr(s string) *string {
-	return &s
-}
 
 func TestControllers(t *testing.T) {
 	RegisterFailHandler(Fail)
@@ -116,6 +113,10 @@ var _ = BeforeSuite(func() {
 	}
 	_, err = clientset.CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
 	Expect(err).NotTo(HaveOccurred())
+
+	// use env to set the conf
+	os.Setenv("HTNN_ENABLE_GATEWAY_API", "true")
+	config.Init()
 
 	unsafeDisableDeepCopy := true
 	k8sManager, err := ctrl.NewManager(cfg, ctrl.Options{

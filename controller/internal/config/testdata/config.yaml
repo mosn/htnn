@@ -1,4 +1,6 @@
+# Remember to update the config/config.default.yaml after adding a new item
 enable_webhooks: true
+enable_gateway_api: true
 envoy:
   go_so_path: /usr/local/golang.so
 istio:

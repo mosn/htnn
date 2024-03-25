@@ -72,6 +72,8 @@ spec:
         env:
         - name: HTNN_ENABLE_WEBHOOKS
           value: "true"
+        - name: HTNN_ENABLE_GATEWAY_API
+          value: "true"
         securityContext:
           allowPrivilegeEscalation: false
           capabilities:

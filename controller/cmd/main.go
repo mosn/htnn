@@ -49,16 +49,6 @@ var (
 	setupLog = ctrl.Log.WithName("setup")
 )
 
-func init() {
-	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-	utilruntime.Must(mosniov1.AddToScheme(scheme))
-	//+kubebuilder:scaffold:scheme
-
-	utilruntime.Must(istioscheme.AddToScheme(scheme))
-	// For HTTPRoute & Gateway, we only support v1 version
-	utilruntime.Must(gwapiv1.AddToScheme(scheme))
-}
-
 func main() {
 	var metricsAddr string
 	var enableLeaderElection bool
@@ -81,6 +71,15 @@ func main() {
 	ctrl.SetLogger(logrLogger)
 
 	config.Init()
+
+	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
+	utilruntime.Must(mosniov1.AddToScheme(scheme))
+	utilruntime.Must(istioscheme.AddToScheme(scheme))
+
+	if config.EnableGatewayAPI() {
+		// For HTTPRoute & Gateway, we only support v1 version
+		utilruntime.Must(gwapiv1.AddToScheme(scheme))
+	}
 
 	unsafeDisableDeepCopy := true
 	mgr, err := ctrl.NewManager(ctrl.GetConfigOrDie(), ctrl.Options{

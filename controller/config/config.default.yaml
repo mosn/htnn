@@ -1,4 +1,12 @@
+# Serving webhooks by this controller
+enable_webhooks: false
+# If this is set to true, support for Kubernetes gateway-api will be enabled.
+# In addition to this being enabled, the gateway-api CRDs need to be installed.
+enable_gateway_api: false
+envoy:
+  # Should match the Go shared library put in the data plane image
+  go_so_path: /etc/libgolang.so
 istio:
   # Should match istio's rootNamespace configuration.
   # See https://istio.io/latest/docs/reference/config/istio.mesh.v1alpha1/#MeshConfig for more info.
-  rootNamespace: "istio-system"
+  root_namespace: "istio-system"

@@ -130,6 +130,9 @@ func (consumer *Consumer) SetAccepted(reason ConditionReason, msg ...string) {
 
 func (c *Consumer) IsValid() bool {
 	for _, cond := range c.Status.Conditions {
+		if cond.ObservedGeneration != c.Generation {
+			continue
+		}
 		if cond.Type == string(ConditionAccepted) && cond.Reason == string(ReasonInvalid) {
 			return false
 		}

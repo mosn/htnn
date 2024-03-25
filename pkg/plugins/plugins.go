@@ -17,6 +17,8 @@ package plugins
 import (
 	"cmp"
 	"encoding/json"
+	"errors"
+	"runtime/debug"
 
 	"mosn.io/htnn/internal/proto"
 	"mosn.io/htnn/pkg/filtermanager/api"
@@ -122,7 +124,14 @@ func NewPluginConfigParser(parser GoPlugin) *PluginConfigParser {
 	}
 }
 
-func (cp *PluginConfigParser) Parse(any interface{}, callbacks api.ConfigCallbackHandler) (interface{}, error) {
+func (cp *PluginConfigParser) Parse(any interface{}, callbacks api.ConfigCallbackHandler) (res interface{}, err error) {
+	defer func() {
+		if p := recover(); p != nil {
+			api.LogErrorf("panic: %v\n%s", p, debug.Stack())
+			err = errors.New("plugin config parser panic")
+		}
+	}()
+
 	conf := cp.Config()
 	if any != nil {
 		data, err := json.Marshal(any)
@@ -136,7 +145,7 @@ func (cp *PluginConfigParser) Parse(any interface{}, callbacks api.ConfigCallbac
 		}
 	}
 
-	err := conf.Validate()
+	err = conf.Validate()
 	if err != nil {
 		return nil, err
 	}

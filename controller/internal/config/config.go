@@ -40,6 +40,12 @@ func EnableWebhooks() bool {
 	return enableWebhooks
 }
 
+var enableGatewayAPI = false
+
+func EnableGatewayAPI() bool {
+	return enableGatewayAPI
+}
+
 type envStringReplacer struct {
 }
 
@@ -51,7 +57,7 @@ func Init() {
 	vp := viper.NewWithOptions(viper.EnvKeyReplacer(&envStringReplacer{}))
 	vp.SetEnvPrefix("HTNN")
 	vp.AutomaticEnv()
-	// a config item `envoy.go_So_Path` can be set with env `HTNN_ENVOY_GO_SO_PATH`, which is prior to the value in config file
+	// a config item `envoy.go_so_path` can be set with env `HTNN_ENVOY_GO_SO_PATH`, which is prior to the value in config file
 
 	vp.SetConfigName("config")
 	vp.SetConfigType("yaml")
@@ -77,4 +83,5 @@ func Init() {
 	}
 
 	enableWebhooks = vp.GetBool("enable_webhooks")
+	enableGatewayAPI = vp.GetBool("enable_gateway_api")
 }

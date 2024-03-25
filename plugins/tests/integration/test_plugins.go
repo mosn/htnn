@@ -286,10 +286,59 @@ func (f *coverageFilter) DecodeHeaders(headers api.RequestHeaderMap, endStream b
 	return &api.LocalResponse{Code: 200}
 }
 
+type badPlugin struct {
+	plugins.PluginMethodDefaultImpl
+}
+
+type badPluginConfig struct {
+	BadPluginConfig
+}
+
+func (c *badPluginConfig) Init(cb api.ConfigCallbackHandler) error {
+	if c.PanicInParse {
+		panic("panic in parse")
+	}
+	return nil
+}
+
+func (p *badPlugin) Config() api.PluginConfig {
+	return &badPluginConfig{}
+}
+
+func (p *badPlugin) Factory() api.FilterFactory {
+	return badFactory
+}
+
+func badFactory(c interface{}, callbacks api.FilterCallbackHandler) api.Filter {
+	cfg := c.(*badPluginConfig)
+	if cfg.PanicInFactory {
+		panic("panic in factory")
+	}
+	return &badFilter{
+		callbacks: callbacks,
+	}
+}
+
+type badFilter struct {
+	api.PassThroughFilter
+
+	callbacks api.FilterCallbackHandler
+}
+
+func (f *badFilter) DecodeRequest(headers api.RequestHeaderMap, data api.BufferInstance, trailers api.RequestTrailerMap) api.ResultAction {
+	return api.Continue
+}
+
+func (f *badFilter) EncodeResponse(headers api.ResponseHeaderMap, data api.BufferInstance, trailers api.ResponseTrailerMap) api.ResultAction {
+	return api.Continue
+}
+
 func init() {
 	plugins.RegisterHttpPlugin("stream", &streamPlugin{})
 	plugins.RegisterHttpPlugin("buffer", &bufferPlugin{})
 	plugins.RegisterHttpPlugin("localReply", &localReplyPlugin{})
 
 	plugins.RegisterHttpPlugin("coverage", &coveragePlugin{})
+
+	plugins.RegisterHttpPlugin("bad", &badPlugin{})
 }

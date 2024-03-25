@@ -238,8 +238,9 @@ func (cp *ControlPlane) UseGoPluginConfig(config *filtermanager.FilterManagerCon
 		},
 	})
 
-	// wait for DP to use the configuration
-	eventually(1*time.Second, 50*time.Millisecond, func() bool {
+	// Wait for DP to use the configuration. Unlike the assert.Eventually, this function doesn't
+	// fail the test when it timed out.
+	eventually(5*time.Second, 50*time.Millisecond, func() bool {
 		return dp.Configured()
 	})
 }

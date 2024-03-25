@@ -16,6 +16,7 @@ package data_plane
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"crypto/md5"
 	"fmt"
@@ -26,6 +27,7 @@ import (
 	"os/exec"
 	"os/user"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 	"testing"
@@ -54,9 +56,10 @@ type DataPlane struct {
 }
 
 type Option struct {
-	LogLevel        string
-	NoErrorLogCheck bool
-	Bootstrap       *bootstrap
+	LogLevel         string
+	NoErrorLogCheck  bool
+	ExpectLogPattern []string
+	Bootstrap        *bootstrap
 }
 
 func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
@@ -141,7 +144,7 @@ func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 	// This is the envoyproxy/envoy:contrib-v1.29.2
 	// Use docker inspect --format='{{index .RepoDigests 0}}' envoyproxy/envoy:contrib-v1.29.2
 	// to get the sha256 ID
-	image := "envoyproxy/envoy@sha256:98ed3d86ff8b86dc12ddf54b7bb67ddf5506f80769038b3e2ab7bf402730fb4d"
+	image := "envoyproxy/envoy@sha256:c47136604751274b30fa7a89132314b8e3586d54d8f8cc30d7a911a9ecc5e11c"
 	pwd, _ := os.Getwd()
 	projectRoot := filepath.Join(pwd, "..", "..", "..")
 	cmdline := "docker run" +
@@ -162,6 +165,7 @@ func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 	if _, ok := validationCache[digest]; !ok {
 		validateCmd := cmdline + " " + envoyValidateCmd
 		cmds := strings.Fields(validateCmd)
+		logger.Info("run validate cmd", "cmdline", validateCmd)
 		out, err := exec.Command(cmds[0], cmds[1:]...).CombinedOutput()
 		if err != nil {
 			logger.Info("bad envoy bootstrap configuration", "cmd", validateCmd, "output", string(out))
@@ -262,10 +266,19 @@ func (dp *DataPlane) Stop() {
 	<-dp.done
 	logger.Info("envoy stopped")
 
-	f := dp.cmd.Stdout.(*os.File)
+	f := dp.cmd.Stderr.(*os.File)
+	f.Close()
+	f = dp.cmd.Stdout.(*os.File)
+	f.Seek(0, 0)
+	text, err := io.ReadAll(f)
+	defer f.Close()
+	if err != nil {
+		logger.Error(err, "failed to read envoy stdout")
+		return
+	}
+
 	if !dp.opt.NoErrorLogCheck {
-		f.Seek(0, 0)
-		sc := bufio.NewScanner(f)
+		sc := bufio.NewScanner(bytes.NewReader(text))
 		for sc.Scan() {
 			s := sc.Text()
 			if strings.Contains(s, "[error]") || strings.Contains(s, "[critical]") {
@@ -275,9 +288,12 @@ func (dp *DataPlane) Stop() {
 		}
 	}
 
-	f.Close()
-	f = dp.cmd.Stderr.(*os.File)
-	f.Close()
+	for _, pattern := range dp.opt.ExpectLogPattern {
+		re := regexp.MustCompile(pattern)
+		if !re.Match(text) {
+			assert.Falsef(dp.t, true, "log pattern %q not found", pattern)
+		}
+	}
 }
 
 func (dp *DataPlane) Head(path string, header http.Header) (*http.Response, error) {

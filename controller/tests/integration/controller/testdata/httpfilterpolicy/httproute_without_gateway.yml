@@ -20,13 +20,7 @@
   spec:
     parentRefs:
     - name: default
-      namespace: istio-ingress # cross namespace is unsupported
-    - name: default
-      sectionName: default
-      port: 8888
-    - name: default
-      sectionName: default2
-      port: 8889
+      sectionName: not-matched
     hostnames:
       - default.local
     rules:
