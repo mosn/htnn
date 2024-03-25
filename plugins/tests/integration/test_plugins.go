@@ -325,7 +325,11 @@ type badFilter struct {
 	callbacks api.FilterCallbackHandler
 }
 
-func (f *badFilter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {
+func (f *badFilter) DecodeRequest(headers api.RequestHeaderMap, data api.BufferInstance, trailers api.RequestTrailerMap) api.ResultAction {
+	return api.Continue
+}
+
+func (f *badFilter) EncodeResponse(headers api.ResponseHeaderMap, data api.BufferInstance, trailers api.ResponseTrailerMap) api.ResultAction {
 	return api.Continue
 }
 
