@@ -32,8 +32,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	"mosn.io/htnn/api/pkg/log"
 	mosniov1 "mosn.io/htnn/controller/apis/v1"
-	"mosn.io/htnn/pkg/log"
 )
 
 var (

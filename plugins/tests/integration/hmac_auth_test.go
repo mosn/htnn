@@ -20,15 +20,15 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"mosn.io/htnn/pkg/filtermanager"
-	"mosn.io/htnn/pkg/filtermanager/model"
-	"mosn.io/htnn/plugins/tests/integration/control_plane"
-	"mosn.io/htnn/plugins/tests/integration/data_plane"
+	"mosn.io/htnn/api/pkg/filtermanager"
+	"mosn.io/htnn/api/pkg/filtermanager/model"
+	"mosn.io/htnn/api/plugins/tests/integration/control_plane"
+	data_plane2 "mosn.io/htnn/api/plugins/tests/integration/data_plane"
 )
 
 func TestHmacAuth(t *testing.T) {
-	dp, err := data_plane.StartDataPlane(t, &data_plane.Option{
-		Bootstrap: data_plane.Bootstrap().AddConsumer("rick", map[string]interface{}{
+	dp, err := data_plane2.StartDataPlane(t, &data_plane2.Option{
+		Bootstrap: data_plane2.Bootstrap().AddConsumer("rick", map[string]interface{}{
 			"auth": map[string]interface{}{
 				"keyAuth":  `{"key":"rick"}`,
 				"hmacAuth": `{"accessKey":"ak","secretKey":"sk","signedHeaders":["x-custom-a"],"algorithm":"HMAC_SHA256"}`,

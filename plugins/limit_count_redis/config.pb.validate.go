@@ -18,7 +18,7 @@ import (
 
 	"google.golang.org/protobuf/types/known/anypb"
 
-	v1 "mosn.io/htnn/api/v1"
+	v1 "mosn.io/htnn/plugins/api/v1"
 )
 
 // ensure the imports are used

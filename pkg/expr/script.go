@@ -14,7 +14,9 @@
 
 package expr
 
-import "mosn.io/htnn/pkg/filtermanager/api"
+import (
+	"mosn.io/htnn/api/pkg/filtermanager/api"
+)
 
 type Script interface {
 	EvalWithRequest(cb api.FilterCallbackHandler, headers api.RequestHeaderMap) (any, error)

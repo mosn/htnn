@@ -21,11 +21,11 @@ import (
 
 	"k8s.io/apimachinery/pkg/types"
 
+	"mosn.io/htnn/api/pkg/filtermanager"
+	fmModel "mosn.io/htnn/api/pkg/filtermanager/model"
+	"mosn.io/htnn/api/pkg/plugins"
 	mosniov1 "mosn.io/htnn/controller/apis/v1"
 	"mosn.io/htnn/controller/internal/model"
-	"mosn.io/htnn/pkg/filtermanager"
-	fmModel "mosn.io/htnn/pkg/filtermanager/model"
-	"mosn.io/htnn/pkg/plugins"
 )
 
 // mergedState does the following:

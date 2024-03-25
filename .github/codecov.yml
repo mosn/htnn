@@ -11,7 +11,8 @@ coverage:
         if_ci_failed: error
 ignore:
   # test files
-  - "plugins/tests"
+  - "api/plugins/tests"
+  - "plugins/tests/"
   - "controller/tests"
   - "e2e/"
   - "**/mock.go"

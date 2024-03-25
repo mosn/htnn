@@ -19,7 +19,7 @@ import (
 	"regexp"
 	"strings"
 
-	api "mosn.io/htnn/api/v1"
+	api "mosn.io/htnn/plugins/api/v1"
 )
 
 type Matcher interface {

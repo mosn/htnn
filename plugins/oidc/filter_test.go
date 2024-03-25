@@ -27,8 +27,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"golang.org/x/oauth2"
 
-	"mosn.io/htnn/pkg/filtermanager/api"
-	"mosn.io/htnn/plugins/tests/pkg/envoy"
+	"mosn.io/htnn/api/pkg/filtermanager/api"
+	"mosn.io/htnn/api/plugins/tests/pkg/envoy"
 )
 
 func getCfg() *config {

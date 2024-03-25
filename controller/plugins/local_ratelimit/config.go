@@ -17,8 +17,8 @@ package local_ratelimit
 import (
 	local_ratelimit "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/local_ratelimit/v3"
 
-	"mosn.io/htnn/pkg/filtermanager/api"
-	"mosn.io/htnn/pkg/plugins"
+	"mosn.io/htnn/api/pkg/filtermanager/api"
+	"mosn.io/htnn/api/pkg/plugins"
 )
 
 const (

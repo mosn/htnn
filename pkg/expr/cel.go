@@ -29,8 +29,8 @@ import (
 	"github.com/google/cel-go/common/types/traits"
 	exprpb "google.golang.org/genproto/googleapis/api/expr/v1alpha1"
 
-	"mosn.io/htnn/pkg/filtermanager/api"
-	"mosn.io/htnn/pkg/log"
+	"mosn.io/htnn/api/pkg/filtermanager/api"
+	"mosn.io/htnn/api/pkg/log"
 )
 
 var (

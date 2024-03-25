@@ -26,9 +26,9 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"mosn.io/htnn/plugins/tests/integration/control_plane"
-	"mosn.io/htnn/plugins/tests/integration/data_plane"
-	"mosn.io/htnn/plugins/tests/integration/helper"
+	"mosn.io/htnn/api/plugins/tests/integration/control_plane"
+	"mosn.io/htnn/api/plugins/tests/integration/data_plane"
+	"mosn.io/htnn/api/plugins/tests/integration/helper"
 )
 
 func TestOIDC(t *testing.T) {

@@ -8,6 +8,6 @@ lint:
     - BASIC
   ignore_only:
     ENUM_VALUE_UPPER_SNAKE_CASE:
-    - api/v1/http_status.proto
+    - plugins/api/v1/http_status.proto
 deps:
   - buf.build/envoyproxy/protoc-gen-validate
