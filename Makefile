@@ -74,7 +74,7 @@ gen-proto: dev-tools install-go-fmtter $(GO_TARGETS)
 	docker run --rm -v $(PWD):/go/src/${PROJECT_NAME} --user $(shell id -u) -w /go/src/${PROJECT_NAME} \
 		${DEV_TOOLS_IMAGE} \
 		protoc --proto_path=. --go_opt="paths=source_relative" --go_out=. --validate_out="lang=go,paths=source_relative:." \
-			-I ../../protoc-gen-validate $<
+			-I /go/src/protoc-gen-validate $<
 	$(LOCALBIN)/gosimports -w -local ${PROJECT_NAME} $@
 
 # We don't run the controller's unit test in this task. Because the controller is considered as a
