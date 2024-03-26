@@ -5,8 +5,8 @@
 
 version: 2
 updates:
-  - package-ecosystem: "gomod" # See documentation for possible values
-    directory: "/" # Location of package manifests
+  - package-ecosystem: "gomod"
+    directory: "/"
     schedule:
       interval: "weekly"
     ignore:
@@ -24,6 +24,18 @@ updates:
       onsi:
         patterns:
           - "github.com/onsi/*" # onsi/gomega and her friends
+  - package-ecosystem: "gomod"
+    directory: "/api"
+    schedule:
+      interval: "weekly"
+    ignore:
+      # the Envoy lib need to be fit with the Envoy we use. So let's disable auto-updates.
+      - dependency-name: "github.com/envoyproxy/envoy"
+      - dependency-name: "github.com/envoyproxy/go-control-plane"
+      - dependency-name: "github.com/envoyproxy/protoc-gen-validate"
+      # So as the Istio's
+      - dependency-name: "istio.io/api"
+      - dependency-name: "istio.io/client-go"
   - package-ecosystem: "gomod"
     directory: "/site"
     schedule:
