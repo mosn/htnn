@@ -43,7 +43,7 @@ spec:
 By applying the configuration below, Cross-Origin Resource Sharing requests sent to `http://localhost:10000/` will be processed. If the `Origin` header of an OPTIONS request matches the regular expression `.*\.default\.local`, then the corresponding response will include the configured `Access-Control-Allow-*` response headers.
 
 ```yaml
-apiVersion: mosn.io/v1
+apiVersion: htnn.mosn.io/v1
 kind: HTTPFilterPolicy
 metadata:
   name: policy

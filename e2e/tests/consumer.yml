@@ -1,4 +1,4 @@
-apiVersion: mosn.io/v1
+apiVersion: htnn.mosn.io/v1
 kind: Consumer
 metadata:
   name: rick
@@ -16,7 +16,7 @@ spec:
       config:
         hostName: rick
 ---
-apiVersion: mosn.io/v1
+apiVersion: htnn.mosn.io/v1
 kind: Consumer
 metadata:
   name: morty
@@ -26,7 +26,7 @@ spec:
       config:
         key: morty
 ---
-apiVersion: mosn.io/v1
+apiVersion: htnn.mosn.io/v1
 kind: Consumer
 metadata:
   name: doraemon
@@ -37,7 +37,7 @@ spec:
       config:
         key: doraemon
 ---
-apiVersion: mosn.io/v1
+apiVersion: htnn.mosn.io/v1
 kind: HTTPFilterPolicy
 metadata:
   name: policy

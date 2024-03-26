@@ -43,7 +43,7 @@ spec:
 By applying the configuration below, the upload speed of requests sent to `http://localhost:10000/` will be limited to approximately 10kb/s:
 
 ```yaml
-apiVersion: mosn.io/v1
+apiVersion: htnn.mosn.io/v1
 kind: HTTPFilterPolicy
 metadata:
   name: policy

@@ -24,7 +24,7 @@
     name: htnn-http-filter # EnvoyFilter to update
     labels:
       htnn.mosn.io/created-by: HTTPFilterPolicy
-- apiVersion: mosn.io/v1
+- apiVersion: htnn.mosn.io/v1
   kind: HTTPFilterPolicy
   metadata:
     name: policy

@@ -53,7 +53,7 @@ spec:
 By applying the configuration below, we can interrupt the requests to `http://localhost:10000/` with the custom response:
 
 ```yaml
-apiVersion: mosn.io/v1
+apiVersion: htnn.mosn.io/v1
 kind: HTTPFilterPolicy
 metadata:
   name: policy

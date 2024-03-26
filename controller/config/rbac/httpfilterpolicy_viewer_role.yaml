@@ -12,7 +12,7 @@ metadata:
   name: httpfilterpolicy-viewer-role
 rules:
 - apiGroups:
-  - mosn.io
+  - htnn.mosn.io
   resources:
   - httpfilterpolicies
   verbs:
@@ -20,7 +20,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - mosn.io
+  - htnn.mosn.io
   resources:
   - httpfilterpolicies/status
   verbs:

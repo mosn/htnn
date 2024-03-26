@@ -47,7 +47,7 @@ virtualService:
                 number: 8000
 httpFilterPolicy:
   httpbin:
-  - apiVersion: mosn.io/v1
+  - apiVersion: htnn.mosn.io/v1
     kind: HTTPFilterPolicy
     metadata:
       name: policy-route
@@ -62,7 +62,7 @@ httpFilterPolicy:
         animal:
           config:
             pet: goldfish
-  - apiVersion: mosn.io/v1
+  - apiVersion: htnn.mosn.io/v1
     kind: HTTPFilterPolicy
     metadata:
       # If these two policies are in the same level, policy-host is prior to policy-route

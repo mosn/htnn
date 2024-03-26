@@ -37,7 +37,7 @@ func (r *Consumer) SetupWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
-//+kubebuilder:webhook:path=/mutate-mosn-io-v1-consumer,mutating=true,failurePolicy=fail,sideEffects=None,groups=mosn.io,resources=consumers,verbs=create;update,versions=v1,name=mconsumer.kb.io,admissionReviewVersions=v1
+//+kubebuilder:webhook:path=/mutate-htnn.mosn.io-v1-consumer,mutating=true,failurePolicy=fail,sideEffects=None,groups=mosn.io,resources=consumers,verbs=create;update,versions=v1,name=mconsumer.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Defaulter = &Consumer{}
 
@@ -45,7 +45,7 @@ var _ webhook.Defaulter = &Consumer{}
 func (r *Consumer) Default() {
 }
 
-//+kubebuilder:webhook:path=/validate-mosn-io-v1-consumer,mutating=false,failurePolicy=fail,sideEffects=None,groups=mosn.io,resources=consumers,verbs=create;update;delete,versions=v1,name=vconsumer.kb.io,admissionReviewVersions=v1
+//+kubebuilder:webhook:path=/validate-htnn.mosn.io-v1-consumer,mutating=false,failurePolicy=fail,sideEffects=None,groups=mosn.io,resources=consumers,verbs=create;update;delete,versions=v1,name=vconsumer.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Validator = &Consumer{}
 
@@ -79,6 +79,6 @@ func (r *Consumer) validate() error {
 	}
 
 	return apierrors.NewInvalid(
-		schema.GroupKind{Group: "mosn.io", Kind: "Consumer"},
+		schema.GroupKind{Group: "htnn.mosn.io", Kind: "Consumer"},
 		r.Name, allErrs)
 }

@@ -1,4 +1,4 @@
-- apiVersion: mosn.io/v1
+- apiVersion: htnn.mosn.io/v1
   kind: ServiceRegistry
   metadata:
     name: default

@@ -48,7 +48,7 @@ spec:
 By applying the configuration below, the request to `http://localhost:10000/` is buffered until the body length meets the max requests bytes 4:
 
 ```yaml
-apiVersion: mosn.io/v1
+apiVersion: htnn.mosn.io/v1
 kind: HTTPFilterPolicy
 metadata:
   name: policy

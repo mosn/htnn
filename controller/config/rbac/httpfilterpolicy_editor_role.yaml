@@ -12,7 +12,7 @@ metadata:
   name: httpfilterpolicy-editor-role
 rules:
 - apiGroups:
-  - mosn.io
+  - htnn.mosn.io
   resources:
   - httpfilterpolicies
   verbs:
@@ -24,7 +24,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - mosn.io
+  - htnn.mosn.io
   resources:
   - httpfilterpolicies/status
   verbs:

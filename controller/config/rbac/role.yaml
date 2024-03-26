@@ -21,7 +21,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - mosn.io
+  - htnn.mosn.io
   resources:
   - consumers
   verbs:
@@ -33,13 +33,13 @@ rules:
   - update
   - watch
 - apiGroups:
-  - mosn.io
+  - htnn.mosn.io
   resources:
   - consumers/finalizers
   verbs:
   - update
 - apiGroups:
-  - mosn.io
+  - htnn.mosn.io
   resources:
   - consumers/status
   verbs:
@@ -47,7 +47,7 @@ rules:
   - patch
   - update
 - apiGroups:
-  - mosn.io
+  - htnn.mosn.io
   resources:
   - httpfilterpolicies
   verbs:
@@ -59,13 +59,13 @@ rules:
   - update
   - watch
 - apiGroups:
-  - mosn.io
+  - htnn.mosn.io
   resources:
   - httpfilterpolicies/finalizers
   verbs:
   - update
 - apiGroups:
-  - mosn.io
+  - htnn.mosn.io
   resources:
   - httpfilterpolicies/status
   verbs:
@@ -73,7 +73,7 @@ rules:
   - patch
   - update
 - apiGroups:
-  - mosn.io
+  - htnn.mosn.io
   resources:
   - serviceregistries
   verbs:
@@ -85,13 +85,13 @@ rules:
   - update
   - watch
 - apiGroups:
-  - mosn.io
+  - htnn.mosn.io
   resources:
   - serviceregistries/finalizers
   verbs:
   - update
 - apiGroups:
-  - mosn.io
+  - htnn.mosn.io
   resources:
   - serviceregistries/status
   verbs:

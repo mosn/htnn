@@ -41,7 +41,7 @@ title: HMAC Auth
 首先，让我们创建一个消费者：
 
 ```yaml
-apiVersion: mosn.io/v1
+apiVersion: htnn.mosn.io/v1
 kind: Consumer
 metadata:
   name: consumer
@@ -75,7 +75,7 @@ spec:
     - name: backend
       port: 8080
 ---
-apiVersion: mosn.io/v1
+apiVersion: htnn.mosn.io/v1
 kind: HTTPFilterPolicy
 metadata:
   name: policy

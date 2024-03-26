@@ -7,7 +7,7 @@ title: 消费者
 举个例子，假设我们现有一个消费者 `Leo`，和两个路由。由于历史遗留原因，这两个路由上的认证参数，一个来自于 url，另一个来自于 header。如下所示：
 
 ```yaml
-apiVersion: mosn.io/v1
+apiVersion: htnn.mosn.io/v1
 kind: Consumer
 metadata:
   name: leo
@@ -49,7 +49,7 @@ spec:
     - name: backend2
       port: 8081
 ---
-apiVersion: mosn.io/v1
+apiVersion: htnn.mosn.io/v1
 kind: HTTPFilterPolicy
 metadata:
   name: alpha
@@ -64,7 +64,7 @@ spec:
         - name: ak
           source: QUERY
 ---
-apiVersion: mosn.io/v1
+apiVersion: htnn.mosn.io/v1
 kind: HTTPFilterPolicy
 metadata:
   name: beta
@@ -97,7 +97,7 @@ spec:
 除此之外，我们还可以给消费者配置特定的插件。这些插件只有在通过认证之后才会执行。以下面的配置为例：
 
 ```yaml
-apiVersion: mosn.io/v1
+apiVersion: htnn.mosn.io/v1
 kind: Consumer
 metadata:
   name: vip
@@ -111,7 +111,7 @@ spec:
       config:
         average: 10
 ---
-apiVersion: mosn.io/v1
+apiVersion: htnn.mosn.io/v1
 kind: Consumer
 metadata:
   name: member
@@ -125,7 +125,7 @@ spec:
       config:
         average: 1
 ---
-apiVersion: mosn.io/v1
+apiVersion: htnn.mosn.io/v1
 kind: HTTPFilterPolicy
 metadata:
   name: beta

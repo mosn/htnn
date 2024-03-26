@@ -48,9 +48,9 @@ const (
 	ConsumerEnvoyFilterName = "htnn-consumer"
 )
 
-//+kubebuilder:rbac:groups=mosn.io,resources=consumers,verbs=get;list;watch;create;update;patch;delete
-//+kubebuilder:rbac:groups=mosn.io,resources=consumers/status,verbs=get;update;patch
-//+kubebuilder:rbac:groups=mosn.io,resources=consumers/finalizers,verbs=update
+//+kubebuilder:rbac:groups=htnn.mosn.io,resources=consumers,verbs=get;list;watch;create;update;patch;delete
+//+kubebuilder:rbac:groups=htnn.mosn.io,resources=consumers/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=htnn.mosn.io,resources=consumers/finalizers,verbs=update
 //+kubebuilder:rbac:groups=networking.istio.io,resources=envoyfilters,verbs=get;list;watch;create;update;patch;delete
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to

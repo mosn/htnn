@@ -41,7 +41,7 @@ When the `source` is `HEADER`, it fetches the key from the configured request he
 First of all, let's create a consumer with key `rick`:
 
 ```yaml
-apiVersion: mosn.io/v1
+apiVersion: htnn.mosn.io/v1
 kind: Consumer
 metadata:
   name: consumer

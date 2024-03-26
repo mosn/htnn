@@ -1,4 +1,4 @@
-- apiVersion: mosn.io/v1
+- apiVersion: htnn.mosn.io/v1
   kind: HTTPFilterPolicy
   metadata:
     name: policy1
@@ -12,7 +12,7 @@
       demo:
         config:
           hostName: alice
-- apiVersion: mosn.io/v1
+- apiVersion: htnn.mosn.io/v1
   kind: HTTPFilterPolicy
   metadata:
     name: policy2

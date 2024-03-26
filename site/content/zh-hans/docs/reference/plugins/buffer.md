@@ -47,7 +47,7 @@ spec:
 通过应用下面的配置，发送到 `http://localhost:10000/` 的请求会被缓冲，直到请求体长度达到最大请求字节数 4：
 
 ```yaml
-apiVersion: mosn.io/v1
+apiVersion: htnn.mosn.io/v1
 kind: HTTPFilterPolicy
 metadata:
   name: policy
