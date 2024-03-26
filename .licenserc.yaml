@@ -32,7 +32,6 @@ header:
     - '**/go.mod'
     - '**/go.sum'
     - 'buf.lock'
-    - 'controller/PROJECT'
     # files can't add license
     - '**/*.json'
     - '**/*.txt'
