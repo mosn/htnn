@@ -34,7 +34,7 @@ require (
 	github.com/gorilla/securecookie v1.1.2
 	github.com/jellydator/ttlcache/v3 v3.2.0
 	github.com/nacos-group/nacos-sdk-go v1.1.4
-	github.com/onsi/ginkgo/v2 v2.17.0
+	github.com/onsi/ginkgo/v2 v2.17.1
 	github.com/onsi/gomega v1.32.0
 	github.com/open-policy-agent/opa v0.62.1
 	github.com/prometheus/client_golang v1.19.0
