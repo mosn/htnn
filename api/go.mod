@@ -14,7 +14,7 @@
 
 module mosn.io/htnn/api
 
-// This module puts the API which can be used in the plugins and the filtermanager.
+// This module puts the filtermanager and the API and test framework which can be used in the plugins.
 
 go 1.21.5
 
