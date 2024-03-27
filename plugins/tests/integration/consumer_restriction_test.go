@@ -21,10 +21,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"mosn.io/htnn/pkg/filtermanager"
-	"mosn.io/htnn/pkg/filtermanager/model"
-	"mosn.io/htnn/plugins/tests/integration/control_plane"
-	"mosn.io/htnn/plugins/tests/integration/data_plane"
+	"mosn.io/htnn/api/pkg/filtermanager"
+	"mosn.io/htnn/api/pkg/filtermanager/model"
+	"mosn.io/htnn/api/plugins/tests/integration/control_plane"
+	"mosn.io/htnn/api/plugins/tests/integration/data_plane"
 )
 
 func TestConsumerRestriction(t *testing.T) {

@@ -20,11 +20,12 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"mosn.io/htnn/pkg/filtermanager"
-	"mosn.io/htnn/plugins/tests/integration/control_plane"
-	"mosn.io/htnn/plugins/tests/integration/data_plane"
+	"mosn.io/htnn/api/pkg/filtermanager"
+	"mosn.io/htnn/api/plugins/tests/integration/control_plane"
+	"mosn.io/htnn/api/plugins/tests/integration/data_plane"
 )
 
+// TODO: move this test under api/plugins/tests/integration
 func TestConsumerWithFilter(t *testing.T) {
 	dp, err := data_plane.StartDataPlane(t, &data_plane.Option{
 		Bootstrap: data_plane.Bootstrap().AddConsumer("with_filter", map[string]interface{}{

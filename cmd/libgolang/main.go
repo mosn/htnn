@@ -19,8 +19,8 @@ package main
 import (
 	"github.com/envoyproxy/envoy/contrib/golang/filters/http/source/go/pkg/http"
 
-	"mosn.io/htnn/pkg/consumer"
-	"mosn.io/htnn/pkg/filtermanager"
+	"mosn.io/htnn/api/pkg/consumer"
+	"mosn.io/htnn/api/pkg/filtermanager"
 	_ "mosn.io/htnn/plugins"
 )
 

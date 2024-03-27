@@ -25,8 +25,8 @@ import (
 	"github.com/gorilla/securecookie"
 	"golang.org/x/oauth2"
 
-	"mosn.io/htnn/pkg/filtermanager/api"
-	"mosn.io/htnn/pkg/plugins"
+	"mosn.io/htnn/api/pkg/filtermanager/api"
+	"mosn.io/htnn/api/pkg/plugins"
 )
 
 const (

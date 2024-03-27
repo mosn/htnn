@@ -23,7 +23,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"mosn.io/htnn/controller/internal/log"
-	"mosn.io/htnn/internal/proto"
+	"mosn.io/htnn/controller/internal/proto"
 )
 
 // RegistryConfig represents the configuration used by the registry

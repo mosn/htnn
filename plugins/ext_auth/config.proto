@@ -16,9 +16,9 @@ syntax = "proto3";
 
 package plugins.ext_auth;
 
-import "api/v1/header.proto";
-import "api/v1/http_status.proto";
-import "api/v1/matcher.proto";
+import "plugins/api/v1/header.proto";
+import "plugins/api/v1/http_status.proto";
+import "plugins/api/v1/matcher.proto";
 
 import "google/protobuf/duration.proto";
 import "validate/validate.proto";

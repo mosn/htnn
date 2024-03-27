@@ -14,7 +14,9 @@
 
 package consumer_restriction
 
-import "mosn.io/htnn/pkg/filtermanager/api"
+import (
+	"mosn.io/htnn/api/pkg/filtermanager/api"
+)
 
 func factory(c interface{}, callbacks api.FilterCallbackHandler) api.Filter {
 	return &filter{

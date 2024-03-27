@@ -20,7 +20,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"mosn.io/htnn/plugins/tests/pkg/envoy"
+	"mosn.io/htnn/api/plugins/tests/pkg/envoy"
 )
 
 func TestHello(t *testing.T) {

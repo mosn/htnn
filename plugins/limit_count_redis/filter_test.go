@@ -22,8 +22,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"mosn.io/htnn/api/plugins/tests/pkg/envoy"
 	"mosn.io/htnn/pkg/expr"
-	"mosn.io/htnn/plugins/tests/pkg/envoy"
 )
 
 func TestGetKey(t *testing.T) {

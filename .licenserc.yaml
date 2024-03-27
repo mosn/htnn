@@ -24,15 +24,11 @@ header:
     - '**/*.yaml'
     - '**/*.yml'
     - '**/*.toml'
-    # ignore generated file
-    - '**/*.pb.go'
-    - '**/*.pb.validate.go'
-    - 'zz_generated.deepcopy.go'
     # ignore file controlled by tools
-    - '**/go.mod'
     - '**/go.sum'
     - 'buf.lock'
     # files can't add license
+    - '**/*.pb.validate.go'
     - '**/*.json'
     - '**/*.txt'
     - 'VERSION'
@@ -40,8 +36,8 @@ header:
     # files from other projects
     - 'site/assets/**'
     - 'site/layouts/**'
+    - 'api/internal/cookie/cookie.go'
     - 'controller/registries/nacos/config.go'
-    - 'pkg/cookie/cookie.go'
   comment: on-failure
   # remove below once skywalking-eyes v0.6.0 is released
   language:

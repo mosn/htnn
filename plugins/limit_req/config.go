@@ -22,9 +22,9 @@ import (
 	"github.com/jellydator/ttlcache/v3"
 	"golang.org/x/time/rate"
 
+	"mosn.io/htnn/api/pkg/filtermanager/api"
+	"mosn.io/htnn/api/pkg/plugins"
 	"mosn.io/htnn/pkg/expr"
-	"mosn.io/htnn/pkg/filtermanager/api"
-	"mosn.io/htnn/pkg/plugins"
 )
 
 const (

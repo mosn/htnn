@@ -22,8 +22,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 
-	internalConsumer "mosn.io/htnn/internal/consumer"
-	"mosn.io/htnn/pkg/filtermanager/model"
+	csModel "mosn.io/htnn/api/pkg/consumer/model"
+	fmModel "mosn.io/htnn/api/pkg/filtermanager/model"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
@@ -86,17 +86,17 @@ func (c *Consumer) Marshal() string {
 		auth[k] = string(v.Config.Raw)
 	}
 
-	consumer := &internalConsumer.Consumer{
+	consumer := &csModel.Consumer{
 		Auth: auth,
 	}
 
 	if len(c.Spec.Filters) > 0 {
-		filters := make(map[string]*model.FilterConfig, len(c.Spec.Filters))
+		filters := make(map[string]*fmModel.FilterConfig, len(c.Spec.Filters))
 		for k, v := range c.Spec.Filters {
 			var config interface{}
 			// we use interface{} here because we will introduce configuration merging one day
 			_ = json.Unmarshal(v.Config.Raw, &config)
-			filters[k] = &model.FilterConfig{
+			filters[k] = &fmModel.FilterConfig{
 				Config: config,
 			}
 		}

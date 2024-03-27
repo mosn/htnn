@@ -21,7 +21,7 @@ import (
 
 	"github.com/jellydator/ttlcache/v3"
 
-	"mosn.io/htnn/pkg/log"
+	"mosn.io/htnn/api/pkg/log"
 )
 
 var (

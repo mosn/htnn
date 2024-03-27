@@ -24,7 +24,7 @@ import (
 	"github.com/google/cel-go/common/types"
 	"github.com/stretchr/testify/require"
 
-	"mosn.io/htnn/plugins/tests/pkg/envoy"
+	"mosn.io/htnn/api/plugins/tests/pkg/envoy"
 )
 
 func TestCompileCel(t *testing.T) {

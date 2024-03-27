@@ -20,10 +20,10 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"mosn.io/htnn/pkg/filtermanager"
-	"mosn.io/htnn/pkg/filtermanager/model"
-	"mosn.io/htnn/plugins/tests/integration/control_plane"
-	"mosn.io/htnn/plugins/tests/integration/data_plane"
+	"mosn.io/htnn/api/pkg/filtermanager"
+	"mosn.io/htnn/api/pkg/filtermanager/model"
+	"mosn.io/htnn/api/plugins/tests/integration/control_plane"
+	"mosn.io/htnn/api/plugins/tests/integration/data_plane"
 )
 
 func TestHmacAuth(t *testing.T) {

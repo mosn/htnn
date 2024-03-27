@@ -20,9 +20,9 @@ import (
 
 	"github.com/casbin/casbin/v2"
 
+	"mosn.io/htnn/api/pkg/filtermanager/api"
+	"mosn.io/htnn/api/pkg/plugins"
 	"mosn.io/htnn/pkg/file"
-	"mosn.io/htnn/pkg/filtermanager/api"
-	"mosn.io/htnn/pkg/plugins"
 )
 
 const (

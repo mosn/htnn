@@ -23,8 +23,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/encoding/protojson"
 
-	"mosn.io/htnn/pkg/filtermanager/api"
-	"mosn.io/htnn/plugins/tests/pkg/envoy"
+	"mosn.io/htnn/api/pkg/filtermanager/api"
+	"mosn.io/htnn/api/plugins/tests/pkg/envoy"
 )
 
 func response(status int) *http.Response {

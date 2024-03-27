@@ -35,8 +35,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/gateway-api/conformance/utils/roundtripper"
 
+	"mosn.io/htnn/api/pkg/log"
 	"mosn.io/htnn/e2e/pkg/k8s"
-	"mosn.io/htnn/pkg/log"
 )
 
 var (
