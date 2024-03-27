@@ -134,7 +134,8 @@ var _ = Describe("Consumer controller", func() {
 
 			// to invalid
 			base := client.MergeFrom(c.DeepCopy())
-			c.Spec.Auth["unknown"] = mosniov1.ConsumerPlugin{
+			prev := c.Spec.Auth["keyAuth"]
+			c.Spec.Auth["keyAuth"] = mosniov1.ConsumerPlugin{
 				Config: runtime.RawExtension{
 					Raw: []byte(`{}`),
 				},
@@ -175,7 +176,7 @@ var _ = Describe("Consumer controller", func() {
 
 			// back to valid
 			base = client.MergeFrom(c.DeepCopy())
-			delete(c.Spec.Auth, "unknown")
+			c.Spec.Auth["keyAuth"] = prev
 			Expect(k8sClient.Patch(ctx, c, base)).Should(Succeed())
 			Eventually(func() bool {
 				if err := k8sClient.List(ctx, &consumers); err != nil {

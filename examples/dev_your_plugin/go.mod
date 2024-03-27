@@ -16,8 +16,6 @@ module mosn.io/htnn/dev_your_plugin
 
 go 1.21
 
-toolchain go1.21.5
-
 require (
 	github.com/envoyproxy/envoy v1.29.2
 	google.golang.org/protobuf v1.33.0

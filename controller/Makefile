@@ -198,6 +198,10 @@ $(ENVTEST): $(LOCALBIN)
 start-controller-service:
 	cd ./tests/testdata/services && docker-compose up -d
 
+.PHONY: stop-controller-service
+stop-controller-service:
+	cd ./tests/testdata/services && docker-compose down
+
 GO_FMTTER_VERSION = 0.3.8
 .PHONY: install-go-fmtter
 install-go-fmtter: $(LOCALBIN)

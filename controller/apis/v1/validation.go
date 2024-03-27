@@ -26,7 +26,22 @@ import (
 	"mosn.io/htnn/controller/pkg/registry"
 )
 
+// ValidateHTTPFilterPolicy validates HTTPFilterPolicy.
+// It only validate the part it knows, so unknown plugins or fields will be skipped.
+// It's recommended to use this function in the controller.
 func ValidateHTTPFilterPolicy(policy *HTTPFilterPolicy) error {
+	return validateHTTPFilterPolicy(policy, false)
+}
+
+// ValidateHTTPFilterPolicyStrictly validates HTTPFilterPolicy strictly.
+// Unknown plugins or fields will be rejected.
+// It's recommended to use this function before writing the configuration to persistent storage,
+// for example, in the dashboard or webhook.
+func ValidateHTTPFilterPolicyStrictly(policy *HTTPFilterPolicy) error {
+	return validateHTTPFilterPolicy(policy, true)
+}
+
+func validateHTTPFilterPolicy(policy *HTTPFilterPolicy, strict bool) error {
 	ref := policy.Spec.TargetRef
 	if ref.Namespace != nil {
 		namespace := string(*ref.Namespace)
@@ -48,13 +63,21 @@ func ValidateHTTPFilterPolicy(policy *HTTPFilterPolicy) error {
 	for name, filter := range policy.Spec.Filters {
 		p := plugins.LoadHttpPlugin(name)
 		if p == nil {
-			// reject unknown filter in CP, ignore unknown filter in DP
-			return errors.New("unknown http filter: " + name)
+			if strict {
+				return errors.New("unknown http filter: " + name)
+			}
+			continue
 		}
 
 		data := filter.Config.Raw
 		conf := p.Config()
-		if err := proto.UnmarshalJSON(data, conf); err != nil {
+		var err error
+		if strict {
+			err = proto.UnmarshalJSONStrictly(data, conf)
+		} else {
+			err = proto.UnmarshalJSON(data, conf)
+		}
+		if err != nil {
 			return fmt.Errorf("failed to unmarshal for filter %s: %w", name, err)
 		}
 
