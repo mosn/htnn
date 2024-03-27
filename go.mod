@@ -49,8 +49,8 @@ require (
 	google.golang.org/genproto/googleapis/api v0.0.0-20240123012728-ef4313101c80
 	google.golang.org/protobuf v1.33.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
-	istio.io/api v1.20.1
-	istio.io/client-go v1.20.1
+	istio.io/api v1.21.0
+	istio.io/client-go v1.21.0
 	k8s.io/api v0.29.3
 	k8s.io/apimachinery v0.29.3
 	k8s.io/client-go v0.29.3
