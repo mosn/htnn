@@ -15,10 +15,8 @@
 package buffer
 
 import (
-	buffer "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/buffer/v3"
-
-	"mosn.io/htnn/api/pkg/filtermanager/api"
 	"mosn.io/htnn/api/pkg/plugins"
+	"mosn.io/htnn/types/plugins/buffer"
 )
 
 const (
@@ -30,21 +28,7 @@ func init() {
 }
 
 type plugin struct {
-	plugins.PluginMethodDefaultImpl
-}
-
-func (p *plugin) Type() plugins.PluginType {
-	return plugins.TypeGeneral
-}
-
-func (p *plugin) Order() plugins.PluginOrder {
-	return plugins.PluginOrder{
-		Position: plugins.OrderPositionOuter,
-	}
-}
-
-func (p *plugin) Config() api.PluginConfig {
-	return &buffer.Buffer{}
+	buffer.Plugin
 }
 
 // The BufferPerRoute has two fields: `disabled` and `buffer`:

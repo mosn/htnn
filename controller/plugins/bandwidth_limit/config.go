@@ -15,10 +15,8 @@
 package bandwidth_limit
 
 import (
-	bandwidth_limit "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/bandwidth_limit/v3"
-
-	"mosn.io/htnn/api/pkg/filtermanager/api"
 	"mosn.io/htnn/api/pkg/plugins"
+	"mosn.io/htnn/types/plugins/bandwidth_limit"
 )
 
 const (
@@ -30,21 +28,7 @@ func init() {
 }
 
 type plugin struct {
-	plugins.PluginMethodDefaultImpl
-}
-
-func (p *plugin) Type() plugins.PluginType {
-	return plugins.TypeTraffic
-}
-
-func (p *plugin) Order() plugins.PluginOrder {
-	return plugins.PluginOrder{
-		Position: plugins.OrderPositionOuter,
-	}
-}
-
-func (p *plugin) Config() api.PluginConfig {
-	return &bandwidth_limit.BandwidthLimit{}
+	bandwidth_limit.Plugin
 }
 
 func (p *plugin) RouteConfigTypeURL() string {

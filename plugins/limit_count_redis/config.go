@@ -17,7 +17,6 @@ package limit_count_redis
 import (
 	"crypto/tls"
 	"fmt"
-	"net"
 	"strings"
 
 	"github.com/google/cel-go/cel"
@@ -26,7 +25,8 @@ import (
 
 	"mosn.io/htnn/api/pkg/filtermanager/api"
 	"mosn.io/htnn/api/pkg/plugins"
-	"mosn.io/htnn/pkg/expr"
+	"mosn.io/htnn/types/pkg/expr"
+	"mosn.io/htnn/types/plugins/limit_count_redis"
 )
 
 const (
@@ -38,7 +38,7 @@ func init() {
 }
 
 type plugin struct {
-	plugins.PluginMethodDefaultImpl
+	limit_count_redis.Plugin
 }
 
 func (p *plugin) Type() plugins.PluginType {
@@ -60,7 +60,7 @@ func (p *plugin) Config() api.PluginConfig {
 }
 
 type config struct {
-	Config
+	limit_count_redis.CustomConfig
 
 	client        *redis.Client
 	clusterClient *redis.ClusterClient
@@ -74,47 +74,6 @@ type Limiter struct {
 	count      uint32
 	timeWindow int64
 	prefix     string
-}
-
-func (conf *config) Validate() error {
-	err := conf.Config.Validate()
-	if err != nil {
-		return err
-	}
-
-	addr := conf.GetAddress()
-	if addr != "" {
-		_, _, err = net.SplitHostPort(addr)
-		if err != nil {
-			return fmt.Errorf("bad address %s: %w", addr, err)
-		}
-	}
-	cluster := conf.GetCluster()
-	if cluster != nil {
-		addrs := cluster.Addresses
-		for _, addr := range addrs {
-			_, _, err = net.SplitHostPort(addr)
-			if err != nil {
-				return fmt.Errorf("bad address %s: %w", addr, err)
-			}
-		}
-	}
-
-	for i, rule := range conf.Rules {
-		if rule.Key == "" {
-			continue
-		}
-		_, err = expr.CompileCel(rule.Key, cel.StringType)
-		if err != nil {
-			return fmt.Errorf("bad rule %d: %w", i, err)
-		}
-	}
-
-	if conf.Username != "" && conf.Password == "" {
-		return fmt.Errorf("password is required when username is set")
-	}
-
-	return nil
 }
 
 func (conf *config) Init(cb api.ConfigCallbackHandler) error {

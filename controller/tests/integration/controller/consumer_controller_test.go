@@ -28,9 +28,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	mosniov1 "mosn.io/htnn/controller/apis/v1"
 	"mosn.io/htnn/controller/tests/integration/helper"
 	"mosn.io/htnn/controller/tests/pkg"
+	mosniov1 "mosn.io/htnn/types/apis/v1"
 )
 
 func mustReadConsumer(fn string, out *[]map[string]interface{}) {

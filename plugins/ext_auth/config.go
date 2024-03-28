@@ -20,12 +20,11 @@ import (
 
 	"mosn.io/htnn/api/pkg/filtermanager/api"
 	"mosn.io/htnn/api/pkg/plugins"
-	"mosn.io/htnn/pkg/expr"
+	"mosn.io/htnn/types/pkg/expr"
+	"mosn.io/htnn/types/plugins/ext_auth"
 )
 
 const (
-	// We name this plugin as ext_auth to distinguish it from the C++ implementation ext_authz.
-	// We may add new feature to this plugin which will make it different from its C++ sibling.
 	Name = "extAuth"
 )
 
@@ -34,17 +33,7 @@ func init() {
 }
 
 type plugin struct {
-	plugins.PluginMethodDefaultImpl
-}
-
-func (p *plugin) Type() plugins.PluginType {
-	return plugins.TypeAuthz
-}
-
-func (p *plugin) Order() plugins.PluginOrder {
-	return plugins.PluginOrder{
-		Position: plugins.OrderPositionAuthz,
-	}
+	ext_auth.Plugin
 }
 
 func (p *plugin) Factory() api.FilterFactory {
@@ -56,7 +45,7 @@ func (p *plugin) Config() api.PluginConfig {
 }
 
 type config struct {
-	Config
+	ext_auth.Config
 
 	client                  *http.Client
 	headerToUpstreamMatcher expr.Matcher

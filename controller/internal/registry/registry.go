@@ -18,9 +18,10 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	mosniov1 "mosn.io/htnn/controller/apis/v1"
 	"mosn.io/htnn/controller/internal/log"
 	pkgRegistry "mosn.io/htnn/controller/pkg/registry"
+	mosniov1 "mosn.io/htnn/types/apis/v1"
+	registrytype "mosn.io/htnn/types/pkg/registry"
 )
 
 var (
@@ -45,7 +46,7 @@ func UpdateRegistry(registry *mosniov1.ServiceRegistry) error {
 			return err
 		}
 
-		conf, err := pkgRegistry.ParseConfig(reg, registry.Spec.Config.Raw)
+		conf, err := registrytype.ParseConfig(reg, registry.Spec.Config.Raw)
 		if err != nil {
 			return err
 		}
@@ -61,7 +62,7 @@ func UpdateRegistry(registry *mosniov1.ServiceRegistry) error {
 		registries[key] = reg
 
 	} else {
-		conf, err := pkgRegistry.ParseConfig(reg, registry.Spec.Config.Raw)
+		conf, err := registrytype.ParseConfig(reg, registry.Spec.Config.Raw)
 		if err != nil {
 			return err
 		}

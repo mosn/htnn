@@ -18,6 +18,7 @@ import (
 	"net/url"
 
 	"mosn.io/htnn/api/pkg/filtermanager/api"
+	"mosn.io/htnn/types/plugins/key_auth"
 )
 
 func factory(c interface{}, callbacks api.FilterCallbackHandler) api.Filter {
@@ -49,7 +50,7 @@ func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api
 	var query url.Values
 	for _, key := range config.Keys {
 		var vals []string
-		if key.Source == Source_QUERY {
+		if key.Source == key_auth.Source_QUERY {
 			if query == nil {
 				query = headers.Url().Query()
 			}

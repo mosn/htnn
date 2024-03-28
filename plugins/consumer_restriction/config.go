@@ -17,6 +17,7 @@ package consumer_restriction
 import (
 	"mosn.io/htnn/api/pkg/filtermanager/api"
 	"mosn.io/htnn/api/pkg/plugins"
+	"mosn.io/htnn/types/plugins/consumer_restriction"
 )
 
 const (
@@ -28,17 +29,7 @@ func init() {
 }
 
 type plugin struct {
-	plugins.PluginMethodDefaultImpl
-}
-
-func (p *plugin) Type() plugins.PluginType {
-	return plugins.TypeAuthz
-}
-
-func (p *plugin) Order() plugins.PluginOrder {
-	return plugins.PluginOrder{
-		Position: plugins.OrderPositionAuthz,
-	}
+	consumer_restriction.Plugin
 }
 
 func (p *plugin) Factory() api.FilterFactory {
@@ -50,7 +41,7 @@ func (p *plugin) Config() api.PluginConfig {
 }
 
 type config struct {
-	Config
+	consumer_restriction.Config
 
 	allow     bool
 	consumers map[string]struct{}

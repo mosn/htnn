@@ -37,6 +37,22 @@ updates:
       - dependency-name: "istio.io/api"
       - dependency-name: "istio.io/client-go"
   - package-ecosystem: "gomod"
+    directory: "/types"
+    schedule:
+      interval: "weekly"
+    ignore:
+      # the Envoy lib need to be fit with the Envoy we use. So let's disable auto-updates.
+      - dependency-name: "github.com/envoyproxy/envoy"
+      - dependency-name: "github.com/envoyproxy/go-control-plane"
+      - dependency-name: "github.com/envoyproxy/protoc-gen-validate"
+      # So as the Istio's
+      - dependency-name: "istio.io/api"
+      - dependency-name: "istio.io/client-go"
+    groups:
+      k8s.io:
+        patterns:
+          - "k8s.io/*" # client-go and her friends
+  - package-ecosystem: "gomod"
     directory: "/site"
     schedule:
       interval: "weekly"

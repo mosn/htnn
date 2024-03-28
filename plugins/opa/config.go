@@ -16,7 +16,6 @@ package opa
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -26,6 +25,7 @@ import (
 
 	"mosn.io/htnn/api/pkg/filtermanager/api"
 	"mosn.io/htnn/api/pkg/plugins"
+	"mosn.io/htnn/types/plugins/opa"
 )
 
 const (
@@ -37,17 +37,7 @@ func init() {
 }
 
 type plugin struct {
-	plugins.PluginMethodDefaultImpl
-}
-
-func (p *plugin) Type() plugins.PluginType {
-	return plugins.TypeAuthz
-}
-
-func (p *plugin) Order() plugins.PluginOrder {
-	return plugins.PluginOrder{
-		Position: plugins.OrderPositionAuthz,
-	}
+	opa.Plugin
 }
 
 func (p *plugin) Factory() api.FilterFactory {
@@ -59,7 +49,7 @@ func (p *plugin) Config() api.PluginConfig {
 }
 
 type config struct {
-	Config
+	opa.CustomConfig
 
 	client *http.Client
 	query  rego.PreparedEvalQuery
@@ -68,35 +58,6 @@ type config struct {
 var (
 	pkgMatcher = regexp.MustCompile(`^package\s+(\w+)\s`)
 )
-
-func (conf *config) Validate() error {
-	err := conf.Config.Validate()
-	if err != nil {
-		return err
-	}
-
-	local := conf.GetLocal()
-	if local != nil {
-		module := local.Text
-		match := pkgMatcher.FindStringSubmatch(module)
-		if len(match) < 2 {
-			return errors.New("invalid Local.Text: bad package name")
-		}
-		policy := match[1]
-
-		ctx := context.Background()
-
-		_, err := rego.New(
-			rego.Query(fmt.Sprintf("allow = data.%s.allow", policy)),
-			rego.Module(fmt.Sprintf("%s.rego", policy), module),
-		).PrepareForEval(ctx)
-
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
 
 func (conf *config) Init(cb api.ConfigCallbackHandler) error {
 	remote := conf.GetRemote()
