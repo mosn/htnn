@@ -34,7 +34,7 @@ import (
 )
 
 var (
-	logger = log.DefaultLogger.WithName("cel")
+	logger = log.DefaultLogger.WithName("expr")
 
 	celEnv     *cel.Env
 	initCelEnv = sync.OnceFunc(func() {
