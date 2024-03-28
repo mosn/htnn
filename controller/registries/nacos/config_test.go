@@ -26,6 +26,7 @@ import (
 	istioapi "istio.io/api/networking/v1beta1"
 
 	"mosn.io/htnn/controller/pkg/registry"
+	"mosn.io/htnn/types/registries/nacos"
 )
 
 func TestGenerateServiceEntry(t *testing.T) {
@@ -104,7 +105,7 @@ func TestUnsubscribeInReload(t *testing.T) {
 	})
 	defer patches.Reset()
 
-	err := reg.Reload(&Config{
+	err := reg.Reload(&nacos.Config{
 		ServerUrl: "http://127.0.0.1:8848",
 	})
 	assert.Nil(t, err)

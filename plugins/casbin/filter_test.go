@@ -23,6 +23,7 @@ import (
 
 	"mosn.io/htnn/api/pkg/filtermanager/api"
 	"mosn.io/htnn/api/plugins/tests/pkg/envoy"
+	"mosn.io/htnn/types/plugins/casbin"
 )
 
 func TestCasbin(t *testing.T) {
@@ -63,12 +64,12 @@ func TestCasbin(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			cb := envoy.NewFilterCallbackHandler()
 			c := &config{
-				Config: Config{
-					Rule: &Config_Rule{
+				Config: casbin.Config{
+					Rule: &casbin.Config_Rule{
 						Model:  "./testdata/model.conf",
 						Policy: "./testdata/policy.csv",
 					},
-					Token: &Config_Token{
+					Token: &casbin.Config_Token{
 						Name: "user",
 					},
 				},

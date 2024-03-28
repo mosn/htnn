@@ -15,10 +15,8 @@
 package local_ratelimit
 
 import (
-	local_ratelimit "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/local_ratelimit/v3"
-
-	"mosn.io/htnn/api/pkg/filtermanager/api"
 	"mosn.io/htnn/api/pkg/plugins"
+	"mosn.io/htnn/types/plugins/local_ratelimit"
 )
 
 const (
@@ -30,24 +28,10 @@ func init() {
 }
 
 type plugin struct {
-	plugins.PluginMethodDefaultImpl
-}
-
-func (p *plugin) Type() plugins.PluginType {
-	return plugins.TypeTraffic
-}
-
-func (p *plugin) Order() plugins.PluginOrder {
-	return plugins.PluginOrder{
-		Position: plugins.OrderPositionOuter,
-	}
+	local_ratelimit.Plugin
 }
 
 // Each Native plugin need to implement the methods below
-
-func (p *plugin) Config() api.PluginConfig {
-	return &local_ratelimit.LocalRateLimit{}
-}
 
 // RouteConfigTypeURL returns the type url of per-route config
 func (p *plugin) RouteConfigTypeURL() string {

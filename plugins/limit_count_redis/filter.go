@@ -24,8 +24,8 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"mosn.io/htnn/api/pkg/filtermanager/api"
-	"mosn.io/htnn/pkg/expr"
 	"mosn.io/htnn/pkg/stringx"
+	"mosn.io/htnn/types/pkg/expr"
 )
 
 func factory(c interface{}, callbacks api.FilterCallbackHandler) api.Filter {

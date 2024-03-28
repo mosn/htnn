@@ -21,6 +21,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"mosn.io/htnn/api/plugins/tests/pkg/envoy"
+	"mosn.io/htnn/types/plugins/demo"
 )
 
 func TestHello(t *testing.T) {
@@ -31,7 +32,7 @@ func TestHello(t *testing.T) {
 	}))
 	cb.SetStreamInfo(info)
 	f := factory(&config{
-		Config: Config{
+		Config: demo.Config{
 			HostName: "Tom",
 		},
 	}, cb).(*filter)
@@ -46,7 +47,7 @@ func TestDecodeHeaders(t *testing.T) {
 	}))
 	cb.SetStreamInfo(info)
 	f := factory(&config{
-		Config: Config{
+		Config: demo.Config{
 			HostName: "Tom",
 		},
 	}, cb)

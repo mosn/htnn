@@ -15,10 +15,8 @@
 package lua
 
 import (
-	lua "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/lua/v3"
-
-	"mosn.io/htnn/api/pkg/filtermanager/api"
 	"mosn.io/htnn/api/pkg/plugins"
+	"mosn.io/htnn/types/plugins/lua"
 )
 
 func init() {
@@ -27,11 +25,6 @@ func init() {
 }
 
 type plugin struct {
-	plugins.PluginMethodDefaultImpl
-}
-
-func (p *plugin) Config() api.PluginConfig {
-	return &lua.LuaPerRoute{}
 }
 
 func (p *plugin) RouteConfigTypeURL() string {
@@ -48,20 +41,10 @@ func (p *plugin) HTTPFilterConfigPlaceholder() map[string]interface{} {
 
 type prePlugin struct {
 	plugin
-}
-
-func (p *prePlugin) Order() plugins.PluginOrder {
-	return plugins.PluginOrder{
-		Position: plugins.OrderPositionOuter,
-	}
+	lua.PrePlugin
 }
 
 type postPlugin struct {
 	plugin
-}
-
-func (p *postPlugin) Order() plugins.PluginOrder {
-	return plugins.PluginOrder{
-		Position: plugins.OrderPositionInner,
-	}
+	lua.PostPlugin
 }

@@ -33,7 +33,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"mosn.io/htnn/api/pkg/log"
-	mosniov1 "mosn.io/htnn/controller/apis/v1"
+	mosniov1 "mosn.io/htnn/types/apis/v1"
 )
 
 var (

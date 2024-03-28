@@ -37,7 +37,7 @@ func TestBadConfig(t *testing.T) {
 					"rules": [{"name":"Doe"}]
 				}
 			}`,
-			err: "oneof plugins.consumer_restriction.Config.config_type is already set",
+			err: "oneof types.plugins.consumer_restriction.Config.config_type is already set",
 		},
 	}
 

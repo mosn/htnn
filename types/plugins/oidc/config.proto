@@ -1,0 +1,53 @@
+// Copyright The HTNN Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package types.plugins.oidc;
+
+import "google/protobuf/duration.proto";
+import "validate/validate.proto";
+
+option go_package = "mosn.io/htnn/types/plugins/oidc";
+
+message Config {
+  string client_id = 1 [(validate.rules).string = {min_len: 1}];
+  string client_secret = 2 [(validate.rules).string = {min_len: 1}];
+  // The issuer is the URL identifier for the service. For example: "https://accounts.google.com"
+  // or "https://login.salesforce.com".
+  string issuer = 3 [(validate.rules).string = {uri: true}];
+  // The configured URL MUST exactly match one of the Redirection URI values
+  // for the Client pre-registered at the OpenID Provider
+  string redirect_url = 4 [(validate.rules).string = {uri: true}];
+  repeated string scopes = 5;
+
+  // This option is provided to skip the nonce verification. It is designed for local development.
+  bool skip_nonce_verify = 6;
+
+  // Default to "x-id-token"
+  string id_token_header = 7;
+
+  // The timeout to wait for the OIDC provider to respond. Default to 3s.
+  google.protobuf.Duration timeout = 8 [(validate.rules).duration = {
+    gt: {},
+  }];
+
+  bool disable_access_token_refresh = 9;
+  // The duration to determines how earlier a token should be considered
+  // expired than its actual expiration time. It is used to avoid late
+  // expirations due to client-server time mismatches. Default to 10s.
+  google.protobuf.Duration access_token_refresh_leeway = 10 [(validate.rules).duration = {
+    gte: {},
+  }];
+}

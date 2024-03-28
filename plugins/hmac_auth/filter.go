@@ -25,12 +25,13 @@ import (
 	"strings"
 
 	"mosn.io/htnn/api/pkg/filtermanager/api"
+	"mosn.io/htnn/types/plugins/hmac_auth"
 )
 
 func factory(c interface{}, callbacks api.FilterCallbackHandler) api.Filter {
 	return &filter{
 		callbacks: callbacks,
-		config:    c.(*Config),
+		config:    c.(*hmac_auth.Config),
 	}
 }
 
@@ -38,8 +39,8 @@ type filter struct {
 	api.PassThroughFilter
 
 	callbacks api.FilterCallbackHandler
-	config    *Config
-	consumer  *ConsumerConfig
+	config    *hmac_auth.Config
+	consumer  *hmac_auth.ConsumerConfig
 }
 
 // This plugin uses the same hmac auth scheme as APISIX:
@@ -117,11 +118,11 @@ func (f *filter) sign(value []byte) string {
 
 	var hash hash.Hash
 	switch f.consumer.Algorithm {
-	case Algorithm_HMAC_SHA256:
+	case hmac_auth.Algorithm_HMAC_SHA256:
 		hash = hmac.New(sha256.New, secret)
-	case Algorithm_HMAC_SHA384:
+	case hmac_auth.Algorithm_HMAC_SHA384:
 		hash = hmac.New(sha512.New384, secret)
-	case Algorithm_HMAC_SHA512:
+	case hmac_auth.Algorithm_HMAC_SHA512:
 		hash = hmac.New(sha512.New, secret)
 	}
 	hash.Write(value)
@@ -152,7 +153,7 @@ func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api
 		return &api.LocalResponse{Code: 401, Msg: "invalid access key"}
 	}
 
-	f.consumer = c.PluginConfig(Name).(*ConsumerConfig)
+	f.consumer = c.PluginConfig(Name).(*hmac_auth.ConsumerConfig)
 	signature, _ := headers.Get(sh)
 	signContent := f.getSignContent(headers, accessKey)
 	generatedSign := f.sign([]byte(signContent))

@@ -24,7 +24,8 @@ import (
 
 	"mosn.io/htnn/api/pkg/filtermanager/api"
 	"mosn.io/htnn/api/pkg/plugins"
-	"mosn.io/htnn/pkg/expr"
+	"mosn.io/htnn/types/pkg/expr"
+	"mosn.io/htnn/types/plugins/limit_req"
 )
 
 const (
@@ -36,17 +37,7 @@ func init() {
 }
 
 type plugin struct {
-	plugins.PluginMethodDefaultImpl
-}
-
-func (p *plugin) Type() plugins.PluginType {
-	return plugins.TypeTraffic
-}
-
-func (p *plugin) Order() plugins.PluginOrder {
-	return plugins.PluginOrder{
-		Position: plugins.OrderPositionTraffic,
-	}
+	limit_req.Plugin
 }
 
 func (p *plugin) Factory() api.FilterFactory {
@@ -58,7 +49,7 @@ func (p *plugin) Config() api.PluginConfig {
 }
 
 type config struct {
-	Config
+	limit_req.CustomConfig
 
 	buckets *ttlcache.Cache[string, *rate.Limiter]
 	// Like traefik, we also require a max delay to avoid holding the requests for unlimited time.
@@ -66,21 +57,6 @@ type config struct {
 	maxDelay time.Duration
 
 	script expr.Script
-}
-
-func (conf *config) Validate() error {
-	err := conf.Config.Validate()
-	if err != nil {
-		return err
-	}
-
-	if conf.Key != "" {
-		_, err = expr.CompileCel(conf.Key, cel.StringType)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 func (conf *config) Init(cb api.ConfigCallbackHandler) error {

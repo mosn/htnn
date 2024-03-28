@@ -20,11 +20,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/durationpb"
+
+	"mosn.io/htnn/types/plugins/oidc"
 )
 
 func TestBadIssuer(t *testing.T) {
 	c := config{
-		Config: Config{
+		Config: oidc.Config{
 			Issuer:  "http://1.1.1.1",
 			Timeout: &durationpb.Duration{Seconds: 1}, // quick fail
 		},
@@ -35,7 +37,7 @@ func TestBadIssuer(t *testing.T) {
 
 func TestDefaultValue(t *testing.T) {
 	c := config{
-		Config: Config{
+		Config: oidc.Config{
 			Issuer:  "http://1.1.1.1",
 			Timeout: &durationpb.Duration{Seconds: 1}, // quick fail
 		},

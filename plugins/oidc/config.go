@@ -27,6 +27,7 @@ import (
 
 	"mosn.io/htnn/api/pkg/filtermanager/api"
 	"mosn.io/htnn/api/pkg/plugins"
+	oidctype "mosn.io/htnn/types/plugins/oidc"
 )
 
 const (
@@ -38,17 +39,7 @@ func init() {
 }
 
 type plugin struct {
-	plugins.PluginMethodDefaultImpl
-}
-
-func (p *plugin) Type() plugins.PluginType {
-	return plugins.TypeAuthn
-}
-
-func (p *plugin) Order() plugins.PluginOrder {
-	return plugins.PluginOrder{
-		Position: plugins.OrderPositionAuthn,
-	}
+	oidctype.Plugin
 }
 
 func (p *plugin) Factory() api.FilterFactory {
@@ -60,7 +51,7 @@ func (p *plugin) Config() api.PluginConfig {
 }
 
 type config struct {
-	Config
+	oidctype.Config
 
 	opTimeout      time.Duration
 	oauth2Config   *oauth2.Config

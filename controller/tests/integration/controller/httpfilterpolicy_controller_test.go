@@ -31,9 +31,9 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	mosniov1 "mosn.io/htnn/controller/apis/v1"
 	"mosn.io/htnn/controller/tests/integration/helper"
 	"mosn.io/htnn/controller/tests/pkg"
+	mosniov1 "mosn.io/htnn/types/apis/v1"
 )
 
 func mustReadHTTPFilterPolicy(fn string, out *[]map[string]interface{}) {

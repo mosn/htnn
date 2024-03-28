@@ -15,10 +15,8 @@
 package fault
 
 import (
-	fault "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/fault/v3"
-
-	"mosn.io/htnn/api/pkg/filtermanager/api"
 	"mosn.io/htnn/api/pkg/plugins"
+	"mosn.io/htnn/types/plugins/fault"
 )
 
 const (
@@ -30,22 +28,7 @@ func init() {
 }
 
 type plugin struct {
-	plugins.PluginMethodDefaultImpl
-}
-
-func (p *plugin) Type() plugins.PluginType {
-	return plugins.TypeGeneral
-}
-
-func (p *plugin) Order() plugins.PluginOrder {
-	return plugins.PluginOrder{
-		Position:  plugins.OrderPositionOuter,
-		Operation: plugins.OrderOperationInsertLast,
-	}
-}
-
-func (p *plugin) Config() api.PluginConfig {
-	return &fault.HTTPFault{}
+	fault.Plugin
 }
 
 func (p *plugin) RouteConfigTypeURL() string {

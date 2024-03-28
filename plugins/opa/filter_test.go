@@ -27,17 +27,20 @@ import (
 
 	"mosn.io/htnn/api/pkg/filtermanager/api"
 	"mosn.io/htnn/api/plugins/tests/pkg/envoy"
+	"mosn.io/htnn/types/plugins/opa"
 )
 
 func TestOpaRemote(t *testing.T) {
 	cb := envoy.NewFilterCallbackHandler()
 	cli := http.DefaultClient
 	f := factory(&config{
-		Config: Config{
-			ConfigType: &Config_Remote{
-				Remote: &Remote{
-					Url:    "http://127.0.0.1:8181",
-					Policy: "httpapi/authz",
+		CustomConfig: opa.CustomConfig{
+			Config: opa.Config{
+				ConfigType: &opa.Config_Remote{
+					Remote: &opa.Remote{
+						Url:    "http://127.0.0.1:8181",
+						Policy: "httpapi/authz",
+					},
 				},
 			},
 		},
@@ -173,10 +176,12 @@ func TestOpaLocal(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			c := &config{
-				Config: Config{
-					ConfigType: &Config_Local{
-						Local: &Local{
-							Text: "package test\n" + tt.text,
+				CustomConfig: opa.CustomConfig{
+					Config: opa.Config{
+						ConfigType: &opa.Config_Local{
+							Local: &opa.Local{
+								Text: "package test\n" + tt.text,
+							},
 						},
 					},
 				},

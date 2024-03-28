@@ -23,6 +23,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/types/known/anypb"
 
+	"mosn.io/htnn/api/pkg/filtermanager/api"
 	_ "mosn.io/htnn/api/plugins/tests/pkg/envoy"
 )
 
@@ -127,6 +128,10 @@ type consumerPluginWrapper struct {
 	ConsumerPlugin
 
 	order PluginOrder
+}
+
+func (p *consumerPluginWrapper) Factory() api.FilterFactory {
+	return p.ConsumerPlugin.(*MockConsumerPlugin).Factory()
 }
 
 func (p *consumerPluginWrapper) Order() PluginOrder {

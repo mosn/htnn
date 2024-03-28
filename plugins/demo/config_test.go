@@ -52,7 +52,7 @@ func TestBadConfig(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			conf := &Config{}
+			conf := &config{}
 			err := protojson.Unmarshal([]byte(tt.input), conf)
 			if err == nil {
 				err = conf.Validate()

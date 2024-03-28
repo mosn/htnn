@@ -29,11 +29,12 @@ import (
 
 	"mosn.io/htnn/api/pkg/filtermanager/api"
 	"mosn.io/htnn/api/plugins/tests/pkg/envoy"
+	oidctype "mosn.io/htnn/types/plugins/oidc"
 )
 
 func getCfg() *config {
 	return &config{
-		Config: Config{
+		Config: oidctype.Config{
 			ClientId:      "9119df09-b20b-4c08-ba08-72472dda2cd2",
 			ClientSecret:  "dSYo5hBwjX_DC57_tfZHlfrDel",
 			RedirectUrl:   "http://127.0.0.1:10000",

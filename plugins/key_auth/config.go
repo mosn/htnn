@@ -17,6 +17,7 @@ package key_auth
 import (
 	"mosn.io/htnn/api/pkg/filtermanager/api"
 	"mosn.io/htnn/api/pkg/plugins"
+	"mosn.io/htnn/types/plugins/key_auth"
 )
 
 const (
@@ -28,35 +29,17 @@ func init() {
 }
 
 type plugin struct {
-	plugins.PluginMethodDefaultImpl
-}
-
-func (p *plugin) Type() plugins.PluginType {
-	return plugins.TypeAuthn
-}
-
-func (p *plugin) Order() plugins.PluginOrder {
-	return plugins.PluginOrder{
-		Position: plugins.OrderPositionAuthn,
-	}
+	key_auth.Plugin
 }
 
 func (p *plugin) Factory() api.FilterFactory {
 	return factory
 }
 
+type config struct {
+	key_auth.Config
+}
+
 func (p *plugin) Config() api.PluginConfig {
 	return &config{}
-}
-
-type config struct {
-	Config
-}
-
-func (p *plugin) ConsumerConfig() api.PluginConsumerConfig {
-	return &ConsumerConfig{}
-}
-
-func (conf *ConsumerConfig) Index() string {
-	return conf.Key
 }

@@ -17,6 +17,7 @@ package hmac_auth
 import (
 	"mosn.io/htnn/api/pkg/filtermanager/api"
 	"mosn.io/htnn/api/pkg/plugins"
+	"mosn.io/htnn/types/plugins/hmac_auth"
 )
 
 const (
@@ -28,31 +29,9 @@ func init() {
 }
 
 type plugin struct {
-	plugins.PluginMethodDefaultImpl
-}
-
-func (p *plugin) Type() plugins.PluginType {
-	return plugins.TypeAuthn
-}
-
-func (p *plugin) Order() plugins.PluginOrder {
-	return plugins.PluginOrder{
-		Position: plugins.OrderPositionAuthn,
-	}
+	hmac_auth.Plugin
 }
 
 func (p *plugin) Factory() api.FilterFactory {
 	return factory
-}
-
-func (p *plugin) Config() api.PluginConfig {
-	return &Config{}
-}
-
-func (p *plugin) ConsumerConfig() api.PluginConsumerConfig {
-	return &ConsumerConfig{}
-}
-
-func (conf *ConsumerConfig) Index() string {
-	return conf.AccessKey
 }

@@ -15,10 +15,8 @@
 package cors
 
 import (
-	cors "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/cors/v3"
-
-	"mosn.io/htnn/api/pkg/filtermanager/api"
 	"mosn.io/htnn/api/pkg/plugins"
+	"mosn.io/htnn/types/plugins/cors"
 )
 
 const (
@@ -30,22 +28,7 @@ func init() {
 }
 
 type plugin struct {
-	plugins.PluginMethodDefaultImpl
-}
-
-func (p *plugin) Type() plugins.PluginType {
-	return plugins.TypeSecurity
-}
-
-func (p *plugin) Order() plugins.PluginOrder {
-	return plugins.PluginOrder{
-		Position:  plugins.OrderPositionOuter,
-		Operation: plugins.OrderOperationInsertLast,
-	}
-}
-
-func (p *plugin) Config() api.PluginConfig {
-	return &cors.CorsPolicy{}
+	cors.Plugin
 }
 
 func (p *plugin) RouteConfigTypeURL() string {

@@ -38,6 +38,12 @@ gen-proto: dev-tools install-go-fmtter $(GO_TARGETS)
 			-I /go/src/protoc-gen-validate $<
 	$(LOCALBIN)/gosimports -w -local ${PROJECT_NAME} $@
 
+.PHONY: gen-crd-code
+gen-crd-code: $(LOCALBIN) install-go-fmtter
+	test -s $(LOCALBIN)/client-gen || GOBIN=$(LOCALBIN) go install k8s.io/code-generator/cmd/client-gen@v0.29.3
+	LOCALBIN=$(LOCALBIN) etc/gen-crd-code.sh
+	$(LOCALBIN)/gosimports -w -local ${PROJECT_NAME} ./types/pkg/client
+
 # We don't run the controller's unit test in this task. Because the controller is considered as a
 # separate component.
 .PHONY: unit-test
@@ -128,13 +134,15 @@ lint-go:
 		GOBIN=$(LOCALBIN) go install github.com/golangci/golangci-lint/cmd/golangci-lint@v$(GOLANGCI_LINT_VERSION); \
 	fi
 	$(LOCALBIN)/golangci-lint run --config=.golangci.yml
+	cd ./api && $(LOCALBIN)/golangci-lint run --config=../.golangci.yml
+	cd ./types && $(LOCALBIN)/golangci-lint run --config=../.golangci.yml
 
 .PHONY: fmt-go
 fmt-go: install-go-fmtter
 	go mod tidy
 	$(LOCALBIN)/gosimports -w -local ${PROJECT_NAME} .
-	cd ./api
-	go mod tidy
+	cd ./api && go mod tidy
+	cd ./types && go mod tidy
 
 # Don't use `buf format` to format the protobuf files! Buf's code style is different from Envoy.
 # That will break lots of things.

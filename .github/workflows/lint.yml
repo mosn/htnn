@@ -51,7 +51,6 @@ jobs:
           echo "Generated files are not up-to-date. Please run 'make gen-proto' and commit changes."
           exit 1
         fi
-        cd controller
         make gen-crd-code
         if ! git diff --exit-code; then
           echo "Generated files are not up-to-date. Please run 'make gen-crd-code' and commit changes."

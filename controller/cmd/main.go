@@ -32,11 +32,12 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	pkgLog "mosn.io/htnn/api/pkg/log"
-	mosniov1 "mosn.io/htnn/controller/apis/v1"
 	"mosn.io/htnn/controller/internal/config"
 	"mosn.io/htnn/controller/internal/controller"
 	"mosn.io/htnn/controller/internal/log"
 	"mosn.io/htnn/controller/internal/registry"
+	"mosn.io/htnn/controller/internal/webhook"
+	v1 "mosn.io/htnn/types/apis/v1"
 )
 
 // Version is specified by build tag, in VERSION file
@@ -73,7 +74,7 @@ func main() {
 	config.Init()
 
 	utilruntime.Must(clientgoscheme.AddToScheme(scheme))
-	utilruntime.Must(mosniov1.AddToScheme(scheme))
+	utilruntime.Must(v1.AddToScheme(scheme))
 	utilruntime.Must(istioscheme.AddToScheme(scheme))
 
 	if config.EnableGatewayAPI() {
@@ -136,19 +137,25 @@ func main() {
 	}
 
 	if config.EnableWebhooks() {
-		if err = (&mosniov1.HTTPFilterPolicy{}).SetupWebhookWithManager(mgr); err != nil {
+		if err = (&webhook.HTTPFilterPolicyWebhook{
+			HTTPFilterPolicy: v1.HTTPFilterPolicy{},
+		}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "HTTPFilterPolicy")
 			os.Exit(1)
 		}
 
-		mosniov1.RegisterVirtualServiceWebhook(mgr)
+		webhook.RegisterVirtualServiceWebhook(mgr)
 
-		if err = (&mosniov1.Consumer{}).SetupWebhookWithManager(mgr); err != nil {
+		if err = (&webhook.ConsumerWebhook{
+			Consumer: v1.Consumer{},
+		}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "Consumer")
 			os.Exit(1)
 		}
 
-		if err = (&mosniov1.ServiceRegistry{}).SetupWebhookWithManager(mgr); err != nil {
+		if err = (&webhook.ServiceRegistryWebhook{
+			ServiceRegistry: v1.ServiceRegistry{},
+		}).SetupWebhookWithManager(mgr); err != nil {
 			setupLog.Error(err, "unable to create webhook", "webhook", "ServiceRegistry")
 			os.Exit(1)
 		}

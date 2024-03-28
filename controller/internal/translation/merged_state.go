@@ -24,8 +24,8 @@ import (
 	"mosn.io/htnn/api/pkg/filtermanager"
 	fmModel "mosn.io/htnn/api/pkg/filtermanager/model"
 	"mosn.io/htnn/api/pkg/plugins"
-	mosniov1 "mosn.io/htnn/controller/apis/v1"
 	"mosn.io/htnn/controller/internal/model"
+	mosniov1 "mosn.io/htnn/types/apis/v1"
 )
 
 // mergedState does the following:
@@ -107,6 +107,10 @@ func toMergedPolicy(rp *routePolicy) *mergedPolicy {
 		name := plugin.Name
 		url := ""
 		p := plugins.LoadHttpPlugin(name)
+		if p == nil {
+			// For Go Plugins, only the type is registered
+			p = plugins.LoadHttpPluginType(name)
+		}
 		nativePlugin, ok := p.(plugins.NativePlugin)
 		if ok {
 			url = nativePlugin.RouteConfigTypeURL()

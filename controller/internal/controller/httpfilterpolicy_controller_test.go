@@ -27,8 +27,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
-	mosniov1 "mosn.io/htnn/controller/apis/v1"
 	"mosn.io/htnn/controller/tests/pkg"
+	mosniov1 "mosn.io/htnn/types/apis/v1"
 )
 
 func TestVirtualServiceIndexer(t *testing.T) {

@@ -70,11 +70,11 @@ help: ## Display this help.
 
 .PHONY: manifests
 manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
-	$(CONTROLLER_GEN) rbac:roleName=manager-role crd:ignoreUnexportedFields=true webhook paths="./..." output:crd:artifacts:config=config/crd/bases
+	$(CONTROLLER_GEN) rbac:roleName=manager-role crd:ignoreUnexportedFields=true webhook paths="../types/..." output:crd:artifacts:config=config/crd/bases
 
 .PHONY: generate
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
-	$(CONTROLLER_GEN) object:headerFile="hack/boilerplate.go.txt" paths="./..."
+	$(CONTROLLER_GEN) object:headerFile="../types/hack/boilerplate.go.txt" paths="../types/..."
 
 .PHONY: test
 test: manifests generate envtest ## Run tests.
@@ -201,16 +201,3 @@ start-controller-service:
 .PHONY: stop-controller-service
 stop-controller-service:
 	cd ./tests/testdata/services && docker-compose down
-
-GO_FMTTER_VERSION = 0.3.8
-.PHONY: install-go-fmtter
-install-go-fmtter: $(LOCALBIN)
-	if ! test -x $(LOCALBIN)/gosimports || ! $(LOCALBIN)/gosimports -version | grep $(GO_FMTTER_VERSION) >/dev/null; then \
-		GOBIN=$(LOCALBIN) go install github.com/rinchsan/gosimports/cmd/gosimports@v$(GO_FMTTER_VERSION); \
-	fi
-
-.PHONY: gen-crd-code
-gen-crd-code: $(LOCALBIN) install-go-fmtter
-	test -s $(LOCALBIN)/client-gen || GOBIN=$(LOCALBIN) go install k8s.io/code-generator/cmd/client-gen@v0.29.3
-	LOCALBIN=$(LOCALBIN) ./hack/gen-crd-code.sh
-	$(LOCALBIN)/gosimports -w -local ${PROJECT_NAME} ./pkg/client

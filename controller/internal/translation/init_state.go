@@ -23,7 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	mosniov1 "mosn.io/htnn/controller/apis/v1"
+	mosniov1 "mosn.io/htnn/types/apis/v1"
 )
 
 type VirtualServicePolicies struct {

@@ -21,5 +21,4 @@ import (
 	_ "mosn.io/htnn/controller/plugins/fault"
 	_ "mosn.io/htnn/controller/plugins/local_ratelimit"
 	_ "mosn.io/htnn/controller/plugins/lua"
-	_ "mosn.io/htnn/plugins" // register Go plugins
 )

@@ -28,6 +28,7 @@ import (
 var (
 	logger = log.DefaultLogger.WithName("plugins")
 
+	httpPluginTypes            = map[string]Plugin{}
 	httpPlugins                = map[string]Plugin{}
 	httpFilterFactoryAndParser = map[string]*FilterFactoryAndParser{}
 )
@@ -67,6 +68,18 @@ const (
 	errDecodeRequestUnsatified    = "DecodeRequest is run only after DecodeHeaders returns WaitAllData. So DecodeHeaders should be defined in this plugin."
 	errEncodeResponseUnsatified   = "EncodeResponse is run only after EncodeHeaders returns WaitAllData. So EncodeHeaders should be defined in this plugin."
 )
+
+func RegisterHttpPluginType(name string, plugin Plugin) {
+	// override plugin is allowed so that we can patch plugin with bugfix if upgrading
+	// the whole htnn is not available
+	httpPluginTypes[name] = plugin
+}
+
+func LoadHttpPluginType(name string) Plugin {
+	return httpPluginTypes[name]
+}
+
+// We separate the plugin type storage and plugin storage, to avoid plugin type overrides the plugin by accident.
 
 func RegisterHttpPlugin(name string, plugin Plugin) {
 	if plugin == nil {

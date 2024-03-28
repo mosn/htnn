@@ -18,6 +18,8 @@
 go 1.21.5
 
 use (
+    ./site
     ./api
+    ./types
     .
 )
