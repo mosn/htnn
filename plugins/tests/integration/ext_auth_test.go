@@ -103,7 +103,7 @@ func TestExtAuth(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			controlPlane.UseGoPluginConfig(tt.config, dp)
+			controlPlane.UseGoPluginConfig(t, tt.config, dp)
 			tt.run(t)
 		})
 	}

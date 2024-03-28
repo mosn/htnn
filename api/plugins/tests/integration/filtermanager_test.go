@@ -236,7 +236,7 @@ func TestFilterManagerDecode(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			controlPlane.UseGoPluginConfig(tt.config, dp)
+			controlPlane.UseGoPluginConfig(t, tt.config, dp)
 			resp, err := dp.Get("/echo", nil)
 			require.Nil(t, err)
 			tt.expectWithoutBody(t, resp)
@@ -464,7 +464,7 @@ func TestFilterManagerEncode(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			controlPlane.UseGoPluginConfig(tt.config, dp)
+			controlPlane.UseGoPluginConfig(t, tt.config, dp)
 			resp, err := dp.Get("/echo", nil)
 			require.Nil(t, err)
 			tt.expectWithoutBody(t, resp)
@@ -703,7 +703,7 @@ func TestFilterManagerDecodeLocalReply(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			controlPlane.UseGoPluginConfig(tt.config, dp)
+			controlPlane.UseGoPluginConfig(t, tt.config, dp)
 			resp, err := dp.Post("/echo", nil, strings.NewReader("any"))
 			require.Nil(t, err)
 			assert.Equal(t, 206, resp.StatusCode)
@@ -877,7 +877,7 @@ func TestFilterManagerEncodeLocalReply(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			controlPlane.UseGoPluginConfig(tt.config, dp)
+			controlPlane.UseGoPluginConfig(t, tt.config, dp)
 			hdr := http.Header{}
 			hdr.Add("from", "reply")
 			resp, err := dp.Post("/echo", hdr, strings.NewReader("any"))
@@ -904,7 +904,7 @@ func TestFilterManagerIgnoreUnknownFields(t *testing.T) {
 	config := control_plane.NewSinglePluinConfig("buffer", map[string]interface{}{
 		"unknown": "blah",
 	})
-	controlPlane.UseGoPluginConfig(config, dp)
+	controlPlane.UseGoPluginConfig(t, config, dp)
 	resp, err := dp.Get("/echo", nil)
 	require.Nil(t, err)
 	assert.Equal(t, 200, resp.StatusCode, resp)
@@ -923,7 +923,7 @@ func TestFilterManagerPluginReturnsErrorInParse(t *testing.T) {
 	config := control_plane.NewSinglePluinConfig("buffer", map[string]interface{}{
 		"decode": []string{"wrong type"},
 	})
-	controlPlane.UseGoPluginConfig(config, dp)
+	controlPlane.UseGoPluginConfig(t, config, dp)
 	resp, err := dp.Get("/echo", nil)
 	require.Nil(t, err)
 	assert.Equal(t, 500, resp.StatusCode, resp)
@@ -951,7 +951,7 @@ func TestFilterManagerPluginPanic(t *testing.T) {
 			},
 		},
 	}
-	controlPlane.UseGoPluginConfig(config, dp)
+	controlPlane.UseGoPluginConfig(t, config, dp)
 	resp, err := dp.Get("/echo", nil)
 	require.Nil(t, err)
 	assert.Equal(t, 500, resp.StatusCode, resp)
@@ -968,7 +968,7 @@ func TestFilterManagerPluginPanic(t *testing.T) {
 			},
 		},
 	}
-	controlPlane.UseGoPluginConfig(config, dp)
+	controlPlane.UseGoPluginConfig(t, config, dp)
 	resp, err = dp.Get("/echo", nil)
 	require.Nil(t, err)
 	assert.Equal(t, 500, resp.StatusCode, resp)
@@ -999,7 +999,7 @@ func TestFilterManagerPluginIncorrectMethodDefinition(t *testing.T) {
 			},
 		},
 	}
-	controlPlane.UseGoPluginConfig(config, dp)
+	controlPlane.UseGoPluginConfig(t, config, dp)
 	resp, err := dp.Get("/echo", nil)
 	require.Nil(t, err)
 	assert.Equal(t, 200, resp.StatusCode, resp)
