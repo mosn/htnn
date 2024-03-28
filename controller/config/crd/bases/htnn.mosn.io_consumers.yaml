@@ -4,22 +4,20 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.13.0
-  labels:
-    gateway.networking.k8s.io/policy: direct
-  name: httpfilterpolicies.mosn.io
+  name: consumers.htnn.mosn.io
 spec:
-  group: mosn.io
+  group: htnn.mosn.io
   names:
-    kind: HTTPFilterPolicy
-    listKind: HTTPFilterPolicyList
-    plural: httpfilterpolicies
-    singular: httpfilterpolicy
+    kind: Consumer
+    listKind: ConsumerList
+    plural: consumers
+    singular: consumer
   scope: Namespaced
   versions:
   - name: v1
     schema:
       openAPIV3Schema:
-        description: HTTPFilterPolicy is the Schema for the httpfilterpolicies API
+        description: Consumer is the Schema for the consumers API
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -34,8 +32,23 @@ spec:
           metadata:
             type: object
           spec:
-            description: HTTPFilterPolicySpec defines the desired state of HTTPFilterPolicy
+            description: ConsumerSpec defines the desired state of Consumer
             properties:
+              auth:
+                additionalProperties:
+                  description: ConsumerPlugin defines the authentication plugin configuration
+                    used in the consumer
+                  properties:
+                    config:
+                      type: object
+                      x-kubernetes-preserve-unknown-fields: true
+                  required:
+                  - config
+                  type: object
+                description: Auth is a map of authentication plugin names to plugin
+                  configurations.
+                minProperties: 1
+                type: object
               filters:
                 additionalProperties:
                   description: HTTPPlugin defines the plugin configuration used in
@@ -49,65 +62,11 @@ spec:
                   type: object
                 description: Filters is a map of filter names to filter configurations.
                 type: object
-              targetRef:
-                description: TargetRef is the name of the resource this policy is
-                  being attached to. This Policy and the TargetRef MUST be in the
-                  same namespace.
-                properties:
-                  group:
-                    description: Group is the group of the target resource.
-                    maxLength: 253
-                    pattern: ^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-                    type: string
-                  kind:
-                    description: Kind is kind of the target resource.
-                    maxLength: 63
-                    minLength: 1
-                    pattern: ^[a-zA-Z]([-a-zA-Z0-9]*[a-zA-Z0-9])?$
-                    type: string
-                  name:
-                    description: Name is the name of the target resource.
-                    maxLength: 253
-                    minLength: 1
-                    type: string
-                  namespace:
-                    description: Namespace is the namespace of the referent. When
-                      unspecified, the local namespace is inferred. Even when policy
-                      targets a resource in a different namespace, it MUST only apply
-                      to traffic originating from the same namespace as the policy.
-                    maxLength: 63
-                    minLength: 1
-                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?$
-                    type: string
-                  sectionName:
-                    description: "SectionName is the name of a section within the
-                      target resource. When unspecified, this targetRef targets the
-                      entire resource. In the following resources, SectionName is
-                      interpreted as the following: \n * Gateway: Listener Name *
-                      Service: Port Name \n If a SectionName is specified, but does
-                      not exist on the targeted object, the Policy must fail to attach,
-                      and the policy implementation should record a `ResolvedRefs`
-                      or similar Condition in the Policy's status."
-                    maxLength: 253
-                    minLength: 1
-                    pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
-                    type: string
-                required:
-                - group
-                - kind
-                - name
-                type: object
-                x-kubernetes-validations:
-                - message: unsupported targetRef.group
-                  rule: self.group in ['', 'networking.istio.io', 'gateway.networking.k8s.io']
-                - message: unsupported targetRef.kind
-                  rule: self.kind in ['Namespace', 'VirtualService', 'Gateway', 'HTTPRoute',
-                    'GRPCRoute']
             required:
-            - targetRef
+            - auth
             type: object
           status:
-            description: HTTPFilterPolicyStatus defines the observed state of HTTPFilterPolicy
+            description: ConsumerStatus defines the observed state of Consumer
             properties:
               conditions:
                 description: Conditions describe the current conditions.

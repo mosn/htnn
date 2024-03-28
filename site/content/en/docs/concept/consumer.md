@@ -7,7 +7,7 @@ When using an API gateway, we frequently need to apply the same authentication l
 For instance, let's assume we have a consumer named `Leo` and two routes. Due to historical reasons, the authentication parameters on these two routes are obtained from different sources — one from the url and the other from the header — as demonstrated below:
 
 ```yaml
-apiVersion: mosn.io/v1
+apiVersion: htnn.mosn.io/v1
 kind: Consumer
 metadata:
   name: leo
@@ -49,7 +49,7 @@ spec:
     - name: backend2
       port: 8081
 ---
-apiVersion: mosn.io/v1
+apiVersion: htnn.mosn.io/v1
 kind: HTTPFilterPolicy
 metadata:
   name: alpha
@@ -64,7 +64,7 @@ spec:
         - name: ak
           source: QUERY
 ---
-apiVersion: mosn.io/v1
+apiVersion: htnn.mosn.io/v1
 kind: HTTPFilterPolicy
 metadata:
   name: beta
@@ -97,7 +97,7 @@ If no Consumer is matched after all the Consumer plugins have been executed, a 4
 Furthermore, we can configure specific plugins for the consumer. These plugins will only execute after the authentication process has passed. Take the following configuration as an example:
 
 ```yaml
-apiVersion: mosn.io/v1
+apiVersion: htnn.mosn.io/v1
 kind: Consumer
 metadata:
   name: vip
@@ -111,7 +111,7 @@ spec:
       config:
         average: 10
 ---
-apiVersion: mosn.io/v1
+apiVersion: htnn.mosn.io/v1
 kind: Consumer
 metadata:
   name: member
@@ -125,7 +125,7 @@ spec:
       config:
         average: 1
 ---
-apiVersion: mosn.io/v1
+apiVersion: htnn.mosn.io/v1
 kind: HTTPFilterPolicy
 metadata:
   name: beta

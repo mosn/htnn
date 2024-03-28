@@ -10,7 +10,7 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /mutate-mosn-io-v1-consumer
+      path: /mutate-htnn.mosn.io-v1-consumer
   failurePolicy: Fail
   name: mconsumer.kb.io
   rules:
@@ -30,7 +30,7 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /mutate-mosn-io-v1-httpfilterpolicy
+      path: /mutate-htnn.mosn.io-v1-httpfilterpolicy
   failurePolicy: Fail
   name: mhttpfilterpolicy.kb.io
   rules:
@@ -50,7 +50,7 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /mutate-mosn-io-v1-serviceregistry
+      path: /mutate-htnn.mosn.io-v1-serviceregistry
   failurePolicy: Fail
   name: mserviceregistry.kb.io
   rules:
@@ -96,7 +96,7 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /validate-mosn-io-v1-consumer
+      path: /validate-htnn.mosn.io-v1-consumer
   failurePolicy: Fail
   name: vconsumer.kb.io
   rules:
@@ -117,7 +117,7 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /validate-mosn-io-v1-httpfilterpolicy
+      path: /validate-htnn.mosn.io-v1-httpfilterpolicy
   failurePolicy: Fail
   name: vhttpfilterpolicy.kb.io
   rules:
@@ -138,7 +138,7 @@ webhooks:
     service:
       name: webhook-service
       namespace: system
-      path: /validate-mosn-io-v1-serviceregistry
+      path: /validate-htnn.mosn.io-v1-serviceregistry
   failurePolicy: Fail
   name: vserviceregistry.kb.io
   rules:

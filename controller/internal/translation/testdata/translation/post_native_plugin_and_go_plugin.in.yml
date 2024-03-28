@@ -38,7 +38,7 @@ virtualService:
                 number: 8000
 httpFilterPolicy:
   httpbin:
-  - apiVersion: mosn.io/v1
+  - apiVersion: htnn.mosn.io/v1
     kind: HTTPFilterPolicy
     metadata:
       name: policy

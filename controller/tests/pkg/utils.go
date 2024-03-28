@@ -53,7 +53,7 @@ func MapToObj(in map[string]interface{}) client.Object {
 		case "Gateway":
 			out = &gwapiv1.Gateway{}
 		}
-	} else if strings.HasPrefix(group, "mosn.io") {
+	} else if strings.HasPrefix(group, "htnn.mosn.io") {
 		switch in["kind"] {
 		case "HTTPFilterPolicy":
 			out = &mosniov1.HTTPFilterPolicy{}

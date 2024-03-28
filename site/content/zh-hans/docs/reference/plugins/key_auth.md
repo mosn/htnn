@@ -41,7 +41,7 @@ title: Key Auth
 首先，让我们创建一个带有密钥 `rick` 的消费者：
 
 ```yaml
-apiVersion: mosn.io/v1
+apiVersion: htnn.mosn.io/v1
 kind: Consumer
 metadata:
   name: consumer

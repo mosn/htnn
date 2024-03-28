@@ -88,7 +88,7 @@ func main() {
 		HealthProbeBindAddress: probeAddr,
 		PprofBindAddress:       pprofAddr,
 		LeaderElection:         enableLeaderElection,
-		LeaderElectionID:       "c30d658e.mosn.io",
+		LeaderElectionID:       "c30d658e.htnn.mosn.io",
 		Cache: cache.Options{
 			DefaultUnsafeDisableDeepCopy: &unsafeDisableDeepCopy,
 		},

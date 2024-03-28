@@ -43,7 +43,7 @@ spec:
 通过应用下面的配置，发送到 `http://localhost:10000/` 的请求将 100% 收到 401 响应：
 
 ```yaml
-apiVersion: mosn.io/v1
+apiVersion: htnn.mosn.io/v1
 kind: HTTPFilterPolicy
 metadata:
   name: policy

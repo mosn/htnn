@@ -37,7 +37,7 @@ func (r *HTTPFilterPolicy) SetupWebhookWithManager(mgr ctrl.Manager) error {
 		Complete()
 }
 
-//+kubebuilder:webhook:path=/mutate-mosn-io-v1-httpfilterpolicy,mutating=true,failurePolicy=fail,sideEffects=None,groups=mosn.io,resources=httpfilterpolicies,verbs=create;update,versions=v1,name=mhttpfilterpolicy.kb.io,admissionReviewVersions=v1
+//+kubebuilder:webhook:path=/mutate-htnn.mosn.io-v1-httpfilterpolicy,mutating=true,failurePolicy=fail,sideEffects=None,groups=mosn.io,resources=httpfilterpolicies,verbs=create;update,versions=v1,name=mhttpfilterpolicy.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Defaulter = &HTTPFilterPolicy{}
 
@@ -45,7 +45,7 @@ var _ webhook.Defaulter = &HTTPFilterPolicy{}
 func (r *HTTPFilterPolicy) Default() {
 }
 
-//+kubebuilder:webhook:path=/validate-mosn-io-v1-httpfilterpolicy,mutating=false,failurePolicy=fail,sideEffects=None,groups=mosn.io,resources=httpfilterpolicies,verbs=create;update;delete,versions=v1,name=vhttpfilterpolicy.kb.io,admissionReviewVersions=v1
+//+kubebuilder:webhook:path=/validate-htnn.mosn.io-v1-httpfilterpolicy,mutating=false,failurePolicy=fail,sideEffects=None,groups=mosn.io,resources=httpfilterpolicies,verbs=create;update;delete,versions=v1,name=vhttpfilterpolicy.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Validator = &HTTPFilterPolicy{}
 
@@ -82,6 +82,6 @@ func (r *HTTPFilterPolicy) validate() error {
 	}
 
 	return apierrors.NewInvalid(
-		schema.GroupKind{Group: "mosn.io", Kind: "HTTPFilterPolicy"},
+		schema.GroupKind{Group: "htnn.mosn.io", Kind: "HTTPFilterPolicy"},
 		r.Name, allErrs)
 }

@@ -43,7 +43,7 @@ spec:
 By applying the configuration below, requests sent to `http://localhost:10000/` will receive a 401 response 100% of the time:
 
 ```yaml
-apiVersion: mosn.io/v1
+apiVersion: htnn.mosn.io/v1
 kind: HTTPFilterPolicy
 metadata:
   name: policy

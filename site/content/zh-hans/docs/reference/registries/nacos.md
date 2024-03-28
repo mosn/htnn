@@ -28,7 +28,7 @@ Nacos 1.x 没有提供订阅当前服务列表的接口，所以只能通过轮�
 假设我们的 Nacos 运行在 `172.0.0.1:8848`，则可以通过以下配置对接它：
 
 ```yaml
-apiVersion: mosn.io/v1
+apiVersion: htnn.mosn.io/v1
 kind: ServiceRegistry
 metadata:
   name: default

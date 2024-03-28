@@ -68,7 +68,7 @@ virtualService:
                 number: 8000
 httpFilterPolicy:
   policy:
-  - apiVersion: mosn.io/v1
+  - apiVersion: htnn.mosn.io/v1
     kind: HTTPFilterPolicy
     metadata:
       name: policy
@@ -83,7 +83,7 @@ httpFilterPolicy:
           config:
             pet: goldfish
   delay:
-  - apiVersion: mosn.io/v1
+  - apiVersion: htnn.mosn.io/v1
     kind: HTTPFilterPolicy
     metadata:
       name: delay

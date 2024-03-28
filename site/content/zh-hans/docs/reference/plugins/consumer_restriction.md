@@ -39,7 +39,7 @@ title: Consumer Restriction
 首先，让我们创建两个消费者：
 
 ```yaml
-apiVersion: mosn.io/v1
+apiVersion: htnn.mosn.io/v1
 kind: Consumer
 metadata:
   name: rick
@@ -49,7 +49,7 @@ spec:
       config:
         key: rick
 ---
-apiVersion: mosn.io/v1
+apiVersion: htnn.mosn.io/v1
 kind: Consumer
 metadata:
   name: doraemon
@@ -80,7 +80,7 @@ spec:
     - name: backend
       port: 8080
 ---
-apiVersion: mosn.io/v1
+apiVersion: htnn.mosn.io/v1
 kind: HTTPFilterPolicy
 metadata:
   name: policy
@@ -115,7 +115,7 @@ HTTP/1.1 403 Forbidden
 如果想用黑名单，则用 `deny` 替换 `allow`：
 
 ```yaml
-apiVersion: mosn.io/v1
+apiVersion: htnn.mosn.io/v1
 kind: HTTPFilterPolicy
 metadata:
   name: policy

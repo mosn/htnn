@@ -43,7 +43,7 @@ spec:
 通过应用下面的配置，发送到 `http://localhost:10000/` 的处理跨域资源共享的请求将会被处理。如果 OPTIONS 请求的请求头的 `Origin` 匹配到正则表达式 `.*\.default\.local`，那么对应的响应中会有配置的 `Access-Control-Allow-*` 响应头。
 
 ```yaml
-apiVersion: mosn.io/v1
+apiVersion: htnn.mosn.io/v1
 kind: HTTPFilterPolicy
 metadata:
   name: policy

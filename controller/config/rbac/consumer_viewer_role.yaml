@@ -12,7 +12,7 @@ metadata:
   name: consumer-viewer-role
 rules:
 - apiGroups:
-  - mosn.io
+  - htnn.mosn.io
   resources:
   - consumers
   verbs:
@@ -20,7 +20,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - mosn.io
+  - htnn.mosn.io
   resources:
   - consumers/status
   verbs:

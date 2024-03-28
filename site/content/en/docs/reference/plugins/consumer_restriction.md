@@ -40,7 +40,7 @@ Only one of `allow` or `deny` can be configured.
 First, let's create two consumers:
 
 ```yaml
-apiVersion: mosn.io/v1
+apiVersion: htnn.mosn.io/v1
 kind: Consumer
 metadata:
   name: rick
@@ -50,7 +50,7 @@ spec:
       config:
         key: rick
 ---
-apiVersion: mosn.io/v1
+apiVersion: htnn.mosn.io/v1
 kind: Consumer
 metadata:
   name: doraemon
@@ -81,7 +81,7 @@ spec:
     - name: backend
       port: 8080
 ---
-apiVersion: mosn.io/v1
+apiVersion: htnn.mosn.io/v1
 kind: HTTPFilterPolicy
 metadata:
   name: policy
@@ -116,7 +116,7 @@ HTTP/1.1 403 Forbidden
 If you want to use a deny list, replace `allow` with `deny`:
 
 ```yaml
-apiVersion: mosn.io/v1
+apiVersion: htnn.mosn.io/v1
 kind: HTTPFilterPolicy
 metadata:
   name: policy

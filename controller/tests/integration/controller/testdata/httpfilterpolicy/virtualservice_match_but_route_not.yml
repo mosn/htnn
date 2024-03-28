@@ -1,4 +1,4 @@
-- apiVersion: mosn.io/v1
+- apiVersion: htnn.mosn.io/v1
   kind: HTTPFilterPolicy
   metadata:
     name: match
@@ -12,7 +12,7 @@
       demo:
         config:
           hostName: goldfish
-- apiVersion: mosn.io/v1
+- apiVersion: htnn.mosn.io/v1
   kind: HTTPFilterPolicy
   metadata:
     name: no-match

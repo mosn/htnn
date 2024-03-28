@@ -27,7 +27,7 @@ Note: Due to heartbeat intervals, network latencies, and other factors, it may t
 Assuming our Nacos is running at `172.0.0.1:8848`, it can be interfaced with the following configuration:
 
 ```yaml
-apiVersion: mosn.io/v1
+apiVersion: htnn.mosn.io/v1
 kind: ServiceRegistry
 metadata:
   name: default

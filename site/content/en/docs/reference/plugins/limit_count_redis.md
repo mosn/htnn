@@ -74,7 +74,7 @@ spec:
     - name: backend
       port: 8080
 ---
-apiVersion: mosn.io/v1
+apiVersion: htnn.mosn.io/v1
 kind: HTTPFilterPolicy
 metadata:
   name: policy

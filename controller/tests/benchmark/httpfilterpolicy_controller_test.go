@@ -112,7 +112,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 				gvk := obj.GetObjectKind().GroupVersionKind()
 				if gvk.Kind == "VirtualService" {
 					virtualService = obj.(*istiov1b1.VirtualService)
-				} else if gvk.Group == "mosn.io" && gvk.Kind == "HTTPFilterPolicy" {
+				} else if gvk.Group == "htnn.mosn.io" && gvk.Kind == "HTTPFilterPolicy" {
 					policy = obj.(*mosniov1.HTTPFilterPolicy)
 				} else {
 					Expect(k8sClient.Create(ctx, obj)).Should(Succeed())

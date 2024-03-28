@@ -36,7 +36,7 @@ If the configured `dateHeader` is not present, the timestamp will be deemed as a
 First, let's create a consumer:
 
 ```yaml
-apiVersion: mosn.io/v1
+apiVersion: htnn.mosn.io/v1
 kind: Consumer
 metadata:
   name: consumer
@@ -70,7 +70,7 @@ spec:
     - name: backend
       port: 8080
 ---
-apiVersion: mosn.io/v1
+apiVersion: htnn.mosn.io/v1
 kind: HTTPFilterPolicy
 metadata:
   name: policy

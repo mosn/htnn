@@ -43,7 +43,7 @@ spec:
 By applying the configuration below, the rate of requests to `http://localhost:10000/` is limited to 1 request per second:
 
 ```yaml
-apiVersion: mosn.io/v1
+apiVersion: htnn.mosn.io/v1
 kind: HTTPFilterPolicy
 metadata:
   name: policy

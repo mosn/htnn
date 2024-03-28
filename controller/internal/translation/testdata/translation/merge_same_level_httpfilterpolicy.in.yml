@@ -38,7 +38,7 @@ virtualService:
               number: 8000
 httpFilterPolicy:
   httpbin:
-  - apiVersion: mosn.io/v1
+  - apiVersion: htnn.mosn.io/v1
     kind: HTTPFilterPolicy
     metadata:
       name: policy
@@ -56,7 +56,7 @@ httpFilterPolicy:
         animal:
           config:
             pet: dog
-  - apiVersion: mosn.io/v1
+  - apiVersion: htnn.mosn.io/v1
     kind: HTTPFilterPolicy
     metadata:
       name: opolicy
@@ -70,7 +70,7 @@ httpFilterPolicy:
         animal:
           config:
             pet: cat
-  - apiVersion: mosn.io/v1
+  - apiVersion: htnn.mosn.io/v1
     kind: HTTPFilterPolicy
     metadata:
       creationTimestamp: "2023-12-01T15:04:05Z"
