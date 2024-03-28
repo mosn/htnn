@@ -70,7 +70,7 @@ func TestOIDC(t *testing.T) {
 		"redirectUrl":  redirectUrl,
 		"issuer":       "http://hydra:4444",
 	})
-	controlPlane.UseGoPluginConfig(config, dp)
+	controlPlane.UseGoPluginConfig(t, config, dp)
 
 	uri := ""
 	var resp *http.Response

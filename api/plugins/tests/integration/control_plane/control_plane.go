@@ -17,13 +17,13 @@ package control_plane
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net"
 	"os"
 	"runtime"
 	"strings"
+	"testing"
 	"time"
 
 	xds "github.com/cncf/xds/go/xds/type/v3"
@@ -39,6 +39,7 @@ import (
 	"github.com/envoyproxy/go-control-plane/pkg/resource/v3"
 	"github.com/envoyproxy/go-control-plane/pkg/server/v3"
 	any1 "github.com/golang/protobuf/ptypes/any"
+	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/structpb"
 
@@ -104,34 +105,9 @@ func (cp *ControlPlane) Start() {
 	}
 }
 
-func eventually(waitFor time.Duration, tick time.Duration, condition func() bool) error {
-	ch := make(chan bool, 1)
-
-	timer := time.NewTimer(waitFor)
-	defer timer.Stop()
-
-	ticker := time.NewTicker(tick)
-	defer ticker.Stop()
-
-	for tick := ticker.C; ; {
-		select {
-		case <-timer.C:
-			return errors.New("Condition never satisfied")
-		case <-tick:
-			tick = nil
-			go func() { ch <- condition() }()
-		case v := <-ch:
-			if v {
-				return nil
-			}
-			tick = ticker.C
-		}
-	}
-}
-
 type Resources map[resource.Type][]types.Resource
 
-func (cp *ControlPlane) updateConfig(res Resources) {
+func (cp *ControlPlane) updateConfig(t *testing.T, res Resources) {
 	snapshot, err := cache.NewSnapshot(fmt.Sprintf("%v.0", cp.version), res)
 	if err != nil {
 		logger.Error(err, "failed to new snapshot")
@@ -141,26 +117,19 @@ func (cp *ControlPlane) updateConfig(res Resources) {
 	cp.version++
 	var IDs []string
 	// wait for DP to connect CP
-	err = eventually(10*time.Second, 10*time.Millisecond, func() bool {
+	require.Eventually(t, func() bool {
 		IDs = cp.snapshotCache.GetStatusKeys()
 		return len(IDs) > 0
-	})
-	if err != nil {
-		logger.Error(err, "failed to wait for DP to connect CP")
-		return
-	}
+	}, 10*time.Second, 10*time.Millisecond, "failed to wait for DP to connect CP")
 
 	for _, id := range IDs {
 		err = cp.snapshotCache.SetSnapshot(context.Background(), id, snapshot)
-		if err != nil {
-			logger.Error(err, "failed to set snapshot")
-			return
-		}
+		require.Nil(t, err, "failed to set snapshot")
 	}
 }
 
-func (cp *ControlPlane) UseGoPluginConfig(config *filtermanager.FilterManagerConfig, dp *data_plane.DataPlane) {
-	cp.updateConfig(Resources{
+func (cp *ControlPlane) UseGoPluginConfig(t *testing.T, config *filtermanager.FilterManagerConfig, dp *data_plane.DataPlane) {
+	cp.updateConfig(t, Resources{
 		resource.RouteType: []types.Resource{
 			&route.RouteConfiguration{
 				Name: "dynamic_route",
@@ -238,11 +207,10 @@ func (cp *ControlPlane) UseGoPluginConfig(config *filtermanager.FilterManagerCon
 		},
 	})
 
-	// Wait for DP to use the configuration. Unlike the assert.Eventually, this function doesn't
-	// fail the test when it timed out.
-	eventually(5*time.Second, 50*time.Millisecond, func() bool {
+	// Wait for DP to use the configuration.
+	require.Eventually(t, func() bool {
 		return dp.Configured()
-	})
+	}, 10*time.Second, 50*time.Millisecond, "failed to wait for DP to use the configuration")
 }
 
 func FilterManagerConfigToTypedStruct(fmc *filtermanager.FilterManagerConfig) *xds.TypedStruct {
