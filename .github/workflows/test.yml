@@ -240,11 +240,12 @@ jobs:
         key: ${{ runner.os }}-${{ hashFiles('./controller/Makefile') }}
 
     - name: Prepare cluster
-      run: make delete-cluster create-cluster deploy-cert-manager e2e-prepare-data-plane-image deploy-istio
+      run: |
+        touch go.work.sum # work around the requirement of sum file in the commands below
+        make delete-cluster create-cluster deploy-cert-manager e2e-prepare-data-plane-image deploy-istio
 
     - name: Prepare controller
       run: |
-        touch go.work.sum # create the dummy one to work around the requirement of sum file in the commands below
         make e2e-build-controller-image deploy-controller
 
     - name: Test
