@@ -32,12 +32,33 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 	namespace := gwapiv1a2.Namespace("ns")
 
 	tests := []struct {
-		name   string
-		policy *HTTPFilterPolicy
-		err    string
+		name      string
+		policy    *HTTPFilterPolicy
+		err       string
+		strictErr string
 	}{
 		{
 			name: "ok, VirtualService",
+			policy: &HTTPFilterPolicy{
+				Spec: HTTPFilterPolicySpec{
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: "networking.istio.io",
+							Kind:  "VirtualService",
+						},
+					},
+					Filters: map[string]HTTPPlugin{
+						"animal": {
+							Config: runtime.RawExtension{
+								Raw: []byte(`{"pet":"cat"}`),
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "unknown fields, VirtualService",
 			policy: &HTTPFilterPolicy{
 				Spec: HTTPFilterPolicySpec{
 					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
@@ -55,9 +76,30 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 					},
 				},
 			},
+			strictErr: "unknown field \"unknown_fields\"",
 		},
 		{
 			name: "ok, HTTPRoute",
+			policy: &HTTPFilterPolicy{
+				Spec: HTTPFilterPolicySpec{
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: "gateway.networking.k8s.io",
+							Kind:  "HTTPRoute",
+						},
+					},
+					Filters: map[string]HTTPPlugin{
+						"animal": {
+							Config: runtime.RawExtension{
+								Raw: []byte(`{"pet":"cat"}`),
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "unknown fields, HTTPRoute",
 			policy: &HTTPFilterPolicy{
 				Spec: HTTPFilterPolicySpec{
 					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
@@ -75,6 +117,7 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 					},
 				},
 			},
+			strictErr: "unknown field \"unknown_fields\"",
 		},
 		{
 			name: "unknown",
@@ -95,7 +138,7 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 					},
 				},
 			},
-			err: "unknown http filter: property",
+			strictErr: "unknown http filter: property",
 		},
 		{
 			name: "cross namespace",
@@ -145,6 +188,17 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 				assert.Nil(t, err)
 			} else {
 				assert.ErrorContains(t, err, tt.err)
+			}
+
+			err = ValidateHTTPFilterPolicyStrictly(tt.policy)
+			if tt.strictErr == "" && tt.err == "" {
+				assert.Nil(t, err)
+			} else {
+				exp := tt.strictErr
+				if exp == "" {
+					exp = tt.err
+				}
+				assert.ErrorContains(t, err, exp)
 			}
 		})
 	}

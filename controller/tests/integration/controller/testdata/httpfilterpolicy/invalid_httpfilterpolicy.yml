@@ -9,9 +9,7 @@
       kind: VirtualService
       name: vs
     filters:
-      unknown:
-        config:
-          hostName: goldfish
       demo:
         config:
-          hostName: Mary
+          hostName:
+            - Mary
