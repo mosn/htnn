@@ -1,5 +1,15 @@
 This doc tracks how to maintain the source code of HTNN.
 
+## Release a new version
+
+To release a new version, please follow the steps below:
+
+1. Create a new release branch `release/v${version}` from the main branch.
+2. Update the `VERSION` file at the root of this repository.
+3. Create tag `api/v${version}`, then update the `go.mod` which depend on `mosn.io/htnn/api`.
+4. Remove the `go.work` file.
+(TBD)
+
 ## Upgrade components
 
 ### Upgrade Istio
