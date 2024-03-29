@@ -221,9 +221,8 @@ func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 
 func (dp *DataPlane) root() string {
 	pwd, _ := os.Getwd()
-	projectRoot := filepath.Join(pwd, "..", "..", "..")
 	name := dp.t.Name()
-	dir := filepath.Join(projectRoot, testRootDirName, name)
+	dir := filepath.Join(pwd, testRootDirName, name)
 	return dir
 }
 

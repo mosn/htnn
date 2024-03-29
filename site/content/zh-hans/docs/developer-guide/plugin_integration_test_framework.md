@@ -9,7 +9,8 @@ title: 插件集成测试框架
 1. 运行 `make build-test-so` 构建 Go 插件。
 2. 运行 `go test -v ./tests/integration -run TestPluginXX` 来运行选定的测试。
 
-测试框架将启动 Envoy 来运行 Go 插件。Envoy 的 stdout/stderr 输出内容可以在 `./test-envoy/$test_name` 中找到。
+测试框架将启动 Envoy 来运行 Go 插件。Envoy 的 stdout/stderr 输出内容可以在 `$test_dir/test-envoy/$test_name` 中找到。
+`$test_dir` 是测试文件所在的目录，在此处指 `./tests/integration`。
 
 一些测试需要第三方服务。您可以通过在 `./tests/integration/testdata/services` 下运行 `docker-compose up $service` 来启动它们。
 
