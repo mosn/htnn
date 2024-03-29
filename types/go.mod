@@ -23,7 +23,7 @@ require (
 	github.com/envoyproxy/go-control-plane v0.12.1-0.20240117015050-472addddff92
 	github.com/envoyproxy/protoc-gen-validate v1.0.4
 	github.com/google/cel-go v0.20.1
-	github.com/open-policy-agent/opa v0.62.1
+	github.com/open-policy-agent/opa v0.63.0
 	github.com/stretchr/testify v1.9.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20240325203815-454cdb8f5daa
 	google.golang.org/protobuf v1.33.0
