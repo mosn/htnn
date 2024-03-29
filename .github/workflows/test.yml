@@ -107,8 +107,8 @@ jobs:
       if: always() # always upload coverage, so the coverage percents won't affect by the failed tests
       uses: actions/upload-artifact@v4
       with:
-        name: unit-test-cover
-        path: ./cover.out
+        name: plugins-unit-test-cover
+        path: ./plugins/cover.out
 
   plugins-integration-test:
     timeout-minutes: 10
@@ -143,7 +143,7 @@ jobs:
     - name: Generate coverage
       if: always()
       run: |
-        go tool covdata textfmt -i=/tmp/htnn_coverage -o plugins/tests/integration/cover.out -v 2
+        go tool covdata textfmt -i=/tmp/htnn_coverage -o tests/integration/cover.out -v 2
     - name: Upload artifact
       if: always()
       uses: actions/upload-artifact@v4
@@ -187,7 +187,7 @@ jobs:
   coverage:
     timeout-minutes: 10
     runs-on: ubuntu-latest
-    needs: [api-module-test, types-module-test, unit-test, plugins-integration-test, controller-test]
+    needs: [api-module-test, types-module-test, plugins-unit-test, plugins-integration-test, controller-test]
     if: always()
     steps:
     - uses: actions/checkout@v4
@@ -201,7 +201,7 @@ jobs:
           ./api-module-test-cover/cover.out,
           ./api-module-test-cover/cover_integration.out,
           ./types-module-test-cover/cover.out,
-          ./unit-test-cover/cover.out,
+          ./plugins-unit-test-cover/cover.out,
           ./plugins-integration-test-cover/cover.out,
           ./controller-test-cover/cover.out
         token: ${{ secrets.CODECOV_TOKEN }}

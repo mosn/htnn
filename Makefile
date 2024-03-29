@@ -183,7 +183,7 @@ e2e-build-controller-image:
 	cd controller/ && make docker-build
 
 e2e-build-so:
-	cd plugins/ && make build-so && mv libhtnn.so ../e2e/
+	cd plugins/ && make build-so && mv libgolang.so ../e2e/
 
 .PHONY: e2e-prepare-data-plane-image
 e2e-prepare-data-plane-image: e2e-build-so kind
