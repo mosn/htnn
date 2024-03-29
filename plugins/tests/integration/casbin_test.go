@@ -104,7 +104,7 @@ g, bob, admin
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			controlPlane.UseGoPluginConfig(tt.config, dp)
+			controlPlane.UseGoPluginConfig(t, tt.config, dp)
 			hdr := http.Header{}
 			hdr.Set("customer", "alice")
 			resp, err := dp.Post("/echo", hdr, strings.NewReader("any"))
