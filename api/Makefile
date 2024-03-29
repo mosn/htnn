@@ -27,7 +27,7 @@ build-test-so-local:
 	CGO_ENABLED=1 go build -tags so \
 		-ldflags "-B 0x$(shell head -c20 /dev/urandom|od -An -tx1|tr -d ' \n') " \
 		--buildmode=c-shared \
-		-cover -covermode=atomic -coverpkg=./... \
+		-cover -covermode=atomic -coverpkg=mosn.io/htnn/... \
 		-v -o plugins/tests/integration/${TARGET_SO} \
 		${PROJECT_NAME}/api/plugins/tests/integration/libgolang
 
