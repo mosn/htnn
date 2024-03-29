@@ -7,6 +7,8 @@ HTNN is...
 
 ## the hub of the Envoy Go plugins.
 
+First of all, go to the `./plugins` directory.
+
 ### To use the Envoy Go plugins
 
 Run `make build-so`. Now the Go plugins are compiled into `libgolang.so`.

@@ -31,7 +31,7 @@ header:
     - '**/*.pb.validate.go'
     - '**/*.json'
     - '**/*.txt'
-    - 'VERSION'
+    - 'plugins/VERSION'
     - '.ignore_words'
     # files from other projects
     - 'site/assets/**'

@@ -18,7 +18,7 @@ import (
 	"github.com/casbin/casbin/v2"
 
 	"mosn.io/htnn/api/pkg/filtermanager/api"
-	"mosn.io/htnn/pkg/file"
+	"mosn.io/htnn/plugins/pkg/file"
 )
 
 func factory(c interface{}, callbacks api.FilterCallbackHandler) api.Filter {
