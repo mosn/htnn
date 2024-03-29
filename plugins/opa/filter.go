@@ -24,7 +24,7 @@ import (
 	"github.com/open-policy-agent/opa/rego"
 
 	"mosn.io/htnn/api/pkg/filtermanager/api"
-	"mosn.io/htnn/pkg/request"
+	"mosn.io/htnn/plugins/pkg/request"
 )
 
 func factory(c interface{}, callbacks api.FilterCallbackHandler) api.Filter {

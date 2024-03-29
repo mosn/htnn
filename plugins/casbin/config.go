@@ -15,14 +15,14 @@
 package casbin
 
 import (
-	sync "sync"
+	"sync"
 	"sync/atomic"
 
 	"github.com/casbin/casbin/v2"
 
 	"mosn.io/htnn/api/pkg/filtermanager/api"
 	"mosn.io/htnn/api/pkg/plugins"
-	"mosn.io/htnn/pkg/file"
+	"mosn.io/htnn/plugins/pkg/file"
 	casbintype "mosn.io/htnn/types/plugins/casbin"
 )
 

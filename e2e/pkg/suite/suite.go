@@ -35,12 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/gateway-api/conformance/utils/roundtripper"
 
-	"mosn.io/htnn/api/pkg/log"
 	"mosn.io/htnn/e2e/pkg/k8s"
-)
-
-var (
-	logger = log.DefaultLogger.WithName("suite")
 )
 
 type Test struct {
@@ -103,7 +98,7 @@ func (suite *Suite) Run(t *testing.T) {
 			time.Sleep(500 * time.Millisecond)
 			// TODO: configure Istio to push aggressively
 
-			logger.Info("Run test", "name", test.Name)
+			t.Logf("Run test %q", test.Name)
 			test.Run(t, suite)
 		})
 	}
@@ -130,7 +125,7 @@ func (suite *Suite) startPortForward(t *testing.T) {
 		suite.forwarders = append(suite.forwarders, forwarder)
 	}
 	time.Sleep(2 * time.Second) // wait for port-forward to take effect
-	logger.Info("port-forward started")
+	t.Log("port-forward started")
 }
 
 func (suite *Suite) stopPortForward(t *testing.T) {
@@ -138,7 +133,7 @@ func (suite *Suite) stopPortForward(t *testing.T) {
 		err := fwd.Process.Signal(os.Interrupt)
 		require.NoError(t, err)
 	}
-	logger.Info("port-forward stopped")
+	t.Log("port-forward stopped")
 }
 
 func (suite *Suite) cleanup(t *testing.T) {

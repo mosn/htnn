@@ -25,4 +25,4 @@ ignore:
   - "**/*.pb.go"
   - "**/*.pb.validate.go"
   - '**/zz_generated.deepcopy.go'
-  - "controller/pkg/client"
+  - "types/pkg/client"

@@ -6,10 +6,11 @@
 version: 2
 updates:
   - package-ecosystem: "gomod"
-    directory: "/"
+    directory: "/controller"
     schedule:
       interval: "weekly"
     ignore:
+      - dependency-name: "mosn.io/htnn/*"
       # the Envoy lib need to be fit with the Envoy we use. So let's disable auto-updates.
       - dependency-name: "github.com/envoyproxy/*"
       # So as the Istio's
@@ -21,6 +22,14 @@ updates:
       onsi:
         patterns:
           - "github.com/onsi/*" # onsi/gomega and her friends
+  - package-ecosystem: "gomod"
+    directory: "/plugins"
+    schedule:
+      interval: "weekly"
+    ignore:
+      - dependency-name: "mosn.io/htnn/*"
+      # the Envoy lib need to be fit with the Envoy we use. So let's disable auto-updates.
+      - dependency-name: "github.com/envoyproxy/*"
   - package-ecosystem: "gomod"
     directory: "/api"
     schedule:
@@ -35,6 +44,7 @@ updates:
     schedule:
       interval: "weekly"
     ignore:
+      - dependency-name: "mosn.io/htnn/*"
       # the Envoy lib need to be fit with the Envoy we use. So let's disable auto-updates.
       - dependency-name: "github.com/envoyproxy/*"
       # So as the Istio's

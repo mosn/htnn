@@ -32,12 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
-	"mosn.io/htnn/api/pkg/log"
 	mosniov1 "mosn.io/htnn/types/apis/v1"
-)
-
-var (
-	logger = log.DefaultLogger.WithName("k8s")
 )
 
 const (
@@ -66,14 +61,14 @@ func Prepare(t *testing.T, client client.Client, source string) {
 			if !apierrors.IsNotFound(err) {
 				require.NoErrorf(t, err, "error getting resource")
 			}
-			logger.Info("Creating", "name", res.GetName(), "kind", res.GetKind())
+			t.Logf("Creating name %s, kind %s", res.GetName(), res.GetKind())
 			err = client.Create(ctx, res.DeepCopy())
 			require.NoErrorf(t, err, "error creating resource")
 			continue
 		}
 
 		res.SetResourceVersion(fetchedObj.GetResourceVersion())
-		logger.Info("Updating", "name", res.GetName(), "kind", res.GetKind())
+		t.Logf("Updating name %s, kind %s", res.GetName(), res.GetKind())
 		err = client.Update(ctx, res.DeepCopy())
 		require.NoErrorf(t, err, "error updating resource")
 	}
@@ -109,7 +104,7 @@ func deleteResource(t *testing.T, ctx context.Context, k8sClient client.Client, 
 	if err != nil && !apierrors.IsNotFound(err) {
 		require.NoError(t, err)
 	}
-	logger.Info("Deleted", "name", obj.GetName(), "kind", obj.GetObjectKind())
+	t.Logf("Deleted name %s, kind %s", obj.GetName(), obj.GetObjectKind())
 }
 
 func CleanUp(t *testing.T, c client.Client) {

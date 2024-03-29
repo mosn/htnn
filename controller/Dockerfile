@@ -26,16 +26,14 @@ WORKDIR /workspace
 # Copy the source
 
 COPY go.* ./
-RUN sed -i '/.\/site/d' go.work # remove this in release
+RUN sed -i '/.\/site/d' go.work && sed -i '/.\/e2e/d' go.work # remove this in release
 # use single layer to copy only works on files
 COPY api/ api/
 COPY types/ types/
-COPY pkg/ pkg/
 COPY plugins/ plugins/
-# cache deps before building and copying source so that we don't need to re-download as much
-# and so that source changes don't invalidate our downloaded layer
-RUN go mod download
 COPY controller/ controller/
+# we can't cache deps before building and copying source because each source directory has its "go.mod"
+RUN go mod download
 
 # Build
 # the GOARCH has not a default value to allow the binary be built according to the host where the command
