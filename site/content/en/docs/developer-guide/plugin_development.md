@@ -8,12 +8,14 @@ There are two types of HTNN plugins: Native plugins, which are converted to Envo
 
 Assume you are at the root of this project.
 
-1. Create a directory under `./plugins/`. The file name must be in snake style, like `key_auth`.
-2. Think about the configuration and write down it into `./plugins/$your_plugin/config.proto`. Then run `make gen-proto`. The `proto` file uses [proto-gen-valdate](https://github.com/bufbuild/protoc-gen-validate?tab=readme-ov-file#constraint-rules) to define validation. The plugin name must be in camel style, like `keyAuth`. The configuration fields must be in snake style, like `connect_timeout`. The enum value must be in upper snake style, like `HEADER`. See the [official protobuf style](https://protobuf.dev/programming-guides/style/) for the details.
-3. Refer to plugins of the same type and decide on the type and order of your plugin. Finish the plugin. Don't forget to write tests. If your plugin is simple, you can write integration test only. You can take `./plugins/demo` as an example. The doc of the API used in the plugin is in their comments.
-4. Add the doc of the plugin in the `site/content/$your_language/docs/reference/plugins/$your_plugin.md`. You can choose to write doc under Simpilified Chinese or English, depends on which is your prime language. We have [tool](https://github.com/mosn/htnn/tree/main/site#cmdtranslator) to translate it to other languages.
-5. Add your plugin's package into `./plugins/plugins.go`. Run `make build-so`. Now the plugin is compiled into `libgolang.so`.
-6. Add integration test in the `./plugins/tests/integration/`. For how to run the integration test, please read [Plugin Integration Test Framework](../plugin_integration_test_framework).
+1. Create a directory under `./types/plugins/`. The file name must be in snake style, like `key_auth`.
+2. Think about the configuration and write down it into `./types/plugins/$your_plugin/config.proto`. Then run `make gen-proto`. The `proto` file uses [proto-gen-valdate](https://github.com/bufbuild/protoc-gen-validate?tab=readme-ov-file#constraint-rules) to define validation. The plugin name must be in camel style, like `keyAuth`. The configuration fields must be in snake style, like `connect_timeout`. The enum value must be in upper snake style, like `HEADER`. See the [official protobuf style](https://protobuf.dev/programming-guides/style/) for the details.
+3. Refer to plugins of the same type and decide on the type and order of your plugin.
+4. Add your plugin's package into `./types/plugins/plugins.go`.
+5. Create a directory under `./plugins`, with the same name created in step one. Finish the plugin. Don't forget to write tests. If your plugin is simple, you can write integration test only. You can take `./plugins/demo` as an example. The doc of the API used in the plugin is in their comments.
+6. Add the doc of the plugin in the `site/content/$your_language/docs/reference/plugins/$your_plugin.md`. You can choose to write doc under Simpilified Chinese or English, depends on which is your prime language. We have [tool](https://github.com/mosn/htnn/tree/main/site#cmdtranslator) to translate it to other languages.
+7. Add your plugin's package into `./plugins/plugins.go`. Run `make build-so`. Now the plugin is compiled into `libgolang.so`.
+8. Add integration test in the `./plugins/tests/integration/`. For how to run the integration test, please read [Plugin Integration Test Framework](../plugin_integration_test_framework).
 
 You can also write the plugin outside HTNN project, please see https://github.com/mosn/htnn/tree/main/examples/dev_your_plugin.
 

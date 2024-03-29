@@ -26,14 +26,15 @@ WORKDIR /workspace
 # Copy the source
 
 COPY go.* ./
+RUN sed -i '/.\/site/d' go.work # remove this in release
 # use single layer to copy only works on files
 COPY api/ api/
+COPY types/ types/
+COPY pkg/ pkg/
+COPY plugins/ plugins/
 # cache deps before building and copying source so that we don't need to re-download as much
 # and so that source changes don't invalidate our downloaded layer
 RUN go mod download
-# TODO: find a way to cache controller dependencies
-COPY pkg/ pkg/
-COPY plugins/ plugins/
 COPY controller/ controller/
 
 # Build

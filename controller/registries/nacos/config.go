@@ -22,7 +22,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
-	sync "sync"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -37,6 +37,8 @@ import (
 
 	"mosn.io/htnn/controller/internal/log"
 	"mosn.io/htnn/controller/pkg/registry"
+	registrytype "mosn.io/htnn/types/pkg/registry"
+	"mosn.io/htnn/types/registries/nacos"
 )
 
 func init() {
@@ -76,6 +78,8 @@ type nacosClient struct {
 }
 
 type Nacos struct {
+	nacos.RegistryType
+
 	store  registry.ServiceEntryStore
 	name   string
 	client *nacosClient
@@ -237,7 +241,7 @@ func (reg *Nacos) generateServiceEntry(host string, services []model.SubscribeSe
 	}
 }
 
-func (reg *Nacos) newClient(config *Config) (*nacosClient, error) {
+func (reg *Nacos) newClient(config *nacos.Config) (*nacosClient, error) {
 	uri, err := url.Parse(config.ServerUrl)
 	if err != nil {
 		return nil, fmt.Errorf("invalid server url: %s", config.ServerUrl)
@@ -288,8 +292,8 @@ func (reg *Nacos) newClient(config *Config) (*nacosClient, error) {
 	}, nil
 }
 
-func (reg *Nacos) Start(c registry.RegistryConfig) error {
-	config := c.(*Config)
+func (reg *Nacos) Start(c registrytype.RegistryConfig) error {
+	config := c.(*nacos.Config)
 
 	client, err := reg.newClient(config)
 	if err != nil {
@@ -306,7 +310,7 @@ func (reg *Nacos) Start(c registry.RegistryConfig) error {
 		err = reg.subscribe(key.GroupName, key.ServiceName)
 		if err != nil {
 			log.Errorf("failed to subscribe service, err: %v, service: %v", err, key)
-			// the service will be resubscribe after refresh interval
+			// the service will be resubscribed after refresh interval
 			delete(fetchedServices, key)
 		}
 	}
@@ -400,8 +404,8 @@ func (reg *Nacos) Stop() error {
 	return nil
 }
 
-func (reg *Nacos) Reload(c registry.RegistryConfig) error {
-	config := c.(*Config)
+func (reg *Nacos) Reload(c registrytype.RegistryConfig) error {
+	config := c.(*nacos.Config)
 
 	client, err := reg.newClient(config)
 	if err != nil {
@@ -446,8 +450,4 @@ func (reg *Nacos) Reload(c registry.RegistryConfig) error {
 	reg.watchingServices = fetchedServices
 
 	return nil
-}
-
-func (reg *Nacos) Config() registry.RegistryConfig {
-	return &Config{}
 }

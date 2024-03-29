@@ -19,7 +19,8 @@ import (
 
 	"mosn.io/htnn/api/pkg/filtermanager/api"
 	"mosn.io/htnn/api/pkg/plugins"
-	"mosn.io/htnn/pkg/expr"
+	"mosn.io/htnn/types/pkg/expr"
+	"mosn.io/htnn/types/plugins/cel_script"
 )
 
 const (
@@ -31,17 +32,7 @@ func init() {
 }
 
 type plugin struct {
-	plugins.PluginMethodDefaultImpl
-}
-
-func (p *plugin) Type() plugins.PluginType {
-	return plugins.TypeTraffic
-}
-
-func (p *plugin) Order() plugins.PluginOrder {
-	return plugins.PluginOrder{
-		Position: plugins.OrderPositionTraffic,
-	}
+	cel_script.Plugin
 }
 
 func (p *plugin) Factory() api.FilterFactory {
@@ -53,24 +44,9 @@ func (p *plugin) Config() api.PluginConfig {
 }
 
 type config struct {
-	Config
+	cel_script.CustomConfig
 
 	allowIfScript expr.Script
-}
-
-func (conf *config) Validate() error {
-	err := conf.Config.Validate()
-	if err != nil {
-		return err
-	}
-
-	if conf.AllowIf != "" {
-		_, err = expr.CompileCel(conf.AllowIf, cel.BoolType)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 func (conf *config) Init(cb api.ConfigCallbackHandler) error {

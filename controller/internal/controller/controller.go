@@ -17,6 +17,9 @@ package controller
 import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	_ "mosn.io/htnn/controller/plugins"    // register plugins
+	_ "mosn.io/htnn/controller/registries" // register registries
 )
 
 var (

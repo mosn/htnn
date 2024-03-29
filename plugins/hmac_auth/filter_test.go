@@ -26,6 +26,7 @@ import (
 	"mosn.io/htnn/api/pkg/filtermanager/api"
 	"mosn.io/htnn/api/plugins/tests/pkg/consumer"
 	"mosn.io/htnn/api/plugins/tests/pkg/envoy"
+	"mosn.io/htnn/types/plugins/hmac_auth"
 )
 
 func TestHmacAuth(t *testing.T) {
@@ -44,7 +45,7 @@ func TestHmacAuth(t *testing.T) {
 				"extra":         {"2", "1"},
 			},
 			consumer: consumer.NewConsumer(map[string]api.PluginConsumerConfig{
-				Name: &ConsumerConfig{
+				Name: &hmac_auth.ConsumerConfig{
 					AccessKey: "ak",
 					SecretKey: "sk",
 					SignedHeaders: []string{
@@ -64,10 +65,10 @@ func TestHmacAuth(t *testing.T) {
 				DateHeader:      {"Fri Jan  5 16:10:54 CST 2024"},
 			},
 			consumer: consumer.NewConsumer(map[string]api.PluginConsumerConfig{
-				Name: &ConsumerConfig{
+				Name: &hmac_auth.ConsumerConfig{
 					AccessKey: "ak",
 					SecretKey: "sk",
-					Algorithm: Algorithm_HMAC_SHA384,
+					Algorithm: hmac_auth.Algorithm_HMAC_SHA384,
 				},
 			}),
 		},
@@ -78,10 +79,10 @@ func TestHmacAuth(t *testing.T) {
 				DateHeader:      {"Fri Jan  5 16:10:54 CST 2024"},
 			},
 			consumer: consumer.NewConsumer(map[string]api.PluginConsumerConfig{
-				Name: &ConsumerConfig{
+				Name: &hmac_auth.ConsumerConfig{
 					AccessKey: "ak",
 					SecretKey: "sk",
-					Algorithm: Algorithm_HMAC_SHA512,
+					Algorithm: hmac_auth.Algorithm_HMAC_SHA512,
 				},
 			}),
 		},
@@ -90,7 +91,7 @@ func TestHmacAuth(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cb := envoy.NewFilterCallbackHandler()
-			conf := &Config{}
+			conf := &hmac_auth.Config{}
 			if tt.conf != "" {
 				protojson.Unmarshal([]byte(tt.conf), conf)
 			}

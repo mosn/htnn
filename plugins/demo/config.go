@@ -19,6 +19,7 @@ import (
 
 	"mosn.io/htnn/api/pkg/filtermanager/api"
 	"mosn.io/htnn/api/pkg/plugins"
+	"mosn.io/htnn/types/plugins/demo"
 )
 
 const (
@@ -31,26 +32,8 @@ func init() {
 }
 
 type plugin struct {
-	// PluginMethodDefaultImpl is the base class of plugin which provides the default implementation
-	// to Plugin methods.
-	plugins.PluginMethodDefaultImpl
-}
-
-// Type returns type of the plugin, default to TypeGeneral
-func (p *plugin) Type() plugins.PluginType {
-	// If a plugin doesn't claim its type, it will have type general.
-	return plugins.TypeGeneral
-}
-
-// Order returns the order of the plugin, default to OrderPositionUnspecified
-func (p *plugin) Order() plugins.PluginOrder {
-	// If a plugin doesn't claim its order, it will be put into OrderPositionUnspecified group.
-	// The order of plugins in the group is decided by the operation. For plugins which have
-	// same operation, they are sorted by alphabetical order.
-	return plugins.PluginOrder{
-		Position:  plugins.OrderPositionUnspecified,
-		Operation: plugins.OrderOperationNop,
-	}
+	// A plugin should embed the type definition in the correndsponding type package.
+	demo.Plugin
 }
 
 // Each Go plugin need to implement the two methods below
@@ -66,9 +49,9 @@ func (p *plugin) Config() api.PluginConfig {
 }
 
 type config struct {
-	// Config is generated from `config.proto`.
+	// Config is generated from `config.proto` in the correndsponding type package.
 	// The returned implementation should embed the Config.
-	Config
+	demo.Config
 
 	client *http.Client
 }

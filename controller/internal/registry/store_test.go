@@ -18,7 +18,6 @@ import (
 	"context"
 	"testing"
 
-	"github.com/agiledragon/gomonkey/v2"
 	"github.com/stretchr/testify/assert"
 	istioapi "istio.io/api/networking/v1beta1"
 	istiov1b1 "istio.io/client-go/pkg/apis/networking/v1beta1"
@@ -28,46 +27,53 @@ import (
 	"mosn.io/htnn/controller/tests/pkg"
 )
 
+type syncTestClient struct {
+	client.Client
+	created, updated, deleted bool
+}
+
+func (cli *syncTestClient) List(c context.Context, list client.ObjectList, opts ...client.ListOption) error {
+	serviceEntries := list.(*istiov1b1.ServiceEntryList)
+	serviceEntries.Items = []*istiov1b1.ServiceEntry{
+		// To delete
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "delete",
+			},
+		},
+		// To update
+		{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "update",
+			},
+			Spec: istioapi.ServiceEntry{
+				Hosts: []string{"before"},
+			},
+		},
+	}
+	return nil
+}
+
+func (cli *syncTestClient) Create(c context.Context, obj client.Object, opts ...client.CreateOption) error {
+	cli.created = true
+	return nil
+}
+
+func (cli *syncTestClient) Update(c context.Context, obj client.Object, opts ...client.UpdateOption) error {
+	cli.updated = true
+	return nil
+}
+
+func (cli *syncTestClient) Delete(c context.Context, obj client.Object, opts ...client.DeleteOption) error {
+	cli.deleted = true
+	return nil
+}
+
 func TestSync(t *testing.T) {
-	store := newServiceEntryStore(pkg.FakeK8sClient(t))
-
-	var created, updated, deleted bool
-
-	patches := gomonkey.ApplyMethodFunc(store.client, "List", func(c context.Context, list client.ObjectList, opts ...client.ListOption) error {
-		serviceEntries := list.(*istiov1b1.ServiceEntryList)
-		serviceEntries.Items = []*istiov1b1.ServiceEntry{
-			// To delete
-			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "delete",
-				},
-			},
-			// To update
-			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "update",
-				},
-				Spec: istioapi.ServiceEntry{
-					Hosts: []string{"before"},
-				},
-			},
-		}
-		return nil
-	})
-	patches.ApplyMethodFunc(store.client, "Create", func(c context.Context, obj client.Object, opts ...client.CreateOption) error {
-		created = true
-		return nil
-	})
-	patches.ApplyMethodFunc(store.client, "Update", func(c context.Context, obj client.Object, opts ...client.UpdateOption) error {
-		updated = true
-		return nil
-	})
-	patches.ApplyMethodFunc(store.client, "Delete", func(c context.Context, obj client.Object, opts ...client.DeleteOption) error {
-		deleted = true
-		return nil
-	})
-	defer patches.Reset()
-
+	cli := &syncTestClient{
+		Client: pkg.FakeK8sClient(t),
+	}
+	store := newServiceEntryStore(cli)
 	store.entries = map[string]*istiov1b1.ServiceEntry{
 		// To update
 		"update": {
@@ -84,7 +90,7 @@ func TestSync(t *testing.T) {
 	}
 
 	store.sync()
-	assert.True(t, created)
-	assert.True(t, updated)
-	assert.True(t, deleted)
+	assert.True(t, cli.created)
+	assert.True(t, cli.updated)
+	assert.True(t, cli.deleted)
 }

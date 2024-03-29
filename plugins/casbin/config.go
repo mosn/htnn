@@ -23,6 +23,7 @@ import (
 	"mosn.io/htnn/api/pkg/filtermanager/api"
 	"mosn.io/htnn/api/pkg/plugins"
 	"mosn.io/htnn/pkg/file"
+	casbintype "mosn.io/htnn/types/plugins/casbin"
 )
 
 const (
@@ -34,17 +35,7 @@ func init() {
 }
 
 type plugin struct {
-	plugins.PluginMethodDefaultImpl
-}
-
-func (p *plugin) Type() plugins.PluginType {
-	return plugins.TypeAuthz
-}
-
-func (p *plugin) Order() plugins.PluginOrder {
-	return plugins.PluginOrder{
-		Position: plugins.OrderPositionAuthz,
-	}
+	casbintype.Plugin
 }
 
 func (p *plugin) Factory() api.FilterFactory {
@@ -56,7 +47,7 @@ func (p *plugin) Config() api.PluginConfig {
 }
 
 type config struct {
-	Config
+	casbintype.Config
 
 	lock *sync.RWMutex
 

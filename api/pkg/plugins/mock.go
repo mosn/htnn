@@ -34,6 +34,8 @@ func (m *MockPlugin) Merge(parent interface{}, child interface{}) interface{} {
 	return child
 }
 
+var _ GoPlugin = &MockPlugin{}
+
 type MockPluginConfig struct {
 	Config
 }
@@ -51,6 +53,8 @@ func (m *MockConsumerPlugin) Order() PluginOrder {
 func (m *MockConsumerPlugin) ConsumerConfig() api.PluginConsumerConfig {
 	return nil
 }
+
+var _ ConsumerPlugin = &MockConsumerPlugin{}
 
 type MockNativePlugin struct {
 	PluginMethodDefaultImpl
@@ -73,3 +77,5 @@ func (m *MockNativePlugin) RouteConfigTypeURL() string {
 func (m *MockNativePlugin) HTTPFilterConfigPlaceholder() map[string]interface{} {
 	return nil
 }
+
+var _ NativePlugin = &MockNativePlugin{}
