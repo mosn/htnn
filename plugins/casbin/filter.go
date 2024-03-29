@@ -43,6 +43,8 @@ func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api
 	policyChanged := file.IsChanged(conf.modelFile, conf.policyFile)
 	if policyChanged && !conf.updating.Load() {
 		conf.updating.Store(true)
+		api.LogWarnf("policy %s or model %s changed, reload enforcer", conf.policyFile.Name, conf.modelFile.Name)
+
 		go func() {
 			defer conf.updating.Store(false)
 			defer f.callbacks.RecoverPanic()
@@ -57,6 +59,7 @@ func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api
 				conf.lock.Unlock()
 
 				file.Update(conf.modelFile, conf.policyFile)
+				api.LogWarnf("policy %s or model %s changed, enforcer reloaded", conf.policyFile.Name, conf.modelFile.Name)
 			}
 		}()
 	}
