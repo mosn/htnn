@@ -225,6 +225,9 @@ jobs:
   e2e-test:
     timeout-minutes: 25
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./e2e
     steps:
     - uses: actions/checkout@v4
 
@@ -236,7 +239,7 @@ jobs:
     - name: binary cache
       uses: actions/cache@v4
       with:
-        path: ./bin
+        path: ./e2e/bin
         key: ${{ runner.os }}-${{ hashFiles('./Makefile') }}
 
     - name: binary cache (for controller)
@@ -247,7 +250,7 @@ jobs:
 
     - name: Prepare cluster
       run: |
-        touch go.work.sum # work around the requirement of sum file in the commands below
+        touch ../go.work.sum # work around the requirement of sum file in the commands below
         make delete-cluster create-cluster deploy-cert-manager e2e-prepare-data-plane-image deploy-istio
 
     - name: Prepare controller
