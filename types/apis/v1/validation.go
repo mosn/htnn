@@ -52,6 +52,12 @@ func validateHTTPFilterPolicy(policy *HTTPFilterPolicy, strict bool) error {
 		}
 	}
 
+	if ref.SectionName != nil {
+		if len(policy.Spec.SubPolicies) > 0 {
+			return errors.New("targetRef.SectionName and SubPolicies can not be used together")
+		}
+	}
+
 	validTarget := false
 	if ref.Group == "networking.istio.io" && ref.Kind == "VirtualService" {
 		validTarget = true

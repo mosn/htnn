@@ -621,6 +621,47 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 			Expect(envoyfilters.Items[0].Name).To(Equal("htnn-http-filter"))
 		})
 
+		It("deal with sub-policies to one virtualservice", func() {
+			ctx := context.Background()
+			input := []map[string]interface{}{}
+			mustReadHTTPFilterPolicy("virtualservice_subpolicies", &input)
+
+			for _, in := range input {
+				obj := pkg.MapToObj(in)
+				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
+			}
+
+			var policies mosniov1.HTTPFilterPolicyList
+			Eventually(func() bool {
+				if err := k8sClient.List(ctx, &policies); err != nil {
+					return false
+				}
+				for _, policy := range policies.Items {
+					if len(policy.Status.Conditions) == 0 {
+						continue
+					}
+					cond := policy.Status.Conditions[0]
+					if cond.Reason == string(gwapiv1a2.PolicyReasonAccepted) {
+						return true
+					}
+				}
+				return false
+			}, timeout, interval).Should(BeTrue())
+			var envoyfilters istiov1a3.EnvoyFilterList
+			Eventually(func() bool {
+				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
+					return false
+				}
+				return len(envoyfilters.Items) == 2
+			}, timeout, interval).Should(BeTrue())
+
+			names := []string{}
+			for _, ef := range envoyfilters.Items {
+				names = append(names, ef.Name)
+			}
+			Expect(names).To(ConsistOf([]string{"htnn-http-filter", "htnn-h-default.local"}))
+		})
+
 	})
 
 	var (
