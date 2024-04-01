@@ -17,6 +17,7 @@ package translation
 import (
 	"encoding/json"
 	"fmt"
+	"slices"
 	"sort"
 
 	"k8s.io/apimachinery/pkg/types"
@@ -73,15 +74,14 @@ func toMergedPolicy(rp *routePolicy) *mergedPolicy {
 	policies := rp.Policies
 	sortHttpFilterPolicy(policies)
 
-	info := &Info{
-		HTTPFilterPolicies: []string{},
-	}
 	p := &mosniov1.HTTPFilterPolicy{
 		Spec: mosniov1.HTTPFilterPolicySpec{
 			Filters: make(map[string]mosniov1.HTTPPlugin),
 		},
 	}
 
+	// use map to deduplicate policies, especially for the sub-policies
+	usedHFP := make(map[string]struct{}, len(policies))
 	for _, policy := range policies {
 		used := false
 		for name, filter := range policy.Spec.Filters {
@@ -92,9 +92,17 @@ func toMergedPolicy(rp *routePolicy) *mergedPolicy {
 		}
 
 		if used {
-			info.HTTPFilterPolicies = append(info.HTTPFilterPolicies, toNsName(policy))
+			usedHFP[toNsName(policy)] = struct{}{}
 		}
 	}
+
+	info := &Info{
+		HTTPFilterPolicies: make([]string, 0, len(usedHFP)),
+	}
+	for s := range usedHFP {
+		info.HTTPFilterPolicies = append(info.HTTPFilterPolicies, s)
+	}
+	slices.Sort(info.HTTPFilterPolicies) // order is required for later procession
 
 	fmc := translateHTTPFilterPolicyToFilterManagerConfig(p)
 	nativeFilters := []*fmModel.FilterConfig{}

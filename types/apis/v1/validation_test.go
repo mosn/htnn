@@ -22,6 +22,7 @@ import (
 	istiov1b1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"mosn.io/htnn/api/pkg/plugins"
@@ -30,6 +31,7 @@ import (
 func TestValidateHTTPFilterPolicy(t *testing.T) {
 	plugins.RegisterHttpPluginType("animal", &plugins.MockPlugin{})
 	namespace := gwapiv1a2.Namespace("ns")
+	sectionName := gwapiv1.SectionName("test")
 
 	tests := []struct {
 		name      string
@@ -157,6 +159,26 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 				},
 			},
 			err: "namespace in TargetRef doesn't match HTTPFilterPolicy's namespace",
+		},
+		{
+			name: "targetRef.SectionName and SubPolicies can not be used together",
+			policy: &HTTPFilterPolicy{
+				Spec: HTTPFilterPolicySpec{
+					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: "networking.istio.io",
+							Kind:  "VirtualService",
+						},
+						SectionName: &sectionName,
+					},
+					SubPolicies: []HTTPFilterSubPolicy{
+						{
+							SectionName: sectionName,
+						},
+					},
+				},
+			},
+			err: "targetRef.SectionName and SubPolicies can not be used together",
 		},
 		{
 			name: "bad configuration",

@@ -92,6 +92,30 @@ func (s *InitState) AddPolicyForVirtualService(policy *mosniov1.HTTPFilterPolicy
 				scope:            PolicyScopeRoute,
 			})
 		}
+
+		if len(policy.Spec.SubPolicies) > 0 {
+			// Some of our cases have over hundreds of sub-policies, so we need to optimize this.
+			subPolicies := make(map[string]*mosniov1.HTTPFilterPolicy, len(policy.Spec.SubPolicies))
+			for _, subPolicy := range policy.Spec.SubPolicies {
+				p := &mosniov1.HTTPFilterPolicy{}
+				*p = *policy
+				p.Spec = mosniov1.HTTPFilterPolicySpec{
+					Filters: subPolicy.Filters,
+				}
+				subPolicies[string(subPolicy.SectionName)] = p
+			}
+
+			for _, httpRoute := range vs.Spec.Http {
+				routeName := httpRoute.Name
+				if subPolicy, ok := subPolicies[routeName]; ok {
+					vsp.RoutePolicies[routeName] = append(vsp.RoutePolicies[routeName], &HTTPFilterPolicyWrapper{
+						HTTPFilterPolicy: subPolicy,
+						scope:            PolicyScopeRule,
+					})
+				}
+			}
+		}
+
 	} else {
 		routeName := string(*policy.Spec.TargetRef.SectionName)
 		vsp.RoutePolicies[routeName] = append(vsp.RoutePolicies[routeName], &HTTPFilterPolicyWrapper{

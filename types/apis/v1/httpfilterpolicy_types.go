@@ -20,17 +20,14 @@ import (
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 )
 
-// EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
 // HTTPFilterPolicySpec defines the desired state of HTTPFilterPolicy
 type HTTPFilterPolicySpec struct {
-	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
-	// Important: Run "make" to regenerate code after modifying this file
-
 	// +kubebuilder:validation:XValidation:rule="self.group in ['', 'networking.istio.io', 'gateway.networking.k8s.io']", message="unsupported targetRef.group"
 	// +kubebuilder:validation:XValidation:rule="self.kind in ['Namespace', 'VirtualService', 'Gateway', 'HTTPRoute', 'GRPCRoute']", message="unsupported targetRef.kind"
 
@@ -38,6 +35,23 @@ type HTTPFilterPolicySpec struct {
 	// This Policy and the TargetRef MUST be in the same namespace.
 	TargetRef gwapiv1a2.PolicyTargetReferenceWithSectionName `json:"targetRef"`
 
+	// Filters is a map of filter names to filter configurations.
+	Filters map[string]HTTPPlugin `json:"filters,omitempty"`
+
+	// SubPolicies is an array of sub-policies to specific section name.
+	// If the specific section name is not found, the HTTPFilterPolicy will still be
+	// treated as accepted.
+	// If the SectionName field in TargetRef is given, the SubPolicies won't take effect.
+	//
+	// +listType=map
+	// +listMapKey=sectionName
+	SubPolicies []HTTPFilterSubPolicy `json:"subPolicies,omitempty"`
+}
+
+// HTTPFilterSubPolicy defines the sub-policy
+type HTTPFilterSubPolicy struct {
+	// SectionName is the name of a section within the target resource.
+	SectionName gwapiv1.SectionName `json:"sectionName"`
 	// Filters is a map of filter names to filter configurations.
 	Filters map[string]HTTPPlugin `json:"filters,omitempty"`
 }

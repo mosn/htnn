@@ -49,6 +49,41 @@ spec:
                   type: object
                 description: Filters is a map of filter names to filter configurations.
                 type: object
+              subPolicies:
+                description: SubPolicies is an array of sub-policies to specific section
+                  name. If the specific section name is not found, the HTTPFilterPolicy
+                  will still be treated as accepted. If the SectionName field in TargetRef
+                  is given, the SubPolicies won't take effect.
+                items:
+                  description: HTTPFilterSubPolicy defines the sub-policy
+                  properties:
+                    filters:
+                      additionalProperties:
+                        description: HTTPPlugin defines the plugin configuration used
+                          in the HTTP layer
+                        properties:
+                          config:
+                            type: object
+                            x-kubernetes-preserve-unknown-fields: true
+                        required:
+                        - config
+                        type: object
+                      description: Filters is a map of filter names to filter configurations.
+                      type: object
+                    sectionName:
+                      description: SectionName is the name of a section within the
+                        target resource.
+                      maxLength: 253
+                      minLength: 1
+                      pattern: ^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$
+                      type: string
+                  required:
+                  - sectionName
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - sectionName
+                x-kubernetes-list-type: map
               targetRef:
                 description: TargetRef is the name of the resource this policy is
                   being attached to. This Policy and the TargetRef MUST be in the
