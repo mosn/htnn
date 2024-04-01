@@ -16,8 +16,10 @@ package integration
 
 import (
 	"net/http"
+	"os"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -112,4 +114,16 @@ g, bob, admin
 			tt.expect(t, resp)
 		})
 	}
+
+	time.Sleep(10 * time.Second) // TODO remove this once we switch the file change detector to inotify
+	// configuration is not changed, but file changed
+	err = os.WriteFile(policyFile2.Name(), []byte(policy), 0755)
+	require.Nil(t, err)
+	hdr := http.Header{}
+	hdr.Set("customer", "alice")
+
+	assert.Eventually(t, func() bool {
+		resp, _ := dp.Post("/echo", hdr, strings.NewReader("any"))
+		return resp != nil && resp.StatusCode == 200
+	}, 1*time.Second, 10*time.Millisecond)
 }

@@ -61,6 +61,7 @@ func newFS(ttl time.Duration) *fs {
 				return nil
 			}
 			item := c.Set(key, info, ttlcache.DefaultTTL)
+			logger.Info("update file mtime", "file", key, "mtime", item.Value().ModTime())
 			return item
 		},
 	)
@@ -76,6 +77,7 @@ func newFS(ttl time.Duration) *fs {
 }
 
 var (
+	// TODO: rewrite it to use inotify
 	defaultFs = newFS(10 * time.Second)
 )
 
