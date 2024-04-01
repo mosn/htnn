@@ -32,12 +32,18 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/yaml"
 
+	"mosn.io/htnn/api/pkg/plugins"
 	"mosn.io/htnn/controller/internal/istio"
 	_ "mosn.io/htnn/controller/plugins"    // register plugins
 	_ "mosn.io/htnn/controller/registries" // register registries
 	"mosn.io/htnn/controller/tests/pkg"
 	mosniov1 "mosn.io/htnn/types/apis/v1"
 )
+
+func init() {
+	plugins.RegisterHttpPluginType("animal", &plugins.MockPlugin{})
+	plugins.RegisterHttpPluginType("localReply", &plugins.MockPlugin{})
+}
 
 func testName(inputFile string) string {
 	_, fileName := filepath.Split(inputFile)

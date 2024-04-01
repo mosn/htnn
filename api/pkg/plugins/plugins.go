@@ -113,6 +113,9 @@ func RegisterHttpPlugin(name string, plugin Plugin) {
 	// override plugin is allowed so that we can patch plugin with bugfix if upgrading
 	// the whole htnn is not available
 	httpPlugins[name] = plugin
+
+	// We don't force developer to divide their plugin into two parts for better DX.
+	httpPluginTypes[name] = plugin
 }
 
 func LoadHttpPlugin(name string) Plugin {
