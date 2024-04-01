@@ -84,7 +84,8 @@ func (s *InitState) AddPolicyForVirtualService(policy *mosniov1.HTTPFilterPolicy
 		s.VirtualServicePolicies[nn] = vsp
 	}
 
-	if policy.Spec.TargetRef.SectionName == nil {
+	targetRef := policy.Spec.TargetRef
+	if targetRef == nil || targetRef.SectionName == nil {
 		for _, httpRoute := range vs.Spec.Http {
 			routeName := httpRoute.Name
 			vsp.RoutePolicies[routeName] = append(vsp.RoutePolicies[routeName], &HTTPFilterPolicyWrapper{

@@ -28,12 +28,13 @@ import (
 
 // HTTPFilterPolicySpec defines the desired state of HTTPFilterPolicy
 type HTTPFilterPolicySpec struct {
-	// +kubebuilder:validation:XValidation:rule="self.group in ['', 'networking.istio.io', 'gateway.networking.k8s.io']", message="unsupported targetRef.group"
-	// +kubebuilder:validation:XValidation:rule="self.kind in ['Namespace', 'VirtualService', 'Gateway', 'HTTPRoute', 'GRPCRoute']", message="unsupported targetRef.kind"
-
 	// TargetRef is the name of the resource this policy is being attached to.
 	// This Policy and the TargetRef MUST be in the same namespace.
-	TargetRef gwapiv1a2.PolicyTargetReferenceWithSectionName `json:"targetRef"`
+	//
+	// +optional
+	// +kubebuilder:validation:XValidation:rule="self.group in ['', 'networking.istio.io', 'gateway.networking.k8s.io']", message="unsupported targetRef.group"
+	// +kubebuilder:validation:XValidation:rule="self.kind in ['Namespace', 'VirtualService', 'Gateway', 'HTTPRoute', 'GRPCRoute']", message="unsupported targetRef.kind"
+	TargetRef *gwapiv1a2.PolicyTargetReferenceWithSectionName `json:"targetRef"`
 
 	// Filters is a map of filter names to filter configurations.
 	Filters map[string]HTTPPlugin `json:"filters,omitempty"`
