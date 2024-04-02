@@ -16,6 +16,7 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"path/filepath"
 	"strings"
 	"time"
@@ -33,6 +34,7 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"mosn.io/htnn/controller/internal/model"
+	"mosn.io/htnn/controller/internal/translation"
 	"mosn.io/htnn/controller/tests/integration/helper"
 	"mosn.io/htnn/controller/tests/pkg"
 	mosniov1 "mosn.io/htnn/types/apis/v1"
@@ -695,6 +697,11 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 					cp := ef.Spec.ConfigPatches[0]
 					b, _ := cp.Patch.Value.MarshalJSON()
 					Expect(string(b)).To(ContainSubstring(`"hostName":"peter"`))
+
+					var info translation.Info
+					ann := ef.Annotations["htnn.mosn.io/info"]
+					json.Unmarshal([]byte(ann), &info)
+					Expect(info.HTTPFilterPolicies).To(ConsistOf([]string{"default/embedded-virtualservice-vs"}))
 				}
 			}
 			Expect(names).To(ConsistOf([]string{"htnn-http-filter", "htnn-h-default.local"}))

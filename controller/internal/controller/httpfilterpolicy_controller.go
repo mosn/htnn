@@ -423,6 +423,9 @@ func (r *HTTPFilterPolicyReconciler) policyToTranslationState(ctx context.Contex
 		}
 		// We require the embedded policy to be valid, otherwise it's costly to validate and hard to report the error.
 
+		policy.Namespace = vs.Namespace
+		// Name convension is "embedded-$kind-$name"
+		policy.Name = "embedded-virtualservice-" + vs.Name
 		err = r.resolveWithVirtualService(ctx, logger, vs, &policy, initState, istioGwIdx)
 		if err != nil {
 			return nil, err
