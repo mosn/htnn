@@ -7,6 +7,7 @@ title: HMAC Auth
 The `hmacAuth` plugin authenticates the client based on the consumer configuration and the signature sent in the request, using the [HMAC](https://en.wikipedia.org/wiki/HMAC) algorithm. Given the significant differences in the implementation of HMAC Auth signatures by different gateways and service providers, it is unlikely to flexibly support multiple signature methods through configuration. This plugin aims to provide the same [signature method](https://apisix.apache.org/docs/apisix/plugins/hmac-auth/#example-usage) as Apache APISIX. You can use this plugin as an example to develop your own HMAC Auth plugin.
 
 ## Attribute
+
 |       |       |
 |-------|-------|
 | Type  | Authn |
