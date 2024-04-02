@@ -145,6 +145,21 @@ func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 	// Use docker inspect --format='{{index .RepoDigests 0}}' envoyproxy/envoy:contrib-v1.29.2
 	// to get the sha256 ID
 	image := "envoyproxy/envoy@sha256:c47136604751274b30fa7a89132314b8e3586d54d8f8cc30d7a911a9ecc5e11c"
+	b, err := exec.Command("docker", "images", image).Output()
+	if err != nil {
+		return nil, err
+	}
+	if !strings.Contains(string(b), "envoyproxy/envoy") {
+		cmd := exec.Command("docker", "pull", image)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		logger.Info("pull envoy image", "cmdline", cmd.String())
+		err = cmd.Run()
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	pwd, _ := os.Getwd()
 	projectRoot := filepath.Join(pwd, "..", "..", "..")
 	cmdline := "docker run" +

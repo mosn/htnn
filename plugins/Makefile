@@ -52,9 +52,6 @@ stop-service:
 
 .PHONY: integration-test
 integration-test:
-	if ! docker images ${PROXY_IMAGE} | grep envoyproxy/envoy > /dev/null; then \
-		docker pull ${PROXY_IMAGE}; \
-	fi
 	test -d /tmp/htnn_coverage && rm -rf /tmp/htnn_coverage || true
 	$(foreach PKG, $(shell go list ./tests/integration/...), \
 		go test -v ${PKG} || exit 1; \
