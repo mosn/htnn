@@ -256,3 +256,9 @@ func TestRejectBadPluginDef(t *testing.T) {
 		})
 	}
 }
+
+func TestRegisterPluginWithType(t *testing.T) {
+	RegisterHttpPlugin("mock", &MockPlugin{})
+	assert.NotNil(t, LoadHttpPlugin("mock"))
+	assert.NotNil(t, LoadHttpPluginType("mock"))
+}

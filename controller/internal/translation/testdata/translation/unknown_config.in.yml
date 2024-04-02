@@ -1,0 +1,67 @@
+istioGateway:
+- apiVersion: networking.istio.io/v1beta1
+  kind: Gateway
+  metadata:
+    name: gateway
+    namespace: default
+  spec:
+    selector:
+      istio: ingressgateway
+    servers:
+    - hosts:
+      - example.com
+      port:
+        name: http
+        number: 80
+        protocol: HTTP
+virtualService:
+  gateway:
+    - apiVersion: networking.istio.io/v1beta1
+      kind: VirtualService
+      metadata:
+        name: vs
+        namespace: default
+      spec:
+        gateways:
+        - gateway
+        hosts:
+        - example.com
+        http:
+        - match:
+          - uri:
+              prefix: /
+          name: policy
+          route:
+          - destination:
+              host: api
+              port:
+                number: 8000
+httpFilterPolicy:
+  vs:
+  - apiVersion: htnn.mosn.io/v1
+    kind: HTTPFilterPolicy
+    metadata:
+      name: policy
+      namespace: default
+    spec:
+      targetRef:
+        group: networking.istio.io
+        kind: VirtualService
+        name: vs
+      filters:
+        animal:
+          config:
+            hostName: goldfish
+            # It's fine to keep unknown field in Go plugin as the data plane will ignore it...
+            unknown_field_in_go_plugin: xx
+        localRatelimit:
+          config:
+            stat_prefix: http_local_rate_limiter
+            tokenBucket:
+              fillInterval: 10s
+              max_tokens: 100
+            # but not for the Native plugin
+            unknown_field_in_native_plugin: xx
+        unknownPlugin:
+          config:
+            blah: 1

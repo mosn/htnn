@@ -20,6 +20,7 @@ import (
 	"slices"
 	"sort"
 
+	"google.golang.org/protobuf/reflect/protoreflect"
 	"k8s.io/apimachinery/pkg/types"
 
 	"mosn.io/htnn/api/pkg/filtermanager"
@@ -68,6 +69,29 @@ func sortHttpFilterPolicy(policies []*HTTPFilterPolicyWrapper) {
 		}
 		return toNsName(policies[i]) < toNsName(policies[j])
 	})
+}
+
+func stripUnknowFields(m map[string]interface{}, fieldDescs protoreflect.FieldDescriptors) {
+	for name, field := range m {
+		fd := fieldDescs.ByJSONName(name)
+		if fd == nil {
+			fd = fieldDescs.ByTextName(name)
+		}
+		if fd == nil {
+			delete(m, name)
+			continue
+		}
+		switch fd.Kind() {
+		case protoreflect.MessageKind, protoreflect.GroupKind:
+			fieldDescs := fd.Message().Fields()
+			m, ok := field.(map[string]interface{})
+			if !ok {
+				// well-known type, like google.protobuf.Duration
+				continue
+			}
+			stripUnknowFields(m, fieldDescs)
+		}
+	}
 }
 
 func toMergedPolicy(rp *routePolicy) *mergedPolicy {
@@ -119,19 +143,36 @@ func toMergedPolicy(rp *routePolicy) *mergedPolicy {
 			// For Go Plugins, only the type is registered
 			p = plugins.LoadHttpPluginType(name)
 		}
-		nativePlugin, ok := p.(plugins.NativePlugin)
-		if ok {
-			url = nativePlugin.RouteConfigTypeURL()
+		// As we don't reject configuration with unknown plugin to keep compatibility...
+		if p == nil {
+			continue
 		}
+
+		var cfg interface{}
+		// we validated the filter at the beginning, so theorily err should not happen
+		_ = json.Unmarshal(plugin.Config.([]byte), &cfg)
+
+		nativePlugin, ok := p.(plugins.NativePlugin)
 		if !ok {
+			plugin.Config = cfg
 			goFilterManager.Plugins = append(goFilterManager.Plugins, plugin)
 		} else {
+			url = nativePlugin.RouteConfigTypeURL()
+			conf := p.Config()
+			desc := conf.ProtoReflect().Descriptor()
+			fieldDescs := desc.Fields()
+			m := cfg.(map[string]interface{})
+			// TODO: unify the name style of fields. Currently, the field names can be in snake_case or camelCase.
+			// Each style is fine because the protobuf support both of them. However, if people want to
+			// rewrite the configuration, we should take care of this.
+			stripUnknowFields(m, fieldDescs)
+
 			if wrapper, ok := p.(plugins.NativePluginHasRouteConfigWrapper); ok {
-				plugin.Config = wrapper.ToRouteConfig(plugin.Config.(map[string]interface{}))
+				m = wrapper.ToRouteConfig(m)
 			}
 
-			m := plugin.Config.(map[string]interface{})
 			m["@type"] = url
+			plugin.Config = m
 			nativeFilters = append(nativeFilters, plugin)
 		}
 
@@ -217,12 +258,9 @@ func translateHTTPFilterPolicyToFilterManagerConfig(policy *mosniov1.HTTPFilterP
 		Plugins: []*fmModel.FilterConfig{},
 	}
 	for name, filter := range policy.Spec.Filters {
-		var cfg interface{}
-		// we validated the filter at the beginning, so theorily err should not happen
-		_ = json.Unmarshal(filter.Config.Raw, &cfg)
 		fmc.Plugins = append(fmc.Plugins, &fmModel.FilterConfig{
 			Name:   name,
-			Config: cfg,
+			Config: filter.Config.Raw,
 		})
 	}
 
