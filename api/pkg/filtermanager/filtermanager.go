@@ -601,34 +601,21 @@ func (m *filterManager) DecodeHeaders(headers capi.RequestHeaderMap, endStream b
 
 			if len(c.FilterConfigs) > 0 {
 				c.InitOnce.Do(func() {
-					canSkipMethod := newSkipMethodsMap()
 					names := make([]string, 0, len(c.FilterConfigs))
 					for name, fc := range c.FilterConfigs {
 						names = append(names, name)
 
-						factory := fc.Factory
 						config := fc.ParsedConfig
 						if initer, ok := config.(pkgPlugins.Initer); ok {
 							// For now, we have nothing to provide as config callbacks
 							err := initer.Init(nil)
 							if err != nil {
-								factory = NewInternalErrorFactory(fc.Name, err)
+								fc.Factory = NewInternalErrorFactory(fc.Name, err)
 							}
-						}
-
-						f := factory(config, m.callbacks)
-						for meth := range canSkipMethod {
-							overridden, err := reflectx.IsMethodOverridden(f, meth)
-							if err != nil {
-								api.LogErrorf("failed to check method %s in filter: %v", meth, err)
-								// canSkipMethod[meth] will be false
-							}
-							canSkipMethod[meth] = canSkipMethod[meth] && !overridden
 						}
 					}
 
 					c.FilterNames = names
-					c.CanSkipMethod = canSkipMethod
 				})
 
 				filterWrappers := make([]*model.FilterWrapper, len(c.FilterConfigs))
@@ -639,6 +626,23 @@ func (m *filterManager) DecodeHeaders(headers capi.RequestHeaderMap, endStream b
 					f := factory(config, m.callbacks)
 					filterWrappers[i] = model.NewFilterWrapper(name, f)
 				}
+
+				c.CanSkipMethodOnce.Do(func() {
+					canSkipMethod := newSkipMethodsMap()
+					for _, fw := range filterWrappers {
+						f := fw.Filter
+						for meth := range canSkipMethod {
+							overridden, err := reflectx.IsMethodOverridden(f, meth)
+							if err != nil {
+								api.LogErrorf("failed to check method %s in filter: %v", meth, err)
+								// canSkipMethod[meth] will be false
+							}
+							canSkipMethod[meth] = canSkipMethod[meth] && !overridden
+						}
+					}
+
+					c.CanSkipMethod = canSkipMethod
+				})
 
 				canSkipMethod := c.CanSkipMethod
 				m.canSkipDecodeData = m.canSkipDecodeData && canSkipMethod["DecodeData"] && canSkipMethod["DecodeRequest"]

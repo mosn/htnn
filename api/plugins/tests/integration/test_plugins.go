@@ -309,9 +309,62 @@ func (f *badFilter) EncodeResponse(headers api.ResponseHeaderMap, data api.Buffe
 	return api.Continue
 }
 
+type consumerPlugin struct {
+	plugins.PluginMethodDefaultImpl
+	basePlugin
+}
+
+func (p *consumerPlugin) Factory() api.FilterFactory {
+	return consumerFactory
+}
+
+func (p *consumerPlugin) Type() plugins.PluginType {
+	return plugins.TypeAuthn
+}
+
+func (p *consumerPlugin) Order() plugins.PluginOrder {
+	return plugins.PluginOrder{
+		Position: plugins.OrderPositionAuthn,
+	}
+}
+
+func (p *consumerPlugin) ConsumerConfig() api.PluginConsumerConfig {
+	return &ConsumerConfig{}
+}
+
+func (conf *ConsumerConfig) Index() string {
+	return conf.Name
+}
+
+func consumerFactory(c interface{}, callbacks api.FilterCallbackHandler) api.Filter {
+	return &consumerFilter{
+		callbacks: callbacks,
+		config:    c.(*Config),
+	}
+}
+
+type consumerFilter struct {
+	api.PassThroughFilter
+
+	callbacks api.FilterCallbackHandler
+	config    *Config
+}
+
+func (f *consumerFilter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {
+	h, _ := headers.Get("authorization")
+	c, ok := f.callbacks.LookupConsumer("consumer", h)
+	if !ok {
+		return &api.LocalResponse{Code: 401, Msg: "invalid key"}
+	}
+
+	f.callbacks.SetConsumer(c)
+	return api.Continue
+}
+
 func init() {
 	plugins.RegisterHttpPlugin("stream", &streamPlugin{})
 	plugins.RegisterHttpPlugin("buffer", &bufferPlugin{})
 	plugins.RegisterHttpPlugin("localReply", &localReplyPlugin{})
 	plugins.RegisterHttpPlugin("bad", &badPlugin{})
+	plugins.RegisterHttpPlugin("consumer", &consumerPlugin{})
 }

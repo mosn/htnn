@@ -45,9 +45,10 @@ type Consumer struct {
 	FilterConfigs   map[string]*fmModel.ParsedFilterConfig
 
 	// fields that generated from the configuration
-	CanSkipMethod map[string]bool
-	FilterNames   []string
-	InitOnce      sync.Once
+	CanSkipMethod     map[string]bool
+	FilterNames       []string
+	InitOnce          sync.Once
+	CanSkipMethodOnce sync.Once
 }
 
 func (c *Consumer) Unmarshal(s string) error {

@@ -24,7 +24,7 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 
 	"mosn.io/htnn/api/pkg/filtermanager/api"
-	_ "mosn.io/htnn/api/plugins/tests/pkg/envoy"
+	_ "mosn.io/htnn/api/plugins/tests/pkg/envoy" // for log implementation
 )
 
 func TestIterateHttpPlugin(t *testing.T) {
