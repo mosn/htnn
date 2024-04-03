@@ -15,6 +15,7 @@
 package integration
 
 import (
+	"errors"
 	"net/http"
 	"runtime/debug"
 	"strings"
@@ -262,9 +263,16 @@ type badPluginConfig struct {
 	BadPluginConfig
 }
 
-func (c *badPluginConfig) Init(cb api.ConfigCallbackHandler) error {
+func (c *badPluginConfig) Validate() error {
 	if c.PanicInParse {
 		panic("panic in parse")
+	}
+	return nil
+}
+
+func (c *badPluginConfig) Init(cb api.ConfigCallbackHandler) error {
+	if c.ErrorInInit {
+		return errors.New("ouch")
 	}
 	return nil
 }

@@ -60,6 +60,8 @@ type filterManagerConfig struct {
 
 	parsed []*model.ParsedFilterConfig
 	pool   *sync.Pool
+
+	initOnceNonblockingly func()
 }
 
 func initFilterManagerConfig(namespace string) *filterManagerConfig {
@@ -79,6 +81,7 @@ func initFilterManagerConfig(namespace string) *filterManagerConfig {
 			return fm
 		},
 	}
+	config.initOnceNonblockingly = func() {}
 	return config
 }
 
@@ -121,8 +124,7 @@ func (p *FilterManagerConfigParser) Parse(any *anypb.Any, callbacks capi.ConfigC
 	for _, proto := range plugins {
 		name := proto.Name
 		if plugin := pkgPlugins.LoadHttpFilterFactoryAndParser(name); plugin != nil {
-			// For now, we have nothing to provide as config callbacks
-			config, err := plugin.ConfigParser.Parse(proto.Config, nil)
+			config, err := plugin.ConfigParser.Parse(proto.Config)
 			if err != nil {
 				api.LogErrorf("%s during parsing plugin %s in filtermanager", err, name)
 
@@ -133,7 +135,7 @@ func (p *FilterManagerConfigParser) Parse(any *anypb.Any, callbacks capi.ConfigC
 				// indicates something is wrong.
 				conf.parsed = append(conf.parsed, &model.ParsedFilterConfig{
 					Name:    proto.Name,
-					Factory: InternalErrorFactory,
+					Factory: NewInternalErrorFactory(proto.Name, err),
 				})
 			} else {
 				conf.parsed = append(conf.parsed, &model.ParsedFilterConfig{
@@ -154,6 +156,19 @@ func (p *FilterManagerConfigParser) Parse(any *anypb.Any, callbacks capi.ConfigC
 		}
 	}
 	conf.consumerFiltersEndAt = consumerFiltersEndAt
+
+	conf.initOnceNonblockingly = sync.OnceFunc(func() {
+		for i, fc := range conf.parsed {
+			config := fc.ParsedConfig
+			if initer, ok := config.(pkgPlugins.Initer); ok {
+				// For now, we have nothing to provide as config callbacks
+				err := initer.Init(nil)
+				if err != nil {
+					conf.parsed[i].Factory = NewInternalErrorFactory(fc.Name, err)
+				}
+			}
+		}
+	})
 
 	return conf, nil
 }
@@ -400,11 +415,15 @@ func FilterManagerFactory(c interface{}) capi.StreamFilterFactory {
 			}
 		}()
 
+		conf.initOnceNonblockingly()
+
 		fm := conf.pool.Get().(*filterManager)
 		fm.callbacks.FilterCallbackHandler = cb
 
 		canSkipMethod := fm.canSkipMethod
 		if canSkipMethod == nil {
+			// the `canSkipMethod` can't be initialized in initOnceNonblockingly,
+			// as it depends on the filter which is created per request.
 			canSkipMethod = newSkipMethodsMap()
 		}
 
@@ -581,8 +600,7 @@ func (m *filterManager) DecodeHeaders(headers capi.RequestHeaderMap, endStream b
 			}
 
 			if len(c.FilterConfigs) > 0 {
-				if c.FilterWrappers == nil {
-					c.FilterWrappers = make([]*model.FilterWrapper, 0, len(c.FilterConfigs))
+				c.InitOnce.Do(func() {
 					canSkipMethod := newSkipMethodsMap()
 					names := make([]string, 0, len(c.FilterConfigs))
 					for name, fc := range c.FilterConfigs {
@@ -590,6 +608,14 @@ func (m *filterManager) DecodeHeaders(headers capi.RequestHeaderMap, endStream b
 
 						factory := fc.Factory
 						config := fc.ParsedConfig
+						if initer, ok := config.(pkgPlugins.Initer); ok {
+							// For now, we have nothing to provide as config callbacks
+							err := initer.Init(nil)
+							if err != nil {
+								factory = NewInternalErrorFactory(fc.Name, err)
+							}
+						}
+
 						f := factory(config, m.callbacks)
 						for meth := range canSkipMethod {
 							overridden, err := reflectx.IsMethodOverridden(f, meth)
@@ -599,20 +625,19 @@ func (m *filterManager) DecodeHeaders(headers capi.RequestHeaderMap, endStream b
 							}
 							canSkipMethod[meth] = canSkipMethod[meth] && !overridden
 						}
-						nf := model.NewFilterWrapper(name, f)
-						c.FilterWrappers = append(c.FilterWrappers, nf)
 					}
 
 					c.FilterNames = names
 					c.CanSkipMethod = canSkipMethod
-				} else {
-					for i, name := range c.FilterNames {
-						fc := c.FilterConfigs[name]
-						factory := fc.Factory
-						config := fc.ParsedConfig
-						f := factory(config, m.callbacks)
-						c.FilterWrappers[i].Filter = f
-					}
+				})
+
+				filterWrappers := make([]*model.FilterWrapper, len(c.FilterConfigs))
+				for i, name := range c.FilterNames {
+					fc := c.FilterConfigs[name]
+					factory := fc.Factory
+					config := fc.ParsedConfig
+					f := factory(config, m.callbacks)
+					filterWrappers[i] = model.NewFilterWrapper(name, f)
 				}
 
 				canSkipMethod := c.CanSkipMethod
@@ -629,7 +654,7 @@ func (m *filterManager) DecodeHeaders(headers capi.RequestHeaderMap, endStream b
 						i++
 					}
 				}
-				m.filters = append(m.filters[:i], c.FilterWrappers...)
+				m.filters = append(m.filters[:i], filterWrappers...)
 				sort.Slice(m.filters, func(i, j int) bool {
 					return pkgPlugins.ComparePluginOrder(m.filters[i].Name, m.filters[j].Name)
 				})

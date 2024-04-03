@@ -17,6 +17,7 @@ package consumer
 import (
 	"encoding/json"
 	"fmt"
+	sync "sync"
 
 	"mosn.io/htnn/api/internal/proto"
 	csModel "mosn.io/htnn/api/pkg/consumer/model"
@@ -44,9 +45,9 @@ type Consumer struct {
 	FilterConfigs   map[string]*fmModel.ParsedFilterConfig
 
 	// fields that generated from the configuration
-	CanSkipMethod  map[string]bool
-	FilterNames    []string
-	FilterWrappers []*fmModel.FilterWrapper
+	CanSkipMethod map[string]bool
+	FilterNames   []string
+	InitOnce      sync.Once
 }
 
 func (c *Consumer) Unmarshal(s string) error {
@@ -84,7 +85,7 @@ func (c *Consumer) InitConfigs() error {
 			return fmt.Errorf("plugin %s not found", name)
 		}
 
-		conf, err := p.ConfigParser.Parse(data.Config, nil)
+		conf, err := p.ConfigParser.Parse(data.Config)
 		if err != nil {
 			return fmt.Errorf("%w during parsing plugin %s in consumer", err, name)
 		}

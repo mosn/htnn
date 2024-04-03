@@ -85,7 +85,7 @@ func TestParse(t *testing.T) {
 				defer cln()
 			}
 
-			res, err := cp.Parse(c.input, nil)
+			res, err := cp.Parse(c.input)
 			if c.wantErr {
 				assert.NotNil(t, err)
 			} else {
