@@ -16,7 +16,7 @@ module mosn.io/htnn/controller
 
 // This module stores the HTNN controller.
 
-go 1.21.5
+go 1.21
 
 require (
 	github.com/agiledragon/gomonkey/v2 v2.11.0

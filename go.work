@@ -15,7 +15,7 @@
 // We use go.work and commit it to the repository so that we don't need to update the sub go modules'
 // version during the development. Remember to remove this file and update the sub go modules' version
 // when we draw a release.
-go 1.21.5
+go 1.21
 
 use (
     ./site

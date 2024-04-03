@@ -16,7 +16,7 @@ module mosn.io/htnn/types
 
 // This module stores definitions shared between CP and DP
 
-go 1.21.5
+go 1.21
 
 require (
 	github.com/agiledragon/gomonkey/v2 v2.11.0
