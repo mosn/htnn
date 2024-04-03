@@ -114,6 +114,7 @@ var _ = Describe("Consumer controller", func() {
 			Expect(cp.ApplyTo).To(Equal(istioapi.EnvoyFilter_EXTENSION_CONFIG))
 			value := cp.Patch.Value.AsMap()
 			Expect(value["name"]).To(Equal("htnn-consumer"))
+			Expect(value["disabled"]).To(Equal(true))
 			typedCfg := value["typed_config"].(map[string]interface{})
 			pluginCfg := typedCfg["plugin_config"].(map[string]interface{})
 
