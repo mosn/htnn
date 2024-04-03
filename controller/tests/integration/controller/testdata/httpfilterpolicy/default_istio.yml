@@ -28,6 +28,7 @@
     servers:
     - hosts:
       - default.local
+      - other.local
       port:
         name: http
         number: 8888

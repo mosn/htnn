@@ -1,0 +1,47 @@
+- apiVersion: networking.istio.io/v1beta1
+  kind: VirtualService
+  metadata:
+    name: vs
+    namespace: default
+    annotations:
+      htnn.mosn.io/httpfilterpolicy: |
+        {"apiVersion":"htnn.mosn.io/v1","kind":"HTTPFilterPolicy","metadata":{"name":"policy","namespace":"default"},"spec":{"filters":{"demo":{"config":{"hostName":"peter"}}}}}
+  spec:
+    gateways:
+    - default
+    hosts:
+    - default.local
+    http:
+    - match:
+      - uri:
+          prefix: /
+      name: route
+      route:
+      - destination:
+          host: httpbin
+          port:
+            number: 8000
+- apiVersion: networking.istio.io/v1beta1
+  kind: VirtualService
+  metadata:
+    name: vs-wrong-annotation
+    namespace: default
+    annotations:
+      # ignore annotation that can't be marshalled
+      htnn.mosn.io/httpfilterpolicy: |
+        []
+  spec:
+    gateways:
+    - default
+    hosts:
+    - other.local
+    http:
+    - match:
+      - uri:
+          prefix: /
+      name: route
+      route:
+      - destination:
+          host: httpbin
+          port:
+            number: 8000

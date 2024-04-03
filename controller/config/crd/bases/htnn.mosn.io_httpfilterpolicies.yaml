@@ -138,8 +138,6 @@ spec:
                 - message: unsupported targetRef.kind
                   rule: self.kind in ['Namespace', 'VirtualService', 'Gateway', 'HTTPRoute',
                     'GRPCRoute']
-            required:
-            - targetRef
             type: object
           status:
             description: HTTPFilterPolicyStatus defines the observed state of HTTPFilterPolicy

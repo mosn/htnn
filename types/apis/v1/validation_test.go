@@ -43,7 +43,7 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 			name: "ok, VirtualService",
 			policy: &HTTPFilterPolicy{
 				Spec: HTTPFilterPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+					TargetRef: &gwapiv1a2.PolicyTargetReferenceWithSectionName{
 						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
 							Group: "networking.istio.io",
 							Kind:  "VirtualService",
@@ -60,10 +60,24 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 			},
 		},
 		{
+			name: "ok, embedded VirtualService",
+			policy: &HTTPFilterPolicy{
+				Spec: HTTPFilterPolicySpec{
+					Filters: map[string]HTTPPlugin{
+						"animal": {
+							Config: runtime.RawExtension{
+								Raw: []byte(`{"pet":"cat"}`),
+							},
+						},
+					},
+				},
+			},
+		},
+		{
 			name: "unknown fields, VirtualService",
 			policy: &HTTPFilterPolicy{
 				Spec: HTTPFilterPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+					TargetRef: &gwapiv1a2.PolicyTargetReferenceWithSectionName{
 						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
 							Group: "networking.istio.io",
 							Kind:  "VirtualService",
@@ -84,7 +98,7 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 			name: "ok, HTTPRoute",
 			policy: &HTTPFilterPolicy{
 				Spec: HTTPFilterPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+					TargetRef: &gwapiv1a2.PolicyTargetReferenceWithSectionName{
 						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
 							Group: "gateway.networking.k8s.io",
 							Kind:  "HTTPRoute",
@@ -104,7 +118,7 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 			name: "unknown fields, HTTPRoute",
 			policy: &HTTPFilterPolicy{
 				Spec: HTTPFilterPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+					TargetRef: &gwapiv1a2.PolicyTargetReferenceWithSectionName{
 						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
 							Group: "gateway.networking.k8s.io",
 							Kind:  "HTTPRoute",
@@ -125,7 +139,7 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 			name: "unknown",
 			policy: &HTTPFilterPolicy{
 				Spec: HTTPFilterPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+					TargetRef: &gwapiv1a2.PolicyTargetReferenceWithSectionName{
 						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
 							Group: "networking.istio.io",
 							Kind:  "VirtualService",
@@ -149,7 +163,7 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 					Namespace: "namespace",
 				},
 				Spec: HTTPFilterPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+					TargetRef: &gwapiv1a2.PolicyTargetReferenceWithSectionName{
 						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
 							Namespace: &namespace,
 							Group:     "networking.istio.io",
@@ -164,7 +178,7 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 			name: "targetRef.SectionName and SubPolicies can not be used together",
 			policy: &HTTPFilterPolicy{
 				Spec: HTTPFilterPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+					TargetRef: &gwapiv1a2.PolicyTargetReferenceWithSectionName{
 						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
 							Group: "networking.istio.io",
 							Kind:  "VirtualService",
@@ -184,7 +198,7 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 			name: "bad configuration",
 			policy: &HTTPFilterPolicy{
 				Spec: HTTPFilterPolicySpec{
-					TargetRef: gwapiv1a2.PolicyTargetReferenceWithSectionName{
+					TargetRef: &gwapiv1a2.PolicyTargetReferenceWithSectionName{
 						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
 							Group: "networking.istio.io",
 							Kind:  "VirtualService",
