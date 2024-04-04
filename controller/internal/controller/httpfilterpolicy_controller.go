@@ -18,6 +18,7 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -29,7 +30,6 @@ import (
 	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	istiov1b1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -58,8 +58,10 @@ type HTTPFilterPolicyReconciler struct {
 	client.Client
 	Scheme *runtime.Scheme
 
-	istioGatewayIndexer *IstioGatewayIndexer
-	k8sGatewayIndexer   *K8sGatewayIndexer
+	virtualServiceIndexer *VirtualServiceIndexer
+	httpRouteIndexer      *HTTPRouteIndexer
+	istioGatewayIndexer   *IstioGatewayIndexer
+	k8sGatewayIndexer     *K8sGatewayIndexer
 }
 
 //+kubebuilder:rbac:groups=htnn.mosn.io,resources=httpfilterpolicies,verbs=get;list;watch;create;update;patch;delete
@@ -154,8 +156,16 @@ func (r *HTTPFilterPolicyReconciler) resolveVirtualService(ctx context.Context, 
 		}
 	}
 
+	return r.resolveWithVirtualService(ctx, logger, &virtualService, policy, initState, gwIdx)
+}
+
+func (r *HTTPFilterPolicyReconciler) resolveWithVirtualService(ctx context.Context, logger *logr.Logger,
+	virtualService *istiov1b1.VirtualService, policy *mosniov1.HTTPFilterPolicy, initState *translation.InitState,
+	gwIdx map[string][]*mosniov1.HTTPFilterPolicy) error {
+
+	var err error
 	accepted := false
-	gws := initState.GetGatewaysWithVirtualService(&virtualService)
+	gws := initState.GetGatewaysWithVirtualService(virtualService)
 	if len(gws) > 0 {
 		for _, gateway := range gws {
 			key := getK8sKey(gateway.Namespace, gateway.Name)
@@ -206,7 +216,7 @@ func (r *HTTPFilterPolicyReconciler) resolveVirtualService(ctx context.Context, 
 	}
 
 	if accepted {
-		initState.AddPolicyForVirtualService(policy, &virtualService, gws)
+		initState.AddPolicyForVirtualService(policy, virtualService, gws)
 		policy.SetAccepted(gwapiv1a2.PolicyReasonAccepted)
 		// For reducing the write to K8S API server and reconciliation,
 		// we don't add `gateway.networking.k8s.io/PolicyAffected` to the affected resource.
@@ -332,8 +342,28 @@ func (r *HTTPFilterPolicyReconciler) policyToTranslationState(ctx context.Contex
 	}
 
 	initState := translation.NewInitState(logger)
+	vsIdx := map[string][]*mosniov1.HTTPFilterPolicy{}
+	hrIdx := map[string][]*mosniov1.HTTPFilterPolicy{}
 	istioGwIdx := map[string][]*mosniov1.HTTPFilterPolicy{}
 	k8sGwIdx := map[string][]*mosniov1.HTTPFilterPolicy{}
+
+	for i := range policies.Items {
+		policy := &policies.Items[i]
+		ref := policy.Spec.TargetRef
+		nsName := types.NamespacedName{Name: string(ref.Name), Namespace: policy.Namespace}
+
+		key := getK8sKey(nsName.Namespace, nsName.Name)
+		if ref.Group == "networking.istio.io" && ref.Kind == "VirtualService" {
+			vsIdx[key] = append(vsIdx[key], policy)
+		} else if ref.Group == "gateway.networking.k8s.io" && ref.Kind == "HTTPRoute" {
+			hrIdx[key] = append(hrIdx[key], policy)
+		}
+	}
+
+	r.virtualServiceIndexer.UpdateIndex(vsIdx)
+	if config.EnableGatewayAPI() {
+		r.httpRouteIndexer.UpdateIndex(hrIdx)
+	}
 
 	for i := range policies.Items {
 		policy := &policies.Items[i]
@@ -374,7 +404,35 @@ func (r *HTTPFilterPolicyReconciler) policyToTranslationState(ctx context.Contex
 		}
 	}
 
-	// only update index when the processing is successful
+	// Some of our users only use embedded policy, so it's fine to list all
+	var virtualServices istiov1b1.VirtualServiceList
+	if err := r.List(ctx, &virtualServices); err != nil {
+		return nil, fmt.Errorf("failed to list VirtualService: %w", err)
+	}
+	for _, vs := range virtualServices.Items {
+		ann := vs.GetAnnotations()
+		if ann == nil || ann[model.AnnotationHTTPFilterPolicy] == "" {
+			continue
+		}
+
+		var policy mosniov1.HTTPFilterPolicy
+		err := json.Unmarshal([]byte(ann[model.AnnotationHTTPFilterPolicy]), &policy)
+		if err != nil {
+			logger.Error(err, "failed to unmarshal policy out from VirtualService", "name", vs.Name, "namespace", vs.Namespace)
+			continue
+		}
+		// We require the embedded policy to be valid, otherwise it's costly to validate and hard to report the error.
+
+		policy.Namespace = vs.Namespace
+		// Name convention is "embedded-$kind-$name"
+		policy.Name = "embedded-virtualservice-" + vs.Name
+		err = r.resolveWithVirtualService(ctx, logger, vs, &policy, initState, istioGwIdx)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// Only update index when the processing is successful. This prevents gateways from being partially indexed.
 	r.istioGatewayIndexer.UpdateIndex(istioGwIdx)
 	if config.EnableGatewayAPI() {
 		r.k8sGatewayIndexer.UpdateIndex(k8sGwIdx)
@@ -468,139 +526,32 @@ func (r *HTTPFilterPolicyReconciler) updatePolicies(ctx context.Context,
 // according to the reconciled customer resource
 type CustomerResourceIndexer interface {
 	CustomerResource() client.Object
-	RegisterIndexer(ctx context.Context, mgr ctrl.Manager) error
 	FindAffectedObjects(ctx context.Context, obj client.Object) []reconcile.Request
 	Predicate() predicate.Predicate
 }
 
-type VirtualServiceIndexer struct {
-	r client.Reader
-}
-
-func (v *VirtualServiceIndexer) CustomerResource() client.Object {
-	return &istiov1b1.VirtualService{}
-}
-
-func (v *VirtualServiceIndexer) IndexName() string {
-	return "spec.targetRef.kind.virtualService"
-}
-
-func (v *VirtualServiceIndexer) Index(rawObj client.Object) []string {
-	po := rawObj.(*mosniov1.HTTPFilterPolicy)
-	if po.Spec.TargetRef.Group != "networking.istio.io" || po.Spec.TargetRef.Kind != "VirtualService" {
-		return []string{}
-	}
-	ns := po.Namespace
-	if po.Spec.TargetRef.Namespace != nil {
-		ns = string(*po.Spec.TargetRef.Namespace)
-	}
-	return []string{fmt.Sprintf("%s/%s", ns, po.Spec.TargetRef.Name)}
-}
-
-func (v *VirtualServiceIndexer) RegisterIndexer(ctx context.Context, mgr ctrl.Manager) error {
-	return mgr.GetFieldIndexer().IndexField(ctx, &mosniov1.HTTPFilterPolicy{}, v.IndexName(), v.Index)
-}
-
-func (v *VirtualServiceIndexer) FindAffectedObjects(ctx context.Context, obj client.Object) []reconcile.Request {
-	return findAffectedObjects(ctx, v.r, obj, "VirtualService", v.IndexName())
-}
-
-func (v *VirtualServiceIndexer) Predicate() predicate.Predicate {
-	return predicate.GenerationChangedPredicate{}
-}
-
-type HTTPRouteIndexer struct {
-	r client.Reader
-}
-
-func (v *HTTPRouteIndexer) CustomerResource() client.Object {
-	return &gwapiv1.HTTPRoute{}
-}
-
-func (v *HTTPRouteIndexer) IndexName() string {
-	return "spec.targetRef.kind.HTTPRoute"
-}
-
-func (v *HTTPRouteIndexer) Index(rawObj client.Object) []string {
-	po := rawObj.(*mosniov1.HTTPFilterPolicy)
-	if po.Spec.TargetRef.Group != gwapiv1.GroupName || po.Spec.TargetRef.Kind != "HTTPRoute" {
-		return []string{}
-	}
-	ns := po.Namespace
-	if po.Spec.TargetRef.Namespace != nil {
-		ns = string(*po.Spec.TargetRef.Namespace)
-	}
-	return []string{fmt.Sprintf("%s/%s", ns, po.Spec.TargetRef.Name)}
-}
-
-func (v *HTTPRouteIndexer) RegisterIndexer(ctx context.Context, mgr ctrl.Manager) error {
-	return mgr.GetFieldIndexer().IndexField(ctx, &mosniov1.HTTPFilterPolicy{}, v.IndexName(), v.Index)
-}
-
-func (v *HTTPRouteIndexer) FindAffectedObjects(ctx context.Context, obj client.Object) []reconcile.Request {
-	return findAffectedObjects(ctx, v.r, obj, "HTTPRoute", v.IndexName())
-}
-
-func (v *HTTPRouteIndexer) Predicate() predicate.Predicate {
-	return predicate.ResourceVersionChangedPredicate{}
-}
-
-func findAffectedObjects(ctx context.Context, reader client.Reader, obj client.Object, kind string, idx string) []reconcile.Request {
-	logger := log.FromContext(ctx)
-
-	policies := &mosniov1.HTTPFilterPolicyList{}
-	listOps := &client.ListOptions{
-		// Use the built index
-		FieldSelector: fields.OneTermEqualSelector(idx, fmt.Sprintf("%s/%s", obj.GetNamespace(), obj.GetName())),
-	}
-	err := reader.List(ctx, policies, listOps)
-	if err != nil {
-		logger.Error(err, "failed to list HTTPFilterPolicy")
-		return nil
-	}
-
-	requests := make([]reconcile.Request, len(policies.Items))
-	for i, item := range policies.Items {
-		requests[i] = reconcile.Request{
-			NamespacedName: types.NamespacedName{
-				Name:      item.GetName(),
-				Namespace: item.GetNamespace(),
-			},
-		}
-	}
-
-	if len(requests) > 0 {
-		logger.Info("Target changed, trigger reconciliation", "kind", kind,
-			"namespace", obj.GetNamespace(), "name", obj.GetName(), "requests", requests)
-		// As we do full regeneration, we only need to reconcile one HTTPFilterPolicy
-		return triggerReconciliation()
-	}
-	return requests
-}
-
-type IstioGatewayIndexer struct {
-	r client.Reader
-
+// indexer extracts common logic for indexing the affected resources
+type indexer struct {
 	lock  sync.RWMutex
 	index map[string][]*mosniov1.HTTPFilterPolicy
 }
 
-func (v *IstioGatewayIndexer) CustomerResource() client.Object {
-	return &istiov1b1.Gateway{}
-}
-
-func (v *IstioGatewayIndexer) RegisterIndexer(ctx context.Context, mgr ctrl.Manager) error {
-	return nil
-}
-
-func (v *IstioGatewayIndexer) UpdateIndex(idx map[string][]*mosniov1.HTTPFilterPolicy) {
+func (v *indexer) UpdateIndex(idx map[string][]*mosniov1.HTTPFilterPolicy) {
 	v.lock.Lock()
 	v.index = idx
 	v.lock.Unlock()
 }
 
-func (v *IstioGatewayIndexer) FindAffectedObjects(ctx context.Context, obj client.Object) []reconcile.Request {
+func (v *indexer) FindAffectedObjects(ctx context.Context, obj client.Object) []reconcile.Request {
 	logger := log.FromContext(ctx)
+
+	ann := obj.GetAnnotations()
+	if ann != nil && ann[model.AnnotationHTTPFilterPolicy] != "" {
+		logger.Info("Target with embedded HTTPFilterPolicy changed, trigger reconciliation",
+			"kind", obj.GetObjectKind().GroupVersionKind().Kind,
+			"namespace", obj.GetNamespace(), "name", obj.GetName())
+		return triggerReconciliation()
+	}
 
 	v.lock.RLock()
 	policies, ok := v.index[getK8sKey(obj.GetNamespace(), obj.GetName())]
@@ -619,9 +570,47 @@ func (v *IstioGatewayIndexer) FindAffectedObjects(ctx context.Context, obj clien
 		}
 		requests[i] = request
 	}
-	logger.Info("Target changed, trigger reconciliation", "kind", "IstioGateway",
+	logger.Info("Target changed, trigger reconciliation", "kind", obj.GetObjectKind().GroupVersionKind().Kind,
 		"namespace", obj.GetNamespace(), "name", obj.GetName(), "requests", requests)
 	return triggerReconciliation()
+}
+
+type VirtualServiceIndexer struct {
+	indexer
+}
+
+func (v *VirtualServiceIndexer) CustomerResource() client.Object {
+	return &istiov1b1.VirtualService{}
+}
+
+func (v *VirtualServiceIndexer) Predicate() predicate.Predicate {
+	return predicate.Or(
+		predicate.GenerationChangedPredicate{},
+		predicate.AnnotationChangedPredicate{},
+	)
+}
+
+type HTTPRouteIndexer struct {
+	indexer
+}
+
+func (v *HTTPRouteIndexer) CustomerResource() client.Object {
+	return &gwapiv1.HTTPRoute{}
+}
+
+func (v *HTTPRouteIndexer) Predicate() predicate.Predicate {
+	return predicate.Or(
+		predicate.GenerationChangedPredicate{},
+		predicate.AnnotationChangedPredicate{},
+	)
+}
+
+type IstioGatewayIndexer struct {
+	indexer
+}
+
+func (v *IstioGatewayIndexer) CustomerResource() client.Object {
+	return &istiov1b1.Gateway{}
 }
 
 func (v *IstioGatewayIndexer) Predicate() predicate.Predicate {
@@ -629,50 +618,11 @@ func (v *IstioGatewayIndexer) Predicate() predicate.Predicate {
 }
 
 type K8sGatewayIndexer struct {
-	r client.Reader
-
-	lock  sync.RWMutex
-	index map[string][]*mosniov1.HTTPFilterPolicy
+	indexer
 }
 
 func (v *K8sGatewayIndexer) CustomerResource() client.Object {
 	return &gwapiv1.Gateway{}
-}
-
-func (v *K8sGatewayIndexer) RegisterIndexer(ctx context.Context, mgr ctrl.Manager) error {
-	return nil
-}
-
-func (v *K8sGatewayIndexer) UpdateIndex(idx map[string][]*mosniov1.HTTPFilterPolicy) {
-	v.lock.Lock()
-	v.index = idx
-	v.lock.Unlock()
-}
-
-func (v *K8sGatewayIndexer) FindAffectedObjects(ctx context.Context, obj client.Object) []reconcile.Request {
-	logger := log.FromContext(ctx)
-
-	gw := obj.(*gwapiv1.Gateway)
-	v.lock.RLock()
-	policies, ok := v.index[getK8sKey(gw.Namespace, gw.Name)]
-	v.lock.RUnlock()
-	if !ok {
-		return nil
-	}
-
-	requests := make([]reconcile.Request, len(policies))
-	for i, policy := range policies {
-		request := reconcile.Request{
-			NamespacedName: types.NamespacedName{
-				Name:      policy.GetName(),
-				Namespace: policy.GetNamespace(),
-			},
-		}
-		requests[i] = request
-	}
-	logger.Info("Target changed, trigger reconciliation", "kind", "K8sGateway",
-		"namespace", obj.GetNamespace(), "name", obj.GetName(), "requests", requests)
-	return triggerReconciliation()
 }
 
 func (v *K8sGatewayIndexer) Predicate() predicate.Predicate {
@@ -681,36 +631,24 @@ func (v *K8sGatewayIndexer) Predicate() predicate.Predicate {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *HTTPFilterPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	ctx := context.Background()
-	istioGatewayIndexer := &IstioGatewayIndexer{
-		r: r,
-	}
+	virtualServiceIndexer := &VirtualServiceIndexer{}
+	r.virtualServiceIndexer = virtualServiceIndexer
+	istioGatewayIndexer := &IstioGatewayIndexer{}
 	r.istioGatewayIndexer = istioGatewayIndexer
 	indexers := []CustomerResourceIndexer{
-		&VirtualServiceIndexer{
-			r: r,
-		},
+		virtualServiceIndexer,
 		istioGatewayIndexer,
 	}
 
 	if config.EnableGatewayAPI() {
-		k8sGatewayIndexer := &K8sGatewayIndexer{
-			r: r,
-		}
+		httpRouteIndexer := &HTTPRouteIndexer{}
+		r.httpRouteIndexer = httpRouteIndexer
+		k8sGatewayIndexer := &K8sGatewayIndexer{}
 		r.k8sGatewayIndexer = k8sGatewayIndexer
 		indexers = append(indexers,
-			&HTTPRouteIndexer{
-				r: r,
-			},
+			httpRouteIndexer,
 			k8sGatewayIndexer,
 		)
-	}
-
-	// IndexField is called per HTTPFilterPolicy
-	for _, idxer := range indexers {
-		if err := idxer.RegisterIndexer(ctx, mgr); err != nil {
-			return err
-		}
 	}
 
 	controller := ctrl.NewControllerManagedBy(mgr).

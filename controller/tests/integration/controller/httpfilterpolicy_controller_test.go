@@ -16,7 +16,9 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"path/filepath"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -31,6 +33,8 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
+	"mosn.io/htnn/controller/internal/model"
+	"mosn.io/htnn/controller/internal/translation"
 	"mosn.io/htnn/controller/tests/integration/helper"
 	"mosn.io/htnn/controller/tests/pkg"
 	mosniov1 "mosn.io/htnn/types/apis/v1"
@@ -662,6 +666,126 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 			Expect(names).To(ConsistOf([]string{"htnn-http-filter", "htnn-h-default.local"}))
 		})
 
+		It("deal with embedded HTTPFilterPolicy", func() {
+			ctx := context.Background()
+			input := []map[string]interface{}{}
+			mustReadHTTPFilterPolicy("virtualservice_embeded_hfp", &input)
+
+			var virtualService *istiov1b1.VirtualService
+			for _, in := range input {
+				obj := pkg.MapToObj(in)
+				if obj.GetName() == "vs" {
+					virtualService = obj.(*istiov1b1.VirtualService)
+				}
+				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
+			}
+
+			// create
+			var envoyfilters istiov1a3.EnvoyFilterList
+			Eventually(func() bool {
+				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
+					return false
+				}
+				return len(envoyfilters.Items) == 2
+			}, timeout, interval).Should(BeTrue())
+
+			names := []string{}
+			for _, ef := range envoyfilters.Items {
+				names = append(names, ef.Name)
+				if ef.Name == "htnn-h-default.local" {
+					Expect(len(ef.Spec.ConfigPatches)).To(Equal(1))
+					cp := ef.Spec.ConfigPatches[0]
+					b, _ := cp.Patch.Value.MarshalJSON()
+					Expect(string(b)).To(ContainSubstring(`"hostName":"peter"`))
+
+					var info translation.Info
+					ann := ef.Annotations["htnn.mosn.io/info"]
+					json.Unmarshal([]byte(ann), &info)
+					Expect(info.HTTPFilterPolicies).To(ConsistOf([]string{"default/embedded-virtualservice-vs"}))
+				}
+			}
+			Expect(names).To(ConsistOf([]string{"htnn-http-filter", "htnn-h-default.local"}))
+
+			// update
+			virtualService.Spec.Hosts[0] = "other.local"
+			err := k8sClient.Update(ctx, virtualService)
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(func() bool {
+				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
+					return false
+				}
+				for _, ef := range envoyfilters.Items {
+					if ef.Name == "htnn-h-other.local" {
+						return true
+					}
+				}
+				return false
+			}, timeout, interval).Should(BeTrue())
+
+			// update annotation
+			virtualService.Annotations[model.AnnotationHTTPFilterPolicy] = `{"apiVersion":"htnn.mosn.io/v1","kind":"HTTPFilterPolicy","metadata":{"name":"policy","namespace":"default"},"spec":{"filters":{"demo":{"config":{"hostName":"Zhang"}}}}}`
+			err = k8sClient.Update(ctx, virtualService)
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(func() bool {
+				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
+					return false
+				}
+				for _, ef := range envoyfilters.Items {
+					if ef.Name == "htnn-h-other.local" {
+						cp := ef.Spec.ConfigPatches[0]
+						b, _ := cp.Patch.Value.MarshalJSON()
+						return strings.Contains(string(b), `"hostName":"Zhang"`)
+					}
+				}
+				return false
+			}, timeout, interval).Should(BeTrue())
+
+			// delete
+			Expect(k8sClient.Delete(ctx, virtualService)).Should(Succeed())
+			Eventually(func() bool {
+				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
+					return false
+				}
+				for _, ef := range envoyfilters.Items {
+					if ef.Name == "htnn-h-other.local" {
+						return false
+					}
+				}
+				return true
+			}, timeout, interval).Should(BeTrue())
+		})
+
+		It("deal with embedded HTTPFilterPolicy with SubPolicies", func() {
+			ctx := context.Background()
+			input := []map[string]interface{}{}
+			mustReadHTTPFilterPolicy("virtualservice_embeded_hfp_with_subpolicies", &input)
+
+			for _, in := range input {
+				obj := pkg.MapToObj(in)
+				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
+			}
+
+			var envoyfilters istiov1a3.EnvoyFilterList
+			Eventually(func() bool {
+				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
+					return false
+				}
+				return len(envoyfilters.Items) == 2
+			}, timeout, interval).Should(BeTrue())
+
+			names := []string{}
+			for _, ef := range envoyfilters.Items {
+				names = append(names, ef.Name)
+				if ef.Name == "htnn-h-default.local" {
+					Expect(len(ef.Spec.ConfigPatches)).To(Equal(1))
+					cp := ef.Spec.ConfigPatches[0]
+					b, _ := cp.Patch.Value.MarshalJSON()
+					Expect(string(b)).To(ContainSubstring(`"hostName":"kate"`))
+				}
+			}
+			Expect(names).To(ConsistOf([]string{"htnn-http-filter", "htnn-h-default.local"}))
+		})
+
 	})
 
 	var (
@@ -670,6 +794,16 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 
 	Context("When reconciling HTTPFilterPolicy with HTTPRoute", func() {
 		BeforeEach(func() {
+			// Clean up the resources created by previous tests. We don't use AfterEach
+			// in the previous test so we can check the resources when we only run the specific
+			// test after the test is finished.
+			var virtualservices istiov1b1.VirtualServiceList
+			if err := k8sClient.List(ctx, &virtualservices); err == nil {
+				for _, e := range virtualservices.Items {
+					pkg.DeleteK8sResource(ctx, k8sClient, e)
+				}
+			}
+
 			var policies mosniov1.HTTPFilterPolicyList
 			if err := k8sClient.List(ctx, &policies); err == nil {
 				for _, e := range policies.Items {

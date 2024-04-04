@@ -48,6 +48,8 @@ func UpdateConsumers(value *structpb.Struct) {
 			currValue, ok := currIdx[name]
 			if !ok || currValue.generation != v {
 				s := fields["d"].GetStringValue()
+				api.LogInfof("receive consumer configuration: %s", s)
+
 				var c Consumer
 				err := c.Unmarshal(s)
 				if err != nil {

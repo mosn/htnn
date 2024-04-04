@@ -45,27 +45,29 @@ func ValidateHTTPFilterPolicyStrictly(policy *HTTPFilterPolicy) error {
 
 func validateHTTPFilterPolicy(policy *HTTPFilterPolicy, strict bool) error {
 	ref := policy.Spec.TargetRef
-	if ref.Namespace != nil {
-		namespace := string(*ref.Namespace)
-		if namespace != policy.Namespace {
-			return errors.New("namespace in TargetRef doesn't match HTTPFilterPolicy's namespace")
+	if ref != nil {
+		if ref.Namespace != nil {
+			namespace := string(*ref.Namespace)
+			if namespace != policy.Namespace {
+				return errors.New("namespace in TargetRef doesn't match HTTPFilterPolicy's namespace")
+			}
 		}
-	}
 
-	if ref.SectionName != nil {
-		if len(policy.Spec.SubPolicies) > 0 {
-			return errors.New("targetRef.SectionName and SubPolicies can not be used together")
+		if ref.SectionName != nil {
+			if len(policy.Spec.SubPolicies) > 0 {
+				return errors.New("targetRef.SectionName and SubPolicies can not be used together")
+			}
 		}
-	}
 
-	validTarget := false
-	if ref.Group == "networking.istio.io" && ref.Kind == "VirtualService" {
-		validTarget = true
-	} else if ref.Group == "gateway.networking.k8s.io" && ref.Kind == "HTTPRoute" {
-		validTarget = true
-	}
-	if !validTarget {
-		return errors.New("unsupported targetRef.group or targetRef.kind")
+		validTarget := false
+		if ref.Group == "networking.istio.io" && ref.Kind == "VirtualService" {
+			validTarget = true
+		} else if ref.Group == "gateway.networking.k8s.io" && ref.Kind == "HTTPRoute" {
+			validTarget = true
+		}
+		if !validTarget {
+			return errors.New("unsupported targetRef.group or targetRef.kind")
+		}
 	}
 
 	for name, filter := range policy.Spec.Filters {

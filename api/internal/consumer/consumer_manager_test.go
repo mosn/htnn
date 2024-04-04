@@ -22,6 +22,7 @@ import (
 
 	"mosn.io/htnn/api/pkg/consumer/model"
 	"mosn.io/htnn/api/pkg/plugins"
+	_ "mosn.io/htnn/api/plugins/tests/pkg/envoy" // for log implementation
 )
 
 type consumerTest struct {

@@ -47,17 +47,17 @@ func lintSite() error {
 			return nil
 		}
 
-		data, err := os.ReadFile(path)
-		if err != nil {
-			return err
-		}
-
 		ext := filepath.Ext(path)
 		if ext != ".html" && ext != ".md" {
 			return fmt.Errorf("file %s has unexpected extension", path)
 		}
 
 		if ext == ".md" {
+			data, err := os.ReadFile(path)
+			if err != nil {
+				return err
+			}
+
 			if !bytes.HasPrefix(data, []byte("---")) {
 				return fmt.Errorf("header is missing in %s", path)
 			}

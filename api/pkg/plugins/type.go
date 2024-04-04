@@ -30,6 +30,27 @@ const (
 	TypeGeneral
 )
 
+func (p PluginType) String() string {
+	switch p {
+	case TypeSecurity:
+		return "Security"
+	case TypeAuthn:
+		return "Authn"
+	case TypeAuthz:
+		return "Authz"
+	case TypeTraffic:
+		return "Traffic"
+	case TypeTransform:
+		return "Transform"
+	case TypeObservability:
+		return "Observability"
+	case TypeGeneral:
+		return "General"
+	default:
+		return "Unknown"
+	}
+}
+
 // PluginOrder is used by the control plane to specify the order of the plugins, especially during merging.
 // There is always a requirement to specify the order by users.
 // For now, we just provide a default order in plugins. Therefore, users don't need to manually configure the order.
@@ -60,6 +81,33 @@ const (
 	// Last position. It's reserved for Native plugins.
 	OrderPositionInner
 )
+
+func (p PluginOrderPosition) String() string {
+	switch p {
+	case OrderPositionOuter:
+		return "Outer"
+	case OrderPositionAccess:
+		return "Access"
+	case OrderPositionAuthn:
+		return "Authn"
+	case OrderPositionAuthz:
+		return "Authz"
+	case OrderPositionTraffic:
+		return "Traffic"
+	case OrderPositionTransform:
+		return "Transform"
+	case OrderPositionUnspecified:
+		return "Unspecified"
+	case OrderPositionBeforeUpstream:
+		return "Before Upstream"
+	case OrderPositionStats:
+		return "Stats"
+	case OrderPositionInner:
+		return "Inner"
+	default:
+		return "Unknown"
+	}
+}
 
 type PluginOrderOperation int
 

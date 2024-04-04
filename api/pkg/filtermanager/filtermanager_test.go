@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"sync"
 	"testing"
 
 	"github.com/agiledragon/gomonkey/v2"
@@ -365,7 +366,6 @@ func TestSkipMethodWhenThereAreMultiFilters(t *testing.T) {
 }
 
 func TestFiltersFromConsumer(t *testing.T) {
-	cb := envoy.NewCAPIFilterCallbackHandler()
 	config := initFilterManagerConfig("ns")
 	config.consumerFiltersEndAt = 1
 
@@ -406,29 +406,38 @@ func TestFiltersFromConsumer(t *testing.T) {
 			},
 		},
 	}
+
+	var wg sync.WaitGroup
+	wg.Add(20)
 	for i := 0; i < 20; i++ {
-		m := FilterManagerFactory(config)(cb).(*filterManager)
-		assert.Equal(t, true, m.canSkipOnLog)
-		assert.Equal(t, 1, len(m.filters))
-		h := http.Header{}
-		idx := i % 10
-		h.Add("consumer", strconv.Itoa(idx))
-		hdr := envoy.NewRequestHeaderMap(h)
-		m.DecodeHeaders(hdr, true)
-		cb.WaitContinued()
-		if idx%2 == 0 {
-			assert.Equal(t, false, m.canSkipOnLog)
-			assert.Equal(t, 2, len(m.filters))
-		} else {
+		go func(i int) {
+			cb := envoy.NewCAPIFilterCallbackHandler()
+			m := FilterManagerFactory(config)(cb).(*filterManager)
 			assert.Equal(t, true, m.canSkipOnLog)
 			assert.Equal(t, 1, len(m.filters))
-		}
+			h := http.Header{}
+			idx := i % 10
+			h.Add("consumer", strconv.Itoa(idx))
+			hdr := envoy.NewRequestHeaderMap(h)
+			m.DecodeHeaders(hdr, true)
+			cb.WaitContinued()
+			if idx%2 == 0 {
+				assert.Equal(t, false, m.canSkipOnLog)
+				assert.Equal(t, 2, len(m.filters))
+			} else {
+				assert.Equal(t, true, m.canSkipOnLog)
+				assert.Equal(t, 1, len(m.filters))
+			}
 
-		_, ok := hdr.Get("x-htnn-route")
-		assert.False(t, ok)
-		_, ok = hdr.Get(fmt.Sprintf("x-htnn-consumer-%d", idx))
-		assert.True(t, ok)
+			_, ok := hdr.Get("x-htnn-route")
+			assert.False(t, ok)
+			_, ok = hdr.Get(fmt.Sprintf("x-htnn-consumer-%d", idx))
+			assert.True(t, ok)
+
+			wg.Done()
+		}(i)
 	}
+	wg.Wait()
 }
 
 func setPluginStateFilterFactory(c interface{}, callbacks api.FilterCallbackHandler) api.Filter {
