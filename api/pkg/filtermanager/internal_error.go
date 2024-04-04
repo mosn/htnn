@@ -22,16 +22,25 @@ import (
 
 type internalErrorFilter struct {
 	api.PassThroughFilter
+
+	plugin string
+	err    error
 }
 
 func (f *internalErrorFilter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {
+	api.LogErrorf("error in plugin %s: %s", f.plugin, f.err)
 	return &api.LocalResponse{
 		Code: 500,
 	}
 }
 
-func InternalErrorFactory(interface{}, api.FilterCallbackHandler) api.Filter {
-	return &internalErrorFilter{}
+func NewInternalErrorFactory(plugin string, err error) api.FilterFactory {
+	return func(interface{}, api.FilterCallbackHandler) api.Filter {
+		return &internalErrorFilter{
+			plugin: plugin,
+			err:    err,
+		}
+	}
 }
 
 type internalErrorFilterForCAPI struct {

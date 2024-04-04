@@ -24,7 +24,7 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 
 	"mosn.io/htnn/api/pkg/filtermanager/api"
-	_ "mosn.io/htnn/api/plugins/tests/pkg/envoy"
+	_ "mosn.io/htnn/api/plugins/tests/pkg/envoy" // for log implementation
 )
 
 func TestIterateHttpPlugin(t *testing.T) {
@@ -85,7 +85,7 @@ func TestParse(t *testing.T) {
 				defer cln()
 			}
 
-			res, err := cp.Parse(c.input, nil)
+			res, err := cp.Parse(c.input)
 			if c.wantErr {
 				assert.NotNil(t, err)
 			} else {

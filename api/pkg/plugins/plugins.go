@@ -35,7 +35,7 @@ var (
 
 // Here we introduce extra struct to avoid cyclic import between pkg/filtermanager and pkg/plugins
 type FilterConfigParser interface {
-	Parse(input interface{}, callbacks api.ConfigCallbackHandler) (interface{}, error)
+	Parse(input interface{}) (interface{}, error)
 	Merge(parentConfig interface{}, childConfig interface{}) interface{}
 }
 
@@ -140,7 +140,7 @@ func NewPluginConfigParser(parser GoPlugin) *PluginConfigParser {
 	}
 }
 
-func (cp *PluginConfigParser) Parse(any interface{}, callbacks api.ConfigCallbackHandler) (res interface{}, err error) {
+func (cp *PluginConfigParser) Parse(any interface{}) (res interface{}, err error) {
 	defer func() {
 		if p := recover(); p != nil {
 			api.LogErrorf("panic: %v\n%s", p, debug.Stack())
@@ -166,12 +166,6 @@ func (cp *PluginConfigParser) Parse(any interface{}, callbacks api.ConfigCallbac
 		return nil, err
 	}
 
-	if initer, ok := conf.(Initer); ok {
-		err = initer.Init(callbacks)
-		if err != nil {
-			return nil, err
-		}
-	}
 	return conf, nil
 }
 
