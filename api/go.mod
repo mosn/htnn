@@ -16,7 +16,7 @@ module mosn.io/htnn/api
 
 // This module puts the filtermanager and the API and test framework which can be used in the plugins.
 
-go 1.21.5
+go 1.21
 
 require (
 	github.com/agiledragon/gomonkey/v2 v2.11.0
