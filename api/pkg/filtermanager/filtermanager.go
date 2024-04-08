@@ -109,6 +109,9 @@ func (p *FilterManagerConfigParser) Parse(any *anypb.Any, callbacks capi.ConfigC
 		return nil, err
 	}
 
+	// TODO: figure out a way to identify what the config is belonged to, like using the route name
+	api.LogInfof("receive filtermanager config: %s", string(data))
+
 	fmConfig := &FilterManagerConfig{}
 	if err := json.Unmarshal(data, fmConfig); err != nil {
 		return nil, err
@@ -402,6 +405,10 @@ func newSkipMethodsMap() map[string]bool {
 	}
 }
 
+func needLogExecution() bool {
+	return api.GetLogLevel() <= api.LogLevelDebug
+}
+
 func FilterManagerFactory(c interface{}) capi.StreamFilterFactory {
 	conf := c.(*filterManagerConfig)
 	parsedConfig := conf.parsed
@@ -460,8 +467,8 @@ func FilterManagerFactory(c interface{}) capi.StreamFilterFactory {
 				// is expensive and not necessary in most of time.
 			}
 
-			if api.GetLogLevel() <= api.LogLevelDebug {
-				filters[i] = model.NewFilterWrapper(fc.Name, NewLogExecutionFilter(fc.Name, f))
+			if needLogExecution() {
+				filters[i] = model.NewFilterWrapper(fc.Name, NewLogExecutionFilter(fc.Name, f, fm.callbacks))
 			} else {
 				filters[i] = model.NewFilterWrapper(fc.Name, f)
 			}
@@ -640,9 +647,15 @@ func (m *filterManager) DecodeHeaders(headers capi.RequestHeaderMap, endStream b
 							canSkipMethod[meth] = canSkipMethod[meth] && !overridden
 						}
 					}
-
 					c.CanSkipMethod = canSkipMethod
 				})
+
+				if needLogExecution() {
+					for _, fw := range filterWrappers {
+						f := fw.Filter
+						fw.Filter = NewLogExecutionFilter(fw.Name, f, m.callbacks)
+					}
+				}
 
 				canSkipMethod := c.CanSkipMethod
 				m.canSkipDecodeData = m.canSkipDecodeData && canSkipMethod["DecodeData"] && canSkipMethod["DecodeRequest"]

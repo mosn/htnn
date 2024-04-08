@@ -20,58 +20,72 @@ import (
 
 type logExecutionFilter struct {
 	// Don't inherit the PassThroughFilter
-	name     string
-	internal api.Filter
+	name      string
+	internal  api.Filter
+	callbacks api.FilterCallbackHandler
 }
 
-func NewLogExecutionFilter(name string, internal api.Filter) api.Filter {
+func NewLogExecutionFilter(name string, internal api.Filter, callbacks api.FilterCallbackHandler) api.Filter {
 	return &logExecutionFilter{
-		name:     name,
-		internal: internal,
+		name:      name,
+		internal:  internal,
+		callbacks: callbacks,
 	}
 }
 
+func (f *logExecutionFilter) id() string {
+	name := f.callbacks.StreamInfo().GetRouteName()
+	if name != "" {
+		return "route " + name
+	}
+	vc, ok := f.callbacks.StreamInfo().VirtualClusterName()
+	if ok {
+		return "virtual cluster " + vc
+	}
+	return "filter chain " + f.callbacks.StreamInfo().FilterChainName()
+}
+
 func (f *logExecutionFilter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {
-	api.LogDebugf("run plugin %s, method: DecodeHeaders", f.name)
+	api.LogDebugf("%s run plugin %s, method: DecodeHeaders", f.id(), f.name)
 	return f.internal.DecodeHeaders(headers, endStream)
 }
 
 func (f *logExecutionFilter) DecodeData(data api.BufferInstance, endStream bool) api.ResultAction {
-	api.LogDebugf("run plugin %s, method: DecodeData", f.name)
+	api.LogDebugf("%s run plugin %s, method: DecodeData", f.id(), f.name)
 	return f.internal.DecodeData(data, endStream)
 }
 
 func (f *logExecutionFilter) DecodeTrailers(trailers api.RequestTrailerMap) api.ResultAction {
-	api.LogDebugf("run plugin %s, method: DecodeTrailers", f.name)
+	api.LogDebugf("%s run plugin %s, method: DecodeTrailers", f.id(), f.name)
 	return f.internal.DecodeTrailers(trailers)
 }
 
 func (f *logExecutionFilter) EncodeHeaders(headers api.ResponseHeaderMap, endStream bool) api.ResultAction {
-	api.LogDebugf("run plugin %s, method: EncodeHeaders", f.name)
+	api.LogDebugf("%s run plugin %s, method: EncodeHeaders", f.id(), f.name)
 	return f.internal.EncodeHeaders(headers, endStream)
 }
 
 func (f *logExecutionFilter) EncodeData(data api.BufferInstance, endStream bool) api.ResultAction {
-	api.LogDebugf("run plugin %s, method: EncodeData", f.name)
+	api.LogDebugf("%s run plugin %s, method: EncodeData", f.id(), f.name)
 	return f.internal.EncodeData(data, endStream)
 }
 
 func (f *logExecutionFilter) EncodeTrailers(trailers api.ResponseTrailerMap) api.ResultAction {
-	api.LogDebugf("run plugin %s, method: EncodeTrailers", f.name)
+	api.LogDebugf("%s run plugin %s, method: EncodeTrailers", f.id(), f.name)
 	return f.internal.EncodeTrailers(trailers)
 }
 
 func (f *logExecutionFilter) OnLog() {
-	api.LogDebugf("run plugin %s, method: OnLog", f.name)
+	api.LogDebugf("%s run plugin %s, method: OnLog", f.id(), f.name)
 	f.internal.OnLog()
 }
 
 func (f *logExecutionFilter) DecodeRequest(headers api.RequestHeaderMap, data api.BufferInstance, trailers api.RequestTrailerMap) api.ResultAction {
-	api.LogDebugf("run plugin %s, method: DecodeRequest", f.name)
+	api.LogDebugf("%s run plugin %s, method: DecodeRequest", f.id(), f.name)
 	return f.internal.DecodeRequest(headers, data, trailers)
 }
 
 func (f *logExecutionFilter) EncodeResponse(headers api.ResponseHeaderMap, data api.BufferInstance, trailers api.ResponseTrailerMap) api.ResultAction {
-	api.LogDebugf("run plugin %s, method: EncodeResponse", f.name)
+	api.LogDebugf("%s run plugin %s, method: EncodeResponse", f.id(), f.name)
 	return f.internal.EncodeResponse(headers, data, trailers)
 }

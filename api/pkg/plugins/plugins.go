@@ -70,6 +70,11 @@ const (
 )
 
 func RegisterHttpPluginType(name string, plugin Plugin) {
+	if _, ok := httpPluginTypes[name]; !ok {
+		// As RegisterHttpPluginType also calls RegisterHttpPluginType, we only log for the first time.
+		// Otherwise, we will log twice for the plugins loaded in the data plane.
+		logger.Info("register plugin type", "name", name)
+	}
 	// override plugin is allowed so that we can patch plugin with bugfix if upgrading
 	// the whole htnn is not available
 	httpPluginTypes[name] = plugin
@@ -115,7 +120,7 @@ func RegisterHttpPlugin(name string, plugin Plugin) {
 	httpPlugins[name] = plugin
 
 	// We don't force developer to divide their plugin into two parts for better DX.
-	httpPluginTypes[name] = plugin
+	RegisterHttpPluginType(name, plugin)
 }
 
 func LoadHttpPlugin(name string) Plugin {
