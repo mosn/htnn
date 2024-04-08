@@ -76,7 +76,7 @@ func TestTranslate(t *testing.T) {
 			input := &testInput{}
 			mustUnmarshal(t, inputFile, input)
 
-			s := NewInitState(nil)
+			s := NewInitState()
 
 			// set up resources
 			type gwapiWrapper struct {
@@ -212,7 +212,7 @@ func TestPlugins(t *testing.T) {
 			var hfp mosniov1.HTTPFilterPolicy
 			mustUnmarshal(t, inputFile, &hfp)
 
-			s := NewInitState(nil)
+			s := NewInitState()
 			s.AddPolicyForVirtualService(&hfp, vs, []*istiov1b1.Gateway{gw})
 
 			fs, err := s.Process(context.Background())

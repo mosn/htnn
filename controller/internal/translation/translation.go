@@ -20,19 +20,11 @@ import (
 	"slices"
 	"sort"
 
-	"github.com/go-logr/logr"
-
 	mosniov1 "mosn.io/htnn/types/apis/v1"
 )
 
 type Ctx struct {
 	context.Context
-
-	logger *logr.Logger
-}
-
-func (c *Ctx) Logger() *logr.Logger {
-	return c.logger
 }
 
 type Info struct {

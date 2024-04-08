@@ -19,13 +19,13 @@ import (
 	"net"
 	"strings"
 
-	"github.com/go-logr/logr"
 	istiov1b1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	"mosn.io/htnn/controller/internal/log"
 	"mosn.io/htnn/controller/internal/model"
 )
 
@@ -116,7 +116,7 @@ func buildVirtualHostsWithK8sGw(host string, ls *gwapiv1.Listener, nsName, gwNsN
 	return vhs
 }
 
-func AllowRoute(logger *logr.Logger, cond *gwapiv1.AllowedRoutes, route *gwapiv1.HTTPRoute, gwNsName *types.NamespacedName) bool {
+func AllowRoute(cond *gwapiv1.AllowedRoutes, route *gwapiv1.HTTPRoute, gwNsName *types.NamespacedName) bool {
 	if cond == nil {
 		return true
 	}
@@ -149,7 +149,7 @@ func AllowRoute(logger *logr.Logger, cond *gwapiv1.AllowedRoutes, route *gwapiv1
 		if from == gwapiv1.NamespacesFromSelector && nsCond.Selector != nil {
 			sel, err := metav1.LabelSelectorAsSelector(nsCond.Selector)
 			if err != nil {
-				logger.Error(err, "failed to convert selector", "selector", nsCond.Selector)
+				log.Errorf("failed to convert selector, err: %v, selector: %v", err, nsCond.Selector)
 				return false
 			}
 			if !sel.Matches(labels.Set(route.Labels)) {
@@ -187,8 +187,8 @@ func toDataPlaneState(ctx *Ctx, state *InitState) (*FinalState, error) {
 			vhs := buildVirtualHostsWithIstioGw(hostName, routeNsName, gws)
 			if len(vhs) == 0 {
 				// maybe a host from an unsupported gateway which is referenced as one of the Hosts
-				ctx.logger.Info("virtual host not found, skipped", "hostname", hostName,
-					"virtualservice", id, "gateways", gws)
+				log.Infof("virtual host not found, skipped, hostname: %s, VirtualService: %s, gateways: %v", hostName,
+					id, gws)
 				continue
 			}
 			for _, vh := range vhs {
@@ -246,7 +246,7 @@ func toDataPlaneState(ctx *Ctx, state *InitState) (*FinalState, error) {
 					continue
 				}
 
-				if !AllowRoute(ctx.logger, ls.AllowedRoutes, route.HTTPRoute, gwNsName) {
+				if !AllowRoute(ls.AllowedRoutes, route.HTTPRoute, gwNsName) {
 					continue
 				}
 

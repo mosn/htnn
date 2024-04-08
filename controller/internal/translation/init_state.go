@@ -18,7 +18,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/go-logr/logr"
 	istiov1b1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -42,16 +41,12 @@ type HTTPRoutePolicies struct {
 type InitState struct {
 	VirtualServicePolicies map[types.NamespacedName]*VirtualServicePolicies
 	HTTPRoutePolicies      map[types.NamespacedName]*HTTPRoutePolicies
-
-	logger *logr.Logger
 }
 
-func NewInitState(logger *logr.Logger) *InitState {
+func NewInitState() *InitState {
 	return &InitState{
 		VirtualServicePolicies: make(map[types.NamespacedName]*VirtualServicePolicies),
 		HTTPRoutePolicies:      make(map[types.NamespacedName]*HTTPRoutePolicies),
-
-		logger: logger,
 	}
 }
 
@@ -170,7 +165,6 @@ func (s *InitState) Process(original_ctx context.Context) (*FinalState, error) {
 	// InitState -> DataPlaneState -> MergedState -> FinalState
 	ctx := &Ctx{
 		Context: original_ctx,
-		logger:  s.logger,
 	}
 	return toDataPlaneState(ctx, s)
 }
