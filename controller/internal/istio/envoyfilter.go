@@ -204,7 +204,8 @@ func GenerateConsumers(consumers map[string]interface{}) *istiov1a3.EnvoyFilter 
 					Patch: &istioapi.EnvoyFilter_Patch{
 						Operation: istioapi.EnvoyFilter_Patch_ADD,
 						Value: MustNewStruct(map[string]interface{}{
-							"name": ECDSConsumerName,
+							"name":     ECDSConsumerName,
+							"disabled": true,
 							"typed_config": map[string]interface{}{
 								"@type":        "type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.Config",
 								"library_id":   "cm",
