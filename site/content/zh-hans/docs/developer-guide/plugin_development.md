@@ -12,7 +12,7 @@ HTNN 的插件分成两种：Go 插件和 Native 插件。Native 插件在运行
 2. 思考配置并将其写入 `./plugins/$your_plugin/config.proto`。然后运行 `make gen-proto`。`proto` 文件使用 [proto-gen-valdate](https://github.com/bufbuild/protoc-gen-validate?tab=readme-ov-file#constraint-rules) 定义验证。插件名必须使用驼峰式命名法，如 `keyAuth`。配置字段必须使用蛇形命名法，如 `connect_timeout`。枚举值必须使用大写蛇形命名法，如 `HEADER`。详细信息请参见[官方 protobuf 风格指南](https://protobuf.dev/programming-guides/style/)。
 3. 参考同类型的插件，决定你的插件类型和顺序。
 4. 在 `./types/plugins/plugins.go` 中引入你的插件。
-5. 在 `./plugins/` 下创建一个目录，文件名必须和步骤一里面的名字一致。完成插件编写。不要忘记编写测试。如果您的插件简单，您可以仅编写集成测试。您可以以 `./plugins/demo` 为例。插件开发中涉及的 API 的文档位于这些 API 的注释当中。
+5. 在 `./plugins/plugins/` 下创建一个目录，文件名必须和步骤一里面的名字一致。完成插件编写。不要忘记编写测试。如果您的插件简单，您可以仅编写集成测试。您可以以 `./plugins/plugins/demo` 为例。插件开发中涉及的 API 的文档位于这些 API 的注释当中。
 6. 在 `site/content/$your_language/docs/reference/plugins/$your_plugin.md` 中添加插件文档。您可以选择使用简体中文或英文编写文档，这取决于哪种是您擅长的语言。我们有 [工具](https://github.com/mosn/htnn/tree/main/site#cmdtranslator) 可以将其翻译成其他语言。
 7. 在 `./plugins/plugins.go` 中引入你的插件。前往目录 `./plugins`，运行 `make build-so`。插件将被编译入当前目录下的 `libgolang.so`。
 8. 在 `./plugins/tests/integration/` 中添加集成测试。有关如何运行集成测试，请阅读[插件集成测试框架](../plugin_integration_test_framework)。
