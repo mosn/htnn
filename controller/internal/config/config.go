@@ -22,6 +22,20 @@ import (
 	"mosn.io/htnn/controller/internal/log"
 )
 
+func updateStringIfSet(vp *viper.Viper, key string, item *string) {
+	if vp.IsSet(key) {
+		*item = vp.GetString(key)
+		return
+	}
+}
+
+func updateBoolIfSet(vp *viper.Viper, key string, item *bool) {
+	if vp.IsSet(key) {
+		*item = vp.GetBool(key)
+		return
+	}
+}
+
 var goSoPath = "/etc/libgolang.so"
 
 func GoSoPath() string {
@@ -34,16 +48,22 @@ func RootNamespace() string {
 	return rootNamespace
 }
 
-var enableWebhooks = true
+var enableWebhooks = false
 
 func EnableWebhooks() bool {
 	return enableWebhooks
 }
 
-var enableGatewayAPI = false
+var enableGatewayAPI = true
 
 func EnableGatewayAPI() bool {
 	return enableGatewayAPI
+}
+
+var enableEmbeddedMode = true
+
+func EnableEmbeddedMode() bool {
+	return enableEmbeddedMode
 }
 
 type envStringReplacer struct {
@@ -72,16 +92,10 @@ func Init() {
 		log.Infof("use config file [%s]", vp.ConfigFileUsed())
 	}
 
-	cfgGoSoPath := vp.GetString("envoy.go_so_path")
-	if cfgGoSoPath != "" {
-		goSoPath = cfgGoSoPath
-	}
+	updateStringIfSet(vp, "envoy.go_so_path", &goSoPath)
+	updateStringIfSet(vp, "istio.root_namespace", &rootNamespace)
 
-	cfgRootNamespace := vp.GetString("istio.root_namespace")
-	if cfgRootNamespace != "" {
-		rootNamespace = cfgRootNamespace
-	}
-
-	enableWebhooks = vp.GetBool("enable_webhooks")
-	enableGatewayAPI = vp.GetBool("enable_gateway_api")
+	updateBoolIfSet(vp, "enable_webhooks", &enableWebhooks)
+	updateBoolIfSet(vp, "enable_gateway_api", &enableGatewayAPI)
+	updateBoolIfSet(vp, "enable_embedded_mode", &enableEmbeddedMode)
 }

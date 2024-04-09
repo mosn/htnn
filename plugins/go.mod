@@ -21,7 +21,7 @@ go 1.21.5
 require (
 	github.com/agiledragon/gomonkey/v2 v2.11.0
 	github.com/avast/retry-go v3.0.0+incompatible
-	github.com/casbin/casbin/v2 v2.86.0
+	github.com/casbin/casbin/v2 v2.87.1
 	github.com/coreos/go-oidc/v3 v3.10.0
 	github.com/envoyproxy/envoy v1.29.2
 	github.com/google/cel-go v0.20.1
@@ -31,7 +31,7 @@ require (
 	github.com/open-policy-agent/opa v0.63.0
 	github.com/redis/go-redis/v9 v9.5.1
 	github.com/stretchr/testify v1.9.0
-	golang.org/x/oauth2 v0.18.0
+	golang.org/x/oauth2 v0.19.0
 	golang.org/x/time v0.5.0
 	google.golang.org/protobuf v1.33.0
 	mosn.io/htnn/api v0.2.1
@@ -83,7 +83,6 @@ require (
 	golang.org/x/sync v0.6.0 // indirect
 	golang.org/x/sys v0.18.0 // indirect
 	golang.org/x/text v0.14.0 // indirect
-	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240325203815-454cdb8f5daa // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240318140521-94a12d6c2237 // indirect
 	google.golang.org/grpc v1.62.1 // indirect

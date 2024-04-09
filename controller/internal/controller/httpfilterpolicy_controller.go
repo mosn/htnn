@@ -397,31 +397,33 @@ func (r *HTTPFilterPolicyReconciler) policyToTranslationState(ctx context.Contex
 		}
 	}
 
-	// Some of our users only use embedded policy, so it's fine to list all
-	var virtualServices istiov1b1.VirtualServiceList
-	if err := r.List(ctx, &virtualServices); err != nil {
-		return nil, fmt.Errorf("failed to list VirtualService: %w", err)
-	}
-	for _, vs := range virtualServices.Items {
-		ann := vs.GetAnnotations()
-		if ann == nil || ann[model.AnnotationHTTPFilterPolicy] == "" {
-			continue
+	if config.EnableEmbeddedMode() {
+		// Some of our users use embedded policy mostly, so it's fine to list all
+		var virtualServices istiov1b1.VirtualServiceList
+		if err := r.List(ctx, &virtualServices); err != nil {
+			return nil, fmt.Errorf("failed to list VirtualService: %w", err)
 		}
+		for _, vs := range virtualServices.Items {
+			ann := vs.GetAnnotations()
+			if ann == nil || ann[model.AnnotationHTTPFilterPolicy] == "" {
+				continue
+			}
 
-		var policy mosniov1.HTTPFilterPolicy
-		err := json.Unmarshal([]byte(ann[model.AnnotationHTTPFilterPolicy]), &policy)
-		if err != nil {
-			log.Errorf("failed to unmarshal policy out from VirtualService, err: %v, name: %s, namespace: %s", err, vs.Name, vs.Namespace)
-			continue
-		}
-		// We require the embedded policy to be valid, otherwise it's costly to validate and hard to report the error.
+			var policy mosniov1.HTTPFilterPolicy
+			err := json.Unmarshal([]byte(ann[model.AnnotationHTTPFilterPolicy]), &policy)
+			if err != nil {
+				log.Errorf("failed to unmarshal policy out from VirtualService, err: %v, name: %s, namespace: %s", err, vs.Name, vs.Namespace)
+				continue
+			}
+			// We require the embedded policy to be valid, otherwise it's costly to validate and hard to report the error.
 
-		policy.Namespace = vs.Namespace
-		// Name convention is "embedded-$kind-$name"
-		policy.Name = "embedded-virtualservice-" + vs.Name
-		err = r.resolveWithVirtualService(ctx, vs, &policy, initState, istioGwIdx)
-		if err != nil {
-			return nil, err
+			policy.Namespace = vs.Namespace
+			// Name convention is "embedded-$kind-$name"
+			policy.Name = "embedded-virtualservice-" + vs.Name
+			err = r.resolveWithVirtualService(ctx, vs, &policy, initState, istioGwIdx)
+			if err != nil {
+				return nil, err
+			}
 		}
 	}
 
@@ -536,12 +538,14 @@ func (v *indexer) UpdateIndex(idx map[string][]*mosniov1.HTTPFilterPolicy) {
 }
 
 func (v *indexer) FindAffectedObjects(ctx context.Context, obj client.Object) []reconcile.Request {
-	ann := obj.GetAnnotations()
-	if ann != nil && ann[model.AnnotationHTTPFilterPolicy] != "" {
-		log.Infof("Target with embedded HTTPFilterPolicy changed, trigger reconciliation, kind: %s, namespace: %s, name: %s",
-			obj.GetObjectKind().GroupVersionKind().Kind,
-			obj.GetNamespace(), obj.GetName())
-		return triggerReconciliation()
+	if config.EnableEmbeddedMode() {
+		ann := obj.GetAnnotations()
+		if ann != nil && ann[model.AnnotationHTTPFilterPolicy] != "" {
+			log.Infof("Target with embedded HTTPFilterPolicy changed, trigger reconciliation, kind: %s, namespace: %s, name: %s",
+				obj.GetObjectKind().GroupVersionKind().Kind,
+				obj.GetNamespace(), obj.GetName())
+			return triggerReconciliation()
+		}
 	}
 
 	v.lock.RLock()
