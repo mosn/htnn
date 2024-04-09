@@ -25,7 +25,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-logr/logr"
 	"google.golang.org/protobuf/proto"
 	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	istiov1b1 "istio.io/client-go/pkg/apis/networking/v1beta1"
@@ -36,13 +35,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"mosn.io/htnn/controller/internal/config"
+	"mosn.io/htnn/controller/internal/log"
 	"mosn.io/htnn/controller/internal/metrics"
 	"mosn.io/htnn/controller/internal/model"
 	"mosn.io/htnn/controller/internal/translation"
@@ -80,12 +79,8 @@ type HTTPFilterPolicyReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.16.3/pkg/reconcile
 func (r *HTTPFilterPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	// the controller is run with MaxConcurrentReconciles == 1, so we don't need to worry about concurrent access.
-	logger := log.FromContext(ctx)
-	logger.Info("reconcile")
-
 	var policies mosniov1.HTTPFilterPolicyList
-	initState, err := r.policyToTranslationState(ctx, &logger, &policies)
+	initState, err := r.policyToTranslationState(ctx, &policies)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -98,7 +93,7 @@ func (r *HTTPFilterPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	processDurationInSecs := time.Since(start).Seconds()
 	metrics.HFPTranslateDurationObserver.Observe(processDurationInSecs)
 	if err != nil {
-		logger.Error(err, "failed to process state")
+		log.Errorf("failed to process state: %v", err)
 		// there is no retryable err during processing
 		return ctrl.Result{}, nil
 	}
@@ -107,7 +102,7 @@ func (r *HTTPFilterPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	// We can add a configured concurrency to write to API server in parallel, if
 	// the performance is not good. Note that the API server probably has rate limit.
 
-	err = r.translationStateToCustomResource(ctx, &logger, finalState)
+	err = r.translationStateToCustomResource(ctx, finalState)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -116,7 +111,7 @@ func (r *HTTPFilterPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	return ctrl.Result{}, err
 }
 
-func (r *HTTPFilterPolicyReconciler) resolveVirtualService(ctx context.Context, logger *logr.Logger,
+func (r *HTTPFilterPolicyReconciler) resolveVirtualService(ctx context.Context,
 	policy *mosniov1.HTTPFilterPolicy, initState *translation.InitState, gwIdx map[string][]*mosniov1.HTTPFilterPolicy) error {
 
 	ref := policy.Spec.TargetRef
@@ -134,7 +129,7 @@ func (r *HTTPFilterPolicyReconciler) resolveVirtualService(ctx context.Context, 
 
 	err = mosniov1.ValidateVirtualService(&virtualService)
 	if err != nil {
-		logger.Info("unsupported VirtualService", "name", virtualService.Name, "namespace", virtualService.Namespace, "reason", err.Error())
+		log.Infof("unsupported VirtualService, name: %s, namespace: %s, reason: %v", virtualService.Name, virtualService.Namespace, err.Error())
 		// treat invalid target resource as not found
 		policy.SetAccepted(gwapiv1a2.PolicyReasonTargetNotFound, err.Error())
 		return nil
@@ -156,10 +151,10 @@ func (r *HTTPFilterPolicyReconciler) resolveVirtualService(ctx context.Context, 
 		}
 	}
 
-	return r.resolveWithVirtualService(ctx, logger, &virtualService, policy, initState, gwIdx)
+	return r.resolveWithVirtualService(ctx, &virtualService, policy, initState, gwIdx)
 }
 
-func (r *HTTPFilterPolicyReconciler) resolveWithVirtualService(ctx context.Context, logger *logr.Logger,
+func (r *HTTPFilterPolicyReconciler) resolveWithVirtualService(ctx context.Context,
 	virtualService *istiov1b1.VirtualService, policy *mosniov1.HTTPFilterPolicy, initState *translation.InitState,
 	gwIdx map[string][]*mosniov1.HTTPFilterPolicy) error {
 
@@ -178,11 +173,11 @@ func (r *HTTPFilterPolicyReconciler) resolveWithVirtualService(ctx context.Conte
 		gws = make([]*istiov1b1.Gateway, 0, len(virtualService.Spec.Gateways))
 		for _, gw := range virtualService.Spec.Gateways {
 			if gw == "mesh" {
-				logger.Info("skip unsupported mesh gateway", "name", virtualService.Name, "namespace", virtualService.Namespace)
+				log.Infof("skip unsupported mesh gateway, name: %s, namespace: %s", virtualService.Name, virtualService.Namespace)
 				continue
 			}
 			if strings.Contains(gw, "/") {
-				logger.Info("skip gateway from other namespace", "name", virtualService.Name, "namespace", virtualService.Namespace, "gateway", gw)
+				log.Infof("skip gateway from other namespace, name: %s, namespace: %s, gateway: %s", virtualService.Name, virtualService.Namespace, gw)
 				continue
 			}
 
@@ -197,15 +192,14 @@ func (r *HTTPFilterPolicyReconciler) resolveWithVirtualService(ctx context.Conte
 				if !apierrors.IsNotFound(err) {
 					return err
 				}
-				logger.Info("gateway not found", "gateway", gw,
-					"name", virtualService.Name, "namespace", virtualService.Namespace)
+				log.Infof("gateway not found, name: %s, namespace: %s, gateway: %s", virtualService.Name, virtualService.Namespace, gw)
 				continue
 			}
 
 			err = mosniov1.ValidateGateway(&gateway)
 			if err != nil {
-				logger.Info("unsupported Gateway", "name", virtualService.Name, "namespace", virtualService.Namespace,
-					"gateway name", gateway.Name, "gateway namespace", gateway.Namespace, "reason", err.Error())
+				log.Infof("unsupported Gateway, name: %s, namespace: %s, gateway name: %s, gateway namespace: %s, reason: %v",
+					virtualService.Name, virtualService.Namespace, gateway.Name, gateway.Namespace, err)
 				continue
 			}
 
@@ -231,7 +225,7 @@ func (r *HTTPFilterPolicyReconciler) resolveWithVirtualService(ctx context.Conte
 	return nil
 }
 
-func (r *HTTPFilterPolicyReconciler) resolveHTTPRoute(ctx context.Context, logger *logr.Logger,
+func (r *HTTPFilterPolicyReconciler) resolveHTTPRoute(ctx context.Context,
 	policy *mosniov1.HTTPFilterPolicy, initState *translation.InitState, gwIdx map[string][]*mosniov1.HTTPFilterPolicy) error {
 
 	ref := policy.Spec.TargetRef
@@ -269,7 +263,7 @@ func (r *HTTPFilterPolicyReconciler) resolveHTTPRoute(ctx context.Context, logge
 				continue
 			}
 			if ref.Namespace != nil && *ref.Namespace != gwapiv1.Namespace(ns) {
-				logger.Info("skip gateway from other namespace", "name", route.Name, "namespace", route.Namespace, "gateway", ref)
+				log.Infof("skip gateway from other namespace, name: %s, namespace: %s, gateway: %v", route.Name, route.Namespace, ref)
 				continue
 			}
 
@@ -285,8 +279,7 @@ func (r *HTTPFilterPolicyReconciler) resolveHTTPRoute(ctx context.Context, logge
 				if !apierrors.IsNotFound(err) {
 					return err
 				}
-				logger.Info("gateway not found", "gateway", ref,
-					"name", route.Name, "namespace", route.Namespace)
+				log.Infof("gateway not found, name: %s, namespace: %s, gateway: %v", route.Name, route.Namespace, ref)
 				continue
 			}
 
@@ -302,7 +295,7 @@ func (r *HTTPFilterPolicyReconciler) resolveHTTPRoute(ctx context.Context, logge
 					continue
 				}
 
-				if !translation.AllowRoute(logger, ls.AllowedRoutes, &route, &gwNsName) {
+				if !translation.AllowRoute(ls.AllowedRoutes, &route, &gwNsName) {
 					continue
 				}
 
@@ -311,8 +304,8 @@ func (r *HTTPFilterPolicyReconciler) resolveHTTPRoute(ctx context.Context, logge
 			}
 
 			if !atLeastOneListenerMatched {
-				logger.Info("no matched listeners in gateway", "gateway", ref,
-					"name", route.Name, "namespace", route.Namespace, "listeners", gw.Spec.Listeners)
+				log.Infof("no matched listeners in gateway %v, name: %s, namespace: %s, listeners: %v", ref,
+					route.Name, route.Namespace, gw.Spec.Listeners)
 				continue
 			}
 
@@ -332,7 +325,7 @@ func (r *HTTPFilterPolicyReconciler) resolveHTTPRoute(ctx context.Context, logge
 	return nil
 }
 
-func (r *HTTPFilterPolicyReconciler) policyToTranslationState(ctx context.Context, logger *logr.Logger,
+func (r *HTTPFilterPolicyReconciler) policyToTranslationState(ctx context.Context,
 	policies *mosniov1.HTTPFilterPolicyList) (*translation.InitState, error) {
 
 	// For current implementation, let's rebuild the state each time to avoid complexity.
@@ -341,7 +334,7 @@ func (r *HTTPFilterPolicyReconciler) policyToTranslationState(ctx context.Contex
 		return nil, fmt.Errorf("failed to list HTTPFilterPolicy: %w", err)
 	}
 
-	initState := translation.NewInitState(logger)
+	initState := translation.NewInitState()
 	vsIdx := map[string][]*mosniov1.HTTPFilterPolicy{}
 	hrIdx := map[string][]*mosniov1.HTTPFilterPolicy{}
 	istioGwIdx := map[string][]*mosniov1.HTTPFilterPolicy{}
@@ -374,7 +367,7 @@ func (r *HTTPFilterPolicyReconciler) policyToTranslationState(ctx context.Contex
 		if policy.IsSpecChanged() {
 			err := mosniov1.ValidateHTTPFilterPolicy(policy)
 			if err != nil {
-				logger.Error(err, "invalid HTTPFilterPolicy", "name", policy.Name, "namespace", policy.Namespace)
+				log.Errorf("invalid HTTPFilterPolicy, err: %v, name: %s, namespace: %s", err, policy.Name, policy.Namespace)
 				// mark the policy as invalid
 				policy.SetAccepted(gwapiv1a2.PolicyReasonInvalid, err.Error())
 				continue
@@ -383,7 +376,7 @@ func (r *HTTPFilterPolicyReconciler) policyToTranslationState(ctx context.Contex
 				nsName.Namespace = string(*ref.Namespace)
 				if nsName.Namespace != policy.Namespace {
 					err := errors.New("namespace in TargetRef doesn't match HTTPFilterPolicy's namespace")
-					logger.Error(err, "invalid HTTPFilterPolicy", "name", policy.Name, "namespace", policy.Namespace)
+					log.Errorf("invalid HTTPFilterPolicy, err: %v, name: %s, namespace: %s", err, policy.Name, policy.Namespace)
 					policy.SetAccepted(gwapiv1a2.PolicyReasonInvalid, err.Error())
 					continue
 				}
@@ -395,9 +388,9 @@ func (r *HTTPFilterPolicyReconciler) policyToTranslationState(ctx context.Contex
 
 		var err error
 		if ref.Group == "networking.istio.io" && ref.Kind == "VirtualService" {
-			err = r.resolveVirtualService(ctx, logger, policy, initState, istioGwIdx)
+			err = r.resolveVirtualService(ctx, policy, initState, istioGwIdx)
 		} else if ref.Group == "gateway.networking.k8s.io" && ref.Kind == "HTTPRoute" {
-			err = r.resolveHTTPRoute(ctx, logger, policy, initState, k8sGwIdx)
+			err = r.resolveHTTPRoute(ctx, policy, initState, k8sGwIdx)
 		}
 		if err != nil {
 			return nil, err
@@ -419,7 +412,7 @@ func (r *HTTPFilterPolicyReconciler) policyToTranslationState(ctx context.Contex
 			var policy mosniov1.HTTPFilterPolicy
 			err := json.Unmarshal([]byte(ann[model.AnnotationHTTPFilterPolicy]), &policy)
 			if err != nil {
-				logger.Error(err, "failed to unmarshal policy out from VirtualService", "name", vs.Name, "namespace", vs.Namespace)
+				log.Errorf("failed to unmarshal policy out from VirtualService, err: %v, name: %s, namespace: %s", err, vs.Name, vs.Namespace)
 				continue
 			}
 			// We require the embedded policy to be valid, otherwise it's costly to validate and hard to report the error.
@@ -427,7 +420,7 @@ func (r *HTTPFilterPolicyReconciler) policyToTranslationState(ctx context.Contex
 			policy.Namespace = vs.Namespace
 			// Name convention is "embedded-$kind-$name"
 			policy.Name = "embedded-virtualservice-" + vs.Name
-			err = r.resolveWithVirtualService(ctx, logger, vs, &policy, initState, istioGwIdx)
+			err = r.resolveWithVirtualService(ctx, vs, &policy, initState, istioGwIdx)
 			if err != nil {
 				return nil, err
 			}
@@ -451,7 +444,7 @@ func fillEnvoyFilterMeta(ef *istiov1a3.EnvoyFilter) {
 	ef.Labels[model.LabelCreatedBy] = "HTTPFilterPolicy"
 }
 
-func (r *HTTPFilterPolicyReconciler) translationStateToCustomResource(ctx context.Context, logger *logr.Logger,
+func (r *HTTPFilterPolicyReconciler) translationStateToCustomResource(ctx context.Context,
 	finalState *translation.FinalState) error {
 
 	var envoyfilters istiov1a3.EnvoyFilterList
@@ -464,7 +457,7 @@ func (r *HTTPFilterPolicyReconciler) translationStateToCustomResource(ctx contex
 	preEnvoyFilterMap := make(map[string]*istiov1a3.EnvoyFilter, len(envoyfilters.Items))
 	for _, e := range envoyfilters.Items {
 		if _, ok := finalState.EnvoyFilters[e.Name]; !ok || e.Namespace != config.RootNamespace() {
-			logger.Info("delete EnvoyFilter", "name", e.Name, "namespace", e.Namespace)
+			log.Infof("delete EnvoyFilter, name: %s, namespace: %s", e.Name, e.Namespace)
 			if err := r.Delete(ctx, e); err != nil {
 				return fmt.Errorf("failed to delete EnvoyFilter: %w, namespacedName: %v",
 					err, types.NamespacedName{Name: e.Name, Namespace: e.Namespace})
@@ -477,7 +470,7 @@ func (r *HTTPFilterPolicyReconciler) translationStateToCustomResource(ctx contex
 	for _, ef := range finalState.EnvoyFilters {
 		envoyfilter, ok := preEnvoyFilterMap[ef.Name]
 		if !ok {
-			logger.Info("create EnvoyFilter", "name", ef.Name, "namespace", ef.Namespace)
+			log.Infof("create EnvoyFilter, name: %s, namespace: %s", ef.Name, ef.Namespace)
 			fillEnvoyFilterMeta(ef)
 
 			if err := r.Create(ctx, ef); err != nil {
@@ -490,7 +483,7 @@ func (r *HTTPFilterPolicyReconciler) translationStateToCustomResource(ctx contex
 				continue
 			}
 
-			logger.Info("update EnvoyFilter", "name", ef.Name, "namespace", ef.Namespace)
+			log.Infof("update EnvoyFilter, name: %s, namespace: %s", ef.Name, ef.Namespace)
 			fillEnvoyFilterMeta(ef)
 			// Address metadata.resourceVersion: Invalid value: 0x0 error
 			ef.SetResourceVersion(envoyfilter.ResourceVersion)
@@ -545,14 +538,12 @@ func (v *indexer) UpdateIndex(idx map[string][]*mosniov1.HTTPFilterPolicy) {
 }
 
 func (v *indexer) FindAffectedObjects(ctx context.Context, obj client.Object) []reconcile.Request {
-	logger := log.FromContext(ctx)
-
 	if config.EnableEmbeddedMode() {
 		ann := obj.GetAnnotations()
 		if ann != nil && ann[model.AnnotationHTTPFilterPolicy] != "" {
-			logger.Info("Target with embedded HTTPFilterPolicy changed, trigger reconciliation",
-				"kind", obj.GetObjectKind().GroupVersionKind().Kind,
-				"namespace", obj.GetNamespace(), "name", obj.GetName())
+			log.Infof("Target with embedded HTTPFilterPolicy changed, trigger reconciliation, kind: %s, namespace: %s, name: %s",
+				obj.GetObjectKind().GroupVersionKind().Kind,
+				obj.GetNamespace(), obj.GetName())
 			return triggerReconciliation()
 		}
 	}
@@ -574,8 +565,11 @@ func (v *indexer) FindAffectedObjects(ctx context.Context, obj client.Object) []
 		}
 		requests[i] = request
 	}
-	logger.Info("Target changed, trigger reconciliation", "kind", obj.GetObjectKind().GroupVersionKind().Kind,
-		"namespace", obj.GetNamespace(), "name", obj.GetName(), "requests", requests)
+
+	log.Infof("Target changed, trigger reconciliation, kind: %s, namespace: %s, name: %s",
+		obj.GetObjectKind().GroupVersionKind().Kind,
+		obj.GetNamespace(), obj.GetName())
+
 	return triggerReconciliation()
 }
 

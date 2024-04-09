@@ -21,12 +21,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestConvertAnyToStr(t *testing.T) {
+func TestDevLogConvertAnyToStr(t *testing.T) {
 	InitLogger("json")
-	patches := gomonkey.ApplyMethodFunc(logger, "Error", func(err error, msg string, keysAndValues ...any) {
+	patches := gomonkey.ApplyMethodFunc(devLogger, "Error", func(err error, msg string, keysAndValues ...any) {
 		assert.Equal(t, "1", msg)
 	})
-	patches.ApplyMethodFunc(logger, "Info", func(msg string, keysAndValues ...any) {
+	patches.ApplyMethodFunc(devLogger, "Info", func(msg string, keysAndValues ...any) {
 		assert.Equal(t, "1", msg)
 	})
 	defer patches.Reset()

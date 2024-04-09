@@ -14,51 +14,39 @@
 
 package log
 
-import (
-	"fmt"
+import "github.com/go-logr/logr"
 
-	"github.com/go-logr/logr"
-	"github.com/go-logr/zapr"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
-)
-
-var logger logr.Logger
-
-func InitLogger(enc string) {
-	cfg := zap.NewProductionConfig()
-	cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
-	cfg.Encoding = enc
-	zapLog, err := cfg.Build(
-		zap.WithCaller(false), // enable caller will make log nearly 10 times slow
-	)
-	if err != nil {
-		panic(fmt.Sprintf("failed to init logger: %v", err))
-	}
-
-	logger = zapr.NewLoggerWithOptions(zapLog)
+var logger CtrlLogger = &logrWrapper{
+	logger: logr.Logger{},
 }
 
-func Logger() logr.Logger {
-	return logger
+type CtrlLogger interface {
+	Error(msg any)
+	Errorf(format string, args ...any)
+	Info(msg any)
+	Infof(format string, args ...any)
+}
+
+func SetLogger(l CtrlLogger) {
+	logger = l
 }
 
 // Error outputs a message at error level.
 func Error(msg any) {
-	logger.Error(nil, fmt.Sprint(msg))
+	logger.Error(msg)
 }
 
 // Errorf uses fmt.Sprintf to construct and log a message at error level.
 func Errorf(format string, args ...any) {
-	logger.Error(nil, fmt.Sprintf(format, args...))
+	logger.Errorf(format, args...)
 }
 
 // Info outputs a message at info level.
 func Info(msg any) {
-	logger.Info(fmt.Sprint(msg))
+	logger.Info(msg)
 }
 
 // Infof uses fmt.Sprintf to construct and log a message at info level.
 func Infof(format string, args ...any) {
-	logger.Info(fmt.Sprintf(format, args...))
+	logger.Infof(format, args...)
 }
