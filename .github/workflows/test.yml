@@ -175,6 +175,10 @@ jobs:
       run: |
         make start-controller-service
 
+    - name: Ensure benchmark is runnable
+      run: |
+        ENABLE_PROFILE=true BENCHMARK_SCALE=10 make benchmark
+
     - name: Test
       run: make test
     - name: Upload artifact

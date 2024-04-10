@@ -59,10 +59,10 @@ func createResource(ctx context.Context, policy *mosniov1.HTTPFilterPolicy, virt
 	}
 
 	policy.Name = "policy-" + id + "-host"
-	policy.Spec.TargetRef = tr
+	policy.Spec.TargetRef = &tr
 	createEventually(ctx, policy.DeepCopy())
 	policy.Name = "policy-" + id + "-route"
-	policy.Spec.TargetRef = trRoute
+	policy.Spec.TargetRef = &trRoute
 	createEventually(ctx, policy.DeepCopy())
 
 	vs := virtualService.DeepCopy()
