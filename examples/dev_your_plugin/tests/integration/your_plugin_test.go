@@ -40,9 +40,8 @@ func TestYourPlugin(t *testing.T) {
 		expect func(t *testing.T, resp *http.Response)
 	}{
 		{
-			name: "happy path",
-			config: control_plane.NewSinglePluinConfig("your_plugin", map[string]interface{}{
-			}),
+			name:   "happy path",
+			config: control_plane.NewSinglePluinConfig("your_plugin", map[string]interface{}{}),
 			expect: func(t *testing.T, resp *http.Response) {
 				assert.Equal(t, "text/plain", resp.Header.Get("content-type"), resp)
 			},
@@ -58,4 +57,3 @@ func TestYourPlugin(t *testing.T) {
 		})
 	}
 }
-

@@ -28,6 +28,16 @@ PROTOC = protoc
 PROTO_FILES = $(call rwildcard,./,*.proto)
 GO_TARGETS = $(patsubst %.proto,%.pb.go,$(PROTO_FILES))
 
+MOUNT_GOMOD_CACHE = -v $(shell go env GOPATH):/go
+ifeq ($(IN_CI), true)
+	# Mount go mod cache in the CI environment will cause 'Permission denied' error
+	# when accessing files on host in later phase because the mounted directory will
+	# have files which is created by the root user in Docker.
+	# Run as low privilege user in the Docker doesn't
+	# work because we also need root to create /.cache in the Docker.
+	MOUNT_GOMOD_CACHE =
+endif
+
 .PHONY: dev-tools
 dev-tools:
 	@if ! docker images ${DEV_TOOLS_IMAGE} | grep dev-tools > /dev/null; then \
@@ -54,7 +64,7 @@ build-so-local:
 
 .PHONY: build-so
 build-so:
-	docker run --rm -v $(shell go env GOPATH):/go -v $(PWD):/go/src/${PROJECT_NAME} -w /go/src/${PROJECT_NAME} \
+	docker run --rm $(MOUNT_GOMOD_CACHE) -v $(PWD):/go/src/${PROJECT_NAME} -w /go/src/${PROJECT_NAME} \
 		-e GOPROXY \
 		${BUILD_IMAGE} \
 		make build-so-local
@@ -65,7 +75,7 @@ unit-test-local:
 
 .PHONY: unit-test
 unit-test:
-	docker run --rm -v $(shell go env GOPATH):/go -v $(PWD):/go/src/${PROJECT_NAME} -w /go/src/${PROJECT_NAME} \
+	docker run --rm $(MOUNT_GOMOD_CACHE) -v $(PWD):/go/src/${PROJECT_NAME} -w /go/src/${PROJECT_NAME} \
 		-e GOPROXY \
 		${BUILD_IMAGE} \
 		make unit-test-local
@@ -75,6 +85,7 @@ unit-test:
 # this module are always up-to-date.
 .PHONY: integration-test
 integration-test: build-so
+	mv $(TARGET_SO) ./tests/integration/
 	go test -v ./tests/integration/...
 
 .PHONY: run-plugin

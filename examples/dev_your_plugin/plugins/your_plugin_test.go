@@ -20,6 +20,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/encoding/protojson"
+
 	"mosn.io/htnn/api/pkg/filtermanager/api"
 	"mosn.io/htnn/api/plugins/tests/pkg/envoy"
 )
