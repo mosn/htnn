@@ -20,7 +20,7 @@ require (
 	github.com/envoyproxy/envoy v1.29.2
 	github.com/stretchr/testify v1.9.0
 	google.golang.org/protobuf v1.33.0
-	mosn.io/htnn/api v0.2.2-0.20240411025032-2df9bc02be0a
+	mosn.io/htnn/api v0.2.2-0.20240411084247-3ed33295ba57
 )
 
 require (

@@ -22,6 +22,7 @@ import (
 	"github.com/envoyproxy/envoy/contrib/golang/filters/http/source/go/pkg/http"
 
 	"mosn.io/htnn/api/pkg/filtermanager"
+	_ "mosn.io/htnn/api/plugins/tests/integration/data_plane" // for utility plugins provided in the test framework
 	_ "mosn.io/htnn/dev_your_plugin/plugins"
 )
 

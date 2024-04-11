@@ -80,12 +80,30 @@ unit-test:
 		${BUILD_IMAGE} \
 		make unit-test-local
 
+.PHONY: build-test-so-local
+build-test-so-local:
+	CGO_ENABLED=1 go build -tags so \
+		--buildmode=c-shared \
+		-cover -covermode=atomic -coverpkg=${PROJECT_NAME}/... \
+		-v -o ./tests/integration/${TARGET_SO} \
+		${PROJECT_NAME}/cmd/libgolang
+
+.PHONY: build-test-so
+build-test-so:
+	docker run --rm $(MOUNT_GOMOD_CACHE) -v $(PWD):/go/src/${PROJECT_NAME} -w /go/src/${PROJECT_NAME} \
+		-e GOPROXY \
+		${BUILD_IMAGE} \
+		make build-test-so-local
+
 # This task can only be run in the CI, because we have `go.work` in the root directory and this module
 # is not in it. We don't add this module to the `go.work` to ensure the `go.mod` and `go.sum` files in
 # this module are always up-to-date.
+# In the CI environment, we remove the `go.work`. If you want to run the integration test locally,
+# you can remove the `go.work` and run `make integration-test`, or copy this module to a directory
+# which doesn't have `go.work` in its ancestors.
 .PHONY: integration-test
-integration-test: build-so
-	mv $(TARGET_SO) ./tests/integration/
+integration-test: build-test-so
+	test -d /tmp/htnn_coverage && rm -rf /tmp/htnn_coverage || true
 	go test -v ./tests/integration/...
 
 .PHONY: run-plugin
