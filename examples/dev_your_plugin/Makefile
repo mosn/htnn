@@ -49,12 +49,33 @@ build-so-local:
 		-v -o ${TARGET_SO} \
 		${PROJECT_NAME}/cmd/libgolang
 
+# As the tasks below mount the GOPATH into the docker container, please make sure you don't have Go binary put into the GOPATH
+# which will override the one provides by the docker image.
+
 .PHONY: build-so
 build-so:
 	docker run --rm -v $(shell go env GOPATH):/go -v $(PWD):/go/src/${PROJECT_NAME} -w /go/src/${PROJECT_NAME} \
 		-e GOPROXY \
 		${BUILD_IMAGE} \
-		bash -c "git config --global --add safe.directory '*' && make build-so-local"
+		make build-so-local
+
+.PHONY: unit-test-local
+unit-test-local:
+	go test -v ./plugins/...
+
+.PHONY: unit-test
+unit-test:
+	docker run --rm -v $(shell go env GOPATH):/go -v $(PWD):/go/src/${PROJECT_NAME} -w /go/src/${PROJECT_NAME} \
+		-e GOPROXY \
+		${BUILD_IMAGE} \
+		make unit-test-local
+
+# This task can only be run in the CI, because we have `go.work` in the root directory and this module
+# is not in it. We don't add this module to the `go.work` to ensure the `go.mod` and `go.sum` files in
+# this module are always up-to-date.
+.PHONY: integration-test
+integration-test: build-so
+	go test -v ./tests/integration/...
 
 .PHONY: run-plugin
 run-plugin:
