@@ -161,15 +161,13 @@ func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 	}
 
 	pwd, _ := os.Getwd()
-	projectRoot := filepath.Join(pwd, "..", "..", "..")
 	cmdline := "docker run" +
 		" --name " + containerName +
 		" --network " + networkName +
 		" --user " + currentUser.Uid +
 		" --rm -t -v " +
 		cfgFile.Name() + ":/etc/envoy.yaml -v " +
-		projectRoot +
-		"/plugins/tests/integration/libgolang.so:/etc/libgolang.so" +
+		filepath.Join(pwd, "libgolang.so") + ":/etc/libgolang.so" +
 		" -v /tmp:/tmp" +
 		" -e GOCOVERDIR=" + coverDir +
 		" -p 10000:10000 -p 9998:9998 " + hostAddr + " " +
