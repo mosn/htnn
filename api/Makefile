@@ -40,7 +40,7 @@ build-test-so:
 		-w /go/src/${PROJECT_NAME}/api \
 		-e GOPROXY \
 		${BUILD_IMAGE} \
-		bash -c "git config --global --add safe.directory '*' && make build-test-so-local"
+		make build-test-so-local
 
 .PHONY: integration-test
 integration-test:

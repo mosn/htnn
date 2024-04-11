@@ -40,7 +40,7 @@ build-test-so:
 	docker run --rm ${MOUNT_GOMOD_CACHE} -v ${PROJECT_ROOT}:/go/src/${PROJECT_NAME} -w /go/src/${PROJECT_NAME}/plugins \
 		-e GOPROXY \
 		${BUILD_IMAGE} \
-		bash -c "git config --global --add safe.directory '*' && make build-test-so-local"
+		make build-test-so-local
 
 .PHONY: start-service
 start-service:
@@ -70,7 +70,7 @@ build-so:
 	docker run --rm ${MOUNT_GOMOD_CACHE} -v ${PROJECT_ROOT}:/go/src/${PROJECT_NAME} -w /go/src/${PROJECT_NAME}/plugins \
 		-e GOPROXY \
 		${BUILD_IMAGE} \
-		bash -c "git config --global --add safe.directory '*' && make build-so-local"
+		make build-so-local
 
 .PHONY: run-demo
 run-demo:
