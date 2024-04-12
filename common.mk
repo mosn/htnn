@@ -34,11 +34,14 @@ GIT_VERSION     = $(shell git log -1 --pretty=format:%h)
 
 MIN_K8S_VERSION = 1.26.0
 
+GO_PROD_MODULES = api types controller plugins
+GO_MODULES = $(GO_PROD_MODULES) e2e
+
 # Define a recursive wildcard function
 rwildcard=$(foreach d,$(wildcard $(addsuffix *,$(1))),$(call rwildcard,$d/,$(2))$(filter $(subst *,%,$(2)),$d))
 
 PROTOC = protoc
-PROTO_FILES = $(call rwildcard,./,*.proto)
+PROTO_FILES = $(call rwildcard,$(GO_MODULES),*.proto)
 GO_TARGETS = $(patsubst %.proto,%.pb.go,$(PROTO_FILES))
 
 TEST_OPTION ?= -gcflags="all=-N -l" -race -covermode=atomic -coverprofile=cover.out -coverpkg=${PROJECT_NAME}/...

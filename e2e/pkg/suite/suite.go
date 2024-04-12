@@ -89,6 +89,7 @@ func (suite *Suite) Run(t *testing.T) {
 					t.Fail()
 				}
 			}()
+			t.Logf("CleanUp test %q at %v", test.Name, time.Now())
 			suite.cleanup(t)
 			for _, manifest := range test.Manifests {
 				k8s.Prepare(t, suite.Opt.Client, manifest)
@@ -98,7 +99,7 @@ func (suite *Suite) Run(t *testing.T) {
 			time.Sleep(500 * time.Millisecond)
 			// TODO: configure Istio to push aggressively
 
-			t.Logf("Run test %q", test.Name)
+			t.Logf("Run test %q at %v", test.Name, time.Now())
 			test.Run(t, suite)
 		})
 	}

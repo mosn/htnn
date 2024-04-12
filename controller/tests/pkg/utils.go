@@ -23,11 +23,10 @@ import (
 	. "github.com/onsi/gomega"
 	"github.com/stretchr/testify/require"
 	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
-	istiov1b1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	mosniov1 "mosn.io/htnn/types/apis/v1"
 )
@@ -40,18 +39,18 @@ func MapToObj(in map[string]interface{}) client.Object {
 	if strings.HasPrefix(group, "networking.istio.io") {
 		switch in["kind"] {
 		case "VirtualService":
-			out = &istiov1b1.VirtualService{}
+			out = &istiov1a3.VirtualService{}
 		case "Gateway":
-			out = &istiov1b1.Gateway{}
+			out = &istiov1a3.Gateway{}
 		case "EnvoyFilter":
 			out = &istiov1a3.EnvoyFilter{}
 		}
 	} else if strings.HasPrefix(group, "gateway.networking.k8s.io") {
 		switch in["kind"] {
 		case "HTTPRoute":
-			out = &gwapiv1.HTTPRoute{}
+			out = &gwapiv1b1.HTTPRoute{}
 		case "Gateway":
-			out = &gwapiv1.Gateway{}
+			out = &gwapiv1b1.Gateway{}
 		}
 	} else if strings.HasPrefix(group, "htnn.mosn.io") {
 		switch in["kind"] {

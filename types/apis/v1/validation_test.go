@@ -18,8 +18,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	istioapi "istio.io/api/networking/v1beta1"
-	istiov1b1 "istio.io/client-go/pkg/apis/networking/v1beta1"
+	istioapi "istio.io/api/networking/v1alpha3"
+	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -243,13 +243,13 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 func TestValidateVirtualService(t *testing.T) {
 	tests := []struct {
 		name string
-		vs   *istiov1b1.VirtualService
+		vs   *istiov1a3.VirtualService
 		err  string
 	}{
 		{
 			name: "empty route name not allowed",
 			err:  "route name is empty",
-			vs: &istiov1b1.VirtualService{
+			vs: &istiov1a3.VirtualService{
 				Spec: istioapi.VirtualService{
 					Http: []*istioapi.HTTPRoute{
 						{
@@ -262,14 +262,14 @@ func TestValidateVirtualService(t *testing.T) {
 		{
 			name: "only http route is supported",
 			err:  "only http route is supported",
-			vs: &istiov1b1.VirtualService{
+			vs: &istiov1a3.VirtualService{
 				Spec: istioapi.VirtualService{},
 			},
 		},
 		{
 			name: "delegate not supported",
 			err:  "not supported",
-			vs: &istiov1b1.VirtualService{
+			vs: &istiov1a3.VirtualService{
 				Spec: istioapi.VirtualService{
 					Http: []*istioapi.HTTPRoute{
 						{

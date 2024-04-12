@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -64,6 +65,16 @@ func init() {
 			var consumer mosniov1.Consumer
 			err = c.Get(ctx, nsName, &consumer)
 			require.NoError(t, err)
+
+			st := consumer.Status
+			cd := st.Conditions[0]
+			gen := consumer.Generation
+			require.Equal(t, gen, cd.ObservedGeneration)
+			require.Equal(t, metav1.ConditionTrue, cd.Status)
+			require.Equal(t, "Accepted", cd.Type)
+			require.Equal(t, "The resource has been accepted", cd.Message)
+			require.Equal(t, "Accepted", cd.Reason)
+
 			base := client.MergeFrom(consumer.DeepCopy())
 			consumer.Spec.Filters = map[string]mosniov1.HTTPPlugin{
 				"limitReq": {

@@ -12,30 +12,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package config
+package gatewayapi
 
 import (
-	"os"
-	"testing"
-
-	"github.com/stretchr/testify/assert"
+	"k8s.io/apimachinery/pkg/runtime"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
-func TestInit(t *testing.T) {
-	Init()
+type addToScheme func(s *runtime.Scheme) error
 
-	// Check default values
-	assert.Equal(t, true, EnableGatewayAPI())
-	assert.Equal(t, true, EnableEmbeddedMode())
-	assert.Equal(t, "/etc/libgolang.so", GoSoPath())
-	assert.Equal(t, "istio-system", RootNamespace())
-
-	os.Chdir("./testdata")
-	Init()
-	os.Chdir("..")
-
-	assert.Equal(t, false, EnableGatewayAPI())
-	assert.Equal(t, false, EnableEmbeddedMode())
-	assert.Equal(t, "/usr/local/golang.so", GoSoPath())
-	assert.Equal(t, "htnn", RootNamespace())
+func AddToScheme(scheme *runtime.Scheme) error {
+	fs := []addToScheme{
+		gwapiv1b1.AddToScheme,
+		gwapiv1.AddToScheme,
+	}
+	for _, f := range fs {
+		if err := f(scheme); err != nil {
+			return err
+		}
+	}
+	return nil
 }

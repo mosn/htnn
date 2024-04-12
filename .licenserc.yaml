@@ -27,10 +27,12 @@ header:
     # ignore file controlled by tools
     - '**/go.sum'
     - 'buf.lock'
+    - '.gitmodules'
     # files can't add license
     - '**/*.pb.validate.go'
     - '**/*.json'
     - '**/*.txt'
+    - '**/*.patch'
     - 'plugins/VERSION'
     - '.ignore_words'
     # files from other projects

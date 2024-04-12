@@ -105,6 +105,7 @@ func lintFilename() error {
 		".git",
 		".github",
 		"site",
+		"external",
 	}
 	files, err := os.ReadDir(".")
 	if err != nil {

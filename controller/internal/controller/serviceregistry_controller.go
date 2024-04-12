@@ -21,24 +21,23 @@ import (
 	"fmt"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"mosn.io/htnn/controller/internal/log"
 	"mosn.io/htnn/controller/internal/registry"
+	"mosn.io/htnn/controller/pkg/component"
 	mosniov1 "mosn.io/htnn/types/apis/v1"
 )
 
 // ServiceRegistryReconciler reconciles a ServiceRegistry object
 type ServiceRegistryReconciler struct {
-	client.Client
-	Scheme *runtime.Scheme
+	component.ResourceManager
 }
 
 //+kubebuilder:rbac:groups=htnn.mosn.io,resources=serviceregistries,verbs=get;list;watch;create;update;patch;delete
@@ -47,8 +46,6 @@ type ServiceRegistryReconciler struct {
 //+kubebuilder:rbac:groups=networking.istio.io,resources=serviceentries,verbs=get;list;watch;update;patch;delete
 
 func (r *ServiceRegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	logger := log.FromContext(ctx)
-
 	var serviceRegistry mosniov1.ServiceRegistry
 	nsName := types.NamespacedName{Name: req.Name, Namespace: req.Namespace}
 	err := r.Get(ctx, nsName, &serviceRegistry)
@@ -57,27 +54,27 @@ func (r *ServiceRegistryReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			return ctrl.Result{}, fmt.Errorf("failed to get ServiceRegistry: %w, namespacedName: %v", err, nsName)
 		}
 
-		logger.Info("delete ServiceRegistry")
+		log.Infof("delete ServiceRegistry %v", nsName)
 		err = registry.DeleteRegistry(nsName)
 		if err != nil {
-			logger.Error(err, "failed to delete registry")
+			log.Errorf("failed to delete ServiceRegistry %v: %v", nsName, err)
 			// don't retry if the err is caused by registry as the resource is already deleted
 		}
 
 		return ctrl.Result{}, nil
 	}
 
-	logger.Info("update ServiceRegistry")
+	log.Infof("update ServiceRegistry %v", nsName)
 	err = registry.UpdateRegistry(&serviceRegistry)
 	if err != nil {
-		logger.Error(err, "failed to update registry")
+		log.Errorf("failed to update ServiceRegistry %v: %v", nsName, err)
 		serviceRegistry.SetAccepted(mosniov1.ReasonInvalid, err.Error())
 		// don't retry if the err is caused by registry
 	} else {
 		serviceRegistry.SetAccepted(mosniov1.ReasonAccepted)
 	}
 
-	if err := r.Status().Update(ctx, serviceRegistry.DeepCopy()); err != nil {
+	if err := r.UpdateStatus(ctx, &serviceRegistry, &serviceRegistry.Status); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to update ServiceRegistry status: %w, namespacedName: %v",
 			err, nsName)
 	}

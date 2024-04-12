@@ -19,11 +19,12 @@ import (
 	"net"
 	"strings"
 
-	istiov1b1 "istio.io/client-go/pkg/apis/networking/v1beta1"
+	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"mosn.io/htnn/controller/internal/log"
 	"mosn.io/htnn/controller/internal/model"
@@ -68,7 +69,7 @@ func hostMatch(gwHost string, host string) bool {
 	return gwHost == host
 }
 
-func buildVirtualHostsWithIstioGw(host string, nsName *types.NamespacedName, gws []*istiov1b1.Gateway) []*model.VirtualHost {
+func buildVirtualHostsWithIstioGw(host string, nsName *types.NamespacedName, gws []*istiov1a3.Gateway) []*model.VirtualHost {
 	vhs := make([]*model.VirtualHost, 0)
 	for _, gw := range gws {
 		for _, svr := range gw.Spec.Servers {
@@ -116,7 +117,7 @@ func buildVirtualHostsWithK8sGw(host string, ls *gwapiv1.Listener, nsName, gwNsN
 	return vhs
 }
 
-func AllowRoute(cond *gwapiv1.AllowedRoutes, route *gwapiv1.HTTPRoute, gwNsName *types.NamespacedName) bool {
+func AllowRoute(cond *gwapiv1.AllowedRoutes, route *gwapiv1b1.HTTPRoute, gwNsName *types.NamespacedName) bool {
 	if cond == nil {
 		return true
 	}

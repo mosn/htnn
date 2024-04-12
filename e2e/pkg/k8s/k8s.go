@@ -24,7 +24,7 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	istiov1b1 "istio.io/client-go/pkg/apis/networking/v1beta1"
+	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
@@ -130,7 +130,7 @@ func CleanUp(t *testing.T, c client.Client) {
 		deleteResource(t, ctx, c, &e)
 	}
 
-	var virtualservices istiov1b1.VirtualServiceList
+	var virtualservices istiov1a3.VirtualServiceList
 	err = c.List(ctx, &virtualservices)
 	require.NoError(t, err)
 	for _, e := range virtualservices.Items {

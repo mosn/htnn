@@ -25,8 +25,8 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	istioapi "istio.io/api/networking/v1beta1"
-	istiov1b1 "istio.io/client-go/pkg/apis/networking/v1beta1"
+	istioapi "istio.io/api/networking/v1alpha3"
+	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"mosn.io/htnn/controller/internal/model"
@@ -61,8 +61,8 @@ func disableNacos(nacosInstance string) {
 	Expect(k8sClient.Delete(context.Background(), sr)).Should(Succeed())
 }
 
-func listServiceEntries() []*istiov1b1.ServiceEntry {
-	var entries istiov1b1.ServiceEntryList
+func listServiceEntries() []*istiov1a3.ServiceEntry {
+	var entries istiov1a3.ServiceEntryList
 	Expect(k8sClient.List(ctx, &entries, client.MatchingLabels{model.LabelCreatedBy: "ServiceRegistry"})).Should(Succeed())
 	return entries.Items
 }
@@ -153,7 +153,7 @@ var _ = Describe("Nacos", func() {
 
 		registerInstance("8848", "test", "1.2.3.4", "8080", nil)
 
-		var entries []*istiov1b1.ServiceEntry
+		var entries []*istiov1a3.ServiceEntry
 		Eventually(func() bool {
 			entries = listServiceEntries()
 			return len(entries) == 1
@@ -214,7 +214,7 @@ var _ = Describe("Nacos", func() {
 
 		// old
 		enableNacos("default")
-		var entries []*istiov1b1.ServiceEntry
+		var entries []*istiov1a3.ServiceEntry
 		Eventually(func() bool {
 			entries = listServiceEntries()
 			return len(entries) == 3

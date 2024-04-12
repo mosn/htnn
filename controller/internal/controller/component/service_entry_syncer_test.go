@@ -12,18 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package registry
+package component
 
 import (
 	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	istioapi "istio.io/api/networking/v1beta1"
-	istiov1b1 "istio.io/client-go/pkg/apis/networking/v1beta1"
+	istioapi "istio.io/api/networking/v1alpha3"
+	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"mosn.io/htnn/controller/internal/log"
 	"mosn.io/htnn/controller/tests/pkg"
 )
 
@@ -33,8 +34,8 @@ type syncTestClient struct {
 }
 
 func (cli *syncTestClient) List(c context.Context, list client.ObjectList, opts ...client.ListOption) error {
-	serviceEntries := list.(*istiov1b1.ServiceEntryList)
-	serviceEntries.Items = []*istiov1b1.ServiceEntry{
+	serviceEntries := list.(*istiov1a3.ServiceEntryList)
+	serviceEntries.Items = []*istiov1a3.ServiceEntry{
 		// To delete
 		{
 			ObjectMeta: metav1.ObjectMeta{
@@ -70,11 +71,13 @@ func (cli *syncTestClient) Delete(c context.Context, obj client.Object, opts ...
 }
 
 func TestSync(t *testing.T) {
+	logger := log.Logger()
 	cli := &syncTestClient{
 		Client: pkg.FakeK8sClient(t),
 	}
-	store := newServiceEntryStore(cli)
-	store.entries = map[string]*istiov1b1.ServiceEntry{
+	store := newServiceEntrySyncer(cli, &logger)
+
+	store.entries = map[string]*istiov1a3.ServiceEntry{
 		// To update
 		"update": {
 			Spec: istioapi.ServiceEntry{

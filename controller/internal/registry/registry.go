@@ -16,9 +16,9 @@ package registry
 
 import (
 	"k8s.io/apimachinery/pkg/types"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"mosn.io/htnn/controller/internal/log"
+	"mosn.io/htnn/controller/pkg/component"
 	pkgRegistry "mosn.io/htnn/controller/pkg/registry"
 	mosniov1 "mosn.io/htnn/types/apis/v1"
 	registrytype "mosn.io/htnn/types/pkg/registry"
@@ -30,12 +30,11 @@ var (
 )
 
 type RegistryManagerOption struct {
-	Client client.Client
+	Output component.Output
 }
 
 func InitRegistryManager(opt *RegistryManagerOption) {
-	store = newServiceEntryStore(opt.Client)
-	go store.Sync()
+	store = newServiceEntryStore(opt.Output)
 }
 
 func UpdateRegistry(registry *mosniov1.ServiceRegistry) error {

@@ -1,5 +1,3 @@
-# Serving webhooks by this controller
-enable_webhooks: false
 # If this is set to true, support for Kubernetes gateway-api will be enabled.
 # In addition to this being enabled, the gateway-api CRDs need to be installed.
 enable_gateway_api: true

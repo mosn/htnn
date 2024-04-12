@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # Copyright The HTNN Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,8 +13,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-include ../common.mk
 
-.PHONY: unit-test
-unit-test:
-	go test ${TEST_OPTION} ./...
+set -euo pipefail
+
+TARGET_ISTIO_DIR="$1"
+
+for patch in istio/*.patch; do
+    patch -d "$TARGET_ISTIO_DIR" -p1 < "$patch"
+done
+
+pushd "$TARGET_ISTIO_DIR"
+go mod tidy
+popd

@@ -38,10 +38,11 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
-	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"mosn.io/htnn/controller/internal/config"
 	"mosn.io/htnn/controller/internal/controller"
+	"mosn.io/htnn/controller/internal/controller/component"
+	"mosn.io/htnn/controller/internal/gatewayapi"
 	"mosn.io/htnn/controller/internal/registry"
 	mosniov1 "mosn.io/htnn/types/apis/v1"
 )
@@ -96,7 +97,7 @@ var _ = BeforeSuite(func() {
 
 	err = istioscheme.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
-	err = gwapiv1.AddToScheme(scheme.Scheme)
+	err = gatewayapi.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
 	Expect(err).NotTo(HaveOccurred())
@@ -125,12 +126,13 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).ToNot(HaveOccurred())
 
+	output := component.NewK8sOutput(k8sManager.GetClient())
+	rm := component.NewK8sResourceManager(k8sManager.GetClient())
 	registry.InitRegistryManager(&registry.RegistryManagerOption{
-		Client: k8sManager.GetClient(),
+		Output: output,
 	})
 	err = (&controller.ServiceRegistryReconciler{
-		Client: k8sManager.GetClient(),
-		Scheme: k8sManager.GetScheme(),
+		ResourceManager: rm,
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 

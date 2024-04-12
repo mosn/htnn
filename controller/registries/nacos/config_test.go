@@ -23,7 +23,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
-	istioapi "istio.io/api/networking/v1beta1"
+	istioapi "istio.io/api/networking/v1alpha3"
 
 	"mosn.io/htnn/controller/pkg/registry"
 	"mosn.io/htnn/types/registries/nacos"
