@@ -1,0 +1,23 @@
+diff --git a/go.mod b/go.mod
+index e7f308e890..def9507093 100644
+--- a/go.mod
++++ b/go.mod
+@@ -5,6 +5,18 @@ go 1.21
+ // Client-go does not handle different versions of mergo due to some breaking changes - use the matching version
+ replace github.com/imdario/mergo => github.com/imdario/mergo v0.3.5
+ 
++require (
++	mosn.io/htnn/controller v0.0.0
++	mosn.io/htnn/types v0.2.1
++)
++
++replace (
++	github.com/prometheus/common => github.com/prometheus/common v0.45.0
++	mosn.io/htnn/api => ../../api
++	mosn.io/htnn/controller => ../../controller
++	mosn.io/htnn/types => ../../types
++)
++
+ require (
+ 	cloud.google.com/go/compute/metadata v0.2.3
+ 	cloud.google.com/go/logging v1.9.0
