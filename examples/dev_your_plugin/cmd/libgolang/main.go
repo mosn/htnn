@@ -14,15 +14,24 @@
 
 //go:build so
 
+// This package shows how to deploy your plugin in the data plane.
+// It's used in the integration test.
 package main
 
 import (
 	"github.com/envoyproxy/envoy/contrib/golang/filters/http/source/go/pkg/http"
 
+	"mosn.io/htnn/api/pkg/filtermanager"
+	_ "mosn.io/htnn/api/plugins/tests/integration/data_plane" // for utility plugins provided in the test framework
 	_ "mosn.io/htnn/dev_your_plugin/plugins"
-	"mosn.io/htnn/pkg/filtermanager"
-	_ "mosn.io/htnn/plugins"
 )
+
+// If you want to use the built-in plugins, you can import them here:
+// _ "mosn.io/htnn/plugins/plugins"
+//
+// Note that because we only update the module dependency in the release, if you use
+// a non-release version of mosn.io/htnn/plugins module, you may need to manually update the
+// dependency yourself, such as using replace in go.mod
 
 func init() {
 	http.RegisterHttpFilterConfigFactoryAndParser("fm", filtermanager.FilterManagerFactory, &filtermanager.FilterManagerConfigParser{})

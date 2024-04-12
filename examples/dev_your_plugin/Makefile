@@ -28,6 +28,16 @@ PROTOC = protoc
 PROTO_FILES = $(call rwildcard,./,*.proto)
 GO_TARGETS = $(patsubst %.proto,%.pb.go,$(PROTO_FILES))
 
+MOUNT_GOMOD_CACHE = -v $(shell go env GOPATH):/go
+ifeq ($(IN_CI), true)
+	# Mount go mod cache in the CI environment will cause 'Permission denied' error
+	# when accessing files on host in later phase because the mounted directory will
+	# have files which is created by the root user in Docker.
+	# Run as low privilege user in the Docker doesn't
+	# work because we also need root to create /.cache in the Docker.
+	MOUNT_GOMOD_CACHE =
+endif
+
 .PHONY: dev-tools
 dev-tools:
 	@if ! docker images ${DEV_TOOLS_IMAGE} | grep dev-tools > /dev/null; then \
@@ -49,12 +59,52 @@ build-so-local:
 		-v -o ${TARGET_SO} \
 		${PROJECT_NAME}/cmd/libgolang
 
+# As the tasks below mount the GOPATH into the docker container, please make sure you don't have Go binary put into the GOPATH
+# which will override the one provides by the docker image.
+
 .PHONY: build-so
 build-so:
-	docker run --rm -v $(shell go env GOPATH):/go -v $(PWD):/go/src/${PROJECT_NAME} -w /go/src/${PROJECT_NAME} \
+	docker run --rm $(MOUNT_GOMOD_CACHE) -v $(PWD):/go/src/${PROJECT_NAME} -w /go/src/${PROJECT_NAME} \
 		-e GOPROXY \
 		${BUILD_IMAGE} \
-		bash -c "git config --global --add safe.directory '*' && make build-so-local"
+		make build-so-local
+
+.PHONY: unit-test-local
+unit-test-local:
+	go test -v ./plugins/...
+
+.PHONY: unit-test
+unit-test:
+	docker run --rm $(MOUNT_GOMOD_CACHE) -v $(PWD):/go/src/${PROJECT_NAME} -w /go/src/${PROJECT_NAME} \
+		-e GOPROXY \
+		${BUILD_IMAGE} \
+		make unit-test-local
+
+.PHONY: build-test-so-local
+build-test-so-local:
+	CGO_ENABLED=1 go build -tags so \
+		--buildmode=c-shared \
+		-cover -covermode=atomic -coverpkg=${PROJECT_NAME}/... \
+		-v -o ./tests/integration/${TARGET_SO} \
+		${PROJECT_NAME}/cmd/libgolang
+
+.PHONY: build-test-so
+build-test-so:
+	docker run --rm $(MOUNT_GOMOD_CACHE) -v $(PWD):/go/src/${PROJECT_NAME} -w /go/src/${PROJECT_NAME} \
+		-e GOPROXY \
+		${BUILD_IMAGE} \
+		make build-test-so-local
+
+# This task can only be run in the CI, because we have `go.work` in the root directory and this module
+# is not in it. We don't add this module to the `go.work` to ensure the `go.mod` and `go.sum` files in
+# this module are always up-to-date.
+# In the CI environment, we remove the `go.work`. If you want to run the integration test locally,
+# you can remove the `go.work` and run `make integration-test`, or copy this module to a directory
+# which doesn't have `go.work` in its ancestors.
+.PHONY: integration-test
+integration-test: build-test-so
+	test -d /tmp/htnn_coverage && rm -rf /tmp/htnn_coverage || true
+	go test -v ./tests/integration/...
 
 .PHONY: run-plugin
 run-plugin:

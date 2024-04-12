@@ -15,6 +15,9 @@
 module mosn.io/htnn/controller
 
 // This module stores the HTNN controller.
+// Note that because we only update the module dependency during the release, if you use
+// a non-release version of mosn.io/htnn/xxx module, you may need to manually update the
+// dependency yourself, such as using replace in go.mod
 
 go 1.21.5
 
