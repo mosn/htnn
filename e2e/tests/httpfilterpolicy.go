@@ -18,12 +18,15 @@ import (
 	"context"
 	"net"
 	"net/http"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"mosn.io/htnn/e2e/pkg/k8s"
 	"mosn.io/htnn/e2e/pkg/suite"
@@ -37,8 +40,8 @@ func init() {
 			tr := &http.Transport{DialContext: func(ctx context.Context, proto, addr string) (conn net.Conn, err error) {
 				return net.DialTimeout("tcp", ":18000", 1*time.Second)
 			}}
-			client := &http.Client{Transport: tr, Timeout: 10 * time.Second}
-			rsp, err := client.Get("http://default.local:18000/echo")
+			cli := &http.Client{Transport: tr, Timeout: 10 * time.Second}
+			rsp, err := cli.Get("http://default.local:18000/echo")
 			require.NoError(t, err)
 			req, _, err := suite.Capture(rsp)
 			require.NoError(t, err)
@@ -59,6 +62,19 @@ func init() {
 			require.Equal(t, "Accepted", cd.Type)
 			require.Equal(t, "The policy has been accepted", cd.Message)
 			require.Equal(t, "Accepted", cd.Reason)
+
+			// test webhook
+			base := client.MergeFrom(policy.DeepCopy())
+			policy.Spec.Filters = map[string]mosniov1.HTTPPlugin{
+				"limitReq": {
+					Config: runtime.RawExtension{
+						Raw: []byte(`{"average":"invalid"}`),
+					},
+				},
+			}
+			err = c.Patch(ctx, &policy, base)
+			require.Error(t, err)
+			require.True(t, strings.HasPrefix(err.Error(), "admission webhook"))
 		},
 	})
 }

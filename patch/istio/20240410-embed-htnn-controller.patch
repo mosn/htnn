@@ -1834,7 +1834,7 @@ index 252669af19..9d4532cdbe 100644
    - kind: "CustomResourceDefinition"
      plural: "customresourcedefinitions"
 diff --git a/pkg/config/validation/validation.go b/pkg/config/validation/validation.go
-index 56f6971290..764f5a28d7 100644
+index 56f6971290..63b1946fe9 100644
 --- a/pkg/config/validation/validation.go
 +++ b/pkg/config/validation/validation.go
 @@ -37,6 +37,7 @@ import (
@@ -1845,34 +1845,38 @@ index 56f6971290..764f5a28d7 100644
  
  	"istio.io/api/annotation"
  	extensions "istio.io/api/extensions/v1alpha1"
-@@ -2018,6 +2019,32 @@ func validateOneOfSelectorType(selector *type_beta.WorkloadSelector, targetRef *
+@@ -2018,6 +2019,36 @@ func validateOneOfSelectorType(selector *type_beta.WorkloadSelector, targetRef *
  	return
  }
  
 +// ValidateHTTPFilterPolicy checks that HTTPFilterPolicy is well-formed.
 +var ValidateHTTPFilterPolicy = registerValidateFunc("ValidateHTTPFilterPolicy",
 +	func(cfg config.Config) (Warning, error) {
-+		in, ok := cfg.Spec.(*mosniov1.HTTPFilterPolicy)
++		in, ok := cfg.Spec.(*mosniov1.HTTPFilterPolicySpec)
 +		if !ok {
-+			return nil, fmt.Errorf("cannot cast to HTTPFilterPolicy")
++			return nil, fmt.Errorf("cannot cast to HTTPFilterPolicySpec")
 +		}
 +
-+		fmt.Printf("TODO m%+v\n", in)
 +		var warnings Warning
-+		return warnings, nil
++		var policy mosniov1.HTTPFilterPolicy
++		policy.Spec = *in
++		err := mosniov1.ValidateHTTPFilterPolicy(&policy)
++		return warnings, err
 +	})
 +
 +// ValidateConsumer checks that Consumer is well-formed.
 +var ValidateConsumer = registerValidateFunc("ValidateConsumer",
 +	func(cfg config.Config) (Warning, error) {
-+		in, ok := cfg.Spec.(*mosniov1.Consumer)
++		in, ok := cfg.Spec.(*mosniov1.ConsumerSpec)
 +		if !ok {
-+			return nil, fmt.Errorf("cannot cast to Consumer")
++			return nil, fmt.Errorf("cannot cast to ConsumerSpec")
 +		}
 +
-+		fmt.Printf("TODO m%+v\n", in)
 +		var warnings Warning
-+		return warnings, nil
++		var consumer mosniov1.Consumer
++		consumer.Spec = *in
++		err := mosniov1.ValidateConsumer(&consumer)
++		return warnings, err
 +	})
 +
  // ValidateAuthorizationPolicy checks that AuthorizationPolicy is well-formed.
