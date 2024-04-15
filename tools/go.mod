@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-module mosn.io/htnn/site
+module mosn.io/htnn/tools
 
-go 1.16
-
-require github.com/waigani/diffparser v0.0.0-20190828052634-7391f219313d
+go 1.21
