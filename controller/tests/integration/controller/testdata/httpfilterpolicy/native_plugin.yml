@@ -1,0 +1,49 @@
+- apiVersion: htnn.mosn.io/v1
+  kind: HTTPFilterPolicy
+  metadata:
+    name: policy
+    namespace: default
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: HTTPRoute
+      name: hr
+    filters:
+      demo:
+        config:
+          hostName: goldfish
+      localRatelimit:
+        config:
+          statPrefix: http_local_rate_limiter
+          tokenBucket:
+            max_tokens: 10000
+            tokens_per_fill: 1000
+            fillInterval: 1s
+          filter_enabled:
+            default_value:
+              numerator: 100
+              denominator: HUNDRED
+          filter_enforced:
+            default_value:
+              numerator: 100
+              denominator: HUNDRED
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: HTTPRoute
+  metadata:
+    name: hr
+    namespace: default
+  spec:
+    parentRefs:
+    - name: default
+      sectionName: default
+      port: 8888
+    hostnames:
+      - default.local
+    rules:
+    - matches:
+      - path:
+          type: PathPrefix
+          value: /
+      backendRefs:
+      - name: default
+        port: 8000

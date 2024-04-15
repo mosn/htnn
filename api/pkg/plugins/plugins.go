@@ -135,6 +135,12 @@ func IterateHttpPlugin(f func(key string, value Plugin) bool) {
 	}
 }
 
+// This method should be called at startup. There will be race if it's called during runtime.
+func DisableHttpPlugin(name string) {
+	delete(httpPlugins, name)
+	delete(httpPluginTypes, name)
+}
+
 type PluginConfigParser struct {
 	GoPlugin
 }
