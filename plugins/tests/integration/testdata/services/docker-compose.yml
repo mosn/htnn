@@ -83,6 +83,7 @@ services:
 
   redis-cluster-0:
     image: docker.io/bitnami/redis-cluster:7.0
+    restart: unless-stopped
     volumes:
       - ./certs:/certs
     environment:
@@ -100,6 +101,7 @@ services:
 
   redis-cluster-1:
     image: docker.io/bitnami/redis-cluster:7.0
+    restart: unless-stopped
     volumes:
       - ./certs:/certs
     environment:
@@ -117,6 +119,7 @@ services:
 
   redis-cluster-2:
     image: docker.io/bitnami/redis-cluster:7.0
+    restart: unless-stopped
     volumes:
       - ./certs:/certs
     depends_on:
