@@ -41,7 +41,8 @@ type EncodeWholeResponseFilter interface {
 // Filter represents a collection of callbacks in which Envoy will call your Go code.
 // Every filter method (except the OnLog) is run in goroutine so it's non-blocking.
 // To know how do we run the Filter during request processing, please refer to
-// https://github.com/mosn/htnn/blob/main/content/en/docs/developer-guide/plugin_development.md
+// https://github.com/mosn/htnn/blob/main/site/content/en/docs/developer-guide/plugin_development.md
+// TODO: change the link to the official website once we have it.
 type Filter interface {
 	// Callbacks which are called in request path
 
