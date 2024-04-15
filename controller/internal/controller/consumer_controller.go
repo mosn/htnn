@@ -20,28 +20,26 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/go-logr/logr"
-	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"mosn.io/htnn/controller/internal/config"
 	"mosn.io/htnn/controller/internal/istio"
+	"mosn.io/htnn/controller/internal/log"
 	"mosn.io/htnn/controller/internal/model"
+	"mosn.io/htnn/controller/pkg/component"
 	mosniov1 "mosn.io/htnn/types/apis/v1"
 )
 
 // ConsumerReconciler reconciles a Consumer object
 type ConsumerReconciler struct {
-	client.Client
-	Scheme *runtime.Scheme
+	component.ResourceManager
+	Output component.Output
 }
 
 const (
@@ -59,16 +57,15 @@ const (
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.16.3/pkg/reconcile
 func (r *ConsumerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
-	logger := log.FromContext(ctx)
-	logger.Info("reconcile")
+	log.Info("Reconcile Consumer")
 
 	var consumers mosniov1.ConsumerList
-	state, err := r.consumersToState(ctx, &logger, &consumers)
+	state, err := r.consumersToState(ctx, &consumers)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	err = r.generateCustomResource(ctx, &logger, state)
+	err = r.generateCustomResource(ctx, state)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -81,7 +78,7 @@ type consumerReconcileState struct {
 	namespaceToConsumers map[string]map[string]*mosniov1.Consumer
 }
 
-func (r *ConsumerReconciler) consumersToState(ctx context.Context, logger *logr.Logger,
+func (r *ConsumerReconciler) consumersToState(ctx context.Context,
 	consumers *mosniov1.ConsumerList) (*consumerReconcileState, error) {
 
 	if err := r.List(ctx, consumers); err != nil {
@@ -96,7 +93,7 @@ func (r *ConsumerReconciler) consumersToState(ctx context.Context, logger *logr.
 		if consumer.IsSpecChanged() {
 			err := mosniov1.ValidateConsumer(consumer)
 			if err != nil {
-				logger.Error(err, "invalid Consumer", "name", consumer.Name, "namespace", consumer.Namespace)
+				log.Errorf("invalid Consumer, err: %v, name: %s, namespace: %s", consumer.Name, consumer.Namespace)
 				consumer.SetAccepted(mosniov1.ReasonInvalid, err.Error())
 				continue
 			}
@@ -120,7 +117,7 @@ func (r *ConsumerReconciler) consumersToState(ctx context.Context, logger *logr.
 	return state, nil
 }
 
-func (r *ConsumerReconciler) generateCustomResource(ctx context.Context, logger *logr.Logger, state *consumerReconcileState) error {
+func (r *ConsumerReconciler) generateCustomResource(ctx context.Context, state *consumerReconcileState) error {
 	consumerData := map[string]interface{}{}
 	for ns, consumers := range state.namespaceToConsumers {
 		data := make(map[string]interface{}, len(consumers))
@@ -143,43 +140,7 @@ func (r *ConsumerReconciler) generateCustomResource(ctx context.Context, logger 
 	}
 	ef.Labels[model.LabelCreatedBy] = "Consumer"
 
-	nsName := types.NamespacedName{Name: ef.Name, Namespace: ef.Namespace}
-	var envoyfilters istiov1a3.EnvoyFilterList
-	if err := r.List(ctx, &envoyfilters, client.MatchingLabels{model.LabelCreatedBy: "Consumer"}); err != nil {
-		return fmt.Errorf("failed to list EnvoyFilter: %w", err)
-	}
-
-	var envoyfilter *istiov1a3.EnvoyFilter
-	for _, e := range envoyfilters.Items {
-		if e.Namespace != nsName.Namespace || e.Name != nsName.Name {
-			logger.Info("delete EnvoyFilter", "name", e.Name, "namespace", e.Namespace)
-
-			if err := r.Delete(ctx, e); err != nil {
-				return fmt.Errorf("failed to delete EnvoyFilter: %w, namespacedName: %v",
-					err, types.NamespacedName{Name: e.Name, Namespace: e.Namespace})
-			}
-		} else {
-			envoyfilter = e
-		}
-	}
-
-	if envoyfilter == nil {
-		logger.Info("create EnvoyFilter", "name", ef.Name, "namespace", ef.Namespace)
-
-		if err := r.Create(ctx, ef.DeepCopy()); err != nil {
-			return fmt.Errorf("failed to create EnvoyFilter: %w, namespacedName: %v", err, nsName)
-		}
-	} else {
-		logger.Info("update EnvoyFilter", "name", ef.Name, "namespace", ef.Namespace)
-
-		ef = ef.DeepCopy()
-		ef.SetResourceVersion(envoyfilter.ResourceVersion)
-		if err := r.Update(ctx, ef); err != nil {
-			return fmt.Errorf("failed to update EnvoyFilter: %w, namespacedName: %v", err, nsName)
-		}
-	}
-
-	return nil
+	return r.Output.FromConsumer(ctx, ef)
 }
 
 func (r *ConsumerReconciler) updateConsumers(ctx context.Context, consumers *mosniov1.ConsumerList) error {
@@ -189,8 +150,7 @@ func (r *ConsumerReconciler) updateConsumers(ctx context.Context, consumers *mos
 			continue
 		}
 		consumer.Status.Reset()
-		// Update operation will change the original object in cache, so we need to deepcopy it.
-		if err := r.Status().Update(ctx, consumer.DeepCopy()); err != nil {
+		if err := r.UpdateStatus(ctx, consumer, &consumer.Status); err != nil {
 			return fmt.Errorf("failed to update Consumer status: %w, namespacedName: %v",
 				err,
 				types.NamespacedName{Name: consumer.Name, Namespace: consumer.Namespace})

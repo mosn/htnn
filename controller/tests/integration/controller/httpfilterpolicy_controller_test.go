@@ -25,13 +25,13 @@ import (
 	. "github.com/onsi/gomega"
 	istioapi "istio.io/api/networking/v1alpha3"
 	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
-	istiov1b1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"mosn.io/htnn/controller/internal/model"
 	"mosn.io/htnn/controller/internal/translation"
@@ -153,8 +153,8 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 	})
 
 	var (
-		DefaultVirtualService *istiov1b1.VirtualService
-		DefaultIstioGateway   *istiov1b1.Gateway
+		DefaultVirtualService *istiov1a3.VirtualService
+		DefaultIstioGateway   *istiov1a3.Gateway
 	)
 
 	Context("When reconciling HTTPFilterPolicy with VirtualService", func() {
@@ -166,14 +166,14 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 				}
 			}
 
-			var virtualservices istiov1b1.VirtualServiceList
+			var virtualservices istiov1a3.VirtualServiceList
 			if err := k8sClient.List(ctx, &virtualservices); err == nil {
 				for _, e := range virtualservices.Items {
 					pkg.DeleteK8sResource(ctx, k8sClient, e)
 				}
 			}
 
-			var gateways istiov1b1.GatewayList
+			var gateways istiov1a3.GatewayList
 			if err := k8sClient.List(ctx, &gateways); err == nil {
 				for _, e := range gateways.Items {
 					pkg.DeleteK8sResource(ctx, k8sClient, e)
@@ -194,9 +194,9 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 				obj := pkg.MapToObj(in)
 				gvk := obj.GetObjectKind().GroupVersionKind()
 				if gvk.Kind == "VirtualService" {
-					DefaultVirtualService = obj.(*istiov1b1.VirtualService)
+					DefaultVirtualService = obj.(*istiov1a3.VirtualService)
 				} else if gvk.Group == "networking.istio.io" && gvk.Kind == "Gateway" {
-					DefaultIstioGateway = obj.(*istiov1b1.Gateway)
+					DefaultIstioGateway = obj.(*istiov1a3.Gateway)
 				}
 				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
 			}
@@ -208,11 +208,11 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 			input := []map[string]interface{}{}
 			mustReadHTTPFilterPolicy("virtualservice", &input)
 
-			var virtualService *istiov1b1.VirtualService
+			var virtualService *istiov1a3.VirtualService
 			for _, in := range input {
 				obj := pkg.MapToObj(in)
 				if obj.GetName() == "vs" {
-					virtualService = obj.(*istiov1b1.VirtualService)
+					virtualService = obj.(*istiov1a3.VirtualService)
 				}
 				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
 			}
@@ -562,11 +562,11 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 			input := []map[string]interface{}{}
 			mustReadHTTPFilterPolicy("virtualservice_via_route_name", &input)
 
-			var virtualService *istiov1b1.VirtualService
+			var virtualService *istiov1a3.VirtualService
 			for _, in := range input {
 				obj := pkg.MapToObj(in)
 				if obj.GetName() == "vs" {
-					virtualService = obj.(*istiov1b1.VirtualService)
+					virtualService = obj.(*istiov1a3.VirtualService)
 				}
 				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
 			}
@@ -671,11 +671,11 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 			input := []map[string]interface{}{}
 			mustReadHTTPFilterPolicy("virtualservice_embeded_hfp", &input)
 
-			var virtualService *istiov1b1.VirtualService
+			var virtualService *istiov1a3.VirtualService
 			for _, in := range input {
 				obj := pkg.MapToObj(in)
 				if obj.GetName() == "vs" {
-					virtualService = obj.(*istiov1b1.VirtualService)
+					virtualService = obj.(*istiov1a3.VirtualService)
 				}
 				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
 			}
@@ -789,7 +789,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 	})
 
 	var (
-		DefaultK8sGateway *gwapiv1.Gateway
+		DefaultK8sGateway *gwapiv1b1.Gateway
 	)
 
 	Context("When reconciling HTTPFilterPolicy with HTTPRoute", func() {
@@ -797,7 +797,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 			// Clean up the resources created by previous tests. We don't use AfterEach
 			// in the previous test so we can check the resources when we only run the specific
 			// test after the test is finished.
-			var virtualservices istiov1b1.VirtualServiceList
+			var virtualservices istiov1a3.VirtualServiceList
 			if err := k8sClient.List(ctx, &virtualservices); err == nil {
 				for _, e := range virtualservices.Items {
 					pkg.DeleteK8sResource(ctx, k8sClient, e)
@@ -811,14 +811,14 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 				}
 			}
 
-			var httproutes gwapiv1.HTTPRouteList
+			var httproutes gwapiv1b1.HTTPRouteList
 			if err := k8sClient.List(ctx, &httproutes); err == nil {
 				for _, e := range httproutes.Items {
 					pkg.DeleteK8sResource(ctx, k8sClient, &e)
 				}
 			}
 
-			var gateways gwapiv1.GatewayList
+			var gateways gwapiv1b1.GatewayList
 			if err := k8sClient.List(ctx, &gateways); err == nil {
 				for _, e := range gateways.Items {
 					pkg.DeleteK8sResource(ctx, k8sClient, &e)
@@ -839,7 +839,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 				obj := pkg.MapToObj(in)
 				gvk := obj.GetObjectKind().GroupVersionKind()
 				if gvk.Group == "gateway.networking.k8s.io" && gvk.Kind == "Gateway" {
-					DefaultK8sGateway = obj.(*gwapiv1.Gateway)
+					DefaultK8sGateway = obj.(*gwapiv1b1.Gateway)
 				}
 				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
 			}
@@ -851,13 +851,13 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 			input := []map[string]interface{}{}
 			mustReadHTTPFilterPolicy("httproute", &input)
 
-			var httpRoute *gwapiv1.HTTPRoute
+			var httpRoute *gwapiv1b1.HTTPRoute
 			for _, in := range input {
 				obj := pkg.MapToObj(in)
 				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
 
 				if obj.GetName() == "hr" {
-					httpRoute = obj.(*gwapiv1.HTTPRoute)
+					httpRoute = obj.(*gwapiv1b1.HTTPRoute)
 				}
 			}
 

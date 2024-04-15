@@ -24,4 +24,5 @@ use (
     ./controller
     ./plugins
     ./e2e
+    ./external/istio
 )

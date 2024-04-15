@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-include ../etc/common.mk
+include ../common.mk
 
 LOCALBIN ?= $(shell pwd)/bin
 $(LOCALBIN):
@@ -41,7 +41,7 @@ delete-cluster: kind
 
 .PHONY: e2e-build-controller-image
 e2e-build-controller-image:
-	cd ../controller/ && make docker-build
+	cd ../controller/ && IMG=htnn/e2e-cp:0.1.0 make docker-build
 
 e2e-build-so:
 	cd ../plugins/ && make build-so && mv libgolang.so ../e2e/
@@ -53,18 +53,14 @@ e2e-prepare-data-plane-image: e2e-build-so kind
 
 .PHONY: deploy-istio
 deploy-istio:
+	$(KUBECTL) apply -f ./manifests/istio_prestart.yaml
 	ISTIO_VERSION=1.21.0 ./istio.sh install
 	$(KUBECTL) wait --timeout=5m -n istio-system deployment/istio-ingressgateway --for=condition=Available
-
-.PHONY: deploy-cert-manager
-deploy-cert-manager:
-	$(KUBECTL) apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.3/cert-manager.yaml
-	$(KUBECTL) wait --timeout=5m -n cert-manager deployment/cert-manager-cainjector --for=condition=Available
+	$(KUBECTL) apply -f ./manifests/istio_poststart.yaml
 
 .PHONY: deploy-controller
 deploy-controller: kind kubectl
-	cd ../controller/ && KIND=$(KIND) KIND_OPTION="-n htnn" KUBECTL=$(KUBECTL) make deploy
-	$(KUBECTL) wait --timeout=5m -n controller-system deployment/controller-controller-manager --for=condition=Available
+	cd ../controller/ && KIND=$(KIND) KIND_OPTION="-n htnn" KUBECTL=$(KUBECTL) IMG=htnn/e2e-cp:0.1.0 make deploy
 
 .PHONY: undeploy-controller
 undeploy-controller: kubectl
@@ -74,9 +70,11 @@ undeploy-controller: kubectl
 run-e2e:
 	PATH=$(LOCALBIN):"$(PATH)" go test -v ./...
 
-# Run `make undeploy-controller e2e-build-controller-image  deploy-controller` to update the controller.
+# To update the control plane, run `make e2e-prepare-controller-image deploy-controller`, and the delete
+# the istiod pod to trigger restart.
+# For example, `kubectl get pods -n istio-system | grep 'istiod-' | awk '{print $1}' | xargs kubectl delete pod -n istio-system`.
 # To update the data plane, run `make e2e-prepare-data-plane-image` to update the image and then delete
 # the ingressgateway pod to trigger restart.
 .PHONY: e2e-ci
-e2e-ci: delete-cluster create-cluster deploy-cert-manager e2e-prepare-data-plane-image deploy-istio \
-	e2e-build-controller-image deploy-controller run-e2e
+e2e-ci: delete-cluster create-cluster e2e-prepare-data-plane-image \
+	e2e-build-controller-image deploy-controller deploy-istio run-e2e

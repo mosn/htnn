@@ -32,7 +32,7 @@ import (
 	"github.com/nacos-group/nacos-sdk-go/model"
 	"github.com/nacos-group/nacos-sdk-go/vo"
 	"gopkg.in/natefinch/lumberjack.v2"
-	istioapi "istio.io/api/networking/v1beta1"
+	istioapi "istio.io/api/networking/v1alpha3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"mosn.io/htnn/controller/internal/log"

@@ -25,11 +25,8 @@ import (
 	"sync"
 	"time"
 
-	"google.golang.org/protobuf/proto"
 	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
-	istiov1b1 "istio.io/client-go/pkg/apis/networking/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -39,12 +36,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"mosn.io/htnn/controller/internal/config"
 	"mosn.io/htnn/controller/internal/log"
 	"mosn.io/htnn/controller/internal/metrics"
 	"mosn.io/htnn/controller/internal/model"
 	"mosn.io/htnn/controller/internal/translation"
+	"mosn.io/htnn/controller/pkg/component"
 	mosniov1 "mosn.io/htnn/types/apis/v1"
 )
 
@@ -54,13 +53,34 @@ func getK8sKey(ns, name string) string {
 
 // HTTPFilterPolicyReconciler reconciles a HTTPFilterPolicy object
 type HTTPFilterPolicyReconciler struct {
-	client.Client
-	Scheme *runtime.Scheme
+	component.ResourceManager
+	output component.Output
 
 	virtualServiceIndexer *VirtualServiceIndexer
 	httpRouteIndexer      *HTTPRouteIndexer
 	istioGatewayIndexer   *IstioGatewayIndexer
 	k8sGatewayIndexer     *K8sGatewayIndexer
+}
+
+func NewHTTPFilterPolicyReconciler(output component.Output, manager component.ResourceManager) *HTTPFilterPolicyReconciler {
+	r := &HTTPFilterPolicyReconciler{
+		ResourceManager: manager,
+		output:          output,
+	}
+
+	virtualServiceIndexer := &VirtualServiceIndexer{}
+	r.virtualServiceIndexer = virtualServiceIndexer
+	istioGatewayIndexer := &IstioGatewayIndexer{}
+	r.istioGatewayIndexer = istioGatewayIndexer
+
+	if config.EnableGatewayAPI() {
+		httpRouteIndexer := &HTTPRouteIndexer{}
+		r.httpRouteIndexer = httpRouteIndexer
+		k8sGatewayIndexer := &K8sGatewayIndexer{}
+		r.k8sGatewayIndexer = k8sGatewayIndexer
+	}
+
+	return r
 }
 
 //+kubebuilder:rbac:groups=htnn.mosn.io,resources=httpfilterpolicies,verbs=get;list;watch;create;update;patch;delete
@@ -79,6 +99,8 @@ type HTTPFilterPolicyReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.16.3/pkg/reconcile
 func (r *HTTPFilterPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	log.Info("Reconcile HTTPFilterPolicy")
+
 	var policies mosniov1.HTTPFilterPolicyList
 	initState, err := r.policyToTranslationState(ctx, &policies)
 	if err != nil {
@@ -98,11 +120,8 @@ func (r *HTTPFilterPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 		return ctrl.Result{}, nil
 	}
 
-	// In my experience, writing to K8S API server is probably the slowest part.
-	// We can add a configured concurrency to write to API server in parallel, if
-	// the performance is not good. Note that the API server probably has rate limit.
-
-	err = r.translationStateToCustomResource(ctx, finalState)
+	generatedEnvoyFilters := finalState.EnvoyFilters
+	err = r.output.FromHTTPFilterPolicy(ctx, generatedEnvoyFilters)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -116,7 +135,7 @@ func (r *HTTPFilterPolicyReconciler) resolveVirtualService(ctx context.Context,
 
 	ref := policy.Spec.TargetRef
 	nsName := types.NamespacedName{Name: string(ref.Name), Namespace: policy.Namespace}
-	var virtualService istiov1b1.VirtualService
+	var virtualService istiov1a3.VirtualService
 	err := r.Get(ctx, nsName, &virtualService)
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
@@ -155,7 +174,7 @@ func (r *HTTPFilterPolicyReconciler) resolveVirtualService(ctx context.Context,
 }
 
 func (r *HTTPFilterPolicyReconciler) resolveWithVirtualService(ctx context.Context,
-	virtualService *istiov1b1.VirtualService, policy *mosniov1.HTTPFilterPolicy, initState *translation.InitState,
+	virtualService *istiov1a3.VirtualService, policy *mosniov1.HTTPFilterPolicy, initState *translation.InitState,
 	gwIdx map[string][]*mosniov1.HTTPFilterPolicy) error {
 
 	var err error
@@ -170,7 +189,7 @@ func (r *HTTPFilterPolicyReconciler) resolveWithVirtualService(ctx context.Conte
 		accepted = true
 
 	} else {
-		gws = make([]*istiov1b1.Gateway, 0, len(virtualService.Spec.Gateways))
+		gws = make([]*istiov1a3.Gateway, 0, len(virtualService.Spec.Gateways))
 		for _, gw := range virtualService.Spec.Gateways {
 			if gw == "mesh" {
 				log.Infof("skip unsupported mesh gateway, name: %s, namespace: %s", virtualService.Name, virtualService.Namespace)
@@ -186,7 +205,7 @@ func (r *HTTPFilterPolicyReconciler) resolveWithVirtualService(ctx context.Conte
 			// Otherwise, we don't know whether the gateway is changed from invalid to valid.
 			gwIdx[key] = append(gwIdx[key], policy)
 
-			var gateway istiov1b1.Gateway
+			var gateway istiov1a3.Gateway
 			err = r.Get(ctx, types.NamespacedName{Name: gw, Namespace: virtualService.Namespace}, &gateway)
 			if err != nil {
 				if !apierrors.IsNotFound(err) {
@@ -230,7 +249,7 @@ func (r *HTTPFilterPolicyReconciler) resolveHTTPRoute(ctx context.Context,
 
 	ref := policy.Spec.TargetRef
 	nsName := types.NamespacedName{Name: string(ref.Name), Namespace: policy.Namespace}
-	var route gwapiv1.HTTPRoute
+	var route gwapiv1b1.HTTPRoute
 	err := r.Get(ctx, nsName, &route)
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
@@ -252,7 +271,7 @@ func (r *HTTPFilterPolicyReconciler) resolveHTTPRoute(ctx context.Context,
 		accepted = true
 
 	} else {
-		gws = make([]*gwapiv1.Gateway, 0, len(route.Spec.ParentRefs))
+		gws = make([]*gwapiv1b1.Gateway, 0, len(route.Spec.ParentRefs))
 		ns := route.Namespace
 
 		for _, ref := range route.Spec.ParentRefs {
@@ -272,7 +291,7 @@ func (r *HTTPFilterPolicyReconciler) resolveHTTPRoute(ctx context.Context,
 			// Otherwise, we don't know whether the gateway is changed from invalid to valid.
 			gwIdx[key] = append(gwIdx[key], policy)
 
-			var gw gwapiv1.Gateway
+			var gw gwapiv1b1.Gateway
 			gwNsName := types.NamespacedName{Name: string(ref.Name), Namespace: ns}
 			err = r.Get(ctx, gwNsName, &gw)
 			if err != nil {
@@ -399,10 +418,11 @@ func (r *HTTPFilterPolicyReconciler) policyToTranslationState(ctx context.Contex
 
 	if config.EnableEmbeddedMode() {
 		// Some of our users use embedded policy mostly, so it's fine to list all
-		var virtualServices istiov1b1.VirtualServiceList
+		var virtualServices istiov1a3.VirtualServiceList
 		if err := r.List(ctx, &virtualServices); err != nil {
 			return nil, fmt.Errorf("failed to list VirtualService: %w", err)
 		}
+
 		for _, vs := range virtualServices.Items {
 			ann := vs.GetAnnotations()
 			if ann == nil || ann[model.AnnotationHTTPFilterPolicy] == "" {
@@ -436,67 +456,6 @@ func (r *HTTPFilterPolicyReconciler) policyToTranslationState(ctx context.Contex
 	return initState, nil
 }
 
-func fillEnvoyFilterMeta(ef *istiov1a3.EnvoyFilter) {
-	ef.Namespace = config.RootNamespace()
-	if ef.Labels == nil {
-		ef.Labels = map[string]string{}
-	}
-	ef.Labels[model.LabelCreatedBy] = "HTTPFilterPolicy"
-}
-
-func (r *HTTPFilterPolicyReconciler) translationStateToCustomResource(ctx context.Context,
-	finalState *translation.FinalState) error {
-
-	var envoyfilters istiov1a3.EnvoyFilterList
-	if err := r.List(ctx, &envoyfilters,
-		client.MatchingLabels{model.LabelCreatedBy: "HTTPFilterPolicy"},
-	); err != nil {
-		return fmt.Errorf("failed to list EnvoyFilter: %w", err)
-	}
-
-	preEnvoyFilterMap := make(map[string]*istiov1a3.EnvoyFilter, len(envoyfilters.Items))
-	for _, e := range envoyfilters.Items {
-		if _, ok := finalState.EnvoyFilters[e.Name]; !ok || e.Namespace != config.RootNamespace() {
-			log.Infof("delete EnvoyFilter, name: %s, namespace: %s", e.Name, e.Namespace)
-			if err := r.Delete(ctx, e); err != nil {
-				return fmt.Errorf("failed to delete EnvoyFilter: %w, namespacedName: %v",
-					err, types.NamespacedName{Name: e.Name, Namespace: e.Namespace})
-			}
-		} else {
-			preEnvoyFilterMap[e.Name] = e
-		}
-	}
-
-	for _, ef := range finalState.EnvoyFilters {
-		envoyfilter, ok := preEnvoyFilterMap[ef.Name]
-		if !ok {
-			log.Infof("create EnvoyFilter, name: %s, namespace: %s", ef.Name, ef.Namespace)
-			fillEnvoyFilterMeta(ef)
-
-			if err := r.Create(ctx, ef); err != nil {
-				nsName := types.NamespacedName{Name: ef.Name, Namespace: ef.Namespace}
-				return fmt.Errorf("failed to create EnvoyFilter: %w, namespacedName: %v", err, nsName)
-			}
-
-		} else {
-			if proto.Equal(&envoyfilter.Spec, &ef.Spec) {
-				continue
-			}
-
-			log.Infof("update EnvoyFilter, name: %s, namespace: %s", ef.Name, ef.Namespace)
-			fillEnvoyFilterMeta(ef)
-			// Address metadata.resourceVersion: Invalid value: 0x0 error
-			ef.SetResourceVersion(envoyfilter.ResourceVersion)
-			if err := r.Update(ctx, ef); err != nil {
-				nsName := types.NamespacedName{Name: ef.Name, Namespace: ef.Namespace}
-				return fmt.Errorf("failed to update EnvoyFilter: %w, namespacedName: %v", err, nsName)
-			}
-		}
-	}
-
-	return nil
-}
-
 func (r *HTTPFilterPolicyReconciler) updatePolicies(ctx context.Context,
 	policies *mosniov1.HTTPFilterPolicyList) error {
 
@@ -508,8 +467,8 @@ func (r *HTTPFilterPolicyReconciler) updatePolicies(ctx context.Context,
 			continue
 		}
 		policy.Status.Reset()
-		// Update operation will change the original object in cache, so we need to deepcopy it.
-		if err := r.Status().Update(ctx, policy.DeepCopy()); err != nil {
+		// DeepCopy is used to avoid data race in FindAffectedObjects
+		if err := r.UpdateStatus(ctx, policy.DeepCopy(), &policy.Status); err != nil {
 			return fmt.Errorf("failed to update HTTPFilterPolicy status: %w, namespacedName: %v",
 				err, types.NamespacedName{Name: policy.Name, Namespace: policy.Namespace})
 		}
@@ -578,7 +537,7 @@ type VirtualServiceIndexer struct {
 }
 
 func (v *VirtualServiceIndexer) CustomerResource() client.Object {
-	return &istiov1b1.VirtualService{}
+	return &istiov1a3.VirtualService{}
 }
 
 func (v *VirtualServiceIndexer) Predicate() predicate.Predicate {
@@ -593,7 +552,7 @@ type HTTPRouteIndexer struct {
 }
 
 func (v *HTTPRouteIndexer) CustomerResource() client.Object {
-	return &gwapiv1.HTTPRoute{}
+	return &gwapiv1b1.HTTPRoute{}
 }
 
 func (v *HTTPRouteIndexer) Predicate() predicate.Predicate {
@@ -608,7 +567,7 @@ type IstioGatewayIndexer struct {
 }
 
 func (v *IstioGatewayIndexer) CustomerResource() client.Object {
-	return &istiov1b1.Gateway{}
+	return &istiov1a3.Gateway{}
 }
 
 func (v *IstioGatewayIndexer) Predicate() predicate.Predicate {
@@ -620,7 +579,7 @@ type K8sGatewayIndexer struct {
 }
 
 func (v *K8sGatewayIndexer) CustomerResource() client.Object {
-	return &gwapiv1.Gateway{}
+	return &gwapiv1b1.Gateway{}
 }
 
 func (v *K8sGatewayIndexer) Predicate() predicate.Predicate {
@@ -629,23 +588,14 @@ func (v *K8sGatewayIndexer) Predicate() predicate.Predicate {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *HTTPFilterPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	virtualServiceIndexer := &VirtualServiceIndexer{}
-	r.virtualServiceIndexer = virtualServiceIndexer
-	istioGatewayIndexer := &IstioGatewayIndexer{}
-	r.istioGatewayIndexer = istioGatewayIndexer
 	indexers := []CustomerResourceIndexer{
-		virtualServiceIndexer,
-		istioGatewayIndexer,
+		r.virtualServiceIndexer,
+		r.istioGatewayIndexer,
 	}
-
 	if config.EnableGatewayAPI() {
-		httpRouteIndexer := &HTTPRouteIndexer{}
-		r.httpRouteIndexer = httpRouteIndexer
-		k8sGatewayIndexer := &K8sGatewayIndexer{}
-		r.k8sGatewayIndexer = k8sGatewayIndexer
 		indexers = append(indexers,
-			httpRouteIndexer,
-			k8sGatewayIndexer,
+			r.httpRouteIndexer,
+			r.k8sGatewayIndexer,
 		)
 	}
 

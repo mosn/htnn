@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"strings"
 
-	istiov1b1 "istio.io/client-go/pkg/apis/networking/v1beta1"
+	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 
 	"mosn.io/htnn/api/pkg/plugins"
 	"mosn.io/htnn/types/pkg/proto"
@@ -99,7 +99,7 @@ func validateHTTPFilterPolicy(policy *HTTPFilterPolicy, strict bool) error {
 	return nil
 }
 
-func ValidateVirtualService(vs *istiov1b1.VirtualService) error {
+func ValidateVirtualService(vs *istiov1a3.VirtualService) error {
 	if len(vs.Spec.Http) == 0 {
 		return errors.New("only http route is supported")
 	}
@@ -116,7 +116,7 @@ func ValidateVirtualService(vs *istiov1b1.VirtualService) error {
 	return nil
 }
 
-func ValidateGateway(gw *istiov1b1.Gateway) error {
+func ValidateGateway(gw *istiov1a3.Gateway) error {
 	// TODO: support it
 	for _, svr := range gw.Spec.Servers {
 		for _, host := range svr.Hosts {

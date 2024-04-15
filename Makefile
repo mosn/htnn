@@ -12,10 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-include etc/common.mk
-
-GO_PROD_MODULES = api types controller plugins
-GO_MODULES = $(GO_PROD_MODULES) e2e
+include common.mk
 
 # For some tools, like golangci-lint, we prefer to use the latest version so that we can have the new feature.
 # For the other tools, like kind, we don't upgrade it until there is a strong reason.
@@ -44,7 +41,7 @@ gen-proto: dev-tools install-go-fmtter $(GO_TARGETS)
 .PHONY: gen-crd-code
 gen-crd-code: $(LOCALBIN) install-go-fmtter
 	test -s $(LOCALBIN)/client-gen || GOBIN=$(LOCALBIN) go install k8s.io/code-generator/cmd/client-gen@v0.29.3
-	LOCALBIN=$(LOCALBIN) etc/gen-crd-code.sh
+	LOCALBIN=$(LOCALBIN) tools/gen-crd-code.sh
 	$(LOCALBIN)/gosimports -w -local ${PROJECT_NAME} ./types/pkg/client
 
 .PHONY: dev-tools
@@ -79,9 +76,11 @@ lint-go:
 
 .PHONY: fmt-go
 fmt-go: install-go-fmtter
-	$(LOCALBIN)/gosimports -w -local ${PROJECT_NAME} .
 	$(foreach PKG, $(GO_MODULES), \
-		pushd ./${PKG} && go mod tidy || exit 1; popd; \
+		pushd ./${PKG} && \
+			go mod tidy || exit 1; \
+			$(LOCALBIN)/gosimports -w -local ${PROJECT_NAME} . || exit 1; \
+		popd; \
 	)
 
 # Don't use `buf format` to format the protobuf files! Buf's code style is different from Envoy.
@@ -89,7 +88,7 @@ fmt-go: install-go-fmtter
 .PHONY: lint-proto
 lint-proto: $(LOCALBIN)
 	test -x $(LOCALBIN)/buf || GOBIN=$(LOCALBIN) go install github.com/bufbuild/buf/cmd/buf@v1.28.1
-	$(LOCALBIN)/buf lint
+	$(LOCALBIN)/buf lint --exclude-path ./external
 
 .PHONY: fmt-proto
 fmt-proto: dev-tools
@@ -99,7 +98,7 @@ fmt-proto: dev-tools
 
 .PHONY: fmt-proto-local
 fmt-proto-local:
-	find . -name '*.proto' -exec clang-format -i {} \+
+	find . -name '*.proto' | grep -v './external' | xargs clang-format -i
 
 .PHONY: install-license-checker
 install-license-checker: $(LOCALBIN)
@@ -120,7 +119,7 @@ lint-spell: dev-tools
 		${DEV_TOOLS_IMAGE} \
 		make lint-spell-local
 
-CODESPELL = codespell --skip '.git,.idea,test-envoy,go.mod,go.sum,go.work.sum,*.svg,./site/public/**' --check-filenames --check-hidden --ignore-words ./.ignore_words
+CODESPELL = codespell --skip 'test-envoy,go.mod,go.sum,*.patch,*.svg,./site/public/**' --check-filenames --check-hidden --ignore-words ./.ignore_words $(shell ls -A | tr '\t' '\n' | grep -vE 'external|.git|.idea|go.work.sum')
 .PHONY: lint-spell-local
 lint-spell-local:
 	$(CODESPELL)
@@ -155,3 +154,11 @@ fmt: fmt-go fmt-proto
 .PHONY: verify-example
 verify-example:
 	cd ./examples/dev_your_plugin && ./verify.sh
+
+TARGET_ISTIO_DIR = $(shell pwd)/external/istio
+
+.PHONY: prebuild
+prebuild:
+	git submodule update --init --recursive
+	cd $(TARGET_ISTIO_DIR) && git status | grep -q "nothing to commit, working tree clean" || (echo "istio submodule is not clean, please commit your changes first"; exit 1)
+	cd ./patch && ./apply-patch.sh $(TARGET_ISTIO_DIR)

@@ -20,6 +20,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 )
 
 func TestHostMatch(t *testing.T) {
@@ -143,8 +144,8 @@ func TestAllowRoute(t *testing.T) {
 		},
 	}
 
-	route := &gwapiv1.HTTPRoute{
-		Spec: gwapiv1.HTTPRouteSpec{},
+	route := &gwapiv1b1.HTTPRoute{
+		Spec: gwapiv1b1.HTTPRouteSpec{},
 		ObjectMeta: metav1.ObjectMeta{
 			Labels: map[string]string{
 				"app": "ingress",

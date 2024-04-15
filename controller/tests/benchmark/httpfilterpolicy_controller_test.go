@@ -28,7 +28,7 @@ import (
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
-	istiov1b1 "istio.io/client-go/pkg/apis/networking/v1beta1"
+	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	"k8s.io/apimachinery/pkg/types"
 	controllerruntime "sigs.k8s.io/controller-runtime"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -37,7 +37,7 @@ import (
 	mosniov1 "mosn.io/htnn/types/apis/v1"
 )
 
-func createResource(ctx context.Context, policy *mosniov1.HTTPFilterPolicy, virtualService *istiov1b1.VirtualService, i int) {
+func createResource(ctx context.Context, policy *mosniov1.HTTPFilterPolicy, virtualService *istiov1a3.VirtualService, i int) {
 	id := strconv.Itoa(i)
 	policy = policy.DeepCopy()
 
@@ -83,14 +83,14 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 			}
 		}
 
-		var virtualservices istiov1b1.VirtualServiceList
+		var virtualservices istiov1a3.VirtualServiceList
 		if err := k8sClient.List(ctx, &virtualservices); err == nil {
 			for _, e := range virtualservices.Items {
 				pkg.DeleteK8sResource(ctx, k8sClient, e)
 			}
 		}
 
-		var gateways istiov1b1.GatewayList
+		var gateways istiov1a3.GatewayList
 		if err := k8sClient.List(ctx, &gateways); err == nil {
 			for _, e := range gateways.Items {
 				pkg.DeleteK8sResource(ctx, k8sClient, e)
@@ -104,14 +104,14 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 			input := []map[string]interface{}{}
 			mustReadInput("httpfilterpolicy", &input)
 
-			var virtualService *istiov1b1.VirtualService
+			var virtualService *istiov1a3.VirtualService
 			var policy *mosniov1.HTTPFilterPolicy
 
 			for _, in := range input {
 				obj := pkg.MapToObj(in)
 				gvk := obj.GetObjectKind().GroupVersionKind()
 				if gvk.Kind == "VirtualService" {
-					virtualService = obj.(*istiov1b1.VirtualService)
+					virtualService = obj.(*istiov1a3.VirtualService)
 				} else if gvk.Group == "htnn.mosn.io" && gvk.Kind == "HTTPFilterPolicy" {
 					policy = obj.(*mosniov1.HTTPFilterPolicy)
 				} else {
@@ -155,7 +155,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 				Expect(k8sManager.Start(ctx)).ToNot(HaveOccurred(), "failed to run manager")
 			}()
 
-			var virtualservices istiov1b1.VirtualServiceList
+			var virtualservices istiov1a3.VirtualServiceList
 			Eventually(func() bool {
 				if err := k8sClient.List(ctx, &virtualservices); err != nil {
 					return false

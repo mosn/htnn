@@ -25,7 +25,6 @@ func TestInit(t *testing.T) {
 	Init()
 
 	// Check default values
-	assert.Equal(t, false, EnableWebhooks())
 	assert.Equal(t, true, EnableGatewayAPI())
 	assert.Equal(t, true, EnableEmbeddedMode())
 	assert.Equal(t, "/etc/libgolang.so", GoSoPath())
@@ -35,7 +34,6 @@ func TestInit(t *testing.T) {
 	Init()
 	os.Chdir("..")
 
-	assert.Equal(t, true, EnableWebhooks())
 	assert.Equal(t, false, EnableGatewayAPI())
 	assert.Equal(t, false, EnableEmbeddedMode())
 	assert.Equal(t, "/usr/local/golang.so", GoSoPath())

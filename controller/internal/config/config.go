@@ -48,12 +48,6 @@ func RootNamespace() string {
 	return rootNamespace
 }
 
-var enableWebhooks = false
-
-func EnableWebhooks() bool {
-	return enableWebhooks
-}
-
 var enableGatewayAPI = true
 
 func EnableGatewayAPI() bool {
@@ -95,7 +89,6 @@ func Init() {
 	updateStringIfSet(vp, "envoy.go_so_path", &goSoPath)
 	updateStringIfSet(vp, "istio.root_namespace", &rootNamespace)
 
-	updateBoolIfSet(vp, "enable_webhooks", &enableWebhooks)
 	updateBoolIfSet(vp, "enable_gateway_api", &enableGatewayAPI)
 	updateBoolIfSet(vp, "enable_embedded_mode", &enableEmbeddedMode)
 }

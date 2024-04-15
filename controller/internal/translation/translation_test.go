@@ -28,8 +28,7 @@ import (
 	"golang.org/x/text/language"
 	istioapi "istio.io/api/networking/v1alpha3"
 	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
-	istiov1b1 "istio.io/client-go/pkg/apis/networking/v1beta1"
-	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/yaml"
 
 	"mosn.io/htnn/api/pkg/plugins"
@@ -60,11 +59,11 @@ type testInput struct {
 	// we use sigs.k8s.io/yaml which uses JSON under the hover
 	HTTPFilterPolicy map[string][]*mosniov1.HTTPFilterPolicy `json:"httpFilterPolicy"`
 
-	VirtualService map[string][]*istiov1b1.VirtualService `json:"virtualService"`
-	IstioGateway   []*istiov1b1.Gateway                   `json:"istioGateway"`
+	VirtualService map[string][]*istiov1a3.VirtualService `json:"virtualService"`
+	IstioGateway   []*istiov1a3.Gateway                   `json:"istioGateway"`
 
-	HTTPRoute map[string][]*gwapiv1.HTTPRoute `json:"httpRoute"`
-	Gateway   []*gwapiv1.Gateway              `json:"gateway"`
+	HTTPRoute map[string][]*gwapiv1b1.HTTPRoute `json:"httpRoute"`
+	Gateway   []*gwapiv1b1.Gateway              `json:"gateway"`
 }
 
 func TestTranslate(t *testing.T) {
@@ -80,8 +79,8 @@ func TestTranslate(t *testing.T) {
 
 			// set up resources
 			type gwapiWrapper struct {
-				hr  *gwapiv1.HTTPRoute
-				gws []*gwapiv1.Gateway
+				hr  *gwapiv1b1.HTTPRoute
+				gws []*gwapiv1b1.Gateway
 			}
 			hrToGws := map[string]gwapiWrapper{}
 			for _, gw := range input.Gateway {
@@ -111,8 +110,8 @@ func TestTranslate(t *testing.T) {
 			}
 
 			type istioWrapper struct {
-				vs  *istiov1b1.VirtualService
-				gws []*istiov1b1.Gateway
+				vs  *istiov1a3.VirtualService
+				gws []*istiov1a3.Gateway
 			}
 			vsToGws := map[string]istioWrapper{}
 			for _, gw := range input.IstioGateway {
@@ -191,8 +190,8 @@ func TestPlugins(t *testing.T) {
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "plugins", "*.in.yml"))
 	require.NoError(t, err)
 
-	var vs *istiov1b1.VirtualService
-	var gw *istiov1b1.Gateway
+	var vs *istiov1a3.VirtualService
+	var gw *istiov1a3.Gateway
 	input := []map[string]interface{}{}
 	mustUnmarshal(t, filepath.Join("testdata", "plugins", "default.yml"), &input)
 
@@ -200,9 +199,9 @@ func TestPlugins(t *testing.T) {
 		obj := pkg.MapToObj(in)
 		gvk := obj.GetObjectKind().GroupVersionKind()
 		if gvk.Kind == "VirtualService" {
-			vs = obj.(*istiov1b1.VirtualService)
+			vs = obj.(*istiov1a3.VirtualService)
 		} else if gvk.Group == "networking.istio.io" && gvk.Kind == "Gateway" {
-			gw = obj.(*istiov1b1.Gateway)
+			gw = obj.(*istiov1a3.Gateway)
 		}
 	}
 
@@ -213,7 +212,7 @@ func TestPlugins(t *testing.T) {
 			mustUnmarshal(t, inputFile, &hfp)
 
 			s := NewInitState()
-			s.AddPolicyForVirtualService(&hfp, vs, []*istiov1b1.Gateway{gw})
+			s.AddPolicyForVirtualService(&hfp, vs, []*istiov1a3.Gateway{gw})
 
 			fs, err := s.Process(context.Background())
 			require.NoError(t, err)

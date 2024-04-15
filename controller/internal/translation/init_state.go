@@ -18,23 +18,23 @@ import (
 	"context"
 	"fmt"
 
-	istiov1b1 "istio.io/client-go/pkg/apis/networking/v1beta1"
+	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	"k8s.io/apimachinery/pkg/types"
-	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	mosniov1 "mosn.io/htnn/types/apis/v1"
 )
 
 type VirtualServicePolicies struct {
-	VirtualService *istiov1b1.VirtualService
+	VirtualService *istiov1a3.VirtualService
 	RoutePolicies  map[string][]*HTTPFilterPolicyWrapper
-	Gateways       []*istiov1b1.Gateway
+	Gateways       []*istiov1a3.Gateway
 }
 
 type HTTPRoutePolicies struct {
-	HTTPRoute     *gwapiv1.HTTPRoute
+	HTTPRoute     *gwapiv1b1.HTTPRoute
 	RoutePolicies map[string][]*HTTPFilterPolicyWrapper
-	Gateways      []*gwapiv1.Gateway
+	Gateways      []*gwapiv1b1.Gateway
 }
 
 // InitState is the beginning of our translation.
@@ -50,7 +50,7 @@ func NewInitState() *InitState {
 	}
 }
 
-func (s *InitState) GetGatewaysWithVirtualService(vs *istiov1b1.VirtualService) []*istiov1b1.Gateway {
+func (s *InitState) GetGatewaysWithVirtualService(vs *istiov1a3.VirtualService) []*istiov1a3.Gateway {
 	nn := types.NamespacedName{
 		Namespace: vs.Namespace,
 		Name:      vs.Name,
@@ -63,7 +63,7 @@ func (s *InitState) GetGatewaysWithVirtualService(vs *istiov1b1.VirtualService) 
 	return vsp.Gateways
 }
 
-func (s *InitState) AddPolicyForVirtualService(policy *mosniov1.HTTPFilterPolicy, vs *istiov1b1.VirtualService, gws []*istiov1b1.Gateway) {
+func (s *InitState) AddPolicyForVirtualService(policy *mosniov1.HTTPFilterPolicy, vs *istiov1a3.VirtualService, gws []*istiov1a3.Gateway) {
 	nn := types.NamespacedName{
 		Namespace: vs.Namespace,
 		Name:      vs.Name,
@@ -121,7 +121,7 @@ func (s *InitState) AddPolicyForVirtualService(policy *mosniov1.HTTPFilterPolicy
 	}
 }
 
-func (s *InitState) GetGatewaysWithHTTPRoute(route *gwapiv1.HTTPRoute) []*gwapiv1.Gateway {
+func (s *InitState) GetGatewaysWithHTTPRoute(route *gwapiv1b1.HTTPRoute) []*gwapiv1b1.Gateway {
 	nn := types.NamespacedName{
 		Namespace: route.Namespace,
 		Name:      route.Name,
@@ -135,7 +135,7 @@ func (s *InitState) GetGatewaysWithHTTPRoute(route *gwapiv1.HTTPRoute) []*gwapiv
 	return hp.Gateways
 }
 
-func (s *InitState) AddPolicyForHTTPRoute(policy *mosniov1.HTTPFilterPolicy, route *gwapiv1.HTTPRoute, gws []*gwapiv1.Gateway) {
+func (s *InitState) AddPolicyForHTTPRoute(policy *mosniov1.HTTPFilterPolicy, route *gwapiv1b1.HTTPRoute, gws []*gwapiv1b1.Gateway) {
 	nn := types.NamespacedName{
 		Namespace: route.Namespace,
 		Name:      route.Name,

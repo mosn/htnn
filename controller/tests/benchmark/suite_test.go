@@ -44,11 +44,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
-	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	"sigs.k8s.io/yaml"
 
 	"mosn.io/htnn/controller/internal/config"
 	"mosn.io/htnn/controller/internal/controller"
+	"mosn.io/htnn/controller/internal/controller/component"
+	"mosn.io/htnn/controller/internal/gatewayapi"
 	mosniov1 "mosn.io/htnn/types/apis/v1"
 )
 
@@ -150,7 +151,7 @@ var _ = BeforeSuite(func() {
 
 	err = istioscheme.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
-	err = gwapiv1.AddToScheme(scheme.Scheme)
+	err = gatewayapi.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
 	Expect(err).NotTo(HaveOccurred())
@@ -178,10 +179,12 @@ var _ = BeforeSuite(func() {
 	})
 	Expect(err).ToNot(HaveOccurred())
 
-	httpFilterPolicyReconciler = &controller.HTTPFilterPolicyReconciler{
-		Client: k8sManager.GetClient(),
-		Scheme: k8sManager.GetScheme(),
-	}
+	output := component.NewK8sOutput(k8sManager.GetClient())
+	rm := component.NewK8sResourceManager(k8sManager.GetClient())
+	httpFilterPolicyReconciler = controller.NewHTTPFilterPolicyReconciler(
+		output,
+		rm,
+	)
 	err = httpFilterPolicyReconciler.SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 })

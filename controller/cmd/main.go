@@ -29,14 +29,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
-	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	pkgLog "mosn.io/htnn/api/pkg/log"
 	"mosn.io/htnn/controller/internal/config"
 	"mosn.io/htnn/controller/internal/controller"
+	"mosn.io/htnn/controller/internal/controller/component"
+	"mosn.io/htnn/controller/internal/gatewayapi"
 	"mosn.io/htnn/controller/internal/log"
 	"mosn.io/htnn/controller/internal/registry"
-	"mosn.io/htnn/controller/internal/webhook"
 	v1 "mosn.io/htnn/types/apis/v1"
 )
 
@@ -78,8 +78,7 @@ func main() {
 	utilruntime.Must(istioscheme.AddToScheme(scheme))
 
 	if config.EnableGatewayAPI() {
-		// For HTTPRoute & Gateway, we only support v1 version
-		utilruntime.Must(gwapiv1.AddToScheme(scheme))
+		utilruntime.Must(gatewayapi.AddToScheme(scheme))
 	}
 
 	unsafeDisableDeepCopy := true
@@ -110,56 +109,33 @@ func main() {
 		os.Exit(1)
 	}
 
-	if err = (&controller.HTTPFilterPolicyReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
-	}).SetupWithManager(mgr); err != nil {
+	output := component.NewK8sOutput(mgr.GetClient())
+	rm := component.NewK8sResourceManager(mgr.GetClient())
+	if err = controller.NewHTTPFilterPolicyReconciler(
+		output,
+		rm,
+	).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "HTTPFilterPolicy")
 		os.Exit(1)
 	}
 	if err = (&controller.ConsumerReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		ResourceManager: rm,
+		Output:          output,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "Consumer")
 		os.Exit(1)
 	}
 
 	registry.InitRegistryManager(&registry.RegistryManagerOption{
-		Client: mgr.GetClient(),
+		Output: output,
 	})
 	if err = (&controller.ServiceRegistryReconciler{
-		Client: mgr.GetClient(),
-		Scheme: mgr.GetScheme(),
+		ResourceManager: rm,
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "ServiceRegistry")
 		os.Exit(1)
 	}
 
-	if config.EnableWebhooks() {
-		if err = (&webhook.HTTPFilterPolicyWebhook{
-			HTTPFilterPolicy: v1.HTTPFilterPolicy{},
-		}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "HTTPFilterPolicy")
-			os.Exit(1)
-		}
-
-		webhook.RegisterVirtualServiceWebhook(mgr)
-
-		if err = (&webhook.ConsumerWebhook{
-			Consumer: v1.Consumer{},
-		}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "Consumer")
-			os.Exit(1)
-		}
-
-		if err = (&webhook.ServiceRegistryWebhook{
-			ServiceRegistry: v1.ServiceRegistry{},
-		}).SetupWebhookWithManager(mgr); err != nil {
-			setupLog.Error(err, "unable to create webhook", "webhook", "ServiceRegistry")
-			os.Exit(1)
-		}
-	}
 	//+kubebuilder:scaffold:builder
 
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {

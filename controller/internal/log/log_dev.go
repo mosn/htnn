@@ -21,6 +21,8 @@ import (
 	"github.com/go-logr/zapr"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+
+	"mosn.io/htnn/controller/pkg/component"
 )
 
 var devLogger logr.Logger
@@ -49,7 +51,7 @@ type logrWrapper struct {
 	logger logr.Logger
 }
 
-func wrapLogr(l logr.Logger) CtrlLogger {
+func wrapLogr(l logr.Logger) component.CtrlLogger {
 	return &logrWrapper{
 		logger: l,
 	}

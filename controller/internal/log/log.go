@@ -14,20 +14,17 @@
 
 package log
 
-import "github.com/go-logr/logr"
+import (
+	"github.com/go-logr/logr"
 
-var logger CtrlLogger = &logrWrapper{
+	"mosn.io/htnn/controller/pkg/component"
+)
+
+var logger component.CtrlLogger = &logrWrapper{
 	logger: logr.Logger{},
 }
 
-type CtrlLogger interface {
-	Error(msg any)
-	Errorf(format string, args ...any)
-	Info(msg any)
-	Infof(format string, args ...any)
-}
-
-func SetLogger(l CtrlLogger) {
+func SetLogger(l component.CtrlLogger) {
 	logger = l
 }
 
