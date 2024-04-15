@@ -100,9 +100,13 @@ fmt-proto: dev-tools
 fmt-proto-local:
 	find . -name '*.proto' | grep -v './external' | xargs clang-format -i
 
+
+LICENSE_CHECKER_VERSION = 0.6.0
 .PHONY: install-license-checker
 install-license-checker: $(LOCALBIN)
-	test -x $(LOCALBIN)/license-eye || GOBIN=$(LOCALBIN) go install github.com/apache/skywalking-eyes/cmd/license-eye@v0.5.0
+	if ! test -x $(LOCALBIN)/license-eye || ! $(LOCALBIN)/license-eye --version | grep $(LICENSE_CHECKER_VERSION) >/dev/null; then \
+		GOBIN=$(LOCALBIN) go install github.com/apache/skywalking-eyes/cmd/license-eye@v$(LICENSE_CHECKER_VERSION); \
+	fi
 
 .PHONY: lint-license
 lint-license: install-license-checker
