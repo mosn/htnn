@@ -49,10 +49,10 @@ index 34cf0a690d..ea3bcfbdb3 100644
  		go s.configController.Run(stop)
 diff --git a/pilot/pkg/config/htnn/component.go b/pilot/pkg/config/htnn/component.go
 new file mode 100644
-index 0000000000..c05c519498
+index 0000000000..b30f15c77e
 --- /dev/null
 +++ b/pilot/pkg/config/htnn/component.go
-@@ -0,0 +1,194 @@
+@@ -0,0 +1,184 @@
 +// Copyright The HTNN Authors.
 +//
 +// Licensed under the Apache License, Version 2.0 (the "License");
@@ -110,14 +110,6 @@ index 0000000000..c05c519498
 +	return o
 +}
 +
-+func getRootNamespace(pc *model.PushContext) string {
-+	rootNamespace := "istio-system"
-+	if pc.Mesh.RootNamespace != "" {
-+		rootNamespace = pc.Mesh.RootNamespace
-+	}
-+	return rootNamespace
-+}
-+
 +func addHTNNMark(cfg *config.Config) {
 +	ann := cfg.Annotations
 +	if ann == nil {
@@ -143,10 +135,9 @@ index 0000000000..c05c519498
 +}
 +
 +func (o *output) FromHTTPFilterPolicy(_ context.Context, generatedEnvoyFilters map[string]*istiov1a3.EnvoyFilter) error {
-+	pc := o.ctrl.GetContext()
 +	// We have to use []config.Config because the other methods in PushContext expect it
 +	efs := make([]config.Config, 0, len(generatedEnvoyFilters))
-+	rootNamespace := getRootNamespace(pc)
++	rootNamespace := o.ctrl.RootNamespace()
 +
 +	log.Infof("write %d generated envoy filters to PushContext", len(generatedEnvoyFilters))
 +
@@ -161,8 +152,7 @@ index 0000000000..c05c519498
 +}
 +
 +func (o *output) FromConsumer(ctx context.Context, ef *istiov1a3.EnvoyFilter) error {
-+	pc := o.ctrl.GetContext()
-+	rootNamespace := getRootNamespace(pc)
++	rootNamespace := o.ctrl.RootNamespace()
 +
 +	log.Debugf("generate envoy filter %s: %+v", ef.Name, &ef.Spec)
 +
@@ -249,10 +239,10 @@ index 0000000000..c05c519498
 +}
 diff --git a/pilot/pkg/config/htnn/controller.go b/pilot/pkg/config/htnn/controller.go
 new file mode 100644
-index 0000000000..2ce09622bb
+index 0000000000..e1a2500140
 --- /dev/null
 +++ b/pilot/pkg/config/htnn/controller.go
-@@ -0,0 +1,283 @@
+@@ -0,0 +1,278 @@
 +// Copyright The HTNN Authors.
 +//
 +// Licensed under the Apache License, Version 2.0 (the "License");
@@ -471,7 +461,6 @@ index 0000000000..2ce09622bb
 +		}
 +	}
 +
-+	c.SetContext(pc)
 +	req := ctrl.Request{
 +		NamespacedName: types.NamespacedName{
 +			Name: "htnn", // just a placeholder for log
@@ -491,12 +480,8 @@ index 0000000000..2ce09622bb
 +	return len(toReconcile) > 0, k8serrors.NewAggregate(errs)
 +}
 +
-+func (c *Controller) SetContext(pc *model.PushContext) {
-+	c.currContext = pc
-+}
-+
-+func (c *Controller) GetContext() *model.PushContext {
-+	return c.currContext
++func (c *Controller) RootNamespace() string {
++	return c.rootNamespace
 +}
 +
 +func (c *Controller) SetHTTPFilterPolicyEnvoyFilters(efs []config.Config) {
