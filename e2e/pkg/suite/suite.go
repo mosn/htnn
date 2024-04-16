@@ -63,6 +63,7 @@ type Suite struct {
 	Opt Options
 
 	forwarders []*exec.Cmd
+	t          *testing.T
 }
 
 type Options struct {
@@ -100,6 +101,7 @@ func (suite *Suite) Run(t *testing.T) {
 			// TODO: configure Istio to push aggressively
 
 			t.Logf("Run test %q at %v", test.Name, time.Now())
+			suite.t = t // store t for logging
 			test.Run(t, suite)
 		})
 	}
@@ -174,6 +176,7 @@ func (suite *Suite) Patch(path string, header http.Header, body io.Reader) (*htt
 }
 
 func (suite *Suite) do(method string, path string, header http.Header, body io.Reader) (*http.Response, error) {
+	suite.t.Logf("send HTTP request %s %s at %v", method, path, time.Now())
 	req, err := http.NewRequest(method, "http://localhost:10000"+path, body)
 	if err != nil {
 		return nil, err

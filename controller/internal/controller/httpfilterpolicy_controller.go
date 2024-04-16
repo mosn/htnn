@@ -51,10 +51,20 @@ func getK8sKey(ns, name string) string {
 	return ns + "/" + name
 }
 
+// CustomerResourceIndexer indexes the additional customer resource
+// according to the reconciled customer resource
+type CustomerResourceIndexer interface {
+	CustomerResource() client.Object
+	FindAffectedObjects(ctx context.Context, obj component.ResourceMeta) []reconcile.Request
+	Predicate() predicate.Predicate
+}
+
 // HTTPFilterPolicyReconciler reconciles a HTTPFilterPolicy object
 type HTTPFilterPolicyReconciler struct {
 	component.ResourceManager
 	output component.Output
+
+	indexers map[string]CustomerResourceIndexer
 
 	virtualServiceIndexer *VirtualServiceIndexer
 	httpRouteIndexer      *HTTPRouteIndexer
@@ -66,21 +76,43 @@ func NewHTTPFilterPolicyReconciler(output component.Output, manager component.Re
 	r := &HTTPFilterPolicyReconciler{
 		ResourceManager: manager,
 		output:          output,
+
+		indexers: make(map[string]CustomerResourceIndexer),
 	}
 
 	virtualServiceIndexer := &VirtualServiceIndexer{}
 	r.virtualServiceIndexer = virtualServiceIndexer
 	istioGatewayIndexer := &IstioGatewayIndexer{}
 	r.istioGatewayIndexer = istioGatewayIndexer
+	r.addIndexer(virtualServiceIndexer, "networking.istio.io", "VirtualService")
+	r.addIndexer(istioGatewayIndexer, "networking.istio.io", "Gateway")
 
 	if config.EnableGatewayAPI() {
 		httpRouteIndexer := &HTTPRouteIndexer{}
 		r.httpRouteIndexer = httpRouteIndexer
 		k8sGatewayIndexer := &K8sGatewayIndexer{}
 		r.k8sGatewayIndexer = k8sGatewayIndexer
+		r.addIndexer(httpRouteIndexer, gwapiv1.GroupVersion.Group, "HTTPRoute")
+		r.addIndexer(k8sGatewayIndexer, gwapiv1.GroupVersion.Group, "Gateway")
 	}
 
 	return r
+}
+
+func (r *HTTPFilterPolicyReconciler) addIndexer(idxer CustomerResourceIndexer, group, kind string) {
+	r.indexers[fmt.Sprintf("%s/%s", group, kind)] = idxer
+}
+
+func (r *HTTPFilterPolicyReconciler) NeedReconcile(ctx context.Context, meta component.ResourceMeta) bool {
+	var reqs []reconcile.Request
+	idxer := r.indexers[fmt.Sprintf("%s/%s", meta.GetGroup(), meta.GetKind())]
+	if idxer == nil {
+		log.Errorf("no indexer found for %s/%s", meta.GetGroup(), meta.GetKind())
+		return false
+	}
+
+	reqs = idxer.FindAffectedObjects(ctx, meta)
+	return len(reqs) > 0
 }
 
 //+kubebuilder:rbac:groups=htnn.mosn.io,resources=httpfilterpolicies,verbs=get;list;watch;create;update;patch;delete
@@ -476,14 +508,6 @@ func (r *HTTPFilterPolicyReconciler) updatePolicies(ctx context.Context,
 	return nil
 }
 
-// CustomerResourceIndexer indexes the additional customer resource
-// according to the reconciled customer resource
-type CustomerResourceIndexer interface {
-	CustomerResource() client.Object
-	FindAffectedObjects(ctx context.Context, obj client.Object) []reconcile.Request
-	Predicate() predicate.Predicate
-}
-
 // indexer extracts common logic for indexing the affected resources
 type indexer struct {
 	lock  sync.RWMutex
@@ -496,13 +520,12 @@ func (v *indexer) UpdateIndex(idx map[string][]*mosniov1.HTTPFilterPolicy) {
 	v.lock.Unlock()
 }
 
-func (v *indexer) FindAffectedObjects(ctx context.Context, obj client.Object) []reconcile.Request {
+func (v *indexer) FindAffectedObjects(ctx context.Context, obj component.ResourceMeta) []reconcile.Request {
 	if config.EnableEmbeddedMode() {
 		ann := obj.GetAnnotations()
 		if ann != nil && ann[model.AnnotationHTTPFilterPolicy] != "" {
-			log.Infof("Target with embedded HTTPFilterPolicy changed, trigger reconciliation, kind: %s, namespace: %s, name: %s",
-				obj.GetObjectKind().GroupVersionKind().Kind,
-				obj.GetNamespace(), obj.GetName())
+			log.Infof("Target with embedded HTTPFilterPolicy changed, trigger reconciliation, group: %s, kind: %s, namespace: %s, name: %s",
+				obj.GetGroup(), obj.GetKind(), obj.GetNamespace(), obj.GetName())
 			return triggerReconciliation()
 		}
 	}
@@ -525,9 +548,8 @@ func (v *indexer) FindAffectedObjects(ctx context.Context, obj client.Object) []
 		requests[i] = request
 	}
 
-	log.Infof("Target changed, trigger reconciliation, kind: %s, namespace: %s, name: %s",
-		obj.GetObjectKind().GroupVersionKind().Kind,
-		obj.GetNamespace(), obj.GetName())
+	log.Infof("Target changed, trigger reconciliation, group: %s, kind: %s, namespace: %s, name: %s",
+		obj.GetGroup(), obj.GetKind(), obj.GetNamespace(), obj.GetName())
 
 	return triggerReconciliation()
 }
@@ -586,19 +608,24 @@ func (v *K8sGatewayIndexer) Predicate() predicate.Predicate {
 	return predicate.GenerationChangedPredicate{}
 }
 
+type resourceMetaWrapper struct {
+	client.Object
+}
+
+func (r *resourceMetaWrapper) GetGroup() string {
+	return r.GetObjectKind().GroupVersionKind().Group
+}
+
+func (r *resourceMetaWrapper) GetKind() string {
+	return r.GetObjectKind().GroupVersionKind().Kind
+}
+
+func wrapClientObjectToResourceMeta(obj client.Object) component.ResourceMeta {
+	return &resourceMetaWrapper{obj}
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *HTTPFilterPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	indexers := []CustomerResourceIndexer{
-		r.virtualServiceIndexer,
-		r.istioGatewayIndexer,
-	}
-	if config.EnableGatewayAPI() {
-		indexers = append(indexers,
-			r.httpRouteIndexer,
-			r.k8sGatewayIndexer,
-		)
-	}
-
 	controller := ctrl.NewControllerManagedBy(mgr).
 		Named("httpfilterpolicy").
 		Watches(
@@ -613,10 +640,13 @@ func (r *HTTPFilterPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// We don't reconcile when the generated EnvoyFilter is modified.
 		// So that user can manually correct the EnvoyFilter, until something else is changed.
 
-	for _, idxer := range indexers {
+	for _, idxer := range r.indexers {
+		idxer := idxer
 		controller.Watches(
 			idxer.CustomerResource(),
-			handler.EnqueueRequestsFromMapFunc(idxer.FindAffectedObjects),
+			handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
+				return idxer.FindAffectedObjects(ctx, wrapClientObjectToResourceMeta(obj))
+			}),
 			builder.WithPredicates(idxer.Predicate()),
 		)
 	}

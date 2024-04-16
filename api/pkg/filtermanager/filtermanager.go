@@ -435,6 +435,7 @@ func FilterManagerFactory(c interface{}) capi.StreamFilterFactory {
 		}
 
 		filters := make([]*model.FilterWrapper, len(parsedConfig))
+		logExecution := needLogExecution()
 		for i, fc := range parsedConfig {
 			factory := fc.Factory
 			config := fc.ParsedConfig
@@ -467,7 +468,7 @@ func FilterManagerFactory(c interface{}) capi.StreamFilterFactory {
 				// is expensive and not necessary in most of time.
 			}
 
-			if needLogExecution() {
+			if logExecution {
 				filters[i] = model.NewFilterWrapper(fc.Name, NewLogExecutionFilter(fc.Name, f, fm.callbacks))
 			} else {
 				filters[i] = model.NewFilterWrapper(fc.Name, f)
@@ -607,6 +608,8 @@ func (m *filterManager) DecodeHeaders(headers capi.RequestHeaderMap, endStream b
 			}
 
 			if len(c.FilterConfigs) > 0 {
+				api.LogDebugf("merge filters from consumer: %s", c.Name())
+
 				c.InitOnce.Do(func() {
 					names := make([]string, 0, len(c.FilterConfigs))
 					for name, fc := range c.FilterConfigs {
