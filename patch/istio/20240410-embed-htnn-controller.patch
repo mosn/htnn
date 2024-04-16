@@ -1245,7 +1245,7 @@ index dbe58a075b..742ee8be2d 100644
  func OutboundListenerClass(t NodeType) istionetworking.ListenerClass {
  	if t == Router {
 diff --git a/pilot/pkg/model/push_context.go b/pilot/pkg/model/push_context.go
-index 7ba2e93a75..2b181d4dfe 100644
+index 7ba2e93a75..061a3acd7a 100644
 --- a/pilot/pkg/model/push_context.go
 +++ b/pilot/pkg/model/push_context.go
 @@ -1282,6 +1282,7 @@ func (ps *PushContext) createNewContext(env *Environment) error {
@@ -1256,7 +1256,7 @@ index 7ba2e93a75..2b181d4dfe 100644
  	ps.initEnvoyFilters(env, nil, nil)
  	ps.initGateways(env)
  	ps.initAmbient(env)
-@@ -1396,11 +1397,19 @@ func (ps *PushContext) updateContext(
+@@ -1396,6 +1397,9 @@ func (ps *PushContext) updateContext(
  		ps.wasmPluginsByNamespace = oldPushContext.wasmPluginsByNamespace
  	}
  
@@ -1266,17 +1266,7 @@ index 7ba2e93a75..2b181d4dfe 100644
  	if envoyFiltersChanged {
  		ps.initEnvoyFilters(env, changedEnvoyFilters, oldPushContext.envoyFiltersByNamespace)
  	} else {
- 		ps.envoyFiltersByNamespace = oldPushContext.envoyFiltersByNamespace
- 	}
-+	for name, efs := range ps.envoyFiltersByNamespace {
-+		for _, ef := range efs {
-+			fmt.Printf("EnvoyFilters %s: %v\n", name, ef)
-+		}
-+	}
- 
- 	if gatewayChanged {
- 		ps.initGateways(env)
-@@ -2116,7 +2125,11 @@ func (ps *PushContext) initEnvoyFilters(env *Environment, changed sets.Set[Confi
+@@ -2116,7 +2120,11 @@ func (ps *PushContext) initEnvoyFilters(env *Environment, changed sets.Set[Confi
  
  	for _, envoyFilterConfig := range envoyFilterConfigs {
  		var efw *EnvoyFilterWrapper
