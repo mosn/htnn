@@ -27,6 +27,7 @@ func TestInit(t *testing.T) {
 	// Check default values
 	assert.Equal(t, true, EnableGatewayAPI())
 	assert.Equal(t, true, EnableEmbeddedMode())
+	assert.Equal(t, true, EnableNativePlugin())
 	assert.Equal(t, "/etc/libgolang.so", GoSoPath())
 	assert.Equal(t, "istio-system", RootNamespace())
 
@@ -36,6 +37,7 @@ func TestInit(t *testing.T) {
 
 	assert.Equal(t, false, EnableGatewayAPI())
 	assert.Equal(t, false, EnableEmbeddedMode())
+	assert.Equal(t, false, EnableNativePlugin())
 	assert.Equal(t, "/usr/local/golang.so", GoSoPath())
 	assert.Equal(t, "htnn", RootNamespace())
 }

@@ -16,9 +16,11 @@ package config
 
 import (
 	"strings"
+	"sync"
 
 	"github.com/spf13/viper"
 
+	"mosn.io/htnn/api/pkg/plugins"
 	"mosn.io/htnn/controller/internal/log"
 )
 
@@ -36,28 +38,48 @@ func updateBoolIfSet(vp *viper.Viper, key string, item *bool) {
 	}
 }
 
+var (
+	configLock sync.RWMutex
+)
+
 var goSoPath = "/etc/libgolang.so"
 
 func GoSoPath() string {
+	configLock.RLock()
+	defer configLock.RUnlock()
 	return goSoPath
 }
 
 var rootNamespace = "istio-system"
 
 func RootNamespace() string {
+	configLock.RLock()
+	defer configLock.RUnlock()
 	return rootNamespace
 }
 
 var enableGatewayAPI = true
 
 func EnableGatewayAPI() bool {
+	configLock.RLock()
+	defer configLock.RUnlock()
 	return enableGatewayAPI
 }
 
 var enableEmbeddedMode = true
 
 func EnableEmbeddedMode() bool {
+	configLock.RLock()
+	defer configLock.RUnlock()
 	return enableEmbeddedMode
+}
+
+var enableNativePlugin = true
+
+func EnableNativePlugin() bool {
+	configLock.RLock()
+	defer configLock.RUnlock()
+	return enableNativePlugin
 }
 
 type envStringReplacer struct {
@@ -68,6 +90,9 @@ func (r *envStringReplacer) Replace(s string) string {
 }
 
 func Init() {
+	configLock.Lock()
+	defer configLock.Unlock()
+
 	vp := viper.NewWithOptions(viper.EnvKeyReplacer(&envStringReplacer{}))
 	vp.SetEnvPrefix("HTNN")
 	vp.AutomaticEnv()
@@ -91,4 +116,23 @@ func Init() {
 
 	updateBoolIfSet(vp, "enable_gateway_api", &enableGatewayAPI)
 	updateBoolIfSet(vp, "enable_embedded_mode", &enableEmbeddedMode)
+	updateBoolIfSet(vp, "enable_native_plugin", &enableNativePlugin)
+
+	postInit()
+}
+
+func postInit() {
+	if !enableNativePlugin {
+		log.Infof("native plugin disabled by configured")
+		plugins.IterateHttpPlugin(func(key string, value plugins.Plugin) bool {
+			_, ok := value.(plugins.NativePlugin)
+			if !ok {
+				return true
+			}
+
+			plugins.DisableHttpPlugin(key)
+			return true
+		})
+
+	}
 }
