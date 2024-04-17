@@ -1,5 +1,5 @@
 diff --git a/pilot/pkg/bootstrap/configcontroller.go b/pilot/pkg/bootstrap/configcontroller.go
-index 34cf0a690d..ea3bcfbdb3 100644
+index 34cf0a690d..a1d970a45b 100644
 --- a/pilot/pkg/bootstrap/configcontroller.go
 +++ b/pilot/pkg/bootstrap/configcontroller.go
 @@ -24,6 +24,7 @@ import (
@@ -10,40 +10,51 @@ index 34cf0a690d..ea3bcfbdb3 100644
  	"istio.io/istio/pilot/pkg/config/kube/crdclient"
  	"istio.io/istio/pilot/pkg/config/kube/gateway"
  	ingress "istio.io/istio/pilot/pkg/config/kube/ingress"
-@@ -113,6 +114,8 @@ func (s *Server) initConfigController(args *PilotArgs) error {
+@@ -113,6 +114,11 @@ func (s *Server) initConfigController(args *PilotArgs) error {
  		})
  	}
  
 +	htnnCtrl := &htnn.Controller{}
-+	s.ConfigStores = append(s.ConfigStores, htnnCtrl)
++	if features.EnableHTNN {
++		s.ConfigStores = append(s.ConfigStores, htnnCtrl)
++	}
++
  	// Wrap the config controller with a cache.
  	aggregateConfigController, err := configaggregate.MakeCache(s.ConfigStores)
  	if err != nil {
-@@ -123,6 +126,27 @@ func (s *Server) initConfigController(args *PilotArgs) error {
+@@ -123,6 +129,35 @@ func (s *Server) initConfigController(args *PilotArgs) error {
  	// Create the config store.
  	s.environment.ConfigStore = aggregateConfigController
  
-+	htnnCtrl.Init(s.environment)
-+	s.environment.HTNNController = htnnCtrl
-+	s.addTerminatingStartFunc("htnn status", func(stop <-chan struct{}) error {
-+		leaderelection.
-+			NewLeaderElection(args.Namespace, args.PodName, leaderelection.HTNNStatusController, args.Revision, s.kubeClient).
-+			AddRunFunction(func(leaderStop <-chan struct{}) {
-+				log.Infof("Starting htnn status writer")
-+				htnnCtrl.SetStatusWrite(true, s.statusManager)
++	if features.EnableHTNN {
++		htnnCtrl.Init(s.environment)
++		s.environment.HTNNController = htnnCtrl
 +
-+				// Trigger a push so we can recompute status
-+				s.XDSServer.ConfigUpdate(&model.PushRequest{
-+					Full:   true,
-+					Reason: model.NewReasonStats(model.GlobalUpdate),
-+				})
-+				<-leaderStop
-+				log.Infof("Stopping htnn status writer")
-+				htnnCtrl.SetStatusWrite(false, nil)
-+			}).
-+			Run(stop)
-+		return nil
-+	})
++		// TODO: add feature gate like EnableGatewayAPIStatus
++		if s.statusManager == nil {
++			s.initStatusManager(args)
++		}
++		s.addTerminatingStartFunc("htnn status", func(stop <-chan struct{}) error {
++			leaderelection.
++				NewLeaderElection(args.Namespace, args.PodName, leaderelection.HTNNStatusController, args.Revision, s.kubeClient).
++				AddRunFunction(func(leaderStop <-chan struct{}) {
++					log.Infof("Starting htnn status writer")
++					htnnCtrl.SetStatusWrite(true, s.statusManager)
++
++					// Trigger a push so we can recompute status
++					s.XDSServer.ConfigUpdate(&model.PushRequest{
++						Full:   true,
++						Reason: model.NewReasonStats(model.GlobalUpdate),
++					})
++					<-leaderStop
++					log.Infof("Stopping htnn status writer")
++					htnnCtrl.SetStatusWrite(false, nil)
++				}).
++				Run(stop)
++			return nil
++		})
++	}
++
  	// Defer starting the controller until after the service is created.
  	s.addStartFunc("config controller", func(stop <-chan struct{}) error {
  		go s.configController.Run(stop)
@@ -1197,6 +1208,36 @@ index ef76a6c255..4b1e3787d2 100644
 +		return obj
 +	},
 +}
+diff --git a/pilot/pkg/features/htnn.go b/pilot/pkg/features/htnn.go
+new file mode 100644
+index 0000000000..cb1214e629
+--- /dev/null
++++ b/pilot/pkg/features/htnn.go
+@@ -0,0 +1,24 @@
++// Copyright The HTNN Authors.
++//
++// Licensed under the Apache License, Version 2.0 (the "License");
++// you may not use this file except in compliance with the License.
++// You may obtain a copy of the License at
++//
++//     http://www.apache.org/licenses/LICENSE-2.0
++//
++// Unless required by applicable law or agreed to in writing, software
++// distributed under the License is distributed on an "AS IS" BASIS,
++// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++// See the License for the specific language governing permissions and
++// limitations under the License.
++
++package features
++
++import (
++	"istio.io/istio/pkg/env"
++)
++
++var (
++	EnableHTNN = env.Register("PILOT_ENABLE_HTNN", false,
++		"If enabled, Pilot will watch HTNN resources").Get()
++)
 diff --git a/pilot/pkg/leaderelection/leaderelection.go b/pilot/pkg/leaderelection/leaderelection.go
 index 627860bce7..a0ce6a30f5 100644
 --- a/pilot/pkg/leaderelection/leaderelection.go
@@ -1269,10 +1310,10 @@ index 7ba2e93a75..061a3acd7a 100644
  				// Reuse the previous EnvoyFilterWrapper if it exists and hasn't changed when optimized config rebuild is enabled
 diff --git a/pilot/pkg/model/push_context_htnn.go b/pilot/pkg/model/push_context_htnn.go
 new file mode 100644
-index 0000000000..dd33b02d57
+index 0000000000..0d5b419885
 --- /dev/null
 +++ b/pilot/pkg/model/push_context_htnn.go
-@@ -0,0 +1,33 @@
+@@ -0,0 +1,38 @@
 +// Copyright The HTNN Authors.
 +//
 +// Licensed under the Apache License, Version 2.0 (the "License");
@@ -1291,6 +1332,7 @@ index 0000000000..dd33b02d57
 +
 +// We put HTNN modifications to a separate file if possible
 +import (
++	"istio.io/istio/pilot/pkg/features"
 +	"istio.io/istio/pkg/util/sets"
 +)
 +
@@ -1299,6 +1341,10 @@ index 0000000000..dd33b02d57
 +)
 +
 +func (ps *PushContext) initHTNNResources(env *Environment, configsUpdated sets.Set[ConfigKey]) bool {
++	if !features.EnableHTNN {
++		return false
++	}
++
 +	efGenerated, err := env.HTNNController.Reconcile(ps, configsUpdated)
 +	if err != nil {
 +		log.Errorf("failed to reconcile HTNN resources: %s", err)
@@ -1333,30 +1379,63 @@ index b1134806f9..bd13c63eee 100644
  	return "Kube"
  }
 diff --git a/pkg/config/schema/codegen/templates/collections.go.tmpl b/pkg/config/schema/codegen/templates/collections.go.tmpl
-index 8e35e84830..0b4e8c88b1 100644
+index 8e35e84830..35c609c0ca 100644
 --- a/pkg/config/schema/codegen/templates/collections.go.tmpl
 +++ b/pkg/config/schema/codegen/templates/collections.go.tmpl
-@@ -63,6 +63,9 @@ var (
- 		{{- if (contains .Resource.Group "istio.io") }}
+@@ -4,6 +4,7 @@
+ package {{.PackageName}}
+ 
+ import (
++	"istio.io/istio/pilot/pkg/features"
+ 	"istio.io/istio/pkg/config/schema/collection"
+ 	"istio.io/istio/pkg/config/schema/resource"
+ 	"istio.io/istio/pkg/config/validation"
+@@ -44,7 +45,9 @@ var (
+ 	// All contains all collections in the system.
+ 	All = collection.NewSchemasBuilder().
+ 	{{- range .Entries }}
++		{{- if (not (contains .Resource.Group "htnn.mosn.io")) }}
  		MustAdd({{ .Resource.Identifier }}).
- 		{{- end}}
-+		{{- if (contains .Resource.Group "mosn.io") }}
-+		MustAdd({{ .Resource.Identifier }}).
 +		{{- end}}
  	{{- end }}
  		Build()
  
-@@ -86,6 +89,9 @@ var (
-     }}
- 		MustAdd({{ .Resource.Identifier }}).
- 		{{- end}}
-+		{{- if (contains .Resource.Group "mosn.io") }}
-+		MustAdd({{ .Resource.Identifier }}).
-+		{{- end}}
+@@ -66,6 +69,17 @@ var (
  	{{- end }}
  		Build()
- )
+ 
++    {{- if (contains .FilePrefix "build !agent") }}
++	// HTNN contains collections used provided by HTNN.
++	HTNN = collection.NewSchemasBuilder().
++	{{- range .Entries }}
++		{{- if (contains .Resource.Group "htnn.mosn.io") }}
++		MustAdd({{ .Resource.Identifier }}).
++		{{- end}}
++	{{- end }}
++		Build()
++	{{- end }}
++
+ 	// pilotGatewayAPI contains only collections used by Pilot, including the full Gateway API.
+ 	pilotGatewayAPI = collection.NewSchemasBuilder().
+ 	{{- range .Entries }}
+@@ -88,4 +102,15 @@ var (
+ 		{{- end}}
+ 	{{- end }}
+ 		Build()
+-)
 \ No newline at end of file
++)
++
++{{- if (contains .FilePrefix "build !agent") }}
++func init() {
++	if features.EnableHTNN {
++		All = All.Union(HTNN)
++		Pilot = Pilot.Union(HTNN)
++		pilotGatewayAPI = pilotGatewayAPI.Union(HTNN)
++		pilotStableGatewayAPI = pilotStableGatewayAPI.Union(HTNN)
++	}
++}
++{{- end }}
 diff --git a/pkg/config/schema/codegen/templates/crdclient.go.tmpl b/pkg/config/schema/codegen/templates/crdclient.go.tmpl
 index 1da41f51ca..a11e26bc8a 100644
 --- a/pkg/config/schema/codegen/templates/crdclient.go.tmpl
@@ -1442,7 +1521,7 @@ index 05f87324df..343c9bd09d 100644
  {{- end }}
    default:
 diff --git a/pkg/config/schema/collections/collections.gen.go b/pkg/config/schema/collections/collections.gen.go
-index 91f0909c0a..e1e8105517 100755
+index 91f0909c0a..7cc1b90a43 100755
 --- a/pkg/config/schema/collections/collections.gen.go
 +++ b/pkg/config/schema/collections/collections.gen.go
 @@ -16,6 +16,7 @@ import (
@@ -1453,7 +1532,15 @@ index 91f0909c0a..e1e8105517 100755
  	sigsk8siogatewayapiapisv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
  	sigsk8siogatewayapiapisv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
  
-@@ -80,6 +81,21 @@ var (
+@@ -26,6 +27,7 @@ import (
+ 	istioioapinetworkingv1beta1 "istio.io/api/networking/v1beta1"
+ 	istioioapisecurityv1beta1 "istio.io/api/security/v1beta1"
+ 	istioioapitelemetryv1alpha1 "istio.io/api/telemetry/v1alpha1"
++	"istio.io/istio/pilot/pkg/features"
+ 	"istio.io/istio/pkg/config/schema/collection"
+ 	"istio.io/istio/pkg/config/schema/resource"
+ 	"istio.io/istio/pkg/config/validation"
+@@ -80,6 +82,21 @@ var (
  		ValidateProto: validation.EmptyValidate,
  	}.MustBuild()
  
@@ -1475,7 +1562,7 @@ index 91f0909c0a..e1e8105517 100755
  	CustomResourceDefinition = resource.Builder{
  		Identifier:    "CustomResourceDefinition",
  		Group:         "apiextensions.k8s.io",
-@@ -240,6 +256,21 @@ var (
+@@ -240,6 +257,21 @@ var (
  		ValidateProto: validation.EmptyValidate,
  	}.MustBuild()
  
@@ -1497,47 +1584,31 @@ index 91f0909c0a..e1e8105517 100755
  	HTTPRoute = resource.Builder{
  		Identifier: "HTTPRoute",
  		Group:      "gateway.networking.k8s.io",
-@@ -724,6 +755,7 @@ var (
- 		MustAdd(AuthorizationPolicy).
- 		MustAdd(CertificateSigningRequest).
- 		MustAdd(ConfigMap).
+@@ -814,6 +846,11 @@ var (
+ 		MustAdd(WorkloadEntry).
+ 		MustAdd(WorkloadGroup).
+ 		Build()
++	// HTNN contains collections used provided by HTNN.
++	HTNN = collection.NewSchemasBuilder().
 +		MustAdd(Consumer).
- 		MustAdd(CustomResourceDefinition).
- 		MustAdd(DaemonSet).
- 		MustAdd(Deployment).
-@@ -734,6 +766,7 @@ var (
- 		MustAdd(GRPCRoute).
- 		MustAdd(Gateway).
- 		MustAdd(GatewayClass).
 +		MustAdd(HTTPFilterPolicy).
- 		MustAdd(HTTPRoute).
- 		MustAdd(Ingress).
- 		MustAdd(IngressClass).
-@@ -800,9 +833,11 @@ var (
- 	// Pilot contains only collections used by Pilot.
- 	Pilot = collection.NewSchemasBuilder().
- 		MustAdd(AuthorizationPolicy).
-+		MustAdd(Consumer).
- 		MustAdd(DestinationRule).
- 		MustAdd(EnvoyFilter).
- 		MustAdd(Gateway).
-+		MustAdd(HTTPFilterPolicy).
- 		MustAdd(PeerAuthentication).
- 		MustAdd(ProxyConfig).
- 		MustAdd(RequestAuthentication).
-@@ -844,10 +879,12 @@ var (
- 	// PilotStableGatewayAPI contains only collections used by Pilot, including beta+ Gateway API.
- 	pilotStableGatewayAPI = collection.NewSchemasBuilder().
- 				MustAdd(AuthorizationPolicy).
-+				MustAdd(Consumer).
- 				MustAdd(DestinationRule).
- 				MustAdd(EnvoyFilter).
- 				MustAdd(Gateway).
- 				MustAdd(GatewayClass).
-+				MustAdd(HTTPFilterPolicy).
- 				MustAdd(HTTPRoute).
- 				MustAdd(KubernetesGateway).
- 				MustAdd(PeerAuthentication).
++		Build()
+ 
+ 	// pilotGatewayAPI contains only collections used by Pilot, including the full Gateway API.
+ 	pilotGatewayAPI = collection.NewSchemasBuilder().
+@@ -863,3 +900,12 @@ var (
+ 				MustAdd(WorkloadGroup).
+ 				Build()
+ )
++
++func init() {
++	if features.EnableHTNN {
++		All = All.Union(HTNN)
++		Pilot = Pilot.Union(HTNN)
++		pilotGatewayAPI = pilotGatewayAPI.Union(HTNN)
++		pilotStableGatewayAPI = pilotStableGatewayAPI.Union(HTNN)
++	}
++}
 diff --git a/pkg/config/schema/gvk/resources.gen.go b/pkg/config/schema/gvk/resources.gen.go
 index 4b60b1ff1d..bd93aff45a 100755
 --- a/pkg/config/schema/gvk/resources.gen.go

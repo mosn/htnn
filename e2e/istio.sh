@@ -35,6 +35,7 @@ install() {
     $ISTIOCTL manifest apply \
         --set .values.pilot.image="htnn/e2e-cp:0.1.0" \
         --set .values.pilot.env.ISTIO_DELTA_XDS=true \
+        --set .values.pilot.env.PILOT_ENABLE_HTNN=true \
         --set .values.pilot.env.UNSAFE_PILOT_ENABLE_RUNTIME_ASSERTIONS=true \
         --set .values.pilot.env.UNSAFE_PILOT_ENABLE_DELTA_TEST=true \
         --set .values.global.proxy.image="htnn/e2e-dp:0.1.0" \
