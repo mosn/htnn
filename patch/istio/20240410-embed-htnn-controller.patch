@@ -49,10 +49,10 @@ index 34cf0a690d..ea3bcfbdb3 100644
  		go s.configController.Run(stop)
 diff --git a/pilot/pkg/config/htnn/component.go b/pilot/pkg/config/htnn/component.go
 new file mode 100644
-index 0000000000..b30f15c77e
+index 0000000000..a6f038f095
 --- /dev/null
 +++ b/pilot/pkg/config/htnn/component.go
-@@ -0,0 +1,184 @@
+@@ -0,0 +1,187 @@
 +// Copyright The HTNN Authors.
 +//
 +// Licensed under the Apache License, Version 2.0 (the "License");
@@ -73,6 +73,7 @@ index 0000000000..b30f15c77e
 +	"context"
 +	"reflect"
 +	"strconv"
++	"time"
 +
 +	istioapi "istio.io/api/networking/v1alpha3"
 +	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
@@ -122,6 +123,8 @@ index 0000000000..b30f15c77e
 +func convertEnvoyFilterToConfig(ef *istiov1a3.EnvoyFilter, ns string) *config.Config {
 +	cfg := &config.Config{
 +		Meta: config.Meta{
++			GroupVersionKind:  gvk.EnvoyFilter,
++			CreationTimestamp: time.Now(),
 +			// Only copy fields used by istio during generating xDS
 +			Name:        ef.Name,
 +			Namespace:   ns,
