@@ -41,13 +41,3 @@ header:
     - 'api/internal/cookie/cookie.go'
     - 'controller/registries/nacos/config.go'
   comment: on-failure
-  # remove below once skywalking-eyes v0.6.0 is released
-  language:
-    Protocol Buffer:
-      extensions:
-        - ".proto"
-      comment_style_id: DoubleSlash
-    Open Policy Agent:
-      extensions:
-        - ".rego"
-      comment_style_id: Hashtag
