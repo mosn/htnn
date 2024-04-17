@@ -67,6 +67,7 @@ func init() {
 			err = c.Get(ctx, nsName, &consumer)
 			require.NoError(t, err)
 
+			// check status
 			st := consumer.Status
 			cd := st.Conditions[0]
 			gen := consumer.Generation
@@ -76,19 +77,23 @@ func init() {
 			require.Equal(t, "The resource has been accepted", cd.Message)
 			require.Equal(t, "Accepted", cd.Reason)
 
+			// update consumer
 			base := client.MergeFrom(consumer.DeepCopy())
 			consumer.Spec.Filters = map[string]mosniov1.HTTPPlugin{
 				"limitReq": {
 					Config: runtime.RawExtension{
-						Raw: []byte(`{"average":1}`),
+						Raw: []byte(`{"average":1,"period":"10s"}`),
 					},
 				},
 			}
 			err = c.Patch(ctx, &consumer, base)
 			require.NoError(t, err)
-			nsName = types.NamespacedName{Name: "rick", Namespace: k8s.DefaultNamespace}
-			err = c.Get(ctx, nsName, &consumer)
-			require.NoError(t, err)
+
+			time.Sleep(1 * time.Second)
+			rsp, _ = suite.Get("/echo", hdrWithKey("morty"))
+			require.Equal(t, 200, rsp.StatusCode)
+			rsp, _ = suite.Get("/echo", hdrWithKey("morty"))
+			require.Equal(t, 429, rsp.StatusCode)
 
 			// test webhook
 			base = client.MergeFrom(consumer.DeepCopy())
@@ -104,16 +109,14 @@ func init() {
 			require.True(t, strings.HasPrefix(err.Error(), "admission webhook"))
 
 			// remove consumer
+			nsName = types.NamespacedName{Name: "rick", Namespace: k8s.DefaultNamespace}
+			err = c.Get(ctx, nsName, &consumer)
+			require.NoError(t, err)
+
 			err = c.Delete(ctx, &consumer)
 			require.NoError(t, err)
 
 			time.Sleep(1 * time.Second)
-
-			rsp, _ = suite.Get("/echo", hdrWithKey("morty"))
-			require.Equal(t, 200, rsp.StatusCode)
-			rsp, _ = suite.Get("/echo", hdrWithKey("morty"))
-			require.Equal(t, 429, rsp.StatusCode)
-
 			rsp, _ = suite.Get("/echo", hdrWithKey("rick"))
 			require.Equal(t, 401, rsp.StatusCode)
 		},

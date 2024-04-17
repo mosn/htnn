@@ -1,20 +1,29 @@
 diff --git a/pilot/pkg/bootstrap/configcontroller.go b/pilot/pkg/bootstrap/configcontroller.go
-index 34cf0a690d..49f5bbc494 100644
+index 34cf0a690d..ea3bcfbdb3 100644
 --- a/pilot/pkg/bootstrap/configcontroller.go
 +++ b/pilot/pkg/bootstrap/configcontroller.go
-@@ -26,6 +26,7 @@ import (
+@@ -24,6 +24,7 @@ import (
+ 	meshconfig "istio.io/api/mesh/v1alpha1"
+ 	"istio.io/istio/pilot/pkg/autoregistration"
  	configaggregate "istio.io/istio/pilot/pkg/config/aggregate"
++	"istio.io/istio/pilot/pkg/config/htnn"
  	"istio.io/istio/pilot/pkg/config/kube/crdclient"
  	"istio.io/istio/pilot/pkg/config/kube/gateway"
-+	"istio.io/istio/pilot/pkg/config/htnn"
  	ingress "istio.io/istio/pilot/pkg/config/kube/ingress"
- 	"istio.io/istio/pilot/pkg/config/memory"
- 	configmonitor "istio.io/istio/pilot/pkg/config/monitor"
-@@ -123,6 +124,27 @@ func (s *Server) initConfigController(args *PilotArgs) error {
+@@ -113,6 +114,8 @@ func (s *Server) initConfigController(args *PilotArgs) error {
+ 		})
+ 	}
+ 
++	htnnCtrl := &htnn.Controller{}
++	s.ConfigStores = append(s.ConfigStores, htnnCtrl)
+ 	// Wrap the config controller with a cache.
+ 	aggregateConfigController, err := configaggregate.MakeCache(s.ConfigStores)
+ 	if err != nil {
+@@ -123,6 +126,27 @@ func (s *Server) initConfigController(args *PilotArgs) error {
  	// Create the config store.
  	s.environment.ConfigStore = aggregateConfigController
  
-+	htnnCtrl := htnn.NewController(s.environment)
++	htnnCtrl.Init(s.environment)
 +	s.environment.HTNNController = htnnCtrl
 +	s.addTerminatingStartFunc("htnn status", func(stop <-chan struct{}) error {
 +		leaderelection.
@@ -40,10 +49,10 @@ index 34cf0a690d..49f5bbc494 100644
  		go s.configController.Run(stop)
 diff --git a/pilot/pkg/config/htnn/component.go b/pilot/pkg/config/htnn/component.go
 new file mode 100644
-index 0000000000..f67b1518d2
+index 0000000000..a6f038f095
 --- /dev/null
 +++ b/pilot/pkg/config/htnn/component.go
-@@ -0,0 +1,194 @@
+@@ -0,0 +1,187 @@
 +// Copyright The HTNN Authors.
 +//
 +// Licensed under the Apache License, Version 2.0 (the "License");
@@ -64,6 +73,7 @@ index 0000000000..f67b1518d2
 +	"context"
 +	"reflect"
 +	"strconv"
++	"time"
 +
 +	istioapi "istio.io/api/networking/v1alpha3"
 +	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
@@ -91,22 +101,14 @@ index 0000000000..f67b1518d2
 +}
 +
 +type output struct {
-+	contextCarrier ContextCarrier
++	ctrl *Controller
 +}
 +
-+func NewOutput(cc ContextCarrier) component.Output {
++func NewOutput(ctrl *Controller) component.Output {
 +	o := &output{
-+		contextCarrier: cc,
++		ctrl: ctrl,
 +	}
 +	return o
-+}
-+
-+func getRootNamespace(pc *model.PushContext) string {
-+	rootNamespace := "istio-system"
-+	if pc.Mesh.RootNamespace != "" {
-+		rootNamespace = pc.Mesh.RootNamespace
-+	}
-+	return rootNamespace
 +}
 +
 +func addHTNNMark(cfg *config.Config) {
@@ -121,6 +123,8 @@ index 0000000000..f67b1518d2
 +func convertEnvoyFilterToConfig(ef *istiov1a3.EnvoyFilter, ns string) *config.Config {
 +	cfg := &config.Config{
 +		Meta: config.Meta{
++			GroupVersionKind:  gvk.EnvoyFilter,
++			CreationTimestamp: time.Now(),
 +			// Only copy fields used by istio during generating xDS
 +			Name:        ef.Name,
 +			Namespace:   ns,
@@ -134,10 +138,9 @@ index 0000000000..f67b1518d2
 +}
 +
 +func (o *output) FromHTTPFilterPolicy(_ context.Context, generatedEnvoyFilters map[string]*istiov1a3.EnvoyFilter) error {
-+	pc := o.contextCarrier.GetContext()
 +	// We have to use []config.Config because the other methods in PushContext expect it
 +	efs := make([]config.Config, 0, len(generatedEnvoyFilters))
-+	rootNamespace := getRootNamespace(pc)
++	rootNamespace := o.ctrl.RootNamespace()
 +
 +	log.Infof("write %d generated envoy filters to PushContext", len(generatedEnvoyFilters))
 +
@@ -147,18 +150,17 @@ index 0000000000..f67b1518d2
 +		efs = append(efs, *convertEnvoyFilterToConfig(ef, rootNamespace))
 +	}
 +	// We don't write the generated filters to the cache here because the cache is read-only
-+	pc.SetHTTPFilterPolicyEnvoyFilters(efs)
++	o.ctrl.SetHTTPFilterPolicyEnvoyFilters(efs)
 +	return nil
 +}
 +
 +func (o *output) FromConsumer(ctx context.Context, ef *istiov1a3.EnvoyFilter) error {
-+	pc := o.contextCarrier.GetContext()
-+	rootNamespace := getRootNamespace(pc)
++	rootNamespace := o.ctrl.RootNamespace()
 +
 +	log.Debugf("generate envoy filter %s: %+v", ef.Name, &ef.Spec)
 +
 +	cfg := convertEnvoyFilterToConfig(ef, rootNamespace)
-+	pc.SetConsumerEnvoyFilter(cfg)
++	o.ctrl.SetConsumerEnvoyFilter(cfg)
 +	return nil
 +}
 +
@@ -240,10 +242,10 @@ index 0000000000..f67b1518d2
 +}
 diff --git a/pilot/pkg/config/htnn/controller.go b/pilot/pkg/config/htnn/controller.go
 new file mode 100644
-index 0000000000..9abd56ba1f
+index 0000000000..e1a2500140
 --- /dev/null
 +++ b/pilot/pkg/config/htnn/controller.go
-@@ -0,0 +1,104 @@
+@@ -0,0 +1,278 @@
 +// Copyright The HTNN Authors.
 +//
 +// Licensed under the Apache License, Version 2.0 (the "License");
@@ -262,49 +264,235 @@ index 0000000000..9abd56ba1f
 +
 +import (
 +	"context"
++	"errors"
 +	"sync/atomic"
 +
 +	"k8s.io/apimachinery/pkg/types"
-+	"k8s.io/apimachinery/pkg/util/errors"
++	k8serrors "k8s.io/apimachinery/pkg/util/errors"
++	"mosn.io/htnn/controller/pkg/component"
 +	"mosn.io/htnn/controller/pkg/istio"
 +	ctrl "sigs.k8s.io/controller-runtime"
 +
 +	"istio.io/istio/pilot/pkg/model"
 +	"istio.io/istio/pilot/pkg/status"
++	"istio.io/istio/pkg/config"
++	"istio.io/istio/pkg/config/schema/collection"
++	"istio.io/istio/pkg/config/schema/collections"
++	"istio.io/istio/pkg/config/schema/gvk"
++	"istio.io/istio/pkg/config/schema/kind"
++	"istio.io/istio/pkg/util/sets"
++)
++
++var errUnsupportedOp = errors.New("unsupported operation: the controller is read-only")
++
++var schemas = collection.SchemasFor(
++	collections.EnvoyFilter,
 +)
 +
 +type Controller struct {
-+	httpFilterPolicyReconciler istio.Reconciler
-+	consumerReconciler         istio.Reconciler
++	httpFilterPolicyReconciler istio.HTTPFilterPolicyReconciler
++	consumerReconciler         istio.ConsumerReconciler
 +
-+	currContext *model.PushContext
++	currContext            *model.PushContext
++	efFromHTTPFilterPolicy []config.Config
++	efFromConsumer         *config.Config
++	rootNamespace          string
++	cache                  model.ConfigStore
 +
 +	statusController *status.Controller
 +	statusEnabled    atomic.Bool
 +}
 +
-+func (c *Controller) Reconcile(pc *model.PushContext) error {
-+	c.SetContext(pc)
++func (c *Controller) Init(env *model.Environment) {
++	setupEnv(env)
++
++	c.rootNamespace = env.Mesh().RootNamespace
++	c.cache = env.ConfigStore
++	output := NewOutput(c)
++	manager := NewResourceManager(c.cache, c)
++	c.httpFilterPolicyReconciler = istio.NewHTTPFilterPolicyReconciler(output, manager)
++	c.consumerReconciler = istio.NewConsumerReconciler(output, manager)
++}
++
++// Implement model.ConfigStoreController
++func (c *Controller) RegisterEventHandler(kind config.GroupVersionKind, f model.EventHandler) {
++}
++
++func (c *Controller) Run(stop <-chan struct{}) {
++	// We don't produce EF in the Run method, because it seems that this doesn't guarantee the
++	// generated EF is sent together with the VirtualServices and other networking CR.
++	// (That is why put the htnn controller inside the istiod)
++}
++
++func (c *Controller) HasSynced() bool {
++	return true
++}
++
++func (c *Controller) Schemas() collection.Schemas {
++	return schemas
++}
++
++func (c *Controller) Get(typ config.GroupVersionKind, name, namespace string) *config.Config {
++	if typ != gvk.EnvoyFilter {
++		return nil
++	}
++
++	if c.efFromConsumer != nil {
++		ef := c.efFromConsumer
++		if ef.Name == name && ef.Namespace == namespace {
++			return ef
++		}
++	}
++
++	for _, ef := range c.efFromHTTPFilterPolicy {
++		if ef.Name == name && ef.Namespace == namespace {
++			return &ef
++		}
++	}
++	return nil
++}
++
++func (c *Controller) List(typ config.GroupVersionKind, namespace string) []config.Config {
++	if typ != gvk.EnvoyFilter {
++		return nil
++	}
++
++	if namespace != "" && namespace != c.rootNamespace {
++		return nil
++	}
++
++	// We return the internal structure directly as istio claims that the returned data should be read-only
++	if c.efFromConsumer != nil {
++		return append(c.efFromHTTPFilterPolicy, *c.efFromConsumer)
++	}
++	return c.efFromHTTPFilterPolicy
++}
++
++// This controller should only be used in the aggregateConfigController, which is read-only
++
++func (c *Controller) Create(_ config.Config) (string, error) {
++	return "", errUnsupportedOp
++}
++
++func (c *Controller) Update(_ config.Config) (string, error) {
++	return "", errUnsupportedOp
++}
++
++func (c *Controller) UpdateStatus(config.Config) (string, error) {
++	return "", errUnsupportedOp
++}
++
++func (c *Controller) Patch(_ config.Config, _ config.PatchFunc) (string, error) {
++	return "", errUnsupportedOp
++}
++
++func (c *Controller) Delete(_ config.GroupVersionKind, _, _ string, _ *string) error {
++	return errUnsupportedOp
++}
++
++// End model.ConfigStoreController
++
++type resourceMetaWrapper struct {
++	*config.Config
++}
++
++func (r *resourceMetaWrapper) GetGroup() string {
++	return r.Config.GroupVersionKind.Group
++}
++
++func (r *resourceMetaWrapper) GetKind() string {
++	return r.Config.GroupVersionKind.Kind
++}
++
++func (r *resourceMetaWrapper) GetNamespace() string {
++	return r.Config.Namespace
++}
++
++func (r *resourceMetaWrapper) GetName() string {
++	return r.Config.Name
++}
++
++func (r *resourceMetaWrapper) GetAnnotations() map[string]string {
++	return r.Config.Annotations
++}
++
++func wrapConfigToResourceMeta(cfg *config.Config) component.ResourceMeta {
++	return &resourceMetaWrapper{cfg}
++}
++
++func (c *Controller) Reconcile(pc *model.PushContext, configsUpdated sets.Set[model.ConfigKey]) (bool, error) {
++	ctx := context.Background()
++
++	toReconcile := sets.New[kind.Kind]()
++	if configsUpdated == nil {
++		// for the first time, trigger all reconcilations
++		toReconcile[kind.HTTPFilterPolicy] = struct{}{}
++		toReconcile[kind.Consumer] = struct{}{}
++	} else {
++		// here we provide our own change detection, so adding a new CR won't need to touch istio's own one in PushContext
++		for conf := range configsUpdated {
++			switch conf.Kind {
++			case kind.HTTPFilterPolicy, kind.Consumer:
++				toReconcile[conf.Kind] = struct{}{}
++			}
++		}
++		if _, completed := toReconcile[kind.HTTPFilterPolicy]; !completed {
++			for conf := range configsUpdated {
++				switch conf.Kind {
++				case kind.VirtualService, kind.Gateway, kind.HTTPRoute, kind.KubernetesGateway:
++					gvkValue := kind.MustToGVK(conf.Kind)
++					cfg := c.cache.Get(gvkValue, conf.Name, conf.Namespace)
++					if cfg != nil {
++						r := wrapConfigToResourceMeta(cfg)
++						if c.httpFilterPolicyReconciler.NeedReconcile(ctx, r) {
++							toReconcile[kind.HTTPFilterPolicy] = struct{}{}
++							completed = true
++						}
++					}
++
++					if !completed {
++						log.Debugf("ignore config %s/%s/%s which does not need to reconcile",
++							conf.Kind, conf.Namespace, conf.Name)
++					}
++				}
++
++				if completed {
++					// quick exit to avoid unnecessary checks
++					break // for
++				}
++			}
++		}
++	}
++
 +	req := ctrl.Request{
 +		NamespacedName: types.NamespacedName{
 +			Name: "htnn", // just a placeholder for log
 +		},
 +	}
-+	ctx := context.Background()
 +	errs := []error{}
-+	_, errHFP := c.httpFilterPolicyReconciler.Reconcile(ctx, req)
-+	errs = append(errs, errHFP) // err can be nil
-+	_, errCS := c.consumerReconciler.Reconcile(ctx, req)
-+	errs = append(errs, errCS) // err can be nil
-+	return errors.NewAggregate(errs)
++	for k := range toReconcile {
++		var err error
++		switch k {
++		case kind.HTTPFilterPolicy:
++			_, err = c.httpFilterPolicyReconciler.Reconcile(ctx, req)
++		case kind.Consumer:
++			_, err = c.consumerReconciler.Reconcile(ctx, req)
++		}
++		errs = append(errs, err) // err can be nil
++	}
++	return len(toReconcile) > 0, k8serrors.NewAggregate(errs)
 +}
 +
-+func (c *Controller) SetContext(pc *model.PushContext) {
-+	c.currContext = pc
++func (c *Controller) RootNamespace() string {
++	return c.rootNamespace
 +}
 +
-+func (c *Controller) GetContext() *model.PushContext {
-+	return c.currContext
++func (c *Controller) SetHTTPFilterPolicyEnvoyFilters(efs []config.Config) {
++	c.efFromHTTPFilterPolicy = efs
++}
++
++func (c *Controller) SetConsumerEnvoyFilter(ef *config.Config) {
++	c.efFromConsumer = ef
 +}
 +
 +func (c *Controller) WriteStatus(status any, target status.Resource) {
@@ -335,18 +523,6 @@ index 0000000000..9abd56ba1f
 +	} else {
 +		c.statusController = nil
 +	}
-+}
-+
-+func NewController(env *model.Environment) *Controller {
-+	setupEnv(env)
-+
-+	ctrl := &Controller{}
-+	output := NewOutput(ctrl)
-+	cache := env.ConfigStore
-+	manager := NewResourceManager(cache, ctrl)
-+	ctrl.httpFilterPolicyReconciler = istio.NewHTTPFilterPolicyReconciler(output, manager)
-+	ctrl.consumerReconciler = istio.NewConsumerReconciler(output, manager)
-+	return ctrl
 +}
 diff --git a/pilot/pkg/config/htnn/htnn.go b/pilot/pkg/config/htnn/htnn.go
 new file mode 100644
@@ -1034,7 +1210,7 @@ index 627860bce7..a0ce6a30f5 100644
  	AnalyzeController       = "istio-analyze-leader"
  	// GatewayDeploymentController controls translating Kubernetes Gateway objects into various derived
 diff --git a/pilot/pkg/model/context.go b/pilot/pkg/model/context.go
-index dbe58a075b..37bb5678c3 100644
+index dbe58a075b..742ee8be2d 100644
 --- a/pilot/pkg/model/context.go
 +++ b/pilot/pkg/model/context.go
 @@ -111,6 +111,7 @@ type Environment struct {
@@ -1050,73 +1226,35 @@ index dbe58a075b..37bb5678c3 100644
  }
  
 +type HTNNController interface {
-+	Reconcile(ctx *PushContext) error
++	Reconcile(ctx *PushContext, configsUpdated sets.Set[ConfigKey]) (bool, error)
 +}
 +
  // OutboundListenerClass is a helper to turn a NodeType for outbound to a ListenerClass.
  func OutboundListenerClass(t NodeType) istionetworking.ListenerClass {
  	if t == Router {
 diff --git a/pilot/pkg/model/push_context.go b/pilot/pkg/model/push_context.go
-index 7ba2e93a75..0eddb8139f 100644
+index 7ba2e93a75..061a3acd7a 100644
 --- a/pilot/pkg/model/push_context.go
 +++ b/pilot/pkg/model/push_context.go
-@@ -229,6 +229,8 @@ type PushContext struct {
- 
- 	// envoy filters for each namespace including global config namespace
- 	envoyFiltersByNamespace map[string][]*EnvoyFilterWrapper
-+	efFromHTTPFilterPolicy  []config.Config
-+	efFromConsumer          *config.Config
- 
- 	// wasm plugins for each namespace including global config namespace
- 	wasmPluginsByNamespace map[string][]*WasmPluginWrapper
-@@ -1282,6 +1284,7 @@ func (ps *PushContext) createNewContext(env *Environment) error {
+@@ -1282,6 +1282,7 @@ func (ps *PushContext) createNewContext(env *Environment) error {
  	ps.initTelemetry(env)
  	ps.initProxyConfigs(env)
  	ps.initWasmPlugins(env)
-+	ps.initHTNNResources(env)
++	ps.initHTNNResources(env, nil)
  	ps.initEnvoyFilters(env, nil, nil)
  	ps.initGateways(env)
  	ps.initAmbient(env)
-@@ -1302,8 +1305,16 @@ func (ps *PushContext) updateContext(
- 
- 	changedEnvoyFilters := sets.New[ConfigKey]()
- 
-+	var httpFilterPolicyChanged bool
-+	var consumerChanged bool
-+
- 	for conf := range pushReq.ConfigsUpdated {
- 		switch conf.Kind {
-+		case kind.HTTPFilterPolicy:
-+			httpFilterPolicyChanged = true
-+		case kind.Consumer:
-+			consumerChanged = true
-+
- 		case kind.ServiceEntry, kind.DNSName:
- 			servicesChanged = true
- 		case kind.DestinationRule:
-@@ -1396,6 +1407,13 @@ func (ps *PushContext) updateContext(
+@@ -1396,6 +1397,9 @@ func (ps *PushContext) updateContext(
  		ps.wasmPluginsByNamespace = oldPushContext.wasmPluginsByNamespace
  	}
  
-+	if consumerChanged || httpFilterPolicyChanged || gatewayChanged || virtualServicesChanged {
-+		// TODO: filter out unrelative istio resource changes, and the status change of htnn resource
-+		generated := ps.initHTNNResources(env)
-+		envoyFiltersChanged = envoyFiltersChanged || generated
-+	}
-+	// else, use the oldPushContext's envoyFiltersByNamespace
++	generated := ps.initHTNNResources(env, pushReq.ConfigsUpdated)
++	envoyFiltersChanged = envoyFiltersChanged || generated
 +
  	if envoyFiltersChanged {
  		ps.initEnvoyFilters(env, changedEnvoyFilters, oldPushContext.envoyFiltersByNamespace)
  	} else {
-@@ -2086,6 +2104,7 @@ func (ps *PushContext) WasmPluginsByListenerInfo(proxy *Proxy, info WasmPluginLi
- // pre computes envoy filters per namespace
- func (ps *PushContext) initEnvoyFilters(env *Environment, changed sets.Set[ConfigKey], previousIndex map[string][]*EnvoyFilterWrapper) {
- 	envoyFilterConfigs := env.List(gvk.EnvoyFilter, NamespaceAll)
-+	envoyFilterConfigs = append(envoyFilterConfigs, ps.GetHTTNEnvoyFilters()...)
- 	var previous map[ConfigKey]*EnvoyFilterWrapper
- 	if features.OptimizedConfigRebuild {
- 		previous = make(map[ConfigKey]*EnvoyFilterWrapper)
-@@ -2116,7 +2135,11 @@ func (ps *PushContext) initEnvoyFilters(env *Environment, changed sets.Set[Confi
+@@ -2116,7 +2120,11 @@ func (ps *PushContext) initEnvoyFilters(env *Environment, changed sets.Set[Confi
  
  	for _, envoyFilterConfig := range envoyFilterConfigs {
  		var efw *EnvoyFilterWrapper
@@ -1131,10 +1269,10 @@ index 7ba2e93a75..0eddb8139f 100644
  				// Reuse the previous EnvoyFilterWrapper if it exists and hasn't changed when optimized config rebuild is enabled
 diff --git a/pilot/pkg/model/push_context_htnn.go b/pilot/pkg/model/push_context_htnn.go
 new file mode 100644
-index 0000000000..d16041e337
+index 0000000000..dd33b02d57
 --- /dev/null
 +++ b/pilot/pkg/model/push_context_htnn.go
-@@ -0,0 +1,50 @@
+@@ -0,0 +1,33 @@
 +// Copyright The HTNN Authors.
 +//
 +// Licensed under the Apache License, Version 2.0 (the "License");
@@ -1153,37 +1291,20 @@ index 0000000000..d16041e337
 +
 +// We put HTNN modifications to a separate file if possible
 +import (
-+	"istio.io/istio/pkg/config"
++	"istio.io/istio/pkg/util/sets"
 +)
 +
 +const (
 +	CreatedByHTNN = "htnn.mosn.io/created-by-htnn"
 +)
 +
-+func (ps *PushContext) initHTNNResources(env *Environment) bool {
-+	err := env.HTNNController.Reconcile(ps)
++func (ps *PushContext) initHTNNResources(env *Environment, configsUpdated sets.Set[ConfigKey]) bool {
++	efGenerated, err := env.HTNNController.Reconcile(ps, configsUpdated)
 +	if err != nil {
 +		log.Errorf("failed to reconcile HTNN resources: %s", err)
-+		return false
 +	}
 +
-+	return true
-+}
-+
-+func (ps *PushContext) SetHTTPFilterPolicyEnvoyFilters(envoyFilters []config.Config) {
-+	ps.efFromHTTPFilterPolicy = envoyFilters
-+}
-+
-+func (ps *PushContext) SetConsumerEnvoyFilter(envoyFilter *config.Config) {
-+	ps.efFromConsumer = envoyFilter
-+}
-+
-+func (ps *PushContext) GetHTTNEnvoyFilters() []config.Config {
-+	efs := ps.efFromHTTPFilterPolicy
-+	if ps.efFromConsumer != nil {
-+		efs = append(efs, *ps.efFromConsumer)
-+	}
-+	return efs
++	return efGenerated
 +}
 diff --git a/pilot/pkg/xds/ecds.go b/pilot/pkg/xds/ecds.go
 index 305d1ebd75..d06d645065 100644
@@ -1280,6 +1401,29 @@ index 1da41f51ca..a11e26bc8a 100644
 +	{{- end }}
 +{{- end }}
 +}
+diff --git a/pkg/config/schema/codegen/templates/kind.go.tmpl b/pkg/config/schema/codegen/templates/kind.go.tmpl
+index 6934505e2a..de76f4f1fc 100644
+--- a/pkg/config/schema/codegen/templates/kind.go.tmpl
++++ b/pkg/config/schema/codegen/templates/kind.go.tmpl
+@@ -39,4 +39,17 @@ func MustFromGVK(g config.GroupVersionKind) Kind {
+ 	}
+ 
+ 	panic("unknown kind: " + g.String())
++}
++
++func MustToGVK(k Kind) config.GroupVersionKind {
++	switch k {
++{{- range .Entries }}
++	{{- if not (or (eq .Resource.Identifier "Address") (eq .Resource.Identifier "DNSName")) }}
++		case {{.Resource.Identifier}}:
++			return gvk.{{.Resource.Identifier}}
++	{{- end }}
++{{- end }}
++	}
++
++	panic("unknown kind: " + k.String())
+ }
+\ No newline at end of file
 diff --git a/pkg/config/schema/codegen/templates/types.go.tmpl b/pkg/config/schema/codegen/templates/types.go.tmpl
 index 05f87324df..343c9bd09d 100644
 --- a/pkg/config/schema/codegen/templates/types.go.tmpl
@@ -1489,7 +1633,7 @@ index d165cd5dc2..1171a6a3a2 100755
  		return false
  	case HTTPRoute_v1alpha2:
 diff --git a/pkg/config/schema/kind/resources.gen.go b/pkg/config/schema/kind/resources.gen.go
-index a874fdd75c..a4dfa435b9 100755
+index a874fdd75c..06a3f6f0bf 100755
 --- a/pkg/config/schema/kind/resources.gen.go
 +++ b/pkg/config/schema/kind/resources.gen.go
 @@ -12,6 +12,7 @@ const (
@@ -1544,6 +1688,107 @@ index a874fdd75c..a4dfa435b9 100755
  	case gvk.HTTPRoute:
  		return HTTPRoute
  	case gvk.Ingress:
+@@ -244,3 +254,100 @@ func MustFromGVK(g config.GroupVersionKind) Kind {
+ 
+ 	panic("unknown kind: " + g.String())
+ }
++
++func MustToGVK(k Kind) config.GroupVersionKind {
++	switch k {
++	case AuthorizationPolicy:
++		return gvk.AuthorizationPolicy
++	case CertificateSigningRequest:
++		return gvk.CertificateSigningRequest
++	case ConfigMap:
++		return gvk.ConfigMap
++	case Consumer:
++		return gvk.Consumer
++	case CustomResourceDefinition:
++		return gvk.CustomResourceDefinition
++	case DaemonSet:
++		return gvk.DaemonSet
++	case Deployment:
++		return gvk.Deployment
++	case DestinationRule:
++		return gvk.DestinationRule
++	case EndpointSlice:
++		return gvk.EndpointSlice
++	case Endpoints:
++		return gvk.Endpoints
++	case EnvoyFilter:
++		return gvk.EnvoyFilter
++	case GRPCRoute:
++		return gvk.GRPCRoute
++	case Gateway:
++		return gvk.Gateway
++	case GatewayClass:
++		return gvk.GatewayClass
++	case HTTPFilterPolicy:
++		return gvk.HTTPFilterPolicy
++	case HTTPRoute:
++		return gvk.HTTPRoute
++	case Ingress:
++		return gvk.Ingress
++	case IngressClass:
++		return gvk.IngressClass
++	case KubernetesGateway:
++		return gvk.KubernetesGateway
++	case Lease:
++		return gvk.Lease
++	case MeshConfig:
++		return gvk.MeshConfig
++	case MeshNetworks:
++		return gvk.MeshNetworks
++	case MutatingWebhookConfiguration:
++		return gvk.MutatingWebhookConfiguration
++	case Namespace:
++		return gvk.Namespace
++	case Node:
++		return gvk.Node
++	case PeerAuthentication:
++		return gvk.PeerAuthentication
++	case Pod:
++		return gvk.Pod
++	case ProxyConfig:
++		return gvk.ProxyConfig
++	case ReferenceGrant:
++		return gvk.ReferenceGrant
++	case RequestAuthentication:
++		return gvk.RequestAuthentication
++	case Secret:
++		return gvk.Secret
++	case Service:
++		return gvk.Service
++	case ServiceAccount:
++		return gvk.ServiceAccount
++	case ServiceEntry:
++		return gvk.ServiceEntry
++	case Sidecar:
++		return gvk.Sidecar
++	case StatefulSet:
++		return gvk.StatefulSet
++	case TCPRoute:
++		return gvk.TCPRoute
++	case TLSRoute:
++		return gvk.TLSRoute
++	case Telemetry:
++		return gvk.Telemetry
++	case UDPRoute:
++		return gvk.UDPRoute
++	case ValidatingWebhookConfiguration:
++		return gvk.ValidatingWebhookConfiguration
++	case VirtualService:
++		return gvk.VirtualService
++	case WasmPlugin:
++		return gvk.WasmPlugin
++	case WorkloadEntry:
++		return gvk.WorkloadEntry
++	case WorkloadGroup:
++		return gvk.WorkloadGroup
++	}
++
++	panic("unknown kind: " + k.String())
++}
 diff --git a/pkg/config/schema/kubeclient/common.go b/pkg/config/schema/kubeclient/common.go
 index 2f82038da6..f13cae0e63 100644
 --- a/pkg/config/schema/kubeclient/common.go

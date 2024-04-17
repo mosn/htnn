@@ -37,6 +37,14 @@ type ResourceManager interface {
 	UpdateStatus(ctx context.Context, obj client.Object, statusPtr any) error
 }
 
+type ResourceMeta interface {
+	GetGroup() string
+	GetKind() string
+	GetNamespace() string
+	GetName() string
+	GetAnnotations() map[string]string
+}
+
 type CtrlLogger interface {
 	Error(msg any)
 	Errorf(format string, args ...any)

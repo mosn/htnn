@@ -11,7 +11,7 @@ spec:
     limitReq:
       config:
         average: 1
-        period: 0.1s
+        period: 0.5s
     demo:
       config:
         hostName: rick
