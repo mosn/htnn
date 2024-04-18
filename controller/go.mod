@@ -19,7 +19,7 @@ module mosn.io/htnn/controller
 // a non-release version of mosn.io/htnn/xxx module, you may need to manually update the
 // dependency yourself, such as using replace in go.mod
 
-go 1.21.5
+go 1.21
 
 require (
 	github.com/agiledragon/gomonkey/v2 v2.11.0
