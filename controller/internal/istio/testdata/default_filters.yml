@@ -19,7 +19,7 @@
           typed_config:
             '@type': type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.Config
             library_id: fm
-            library_path: /etc/libgolang.so
+            library_path: /path/to/goso
             plugin_name: fm
     - applyTo: HTTP_FILTER
       match:

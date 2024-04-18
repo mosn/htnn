@@ -19,6 +19,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/agiledragon/gomonkey/v2"
 	local_ratelimit "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/local_ratelimit/v3"
 	"github.com/stretchr/testify/require"
 	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
@@ -26,6 +27,7 @@ import (
 
 	"mosn.io/htnn/api/pkg/filtermanager/api"
 	"mosn.io/htnn/api/pkg/plugins"
+	ctrlcfg "mosn.io/htnn/controller/internal/config"
 )
 
 type basePlugin struct {
@@ -122,6 +124,9 @@ func (p *pluginLast) HTTPFilterConfigPlaceholder() map[string]interface{} {
 }
 
 func TestDefaultFilters(t *testing.T) {
+	patch := gomonkey.ApplyFuncReturn(ctrlcfg.GoSoPath, "/path/to/goso")
+	defer patch.Reset()
+
 	plugins.RegisterHttpPlugin("first", &pluginFirst{})
 	plugins.RegisterHttpPlugin("pre", &pluginPre{})
 	plugins.RegisterHttpPlugin("post", &pluginPost{})
@@ -134,6 +139,24 @@ func TestDefaultFilters(t *testing.T) {
 	d, _ := yaml.Marshal(out)
 	actual := string(d)
 	expFile := filepath.Join("testdata", "default_filters.yml")
+	d, _ = os.ReadFile(expFile)
+	want := string(d)
+	require.Equal(t, want, actual)
+}
+
+func TestGenerateConsumers(t *testing.T) {
+	patch := gomonkey.ApplyFuncReturn(ctrlcfg.GoSoPath, "/path/to/goso")
+	defer patch.Reset()
+
+	out := GenerateConsumers(map[string]interface{}{
+		"ns": map[string]interface{}{
+			"consumer1": "config",
+			"consumer2": "config",
+		},
+	})
+	d, _ := yaml.Marshal(out)
+	actual := string(d)
+	expFile := filepath.Join("testdata", "consumers.yml")
 	d, _ = os.ReadFile(expFile)
 	want := string(d)
 	require.Equal(t, want, actual)
