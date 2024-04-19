@@ -787,7 +787,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 			}, timeout, interval).Should(BeTrue())
 		})
 
-		It("deal with embedded HTTPFilterPolicy, ignore invalid embeded HTTPFilterPolicy", func() {
+		It("deal with embedded HTTPFilterPolicy, ignore invalid embedded HTTPFilterPolicy", func() {
 			ctx := context.Background()
 			input := []map[string]interface{}{}
 			mustReadHTTPFilterPolicy("virtualservice_embeded_invalid_hfp", &input)
