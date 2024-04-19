@@ -22,7 +22,10 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
+	"k8s.io/apimachinery/pkg/types"
 
+	"mosn.io/htnn/e2e/pkg/k8s"
 	"mosn.io/htnn/e2e/pkg/suite"
 )
 
@@ -37,6 +40,36 @@ func init() {
 			require.NoError(t, err)
 			req, _, err := suite.Capture(rsp)
 			require.NoError(t, err)
+			require.Equal(t, "hello,", req.Headers["Doraemon"][0])
+
+			c := suite.K8sClient()
+			ctx := context.Background()
+			nsName := types.NamespacedName{Name: "vs", Namespace: k8s.DefaultNamespace}
+			var route istiov1a3.VirtualService
+
+			err = c.Get(ctx, nsName, &route)
+			require.NoError(t, err)
+			ann := route.GetAnnotations()
+			route.SetAnnotations(nil)
+			err = c.Update(ctx, &route)
+			require.NoError(t, err)
+			time.Sleep(1 * time.Second)
+			rsp, err = client.Get("http://default.local:18000/echo")
+			require.NoError(t, err)
+			req, _, err = suite.Capture(rsp)
+			require.NoError(t, err)
+			// Should not generate EnvoyFilter
+			require.Equal(t, 0, len(req.Headers["Doraemon"]))
+
+			route.SetAnnotations(ann)
+			err = c.Update(ctx, &route)
+			require.NoError(t, err)
+			time.Sleep(1 * time.Second)
+			rsp, err = client.Get("http://default.local:18000/echo")
+			require.NoError(t, err)
+			req, _, err = suite.Capture(rsp)
+			require.NoError(t, err)
+			// Should generate EnvoyFilter again
 			require.Equal(t, "hello,", req.Headers["Doraemon"][0])
 		},
 	})

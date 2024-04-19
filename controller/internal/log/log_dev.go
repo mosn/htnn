@@ -40,7 +40,7 @@ func InitLogger(enc string) {
 
 	devLogger = zapr.NewLoggerWithOptions(zapLog)
 
-	SetLogger(wrapLogr(devLogger))
+	SetLogger(WrapLogr(devLogger))
 }
 
 func Logger() logr.Logger {
@@ -51,7 +51,7 @@ type logrWrapper struct {
 	logger logr.Logger
 }
 
-func wrapLogr(l logr.Logger) component.CtrlLogger {
+func WrapLogr(l logr.Logger) component.CtrlLogger {
 	return &logrWrapper{
 		logger: l,
 	}

@@ -1,3 +1,37 @@
+diff --git a/pilot/pkg/bootstrap/config_compare.go b/pilot/pkg/bootstrap/config_compare.go
+index f1f4f2b0ab..3c437bff1a 100644
+--- a/pilot/pkg/bootstrap/config_compare.go
++++ b/pilot/pkg/bootstrap/config_compare.go
+@@ -31,8 +31,9 @@ func needsPush(prev config.Config, curr config.Config) bool {
+ 		// This should never happen.
+ 		return true
+ 	}
+-	// If the config is not Istio, let us just push.
+-	if !strings.HasSuffix(prev.GroupVersionKind.Group, "istio.io") {
++	// If the config is not Istio/HTNN, let us just push.
++	if !strings.HasSuffix(prev.GroupVersionKind.Group, "istio.io") ||
++		!strings.HasSuffix(prev.GroupVersionKind.Group, "htnn.mosn.io") {
+ 		return true
+ 	}
+ 	// If current/previous metadata has "*istio.io" label/annotation, just push
+@@ -42,7 +43,7 @@ func needsPush(prev config.Config, curr config.Config) bool {
+ 		}
+ 	}
+ 	for annotation := range curr.Meta.Annotations {
+-		if strings.Contains(annotation, "istio.io") {
++		if strings.Contains(annotation, "istio.io") || strings.Contains(annotation, "htnn.mosn.io") {
+ 			return true
+ 		}
+ 	}
+@@ -52,7 +53,7 @@ func needsPush(prev config.Config, curr config.Config) bool {
+ 		}
+ 	}
+ 	for annotation := range prev.Meta.Annotations {
+-		if strings.Contains(annotation, "istio.io") {
++		if strings.Contains(annotation, "istio.io") || strings.Contains(annotation, "htnn.mosn.io") {
+ 			return true
+ 		}
+ 	}
 diff --git a/pilot/pkg/bootstrap/configcontroller.go b/pilot/pkg/bootstrap/configcontroller.go
 index 34cf0a690d..a1d970a45b 100644
 --- a/pilot/pkg/bootstrap/configcontroller.go
@@ -253,7 +287,7 @@ index 0000000000..a6f038f095
 +}
 diff --git a/pilot/pkg/config/htnn/controller.go b/pilot/pkg/config/htnn/controller.go
 new file mode 100644
-index 0000000000..25bbc8dacc
+index 0000000000..78aaab57e8
 --- /dev/null
 +++ b/pilot/pkg/config/htnn/controller.go
 @@ -0,0 +1,297 @@
