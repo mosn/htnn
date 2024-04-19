@@ -58,6 +58,10 @@ updates:
         patterns:
           - "k8s.io/*" # client-go and her friends
   - package-ecosystem: "gomod"
+    directory: "/tools"
+    schedule:
+      interval: "weekly"
+  - package-ecosystem: "gomod"
     directory: "/site"
     schedule:
       interval: "weekly"
