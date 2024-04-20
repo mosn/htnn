@@ -21,6 +21,14 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func setEnvForTest() {
+	os.Setenv("HTNN_ENABLE_GATEWAY_API", "false")
+	os.Setenv("HTNN_ENABLE_EMBEDDED_MODE", "false")
+	os.Setenv("HTNN_ENABLE_NATIVE_PLUGIN", "false")
+	os.Setenv("HTNN_ENVOY_GO_SO_PATH", "/usr/local/golang.so")
+	os.Setenv("HTNN_ISTIO_ROOT_NAMESPACE", "htnn")
+}
+
 func TestInit(t *testing.T) {
 	Init()
 
@@ -31,9 +39,8 @@ func TestInit(t *testing.T) {
 	assert.Equal(t, "/etc/libgolang.so", GoSoPath())
 	assert.Equal(t, "istio-system", RootNamespace())
 
-	os.Chdir("./testdata")
+	setEnvForTest()
 	Init()
-	os.Chdir("..")
 
 	assert.Equal(t, false, EnableGatewayAPI())
 	assert.Equal(t, false, EnableEmbeddedMode())
