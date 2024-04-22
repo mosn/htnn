@@ -209,7 +209,7 @@ func GenerateConsumers(consumers map[string]interface{}) *istiov1a3.EnvoyFilter 
 							"typed_config": map[string]interface{}{
 								"@type":        "type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.Config",
 								"library_id":   "cm",
-								"library_path": "/etc/libgolang.so",
+								"library_path": ctrlcfg.GoSoPath(),
 								"plugin_name":  "cm",
 								"plugin_config": map[string]interface{}{
 									"@type": "type.googleapis.com/xds.type.v3.TypedStruct",
