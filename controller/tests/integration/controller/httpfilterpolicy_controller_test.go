@@ -742,6 +742,36 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 				return false
 			}, timeout, interval).Should(BeTrue())
 
+			// delete annotation
+			ann := virtualService.Annotations
+			virtualService.Annotations = nil
+			err = k8sClient.Update(ctx, virtualService)
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(func() bool {
+				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
+					return false
+				}
+				return len(envoyfilters.Items) == 1
+			}, timeout, interval).Should(BeTrue())
+
+			// add annotation back
+			virtualService.Annotations = ann
+			err = k8sClient.Update(ctx, virtualService)
+			Expect(err).NotTo(HaveOccurred())
+			Eventually(func() bool {
+				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
+					return false
+				}
+				for _, ef := range envoyfilters.Items {
+					if ef.Name == "htnn-h-other.local" {
+						cp := ef.Spec.ConfigPatches[0]
+						b, _ := cp.Patch.Value.MarshalJSON()
+						return strings.Contains(string(b), `"hostName":"Zhang"`)
+					}
+				}
+				return false
+			}, timeout, interval).Should(BeTrue())
+
 			// delete
 			Expect(k8sClient.Delete(ctx, virtualService)).Should(Succeed())
 			Eventually(func() bool {
@@ -754,6 +784,25 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 					}
 				}
 				return true
+			}, timeout, interval).Should(BeTrue())
+		})
+
+		It("deal with embedded HTTPFilterPolicy, ignore invalid embedded HTTPFilterPolicy", func() {
+			ctx := context.Background()
+			input := []map[string]interface{}{}
+			mustReadHTTPFilterPolicy("virtualservice_embeded_invalid_hfp", &input)
+
+			for _, in := range input {
+				obj := pkg.MapToObj(in)
+				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
+			}
+
+			var envoyfilters istiov1a3.EnvoyFilterList
+			Eventually(func() bool {
+				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
+					return false
+				}
+				return len(envoyfilters.Items) == 1
 			}, timeout, interval).Should(BeTrue())
 		})
 

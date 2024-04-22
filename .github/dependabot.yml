@@ -8,11 +8,7 @@ updates:
   - package-ecosystem: "gomod"
     directory: "/controller"
     schedule:
-      interval: "daily"
-    # Limit number of open PRs to 0 so that we only get security updates
-    # See https://docs.github.com/en/code-security/dependabot/dependabot-security-updates/configuring-dependabot-security-updates
-    # We don't upgrade the controller dependency aggressively to reduce the conflict with the istio release.
-    open-pull-requests-limit: 0
+      interval: "weekly"
     ignore:
       - dependency-name: "mosn.io/htnn/*"
       # the Envoy lib need to be fit with the Envoy we use. So let's disable auto-updates.
@@ -57,6 +53,10 @@ updates:
       k8s.io:
         patterns:
           - "k8s.io/*" # client-go and her friends
+  - package-ecosystem: "gomod"
+    directory: "/tools"
+    schedule:
+      interval: "weekly"
   - package-ecosystem: "gomod"
     directory: "/site"
     schedule:

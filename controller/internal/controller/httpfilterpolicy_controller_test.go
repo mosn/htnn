@@ -21,28 +21,13 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"mosn.io/htnn/controller/internal/controller/component"
-	pkgComponent "mosn.io/htnn/controller/pkg/component"
 	"mosn.io/htnn/controller/tests/pkg"
 	mosniov1 "mosn.io/htnn/types/apis/v1"
 )
-
-type FindAffectedObjectsWrapper struct {
-	CustomerResourceIndexer
-
-	succ bool
-}
-
-func (w *FindAffectedObjectsWrapper) FindAffectedObjects(ctx context.Context, obj pkgComponent.ResourceMeta) []reconcile.Request {
-	if w.succ {
-		return triggerReconciliation()
-	}
-	return nil
-}
 
 func TestNeedReconcile(t *testing.T) {
 	cli := pkg.FakeK8sClient(t)
@@ -55,17 +40,22 @@ func TestNeedReconcile(t *testing.T) {
 
 	ctx := context.Background()
 	policy := mosniov1.HTTPFilterPolicy{}
-	policy.SetGroupVersionKind(schema.GroupVersionKind{
-		Group: gwapiv1.GroupVersion.Group,
-		Kind:  "test",
-	})
-	res := wrapClientObjectToResourceMeta(&policy)
+	route := gwapiv1.HTTPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "ns",
+			Name:      "name",
+		},
+	}
+	res := wrapClientObjectToResourceMeta(&route, gwapiv1.GroupVersion.Group, "test")
 	// unknown kind
 	assert.False(t, r.NeedReconcile(ctx, res))
 
-	r.addIndexer(&FindAffectedObjectsWrapper{r.httpRouteIndexer, false}, gwapiv1.GroupVersion.Group, "test")
+	r.httpRouteIndexer.Kind = "test"
+	r.addIndexer(r.httpRouteIndexer)
 	assert.False(t, r.NeedReconcile(ctx, res))
 
-	r.addIndexer(&FindAffectedObjectsWrapper{r.httpRouteIndexer, true}, gwapiv1.GroupVersion.Group, "test")
+	r.httpRouteIndexer.index = map[string][]*mosniov1.HTTPFilterPolicy{
+		"ns/name": {&policy},
+	}
 	assert.True(t, r.NeedReconcile(ctx, res))
 }

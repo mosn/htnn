@@ -43,6 +43,7 @@ import (
 	"mosn.io/htnn/controller/internal/controller"
 	"mosn.io/htnn/controller/internal/controller/component"
 	"mosn.io/htnn/controller/internal/gatewayapi"
+	"mosn.io/htnn/controller/internal/log"
 	"mosn.io/htnn/controller/internal/registry"
 	mosniov1 "mosn.io/htnn/types/apis/v1"
 )
@@ -64,7 +65,9 @@ func TestControllers(t *testing.T) {
 }
 
 var _ = BeforeSuite(func() {
-	logf.SetLogger(zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true)))
+	zlog := zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true))
+	logf.SetLogger(zlog)
+	log.SetLogger(log.WrapLogr(zlog))
 	ctx, cancel = context.WithCancel(context.TODO())
 
 	By("bootstrapping test environment")
