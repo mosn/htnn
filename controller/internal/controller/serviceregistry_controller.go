@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
@@ -30,6 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"mosn.io/htnn/controller/internal/log"
+	"mosn.io/htnn/controller/internal/metrics"
 	"mosn.io/htnn/controller/internal/registry"
 	"mosn.io/htnn/controller/pkg/component"
 	mosniov1 "mosn.io/htnn/types/apis/v1"
@@ -46,6 +48,12 @@ type ServiceRegistryReconciler struct {
 //+kubebuilder:rbac:groups=networking.istio.io,resources=serviceentries,verbs=get;list;watch;update;patch;delete
 
 func (r *ServiceRegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	reconcilationStart := time.Now()
+	defer func() {
+		reconcilationDuration := time.Since(reconcilationStart).Seconds()
+		metrics.ServiceRegistryReconcileDurationDistribution.Record(reconcilationDuration)
+	}()
+
 	var serviceRegistry mosniov1.ServiceRegistry
 	nsName := types.NamespacedName{Name: req.Name, Namespace: req.Namespace}
 	err := r.Get(ctx, nsName, &serviceRegistry)

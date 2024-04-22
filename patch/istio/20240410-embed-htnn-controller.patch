@@ -590,10 +590,10 @@ index 0000000000..78aaab57e8
 +}
 diff --git a/pilot/pkg/config/htnn/htnn.go b/pilot/pkg/config/htnn/htnn.go
 new file mode 100644
-index 0000000000..2cb4e81553
+index 0000000000..9bd0be3935
 --- /dev/null
 +++ b/pilot/pkg/config/htnn/htnn.go
-@@ -0,0 +1,30 @@
+@@ -0,0 +1,40 @@
 +// Copyright The HTNN Authors.
 +//
 +// Licensed under the Apache License, Version 2.0 (the "License");
@@ -611,18 +611,28 @@ index 0000000000..2cb4e81553
 +package htnn
 +
 +import (
++	"mosn.io/htnn/controller/pkg/component"
 +	"mosn.io/htnn/controller/pkg/istio"
 +
 +	"istio.io/istio/pilot/pkg/features"
 +	"istio.io/istio/pilot/pkg/model"
 +	istiolog "istio.io/istio/pkg/log"
++	"istio.io/istio/pkg/monitoring"
 +)
 +
 +var log = istiolog.RegisterScope("htnn", "htnn controller")
 +
++type MetricProvider struct {
++}
++
++func (p *MetricProvider) NewDistribution(name, description string, bounds []float64) component.Distribution {
++	return monitoring.NewDistribution(name, description, bounds)
++}
++
 +func setupEnv(env *model.Environment) {
 +	istio.SetLogger(log)
 +	istio.InitConfig(features.EnableGatewayAPI, env.Mesh().RootNamespace)
++	istio.InitMetrics(&MetricProvider{})
 +}
 diff --git a/pilot/pkg/config/kube/crdclient/client.go b/pilot/pkg/config/kube/crdclient/client.go
 index 6e07fea8e6..44583980e4 100644

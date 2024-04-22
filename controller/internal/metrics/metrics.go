@@ -15,27 +15,51 @@
 package metrics
 
 import (
-	"github.com/prometheus/client_golang/prometheus"
-	"sigs.k8s.io/controller-runtime/pkg/metrics"
+	"fmt"
+
+	"mosn.io/htnn/controller/pkg/component"
 )
 
 const (
-	HTNNSubSystem        = "htnn"
-	TranslateDurationKey = "translate_duration_seconds"
+	HFP                     = "htnn_httpfilterpolicy"
+	Consumer                = "htnn_consumer"
+	SR                      = "htnn_service_registry"
+	TranslateDurationSuffix = "translate_duration_seconds"
+	ReconcileDurationSuffix = "reconcile_duration_seconds"
 )
+
+type voidMetric struct {
+}
+
+func (m *voidMetric) Record(value float64) {}
 
 var (
-	TranslateDuration = prometheus.NewHistogramVec(prometheus.HistogramOpts{
-		Subsystem: HTNNSubSystem,
-		Name:      TranslateDurationKey,
-		Help:      "How long in seconds translate in a batch.",
-		// minimal: 100 microseconds
-		Buckets: prometheus.ExponentialBuckets(10e-5, 10, 10),
-	}, []string{"controller"})
-
-	HFPTranslateDurationObserver = TranslateDuration.WithLabelValues("httpfilterpolicy")
+	HFPTranslateDurationDistribution             component.Distribution = &voidMetric{}
+	HFPReconcileDurationDistribution             component.Distribution = &voidMetric{}
+	ConsumerReconcileDurationDistribution        component.Distribution = &voidMetric{}
+	ServiceRegistryReconcileDurationDistribution component.Distribution = &voidMetric{}
 )
 
-func init() {
-	metrics.Registry.MustRegister(TranslateDuration)
+func InitMetrics(provider component.MetricProvider) {
+	HFPTranslateDurationDistribution = provider.NewDistribution(fmt.Sprintf("%s_%s", HFP, TranslateDurationSuffix),
+		"How long in seconds HTNN translates HTTPFilterPolicy in a batch.",
+		// minimal: 100 microseconds
+		[]float64{1e-4, 1e-3, 0.01, 0.1, 1, 10},
+	)
+	HFPReconcileDurationDistribution = provider.NewDistribution(fmt.Sprintf("%s_%s", HFP, ReconcileDurationSuffix),
+		"How long in seconds HTNN reconciles HTTPFilterPolicy.",
+		// Reconciliation time = Fetch resource time + Translate time + Write Envoy Filter to config store time
+		// minimal: 100 microseconds
+		[]float64{1e-4, 1e-3, 0.01, 0.1, 1, 10},
+	)
+	ConsumerReconcileDurationDistribution = provider.NewDistribution(fmt.Sprintf("%s_%s", Consumer, ReconcileDurationSuffix),
+		"How long in seconds HTNN reconciles Consumer.",
+		// minimal: 100 microseconds
+		[]float64{1e-4, 1e-3, 0.01, 0.1, 1, 10},
+	)
+	ServiceRegistryReconcileDurationDistribution = provider.NewDistribution(fmt.Sprintf("%s_%s", SR, ReconcileDurationSuffix),
+		"How long in seconds HTNN reconciles ServiceRegistry.",
+		// minimal: 100 microseconds
+		[]float64{1e-4, 1e-3, 0.01, 0.1, 1, 10},
+	)
 }

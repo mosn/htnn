@@ -139,6 +139,12 @@ func (r *HTTPFilterPolicyReconciler) NeedReconcile(ctx context.Context, meta com
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.16.3/pkg/reconcile
 func (r *HTTPFilterPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	reconcilationStart := time.Now()
+	defer func() {
+		reconcilationDuration := time.Since(reconcilationStart).Seconds()
+		metrics.HFPReconcileDurationDistribution.Record(reconcilationDuration)
+	}()
+
 	log.Info("Reconcile HTTPFilterPolicy")
 
 	var policies mosniov1.HTTPFilterPolicyList
@@ -153,7 +159,7 @@ func (r *HTTPFilterPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Req
 	start := time.Now()
 	finalState, err := initState.Process(ctx)
 	processDurationInSecs := time.Since(start).Seconds()
-	metrics.HFPTranslateDurationObserver.Observe(processDurationInSecs)
+	metrics.HFPTranslateDurationDistribution.Record(processDurationInSecs)
 	if err != nil {
 		log.Errorf("failed to process state: %v", err)
 		// there is no retryable err during processing

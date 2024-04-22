@@ -14,6 +14,7 @@
 
 package component
 
+// This module stores API needs to be implemented by the host environment
 import (
 	"context"
 
@@ -50,4 +51,15 @@ type CtrlLogger interface {
 	Errorf(format string, args ...any)
 	Info(msg any)
 	Infof(format string, args ...any)
+}
+
+type Distribution interface {
+	// Record makes an observation of the provided value for the given measure.
+	Record(value float64)
+}
+
+type MetricProvider interface {
+	// NewDistribution creates a new Metric type called Distribution. This means that the
+	// data collected by the Metric will be collected and exported as a histogram, with the specified bounds.
+	NewDistribution(name, description string, bounds []float64) Distribution
 }

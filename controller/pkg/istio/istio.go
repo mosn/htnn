@@ -25,6 +25,7 @@ import (
 	"mosn.io/htnn/controller/internal/config"
 	"mosn.io/htnn/controller/internal/controller"
 	"mosn.io/htnn/controller/internal/log"
+	"mosn.io/htnn/controller/internal/metrics"
 	"mosn.io/htnn/controller/pkg/component"
 )
 
@@ -64,4 +65,8 @@ func InitConfig(enableGatewayAPI bool, rootNamespace string) {
 	os.Setenv("HTNN_ENABLE_GATEWAY_API", fmt.Sprintf("%t", enableGatewayAPI))
 	os.Setenv("HTNN_ISTIO_ROOT_NAMESPACE", rootNamespace)
 	config.Init()
+}
+
+func InitMetrics(provider component.MetricProvider) {
+	metrics.InitMetrics(provider)
 }

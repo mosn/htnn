@@ -19,6 +19,7 @@ package controller
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -31,6 +32,7 @@ import (
 	"mosn.io/htnn/controller/internal/config"
 	"mosn.io/htnn/controller/internal/istio"
 	"mosn.io/htnn/controller/internal/log"
+	"mosn.io/htnn/controller/internal/metrics"
 	"mosn.io/htnn/controller/internal/model"
 	"mosn.io/htnn/controller/pkg/component"
 	mosniov1 "mosn.io/htnn/types/apis/v1"
@@ -57,6 +59,12 @@ const (
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.16.3/pkg/reconcile
 func (r *ConsumerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	reconcilationStart := time.Now()
+	defer func() {
+		reconcilationDuration := time.Since(reconcilationStart).Seconds()
+		metrics.ConsumerReconcileDurationDistribution.Record(reconcilationDuration)
+	}()
+
 	log.Info("Reconcile Consumer")
 
 	var consumers mosniov1.ConsumerList
