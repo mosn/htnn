@@ -110,15 +110,24 @@ func (suite *Suite) Run(t *testing.T) {
 // We use port-forward so that both Linux and Mac can expose port in the same way
 func (suite *Suite) startPortForward(t *testing.T) {
 	// TODO: rewrite it with Go code
-	cmdline := fmt.Sprintf("kubectl wait --timeout=5m -n %s deployment/default-istio --for=condition=Available",
-		k8s.DefaultNamespace)
-	cmd := strings.Fields(cmdline)
-	wait := exec.Command(cmd[0], cmd[1:]...)
-	err := wait.Run()
-	require.NoError(t, err)
+	for _, cond := range []struct {
+		name string
+		ns   string
+	}{
+		{name: "istio-ingressgateway", ns: k8s.IstioRootNamespace},
+		{name: "default-istio", ns: k8s.DefaultNamespace},
+		{name: "default-istio", ns: k8s.AnotherNamespace},
+	} {
+		cmdline := fmt.Sprintf("kubectl wait --timeout=5m -n %s deployment/%s --for=condition=Available",
+			cond.ns, cond.name)
+		cmd := strings.Fields(cmdline)
+		wait := exec.Command(cmd[0], cmd[1:]...)
+		err := wait.Run()
+		require.NoError(t, err)
+	}
 
-	cmdline = "./port-forward.sh"
-	dests := []string{"istio-ingressgateway", "k8s-gateway-api"}
+	cmdline := "./port-forward.sh"
+	dests := []string{"istio-ingressgateway", "k8s-gateway-api", "k8s-gateway-api-another"}
 	for _, d := range dests {
 		forwarder := exec.Command(cmdline, d)
 		forwarder.Stdout = os.Stdout

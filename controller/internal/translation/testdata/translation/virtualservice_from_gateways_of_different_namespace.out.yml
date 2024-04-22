@@ -1,10 +1,10 @@
 - metadata:
     annotations:
-      htnn.mosn.io/info: '{"httpfilterpolicies":["default/delay"]}'
+      htnn.mosn.io/info: '{"httpfilterpolicies":["default/default"]}'
     creationTimestamp: null
     labels:
       htnn.mosn.io/created-by: HTTPFilterPolicy
-    name: htnn-h-default.delay
+    name: htnn-h-a.default.com
     namespace: default
   spec:
     configPatches:
@@ -12,9 +12,9 @@
       match:
         routeConfiguration:
           vhost:
-            name: '!!!???:80'
+            name: a.default.com:80
             route:
-              name: route-any
+              name: policy
       patch:
         operation: MERGE
         value:
@@ -28,48 +28,26 @@
                     value:
                       plugins:
                       - config:
-                          pet: cat
-                        name: animal
-    - applyTo: HTTP_ROUTE
-      match:
-        routeConfiguration:
-          vhost:
-            name: '!!!???:80'
-            route:
-              name: route-delay
-      patch:
-        operation: MERGE
-        value:
-          typed_per_filter_config:
-            htnn.filters.http.golang:
-              '@type': type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.ConfigsPerRoute
-              plugins_config:
-                fm:
-                  config:
-                    '@type': type.googleapis.com/xds.type.v3.TypedStruct
-                    value:
-                      plugins:
-                      - config:
-                          pet: cat
+                          pet: dog
                         name: animal
   status: {}
 - metadata:
     annotations:
-      htnn.mosn.io/info: '{"httpfilterpolicies":["default/policy"]}'
+      htnn.mosn.io/info: '{"httpfilterpolicies":["test/test"]}'
     creationTimestamp: null
     labels:
       htnn.mosn.io/created-by: HTTPFilterPolicy
-    name: htnn-h-xn--fiq228c.xn--eqrt2g
-    namespace: default
+    name: htnn-h-a.test.com
+    namespace: test
   spec:
     configPatches:
     - applyTo: HTTP_ROUTE
       match:
         routeConfiguration:
           vhost:
-            name: 中文.域名:80
+            name: a.test.com:80
             route:
-              name: route-policy
+              name: policy
       patch:
         operation: MERGE
         value:
@@ -83,6 +61,6 @@
                     value:
                       plugins:
                       - config:
-                          pet: goldfish
+                          pet: dog
                         name: animal
   status: {}

@@ -1,5 +1,9 @@
 metadata:
   creationTimestamp: null
+  labels:
+    htnn.mosn.io/created-by: Consumer
+  name: htnn-consumer
+  namespace: istio-system
 spec:
   configPatches:
   - applyTo: EXTENSION_CONFIG

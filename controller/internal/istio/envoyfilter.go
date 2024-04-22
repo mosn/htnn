@@ -149,9 +149,14 @@ func DefaultEnvoyFilters() map[string]*istiov1a3.EnvoyFilter {
 		}
 	}
 
-	efs[DefaultHttpFilter] = &istiov1a3.EnvoyFilter{
+	key := fmt.Sprintf("%s/%s", ctrlcfg.RootNamespace(), DefaultHttpFilter)
+	efs[key] = &istiov1a3.EnvoyFilter{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: DefaultHttpFilter,
+			Namespace: ctrlcfg.RootNamespace(),
+			Name:      DefaultHttpFilter,
+			Labels: map[string]string{
+				model.LabelCreatedBy: "HTTPFilterPolicy",
+			},
 		},
 		Spec: istioapi.EnvoyFilter{
 			ConfigPatches: patches,
@@ -172,6 +177,7 @@ func GenerateRouteFilter(host *model.VirtualHost, route string, config map[strin
 	}
 
 	return &istiov1a3.EnvoyFilter{
+		// We don't set ObjectMeta here because this EnvoyFilter will be merged later
 		Spec: istioapi.EnvoyFilter{
 			ConfigPatches: []*istioapi.EnvoyFilter_EnvoyConfigObjectPatch{
 				{
@@ -197,6 +203,13 @@ func GenerateRouteFilter(host *model.VirtualHost, route string, config map[strin
 
 func GenerateConsumers(consumers map[string]interface{}) *istiov1a3.EnvoyFilter {
 	return &istiov1a3.EnvoyFilter{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: ctrlcfg.RootNamespace(),
+			Name:      ECDSConsumerName,
+			Labels: map[string]string{
+				model.LabelCreatedBy: "Consumer",
+			},
+		},
 		Spec: istioapi.EnvoyFilter{
 			ConfigPatches: []*istioapi.EnvoyFilter_EnvoyConfigObjectPatch{
 				{

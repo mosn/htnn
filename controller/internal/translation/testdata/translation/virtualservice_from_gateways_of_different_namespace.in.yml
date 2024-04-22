@@ -1,0 +1,105 @@
+istioGateway:
+- apiVersion: networking.istio.io/v1beta1
+  kind: Gateway
+  metadata:
+    name: test
+    namespace: test
+  spec:
+    selector:
+      istio: ingressgateway
+    servers:
+    - hosts:
+      - "*.test.com"
+      port:
+        name: http
+        number: 80
+        protocol: HTTP
+- apiVersion: networking.istio.io/v1beta1
+  kind: Gateway
+  metadata:
+    name: default
+    namespace: default
+  spec:
+    selector:
+      istio: ingressgateway
+    servers:
+    - hosts:
+      - "*.default.com"
+      port:
+        name: http
+        number: 80
+        protocol: HTTP
+virtualService:
+  test:
+    - apiVersion: networking.istio.io/v1beta1
+      kind: VirtualService
+      metadata:
+        name: test
+        namespace: test
+      spec:
+        gateways:
+        - test
+        hosts:
+        - "a.test.com"
+        http:
+        - match:
+          - uri:
+              prefix: /
+          name: policy
+          route:
+          - destination:
+              host: httpbin
+              port:
+                number: 8000
+  default:
+    - apiVersion: networking.istio.io/v1beta1
+      kind: VirtualService
+      metadata:
+        name: default
+        namespace: default
+      spec:
+        gateways:
+        - default
+        hosts:
+        - "a.default.com"
+        http:
+        - match:
+          - uri:
+              prefix: /
+          name: policy
+          route:
+          - destination:
+              host: httpbin
+              port:
+                number: 8000
+httpFilterPolicy:
+  test:
+  - apiVersion: htnn.mosn.io/v1
+    kind: HTTPFilterPolicy
+    metadata:
+      name: test
+      namespace: test
+    spec:
+      targetRef:
+        group: networking.istio.io
+        kind: VirtualService
+        name: test
+      filters:
+        animal:
+          config:
+            pet: dog
+  default:
+  - apiVersion: htnn.mosn.io/v1
+    kind: HTTPFilterPolicy
+    metadata:
+      name: default
+      namespace: default
+    spec:
+      targetRef:
+        group: networking.istio.io
+        kind: VirtualService
+        name: default
+      filters:
+        animal:
+          config:
+            pet: dog

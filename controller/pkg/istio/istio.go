@@ -62,6 +62,13 @@ func SetLogger(logger component.CtrlLogger) {
 }
 
 func InitConfig(enableGatewayAPI bool, rootNamespace string) {
+	scopeGatewayToNamespace := os.Getenv("PILOT_SCOPE_GATEWAY_TO_NAMESPACE")
+	if scopeGatewayToNamespace != "true" {
+		// HTNN will generate the EnvoyFilter according to the gateway's namespace,
+		// so we require the namespace of workload matches the namespace of gateway.
+		panic("Env variable PILOT_SCOPE_GATEWAY_TO_NAMESPACE must be set to true")
+	}
+
 	os.Setenv("HTNN_ENABLE_GATEWAY_API", fmt.Sprintf("%t", enableGatewayAPI))
 	os.Setenv("HTNN_ISTIO_ROOT_NAMESPACE", rootNamespace)
 	config.Init()
