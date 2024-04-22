@@ -51,25 +51,17 @@ func getK8sKey(ns, name string) string {
 	return ns + "/" + name
 }
 
-// CustomerResourceIndexer indexes the additional customer resource
-// according to the reconciled customer resource
-type CustomerResourceIndexer interface {
-	CustomerResource() client.Object
-	FindAffectedObjects(ctx context.Context, obj component.ResourceMeta) []reconcile.Request
-	Predicate() predicate.Predicate
-}
-
 // HTTPFilterPolicyReconciler reconciles a HTTPFilterPolicy object
 type HTTPFilterPolicyReconciler struct {
 	component.ResourceManager
 	output component.Output
 
-	indexers map[string]CustomerResourceIndexer
+	indexers map[string]*customResourceIndexer
 
-	virtualServiceIndexer *VirtualServiceIndexer
-	httpRouteIndexer      *HTTPRouteIndexer
-	istioGatewayIndexer   *IstioGatewayIndexer
-	k8sGatewayIndexer     *K8sGatewayIndexer
+	virtualServiceIndexer *customResourceIndexer
+	httpRouteIndexer      *customResourceIndexer
+	istioGatewayIndexer   *customResourceIndexer
+	k8sGatewayIndexer     *customResourceIndexer
 }
 
 func NewHTTPFilterPolicyReconciler(output component.Output, manager component.ResourceManager) *HTTPFilterPolicyReconciler {
@@ -77,30 +69,46 @@ func NewHTTPFilterPolicyReconciler(output component.Output, manager component.Re
 		ResourceManager: manager,
 		output:          output,
 
-		indexers: make(map[string]CustomerResourceIndexer),
+		indexers: make(map[string]*customResourceIndexer),
 	}
 
-	virtualServiceIndexer := &VirtualServiceIndexer{}
+	virtualServiceIndexer := &customResourceIndexer{
+		Group:          "networking.istio.io",
+		Kind:           "VirtualService",
+		CustomResource: &istiov1a3.VirtualService{},
+	}
 	r.virtualServiceIndexer = virtualServiceIndexer
-	istioGatewayIndexer := &IstioGatewayIndexer{}
+	istioGatewayIndexer := &customResourceIndexer{
+		Group:          "networking.istio.io",
+		Kind:           "Gateway",
+		CustomResource: &istiov1a3.Gateway{},
+	}
 	r.istioGatewayIndexer = istioGatewayIndexer
-	r.addIndexer(virtualServiceIndexer, "networking.istio.io", "VirtualService")
-	r.addIndexer(istioGatewayIndexer, "networking.istio.io", "Gateway")
+	r.addIndexer(virtualServiceIndexer)
+	r.addIndexer(istioGatewayIndexer)
 
 	if config.EnableGatewayAPI() {
-		httpRouteIndexer := &HTTPRouteIndexer{}
+		httpRouteIndexer := &customResourceIndexer{
+			Group:          "gateway.networking.k8s.io",
+			Kind:           "HTTPRoute",
+			CustomResource: &gwapiv1b1.HTTPRoute{},
+		}
 		r.httpRouteIndexer = httpRouteIndexer
-		k8sGatewayIndexer := &K8sGatewayIndexer{}
+		k8sGatewayIndexer := &customResourceIndexer{
+			Group:          "gateway.networking.k8s.io",
+			Kind:           "Gateway",
+			CustomResource: &gwapiv1b1.Gateway{},
+		}
 		r.k8sGatewayIndexer = k8sGatewayIndexer
-		r.addIndexer(httpRouteIndexer, gwapiv1.GroupVersion.Group, "HTTPRoute")
-		r.addIndexer(k8sGatewayIndexer, gwapiv1.GroupVersion.Group, "Gateway")
+		r.addIndexer(httpRouteIndexer)
+		r.addIndexer(k8sGatewayIndexer)
 	}
 
 	return r
 }
 
-func (r *HTTPFilterPolicyReconciler) addIndexer(idxer CustomerResourceIndexer, group, kind string) {
-	r.indexers[fmt.Sprintf("%s/%s", group, kind)] = idxer
+func (r *HTTPFilterPolicyReconciler) addIndexer(idxer *customResourceIndexer) {
+	r.indexers[fmt.Sprintf("%s/%s", idxer.Group, idxer.Kind)] = idxer
 }
 
 func (r *HTTPFilterPolicyReconciler) NeedReconcile(ctx context.Context, meta component.ResourceMeta) bool {
@@ -476,7 +484,12 @@ func (r *HTTPFilterPolicyReconciler) policyToTranslationState(ctx context.Contex
 			if err != nil {
 				return nil, err
 			}
+
+			key := getK8sKey(vs.Namespace, vs.Name)
+			vsIdx[key] = append(vsIdx[key], &policy)
 		}
+
+		r.virtualServiceIndexer.UpdateIndex(vsIdx)
 	}
 
 	// Only update index when the processing is successful. This prevents gateways from being partially indexed.
@@ -508,19 +521,24 @@ func (r *HTTPFilterPolicyReconciler) updatePolicies(ctx context.Context,
 	return nil
 }
 
-// indexer extracts common logic for indexing the affected resources
-type indexer struct {
+// customResourceIndexer indexes the additional customer resource
+// according to the reconciled customer resource
+type customResourceIndexer struct {
 	lock  sync.RWMutex
 	index map[string][]*mosniov1.HTTPFilterPolicy
+
+	Group          string
+	Kind           string
+	CustomResource client.Object
 }
 
-func (v *indexer) UpdateIndex(idx map[string][]*mosniov1.HTTPFilterPolicy) {
+func (v *customResourceIndexer) UpdateIndex(idx map[string][]*mosniov1.HTTPFilterPolicy) {
 	v.lock.Lock()
 	v.index = idx
 	v.lock.Unlock()
 }
 
-func (v *indexer) FindAffectedObjects(ctx context.Context, obj component.ResourceMeta) []reconcile.Request {
+func (v *customResourceIndexer) FindAffectedObjects(ctx context.Context, obj component.ResourceMeta) []reconcile.Request {
 	if config.EnableEmbeddedMode() {
 		ann := obj.GetAnnotations()
 		if ann != nil && ann[model.AnnotationHTTPFilterPolicy] != "" {
@@ -554,74 +572,27 @@ func (v *indexer) FindAffectedObjects(ctx context.Context, obj component.Resourc
 	return triggerReconciliation()
 }
 
-type VirtualServiceIndexer struct {
-	indexer
-}
-
-func (v *VirtualServiceIndexer) CustomerResource() client.Object {
-	return &istiov1a3.VirtualService{}
-}
-
-func (v *VirtualServiceIndexer) Predicate() predicate.Predicate {
-	return predicate.Or(
-		predicate.GenerationChangedPredicate{},
-		predicate.AnnotationChangedPredicate{},
-	)
-}
-
-type HTTPRouteIndexer struct {
-	indexer
-}
-
-func (v *HTTPRouteIndexer) CustomerResource() client.Object {
-	return &gwapiv1b1.HTTPRoute{}
-}
-
-func (v *HTTPRouteIndexer) Predicate() predicate.Predicate {
-	return predicate.Or(
-		predicate.GenerationChangedPredicate{},
-		predicate.AnnotationChangedPredicate{},
-	)
-}
-
-type IstioGatewayIndexer struct {
-	indexer
-}
-
-func (v *IstioGatewayIndexer) CustomerResource() client.Object {
-	return &istiov1a3.Gateway{}
-}
-
-func (v *IstioGatewayIndexer) Predicate() predicate.Predicate {
-	return predicate.GenerationChangedPredicate{}
-}
-
-type K8sGatewayIndexer struct {
-	indexer
-}
-
-func (v *K8sGatewayIndexer) CustomerResource() client.Object {
-	return &gwapiv1b1.Gateway{}
-}
-
-func (v *K8sGatewayIndexer) Predicate() predicate.Predicate {
-	return predicate.GenerationChangedPredicate{}
-}
-
 type resourceMetaWrapper struct {
 	client.Object
+
+	group string
+	kind  string
 }
 
 func (r *resourceMetaWrapper) GetGroup() string {
-	return r.GetObjectKind().GroupVersionKind().Group
+	return r.group
 }
 
 func (r *resourceMetaWrapper) GetKind() string {
-	return r.GetObjectKind().GroupVersionKind().Kind
+	return r.kind
 }
 
-func wrapClientObjectToResourceMeta(obj client.Object) component.ResourceMeta {
-	return &resourceMetaWrapper{obj}
+func wrapClientObjectToResourceMeta(obj client.Object, group, kind string) component.ResourceMeta {
+	return &resourceMetaWrapper{
+		Object: obj,
+		group:  group,
+		kind:   kind,
+	}
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -640,14 +611,21 @@ func (r *HTTPFilterPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// We don't reconcile when the generated EnvoyFilter is modified.
 		// So that user can manually correct the EnvoyFilter, until something else is changed.
 
-	for _, idxer := range r.indexers {
+	pred := predicate.Or(
+		predicate.GenerationChangedPredicate{},
+		predicate.AnnotationChangedPredicate{},
+	)
+	for name, idxer := range r.indexers {
 		idxer := idxer
+		ss := strings.Split(name, "/")
+		group := ss[0]
+		kind := ss[1]
 		controller.Watches(
-			idxer.CustomerResource(),
+			idxer.CustomResource,
 			handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
-				return idxer.FindAffectedObjects(ctx, wrapClientObjectToResourceMeta(obj))
+				return idxer.FindAffectedObjects(ctx, wrapClientObjectToResourceMeta(obj, group, kind))
 			}),
-			builder.WithPredicates(idxer.Predicate()),
+			builder.WithPredicates(pred),
 		)
 	}
 

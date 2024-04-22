@@ -1,3 +1,37 @@
+diff --git a/pilot/pkg/bootstrap/config_compare.go b/pilot/pkg/bootstrap/config_compare.go
+index f1f4f2b0ab..3c437bff1a 100644
+--- a/pilot/pkg/bootstrap/config_compare.go
++++ b/pilot/pkg/bootstrap/config_compare.go
+@@ -31,8 +31,9 @@ func needsPush(prev config.Config, curr config.Config) bool {
+ 		// This should never happen.
+ 		return true
+ 	}
+-	// If the config is not Istio, let us just push.
+-	if !strings.HasSuffix(prev.GroupVersionKind.Group, "istio.io") {
++	// If the config is not Istio/HTNN, let us just push.
++	if !strings.HasSuffix(prev.GroupVersionKind.Group, "istio.io") ||
++		!strings.HasSuffix(prev.GroupVersionKind.Group, "htnn.mosn.io") {
+ 		return true
+ 	}
+ 	// If current/previous metadata has "*istio.io" label/annotation, just push
+@@ -42,7 +43,7 @@ func needsPush(prev config.Config, curr config.Config) bool {
+ 		}
+ 	}
+ 	for annotation := range curr.Meta.Annotations {
+-		if strings.Contains(annotation, "istio.io") {
++		if strings.Contains(annotation, "istio.io") || strings.Contains(annotation, "htnn.mosn.io") {
+ 			return true
+ 		}
+ 	}
+@@ -52,7 +53,7 @@ func needsPush(prev config.Config, curr config.Config) bool {
+ 		}
+ 	}
+ 	for annotation := range prev.Meta.Annotations {
+-		if strings.Contains(annotation, "istio.io") {
++		if strings.Contains(annotation, "istio.io") || strings.Contains(annotation, "htnn.mosn.io") {
+ 			return true
+ 		}
+ 	}
 diff --git a/pilot/pkg/bootstrap/configcontroller.go b/pilot/pkg/bootstrap/configcontroller.go
 index 34cf0a690d..a1d970a45b 100644
 --- a/pilot/pkg/bootstrap/configcontroller.go
@@ -253,10 +287,10 @@ index 0000000000..a6f038f095
 +}
 diff --git a/pilot/pkg/config/htnn/controller.go b/pilot/pkg/config/htnn/controller.go
 new file mode 100644
-index 0000000000..e1a2500140
+index 0000000000..78aaab57e8
 --- /dev/null
 +++ b/pilot/pkg/config/htnn/controller.go
-@@ -0,0 +1,278 @@
+@@ -0,0 +1,297 @@
 +// Copyright The HTNN Authors.
 +//
 +// Licensed under the Apache License, Version 2.0 (the "License");
@@ -436,9 +470,28 @@ index 0000000000..e1a2500140
 +
 +	toReconcile := sets.New[kind.Kind]()
 +	if configsUpdated == nil {
-+		// for the first time, trigger all reconcilations
++		// for the first time
++
++		// As we have embed mode, check if HTTPFilterPolicy exists is not enough to detect whether
++		// reconciling HTTPFilterPolicy is needed. To avoid complex logic, and most of our users
++		// will use HTTPFilterPolicy, here we assume that HTTPFilterPolicy reconciliation is always needed
++		// after startup. Another solution is that if the generated EnvoyFilter is zero, don't generate
++		// the basic htnn-http-filter EnvoyFilter. But this will break the rule that reducing the HTTPFilterPolicy
++		// should not trigger connection close, as when the basic EnvoyFilter is removed, a LDS drain
++		// will be triggered.
 +		toReconcile[kind.HTTPFilterPolicy] = struct{}{}
-+		toReconcile[kind.Consumer] = struct{}{}
++		// For the other resources, only trigger reconciliation when the resource exists
++		for _, pair := range []struct {
++			gvk  config.GroupVersionKind
++			kind kind.Kind
++		}{
++			{gvk.Consumer, kind.Consumer},
++		} {
++			res := c.cache.List(pair.gvk, "")
++			if len(res) > 0 {
++				toReconcile[pair.kind] = struct{}{}
++			}
++		}
 +	} else {
 +		// here we provide our own change detection, so adding a new CR won't need to touch istio's own one in PushContext
 +		for conf := range configsUpdated {
