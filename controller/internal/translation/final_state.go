@@ -85,25 +85,27 @@ func toFinalState(_ *Ctx, state *mergedState) (*FinalState, error) {
 	efs := istio.DefaultEnvoyFilters()
 	efList := []*envoyFilterWrapper{}
 
-	for _, host := range state.Hosts {
-		for routeName, route := range host.Routes {
-			ef := istio.GenerateRouteFilter(host.VirtualHost, routeName, route.Config)
-			// Set the EnvoyFilter's namespace to the workload's namespace.
-			// For k8s Gateway API, the workload's namespace is equal to the Gateway's namespace.
-			// For Istio API, we will require env var PILOT_SCOPE_GATEWAY_TO_NAMESPACE to be set.
-			ns := host.VirtualHost.Gateway.NsName.Namespace
-			ef.SetNamespace(ns)
-			name := envoyFilterName(host.VirtualHost)
-			ef.SetName(name)
-			if ef.Labels == nil {
-				ef.Labels = map[string]string{}
-			}
-			ef.Labels[model.LabelCreatedBy] = "HTTPFilterPolicy"
+	for proxy, hostRules := range state.Hosts {
+		for _, host := range hostRules {
+			for routeName, route := range host.Routes {
+				ef := istio.GenerateRouteFilter(host.VirtualHost, routeName, route.Config)
+				// Set the EnvoyFilter's namespace to the workload's namespace.
+				// For k8s Gateway API, the workload's namespace is equal to the Gateway's namespace.
+				// For Istio API, we will require env var PILOT_SCOPE_GATEWAY_TO_NAMESPACE to be set.
+				ns := proxy.Namespace
+				ef.SetNamespace(ns)
+				name := envoyFilterName(host.VirtualHost)
+				ef.SetName(name)
+				if ef.Labels == nil {
+					ef.Labels = map[string]string{}
+				}
+				ef.Labels[model.LabelCreatedBy] = "HTTPFilterPolicy"
 
-			efList = append(efList, &envoyFilterWrapper{
-				EnvoyFilter: ef,
-				info:        route.Info,
-			})
+				efList = append(efList, &envoyFilterWrapper{
+					EnvoyFilter: ef,
+					info:        route.Info,
+				})
+			}
 		}
 	}
 

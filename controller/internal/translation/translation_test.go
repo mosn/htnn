@@ -162,6 +162,9 @@ func TestTranslate(t *testing.T) {
 				out = append(out, ef)
 			}
 			sort.Slice(out, func(i, j int) bool {
+				if out[i].Namespace != out[j].Namespace {
+					return out[i].Namespace < out[j].Namespace
+				}
 				return out[i].Name < out[j].Name
 			})
 			d, _ := yaml.Marshal(out)
@@ -250,6 +253,9 @@ func TestPlugins(t *testing.T) {
 				out = append(out, ef)
 			}
 			sort.Slice(out, func(i, j int) bool {
+				if out[i].Namespace != out[j].Namespace {
+					return out[i].Namespace < out[j].Namespace
+				}
 				return out[i].Name < out[j].Name
 			})
 			d, _ := yaml.Marshal(out)

@@ -1,10 +1,10 @@
 - metadata:
     annotations:
-      htnn.mosn.io/info: '{"httpfilterpolicies":["default/default"]}'
+      htnn.mosn.io/info: '{"httpfilterpolicies":["default/test2"]}'
     creationTimestamp: null
     labels:
       htnn.mosn.io/created-by: HTTPFilterPolicy
-    name: htnn-h-a.default.com
+    name: htnn-h-a.test.com
     namespace: default
   spec:
     configPatches:
@@ -12,7 +12,7 @@
       match:
         routeConfiguration:
           vhost:
-            name: a.default.com:80
+            name: a.test.com:80
             route:
               name: policy
       patch:
@@ -61,6 +61,6 @@
                     value:
                       plugins:
                       - config:
-                          pet: dog
+                          pet: cat
                         name: animal
   status: {}

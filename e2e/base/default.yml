@@ -67,6 +67,8 @@ kind: Gateway
 metadata:
   name: default
   namespace: istio-system
+  # TODO: move the data plane out to e2e ns once we can use operator to deploy ingressgateway.
+  # Currently, the operator doesn't support specifying data plane image.
 spec:
   selector:
     istio: ingressgateway

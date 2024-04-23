@@ -35,7 +35,7 @@ import (
 // 2. merge policy among different hierarchies
 // 3. transform a plugin to different plugins if needed
 type mergedState struct {
-	Hosts map[string]*mergedHostPolicy
+	Hosts map[Proxy]map[string]*mergedHostPolicy
 }
 
 type mergedHostPolicy struct {
@@ -233,21 +233,25 @@ func sortPlugins(ps []*fmModel.FilterConfig) {
 
 func toMergedState(ctx *Ctx, state *dataPlaneState) (*FinalState, error) {
 	s := &mergedState{
-		Hosts: make(map[string]*mergedHostPolicy),
+		Hosts: make(map[Proxy]map[string]*mergedHostPolicy),
 	}
 
-	for name, host := range state.Hosts {
-		mh := &mergedHostPolicy{
-			VirtualHost: host.VirtualHost,
-			Routes:      make(map[string]*mergedPolicy),
-		}
+	for proxy, hosts := range state.Hosts {
+		merged := make(map[string]*mergedHostPolicy)
+		for name, host := range hosts {
+			mh := &mergedHostPolicy{
+				VirtualHost: host.VirtualHost,
+				Routes:      make(map[string]*mergedPolicy),
+			}
 
-		for routeName, route := range host.Routes {
-			mergedPolicy := toMergedPolicy(route)
-			mh.Routes[routeName] = mergedPolicy
-		}
+			for routeName, route := range host.Routes {
+				mergedPolicy := toMergedPolicy(route)
+				mh.Routes[routeName] = mergedPolicy
+			}
 
-		s.Hosts[name] = mh
+			merged[name] = mh
+		}
+		s.Hosts[proxy] = merged
 	}
 
 	return toFinalState(ctx, s)

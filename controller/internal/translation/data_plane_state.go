@@ -32,7 +32,7 @@ import (
 
 // dataPlaneState converts the init state to the structure used by the data plane
 type dataPlaneState struct {
-	Hosts map[string]*hostPolicy
+	Hosts map[Proxy]map[string]*hostPolicy
 }
 
 type hostPolicy struct {
@@ -165,9 +165,37 @@ var (
 	wildcardHostnams = []gwapiv1.Hostname{"*"}
 )
 
+func addVirtualHostToProxy(vh *model.VirtualHost, hosts map[Proxy]map[string]*hostPolicy, routes map[string]*routePolicy) {
+	p := Proxy{
+		Namespace: vh.Gateway.NsName.Namespace,
+	}
+
+	proxy, ok := hosts[p]
+	if !ok {
+		hosts[p] = make(map[string]*hostPolicy)
+		proxy = hosts[p]
+	}
+
+	if host, ok := proxy[vh.Name]; ok {
+		// TODO: add route name collision detection
+		// Currently, it is the webhook or the user configuration to guarantee the same route
+		// name won't be used in different VirtualServices that share the same host.
+		// For HTTPRoute, Istio guarantees the default route name is unique
+		for routeName, policy := range routes {
+			host.Routes[routeName] = policy
+		}
+	} else {
+		policy := &hostPolicy{
+			VirtualHost: vh,
+			Routes:      routes,
+		}
+		proxy[vh.Name] = policy
+	}
+}
+
 func toDataPlaneState(ctx *Ctx, state *InitState) (*FinalState, error) {
 	s := &dataPlaneState{
-		Hosts: make(map[string]*hostPolicy),
+		Hosts: make(map[Proxy]map[string]*hostPolicy),
 	}
 	for id, vsp := range state.VirtualServicePolicies {
 		id := id // the copied id will be referenced by address later
@@ -193,20 +221,7 @@ func toDataPlaneState(ctx *Ctx, state *InitState) (*FinalState, error) {
 				continue
 			}
 			for _, vh := range vhs {
-				if host, ok := s.Hosts[vh.Name]; ok {
-					// TODO: add route name collision detection
-					// Currently, it is the webhook or the user configuration to guarantee the same route
-					// name won't be used in different VirtualServices that share the same host.
-					for routeName, policy := range routes {
-						host.Routes[routeName] = policy
-					}
-				} else {
-					policy := &hostPolicy{
-						VirtualHost: vh,
-						Routes:      routes,
-					}
-					s.Hosts[vh.Name] = policy
-				}
+				addVirtualHostToProxy(vh, s.Hosts, routes)
 			}
 		}
 	}
@@ -264,18 +279,7 @@ func toDataPlaneState(ctx *Ctx, state *InitState) (*FinalState, error) {
 						continue
 					}
 					for _, vh := range vhs {
-						if host, ok := s.Hosts[vh.Name]; ok {
-							// Istio guarantees the default route name is unique
-							for routeName, policy := range routes {
-								host.Routes[routeName] = policy
-							}
-						} else {
-							policy := &hostPolicy{
-								VirtualHost: vh,
-								Routes:      routes,
-							}
-							s.Hosts[vh.Name] = policy
-						}
+						addVirtualHostToProxy(vh, s.Hosts, routes)
 					}
 				}
 			}

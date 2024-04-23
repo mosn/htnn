@@ -17,14 +17,14 @@ istioGateway:
 - apiVersion: networking.istio.io/v1beta1
   kind: Gateway
   metadata:
-    name: default
+    name: test2
     namespace: default
   spec:
     selector:
       istio: ingressgateway
     servers:
     - hosts:
-      - "*.default.com"
+      - "*.test.com"
       port:
         name: http
         number: 80
@@ -51,17 +51,17 @@ virtualService:
               host: httpbin
               port:
                 number: 8000
-  default:
+  test2:
     - apiVersion: networking.istio.io/v1beta1
       kind: VirtualService
       metadata:
-        name: default
+        name: test2
         namespace: default
       spec:
         gateways:
-        - default
+        - test2
         hosts:
-        - "a.default.com"
+        - "a.test.com"
         http:
         - match:
           - uri:
@@ -87,18 +87,18 @@ httpFilterPolicy:
       filters:
         animal:
           config:
-            pet: dog
-  default:
+            pet: cat
+  test2:
   - apiVersion: htnn.mosn.io/v1
     kind: HTTPFilterPolicy
     metadata:
-      name: default
+      name: test2
       namespace: default
     spec:
       targetRef:
         group: networking.istio.io
         kind: VirtualService
-        name: default
+        name: test2
       filters:
         animal:
           config:
