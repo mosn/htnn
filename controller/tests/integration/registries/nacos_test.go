@@ -132,9 +132,9 @@ var _ = Describe("Nacos", func() {
 		interval = time.Millisecond * 250
 	)
 
-	BeforeEach(func() {
-		helper.WaitServiceUp(":8848", "Nacos")
+	helper.WaitServiceUp(":8848", "Nacos")
 
+	AfterEach(func() {
 		var registries mosniov1.ServiceRegistryList
 		if err := k8sClient.List(ctx, &registries); err == nil {
 			for _, e := range registries.Items {

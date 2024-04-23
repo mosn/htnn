@@ -41,18 +41,18 @@ var _ = Describe("ServiceRegistry controller", func() {
 		interval = time.Millisecond * 250
 	)
 
-	Context("When reconciling ServiceRegistry", func() {
-		BeforeEach(func() {
-			var registries mosniov1.ServiceRegistryList
-			if err := k8sClient.List(ctx, &registries); err == nil {
-				for _, e := range registries.Items {
-					pkg.DeleteK8sResource(ctx, k8sClient, &e)
-				}
+	helper.WaitServiceUp(":8848", "Nacos")
+
+	AfterEach(func() {
+		var registries mosniov1.ServiceRegistryList
+		if err := k8sClient.List(ctx, &registries); err == nil {
+			for _, e := range registries.Items {
+				pkg.DeleteK8sResource(ctx, k8sClient, &e)
 			}
+		}
+	})
 
-			helper.WaitServiceUp(":8848", "Nacos")
-		})
-
+	Context("When reconciling ServiceRegistry", func() {
 		It("deal with invalid serviceregistry crd", func() {
 			ctx := context.Background()
 			input := []map[string]interface{}{}
