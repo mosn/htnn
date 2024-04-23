@@ -93,6 +93,8 @@ func toFinalState(_ *Ctx, state *mergedState) (*FinalState, error) {
 				// Set the EnvoyFilter's namespace to the workload's namespace.
 				// For k8s Gateway API, the workload's namespace is equal to the Gateway's namespace.
 				// For Istio API, we will require env var PILOT_SCOPE_GATEWAY_TO_NAMESPACE to be set.
+				// If PILOT_SCOPE_GATEWAY_TO_NAMESPACE is not set, people need to follow the convention
+				// that the namespace of workload matches the namespace of gateway.
 				ns := proxy.Namespace
 				ef.SetNamespace(ns)
 				name := envoyFilterName(host.VirtualHost)
