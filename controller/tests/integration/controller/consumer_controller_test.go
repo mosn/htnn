@@ -45,23 +45,23 @@ var _ = Describe("Consumer controller", func() {
 		interval = time.Millisecond * 250
 	)
 
+	AfterEach(func() {
+		var consumers mosniov1.ConsumerList
+		if err := k8sClient.List(ctx, &consumers); err == nil {
+			for _, e := range consumers.Items {
+				pkg.DeleteK8sResource(ctx, k8sClient, &e)
+			}
+		}
+
+		var envoyfilters istiov1a3.EnvoyFilterList
+		if err := k8sClient.List(ctx, &envoyfilters); err == nil {
+			for _, e := range envoyfilters.Items {
+				pkg.DeleteK8sResource(ctx, k8sClient, e)
+			}
+		}
+	})
+
 	Context("When reconciling Consumer", func() {
-		BeforeEach(func() {
-			var consumers mosniov1.ConsumerList
-			if err := k8sClient.List(ctx, &consumers); err == nil {
-				for _, e := range consumers.Items {
-					pkg.DeleteK8sResource(ctx, k8sClient, &e)
-				}
-			}
-
-			var envoyfilters istiov1a3.EnvoyFilterList
-			if err := k8sClient.List(ctx, &envoyfilters); err == nil {
-				for _, e := range envoyfilters.Items {
-					pkg.DeleteK8sResource(ctx, k8sClient, e)
-				}
-			}
-		})
-
 		It("deal with crd", func() {
 			ctx := context.Background()
 			input := []map[string]interface{}{}
