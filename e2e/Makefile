@@ -54,7 +54,7 @@ e2e-prepare-data-plane-image: e2e-build-so kind
 .PHONY: deploy-istio
 deploy-istio:
 	$(KUBECTL) apply -f ./base/istio_prestart.yaml
-	ISTIO_VERSION=1.21.0 ./istio.sh install
+	ISTIO_VERSION=1.21.2 ./istio.sh install
 	$(KUBECTL) wait --timeout=5m -n istio-system deployment/istio-ingressgateway --for=condition=Available
 
 .PHONY: deploy-controller

@@ -48,8 +48,8 @@ github.com/dgryski/trifles v0.0.0-20200323201526-dd97f9abfb48 h1:fRzb/w+pyskVMQ+
 github.com/dgryski/trifles v0.0.0-20200323201526-dd97f9abfb48/go.mod h1:if7Fbed8SFyPtHLHbg49SI7NAdJiC5WIA09pe59rfAA=
 github.com/dustin/go-humanize v1.0.0 h1:VSnTsYCnlFHaM2/igO1h6X3HA71jcobQuxemgkq4zYo=
 github.com/dustin/go-humanize v1.0.0/go.mod h1:HtrtbFcZ19U5GC7JDqmcUSB87Iq5E25KnS6fMYU6eOk=
-github.com/envoyproxy/envoy v1.29.2 h1:VhXwGhSt1whNoYZzErcfY3OabVOYoSSDCrln87GcgGA=
-github.com/envoyproxy/envoy v1.29.2/go.mod h1:c2OGLXJVY9BaTYPiWFRz6eUNaC+3TfqFKmkWS9brdKo=
+github.com/envoyproxy/envoy v1.29.4 h1:1c52LYxzA6arnSjpTfDyxCSrtztwVAnzekcGHirvq8Y=
+github.com/envoyproxy/envoy v1.29.4/go.mod h1:c2OGLXJVY9BaTYPiWFRz6eUNaC+3TfqFKmkWS9brdKo=
 github.com/envoyproxy/go-control-plane v0.12.1-0.20240117015050-472addddff92 h1:/3bsjkhOTh0swUKDBxL1+3MrXCxrf/sEEMseiIEJg00=
 github.com/envoyproxy/go-control-plane v0.12.1-0.20240117015050-472addddff92/go.mod h1:ZBTaoJ23lqITozF0M6G4/IragXCQKCnYbmlmtHvwRG0=
 github.com/envoyproxy/protoc-gen-validate v1.0.4 h1:gVPz/FMfvh57HdSJQyvBtF00j8JU4zdyUgIUNhlgg0A=

@@ -15,7 +15,7 @@ The `localRatelimit` plugin limits the number of requests per second, by leverag
 
 ## Configuration
 
-See the corresponding [Envoy documentation](https://www.envoyproxy.io/docs/envoy/v1.29.2/configuration/http/http_filters/local_rate_limit_filter).
+See the corresponding [Envoy documentation](https://www.envoyproxy.io/docs/envoy/v1.29.4/configuration/http/http_filters/local_rate_limit_filter).
 
 ## Usage
 
