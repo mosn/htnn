@@ -145,10 +145,9 @@ func TestTranslate(t *testing.T) {
 
 			defaultEnvoyFilters := istio.DefaultEnvoyFilters()
 			for key := range defaultEnvoyFilters {
-				name := strings.SplitN(key, "/", 2)[1]
 				found := false
 				for _, ef := range fs.EnvoyFilters {
-					if ef.Name == name {
+					if ef.Name == key.Name {
 						found = true
 						delete(fs.EnvoyFilters, key)
 						break
@@ -224,9 +223,8 @@ func TestPlugins(t *testing.T) {
 			defaultEnvoyFilters := istio.DefaultEnvoyFilters()
 			expPlugin := fmt.Sprintf("htnn.filters.http.%s", snakeToCamel(name))
 			for key := range defaultEnvoyFilters {
-				name := strings.SplitN(key, "/", 2)[1]
 				for _, ef := range fs.EnvoyFilters {
-					if ef.Name == name {
+					if ef.Name == key.Name {
 						if ef.Name == "htnn-http-filter" {
 							kept := []*istioapi.EnvoyFilter_EnvoyConfigObjectPatch{}
 							for _, cp := range ef.Spec.ConfigPatches {

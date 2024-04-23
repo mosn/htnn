@@ -23,8 +23,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
+type EnvoyFilterKey struct {
+	Namespace string
+	Name      string
+}
+
 type Output interface {
-	FromHTTPFilterPolicy(ctx context.Context, envoyFilters map[string]*istiov1a3.EnvoyFilter) error
+	FromHTTPFilterPolicy(ctx context.Context, envoyFilters map[EnvoyFilterKey]*istiov1a3.EnvoyFilter) error
 	FromConsumer(ctx context.Context, envoyFilter *istiov1a3.EnvoyFilter) error
 	// FromServiceRegistry writes the generated ServiceEntries to the output. Unlike the other generators,
 	// it assumes the write already succeed, and don't retry on error,

@@ -94,10 +94,10 @@ index 34cf0a690d..a1d970a45b 100644
  		go s.configController.Run(stop)
 diff --git a/pilot/pkg/config/htnn/component.go b/pilot/pkg/config/htnn/component.go
 new file mode 100644
-index 0000000000..506b50ecd4
+index 0000000000..275fcc02e9
 --- /dev/null
 +++ b/pilot/pkg/config/htnn/component.go
-@@ -0,0 +1,175 @@
+@@ -0,0 +1,174 @@
 +// Copyright The HTNN Authors.
 +//
 +// Licensed under the Apache License, Version 2.0 (the "License");
@@ -118,7 +118,6 @@ index 0000000000..506b50ecd4
 +	"context"
 +	"reflect"
 +	"strconv"
-+	"strings"
 +	"time"
 +
 +	istioapi "istio.io/api/networking/v1alpha3"
@@ -173,15 +172,15 @@ index 0000000000..506b50ecd4
 +	return cfg
 +}
 +
-+func (o *output) FromHTTPFilterPolicy(_ context.Context, generatedEnvoyFilters map[string]*istiov1a3.EnvoyFilter) error {
++func (o *output) FromHTTPFilterPolicy(_ context.Context, generatedEnvoyFilters map[component.EnvoyFilterKey]*istiov1a3.EnvoyFilter) error {
 +	efs := make(map[string][]config.Config, 0)
 +
 +	log.Infof("write %d generated envoy filters to PushContext", len(generatedEnvoyFilters))
 +
 +	for key, ef := range generatedEnvoyFilters {
-+		log.Debugf("generate envoy filter %s: %+v", key, &ef.Spec)
++		log.Debugf("generate envoy filter %+v", ef)
 +
-+		ns := strings.SplitN(key, "/", 2)[0]
++		ns := key.Namespace
 +		efs[ns] = append(efs[ns], *convertEnvoyFilterToConfig(ef))
 +	}
 +	// We don't write the generated filters to the cache here because the cache is read-only
@@ -190,7 +189,7 @@ index 0000000000..506b50ecd4
 +}
 +
 +func (o *output) FromConsumer(ctx context.Context, ef *istiov1a3.EnvoyFilter) error {
-+	log.Debugf("generate envoy filter %s: %+v", ef.Name, &ef.Spec)
++	log.Debugf("generate envoy filter %+v", ef)
 +
 +	cfg := convertEnvoyFilterToConfig(ef)
 +	o.ctrl.SetConsumerEnvoyFilter(cfg)

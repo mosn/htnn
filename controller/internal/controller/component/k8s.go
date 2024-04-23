@@ -46,7 +46,7 @@ func NewK8sOutput(c client.Client) component.Output {
 	return o
 }
 
-func (o *k8sOutput) FromHTTPFilterPolicy(ctx context.Context, generatedEnvoyFilters map[string]*istiov1a3.EnvoyFilter) error {
+func (o *k8sOutput) FromHTTPFilterPolicy(ctx context.Context, generatedEnvoyFilters map[component.EnvoyFilterKey]*istiov1a3.EnvoyFilter) error {
 	logger := o.logger
 
 	var envoyfilters istiov1a3.EnvoyFilterList
@@ -56,9 +56,12 @@ func (o *k8sOutput) FromHTTPFilterPolicy(ctx context.Context, generatedEnvoyFilt
 		return fmt.Errorf("failed to list EnvoyFilter: %w", err)
 	}
 
-	preEnvoyFilterMap := make(map[string]*istiov1a3.EnvoyFilter, len(envoyfilters.Items))
+	preEnvoyFilterMap := make(map[component.EnvoyFilterKey]*istiov1a3.EnvoyFilter, len(envoyfilters.Items))
 	for _, e := range envoyfilters.Items {
-		key := fmt.Sprintf("%s/%s", e.Namespace, e.Name)
+		key := component.EnvoyFilterKey{
+			Namespace: e.Namespace,
+			Name:      e.Name,
+		}
 		if _, ok := generatedEnvoyFilters[key]; !ok {
 			logger.Info("delete EnvoyFilter", "name", e.Name, "namespace", e.Namespace)
 			if err := o.Delete(ctx, e); err != nil {

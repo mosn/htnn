@@ -26,6 +26,7 @@ import (
 
 	"mosn.io/htnn/controller/internal/istio"
 	"mosn.io/htnn/controller/internal/model"
+	"mosn.io/htnn/controller/pkg/component"
 )
 
 const (
@@ -73,7 +74,7 @@ func envoyFilterName(vhost *model.VirtualHost) string {
 
 // finalState is the end of the translation. We convert the state to EnvoyFilter and write it to k8s.
 type FinalState struct {
-	EnvoyFilters map[string]*istiov1a3.EnvoyFilter
+	EnvoyFilters map[component.EnvoyFilterKey]*istiov1a3.EnvoyFilter
 }
 
 type envoyFilterWrapper struct {
@@ -111,18 +112,21 @@ func toFinalState(_ *Ctx, state *mergedState) (*FinalState, error) {
 
 	// Merge EnvoyFilters with same name. The number of EnvoyFilters is equal to the number of
 	// configured domains.
-	efws := map[string]*envoyFilterWrapper{}
+	efws := map[component.EnvoyFilterKey]*envoyFilterWrapper{}
 	for _, ef := range efList {
-		name := fmt.Sprintf("%s/%s", ef.GetNamespace(), ef.GetName())
-		if curr, ok := efws[name]; ok {
+		key := component.EnvoyFilterKey{
+			Namespace: ef.GetNamespace(),
+			Name:      ef.GetName(),
+		}
+		if curr, ok := efws[key]; ok {
 			curr.Spec.ConfigPatches = append(curr.Spec.ConfigPatches, ef.Spec.ConfigPatches...)
 			curr.info.Merge(ef.info)
 		} else {
-			efws[name] = ef
+			efws[key] = ef
 		}
 	}
 
-	for name, ef := range efws {
+	for key, ef := range efws {
 		if ef.info != nil {
 			ef.SetAnnotations(map[string]string{
 				AnnotationInfo: ef.info.String(),
@@ -140,7 +144,7 @@ func toFinalState(_ *Ctx, state *mergedState) (*FinalState, error) {
 			}
 			return aVhost.GetRoute().Name < bVhost.GetRoute().Name
 		})
-		efs[name] = ef.EnvoyFilter
+		efs[key] = ef.EnvoyFilter
 	}
 
 	return &FinalState{

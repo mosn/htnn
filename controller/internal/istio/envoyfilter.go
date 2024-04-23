@@ -26,6 +26,7 @@ import (
 	"mosn.io/htnn/api/pkg/plugins"
 	ctrlcfg "mosn.io/htnn/controller/internal/config"
 	"mosn.io/htnn/controller/internal/model"
+	"mosn.io/htnn/controller/pkg/component"
 )
 
 func MustNewStruct(fields map[string]interface{}) *structpb.Struct {
@@ -48,8 +49,8 @@ type configWrapper struct {
 	filter map[string]interface{}
 }
 
-func DefaultEnvoyFilters() map[string]*istiov1a3.EnvoyFilter {
-	efs := map[string]*istiov1a3.EnvoyFilter{}
+func DefaultEnvoyFilters() map[component.EnvoyFilterKey]*istiov1a3.EnvoyFilter {
+	efs := map[component.EnvoyFilterKey]*istiov1a3.EnvoyFilter{}
 
 	defaultMatch := &istioapi.EnvoyFilter_EnvoyConfigObjectMatch{
 		// As currently we only support Gateway cases, here we hardcode the context
@@ -149,7 +150,10 @@ func DefaultEnvoyFilters() map[string]*istiov1a3.EnvoyFilter {
 		}
 	}
 
-	key := fmt.Sprintf("%s/%s", ctrlcfg.RootNamespace(), DefaultHttpFilter)
+	key := component.EnvoyFilterKey{
+		Namespace: ctrlcfg.RootNamespace(),
+		Name:      DefaultHttpFilter,
+	}
 	efs[key] = &istiov1a3.EnvoyFilter{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: ctrlcfg.RootNamespace(),
