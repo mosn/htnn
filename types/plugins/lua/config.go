@@ -22,8 +22,8 @@ import (
 )
 
 func init() {
-	plugins.RegisterHttpPluginType("outerLua", &PrePlugin{})
-	plugins.RegisterHttpPluginType("innerLua", &PostPlugin{})
+	plugins.RegisterHttpPluginType("outerLua", &OuterPlugin{})
+	plugins.RegisterHttpPluginType("innerLua", &InnerPlugin{})
 }
 
 type plugin struct {
@@ -34,21 +34,21 @@ func (p *plugin) Config() api.PluginConfig {
 	return &lua.LuaPerRoute{}
 }
 
-type PrePlugin struct {
+type OuterPlugin struct {
 	plugin
 }
 
-func (p *PrePlugin) Order() plugins.PluginOrder {
+func (p *OuterPlugin) Order() plugins.PluginOrder {
 	return plugins.PluginOrder{
 		Position: plugins.OrderPositionOuter,
 	}
 }
 
-type PostPlugin struct {
+type InnerPlugin struct {
 	plugin
 }
 
-func (p *PostPlugin) Order() plugins.PluginOrder {
+func (p *InnerPlugin) Order() plugins.PluginOrder {
 	return plugins.PluginOrder{
 		Position: plugins.OrderPositionInner,
 	}
