@@ -33,6 +33,10 @@ func (p *plugin) ToRouteConfig(config map[string]interface{}) map[string]interfa
 		"overrides": config,
 		// TODO: for now, we don't have a way to generate the cluster used in the ExtProcPerRoute's grpcService field.
 		// User need to manually add the cluster via Service or ServiceEntry
+		// Maybe we can add a wrapper to generate the cluster name according to user's configuration, like
+		// https://github.com/alibaba/higress/blob/a787088c0e2a1cd76c5f8e3e92b6e05bc3a85d9a/plugins/wasm-go/pkg/wrapper/cluster_wrapper.go#L56.
+		// Generate a cluster via EnvoyFilter is not a good idea to me, because it's not the plugin's duty to maintain the lifecycle
+		// of the cluster.
 	}
 }
 
