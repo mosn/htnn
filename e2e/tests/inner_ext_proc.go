@@ -4,7 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//	http://www.apache.org/licenses/LICENSE-2.0
+//     http://www.apache.org/licenses/LICENSE-2.0
 //
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
@@ -12,15 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package plugins
+package tests
 
 import (
-	_ "mosn.io/htnn/controller/plugins/bandwidth_limit"
-	_ "mosn.io/htnn/controller/plugins/buffer"
-	_ "mosn.io/htnn/controller/plugins/cors"
-	_ "mosn.io/htnn/controller/plugins/ext_proc"
-	_ "mosn.io/htnn/controller/plugins/fault"
-	_ "mosn.io/htnn/controller/plugins/local_ratelimit"
-	_ "mosn.io/htnn/controller/plugins/lua"
-	_ "mosn.io/htnn/types/plugins"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+
+	"mosn.io/htnn/e2e/pkg/suite"
 )
+
+func init() {
+	suite.Register(suite.Test{
+		Manifests: []string{"base/httproute.yml"},
+		Run: func(t *testing.T, suite *suite.Suite) {
+			rsp, err := suite.Get("/echo", nil)
+			require.NoError(t, err)
+			require.Equal(t, 500, rsp.StatusCode)
+		},
+	})
+}
