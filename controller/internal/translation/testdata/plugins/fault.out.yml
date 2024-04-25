@@ -1,6 +1,7 @@
 - metadata:
     creationTimestamp: null
     name: htnn-h-default.local
+    namespace: default
   spec:
     configPatches:
     - applyTo: HTTP_ROUTE
@@ -25,6 +26,7 @@
 - metadata:
     creationTimestamp: null
     name: htnn-http-filter
+    namespace: istio-system
   spec:
     configPatches:
     - applyTo: HTTP_FILTER

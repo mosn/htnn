@@ -13,7 +13,7 @@
 - apiVersion: networking.istio.io/v1alpha3
   kind: EnvoyFilter
   metadata:
-    namespace: istio-system
+    namespace: default
     name: htnn-h-default.httpbin # EnvoyFilter to remove
     labels:
       htnn.mosn.io/created-by: HTTPFilterPolicy

@@ -2,7 +2,10 @@
     annotations:
       htnn.mosn.io/info: '{"httpfilterpolicies":["default/policy"]}'
     creationTimestamp: null
+    labels:
+      htnn.mosn.io/created-by: HTTPFilterPolicy
     name: htnn-h-httpbin.example.com
+    namespace: default
   spec:
     configPatches:
     - applyTo: HTTP_ROUTE
@@ -54,7 +57,10 @@
     annotations:
       htnn.mosn.io/info: '{"httpfilterpolicies":["default/policy"]}'
     creationTimestamp: null
+    labels:
+      htnn.mosn.io/created-by: HTTPFilterPolicy
     name: htnn-h-httpbin.test.com
+    namespace: default
   spec:
     configPatches:
     - applyTo: HTTP_ROUTE

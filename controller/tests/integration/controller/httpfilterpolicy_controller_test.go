@@ -223,13 +223,15 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 
 			names := []string{}
 			for _, ef := range envoyfilters.Items {
-				Expect(ef.Namespace).To(Equal("istio-system"))
 				names = append(names, ef.Name)
 				if ef.Name == "htnn-h-default.local" {
+					Expect(ef.Namespace).To(Equal("default"))
 					Expect(len(ef.Spec.ConfigPatches)).To(Equal(1))
 					cp := ef.Spec.ConfigPatches[0]
 					Expect(cp.ApplyTo).To(Equal(istioapi.EnvoyFilter_HTTP_ROUTE))
 					Expect(cp.Match.GetRouteConfiguration().GetVhost().Name).To(Equal("default.local:8888"))
+				} else {
+					Expect(ef.Namespace).To(Equal("istio-system"))
 				}
 			}
 			Expect(names).To(ConsistOf([]string{"htnn-http-filter", "htnn-h-default.local"}))
@@ -474,9 +476,12 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 
 			names := []string{}
 			for _, ef := range envoyfilters.Items {
-				Expect(ef.Namespace).To(Equal("istio-system"))
 				names = append(names, ef.Name)
 				if ef.Name == "htnn-http-filter" {
+					Expect(ef.Namespace).To(Equal("istio-system"))
+					Expect(len(ef.Spec.ConfigPatches) > 0).Should(BeTrue())
+				} else if ef.Name == "htnn-h-default.local" {
+					Expect(ef.Namespace).To(Equal("default"))
 					Expect(len(ef.Spec.ConfigPatches) > 0).Should(BeTrue())
 				}
 			}
@@ -577,9 +582,9 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 
 			names := []string{}
 			for _, ef := range envoyfilters.Items {
-				Expect(ef.Namespace).To(Equal("istio-system"))
 				names = append(names, ef.Name)
 				if ef.Name == "htnn-h-default.local" {
+					Expect(ef.Namespace).To(Equal("default"))
 					Expect(len(ef.Spec.ConfigPatches)).To(Equal(1))
 					cp := ef.Spec.ConfigPatches[0]
 					Expect(cp.ApplyTo).To(Equal(istioapi.EnvoyFilter_HTTP_ROUTE))
@@ -893,9 +898,9 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 
 			names := []string{}
 			for _, ef := range envoyfilters.Items {
-				Expect(ef.Namespace).To(Equal("istio-system"))
 				names = append(names, ef.Name)
 				if ef.Name == "htnn-h-default.local" {
+					Expect(ef.Namespace).To(Equal("default"))
 					Expect(len(ef.Spec.ConfigPatches)).To(Equal(1))
 					cp := ef.Spec.ConfigPatches[0]
 					Expect(cp.ApplyTo).To(Equal(istioapi.EnvoyFilter_HTTP_ROUTE))
@@ -1144,7 +1149,6 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 			}, timeout, interval).Should(BeTrue())
 
 			for _, ef := range envoyfilters.Items {
-				Expect(ef.Namespace).To(Equal("istio-system"))
 				if ef.Name == "htnn-h-default.local" {
 					Expect(len(ef.Spec.ConfigPatches)).To(Equal(1))
 					cp := ef.Spec.ConfigPatches[0]

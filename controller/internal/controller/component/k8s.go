@@ -25,7 +25,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"mosn.io/htnn/controller/internal/config"
 	"mosn.io/htnn/controller/internal/log"
 	"mosn.io/htnn/controller/internal/model"
 	"mosn.io/htnn/controller/pkg/component"
@@ -47,15 +46,7 @@ func NewK8sOutput(c client.Client) component.Output {
 	return o
 }
 
-func fillEnvoyFilterMeta(ef *istiov1a3.EnvoyFilter) {
-	ef.Namespace = config.RootNamespace()
-	if ef.Labels == nil {
-		ef.Labels = map[string]string{}
-	}
-	ef.Labels[model.LabelCreatedBy] = "HTTPFilterPolicy"
-}
-
-func (o *k8sOutput) FromHTTPFilterPolicy(ctx context.Context, generatedEnvoyFilters map[string]*istiov1a3.EnvoyFilter) error {
+func (o *k8sOutput) FromHTTPFilterPolicy(ctx context.Context, generatedEnvoyFilters map[component.EnvoyFilterKey]*istiov1a3.EnvoyFilter) error {
 	logger := o.logger
 
 	var envoyfilters istiov1a3.EnvoyFilterList
@@ -65,24 +56,27 @@ func (o *k8sOutput) FromHTTPFilterPolicy(ctx context.Context, generatedEnvoyFilt
 		return fmt.Errorf("failed to list EnvoyFilter: %w", err)
 	}
 
-	preEnvoyFilterMap := make(map[string]*istiov1a3.EnvoyFilter, len(envoyfilters.Items))
+	preEnvoyFilterMap := make(map[component.EnvoyFilterKey]*istiov1a3.EnvoyFilter, len(envoyfilters.Items))
 	for _, e := range envoyfilters.Items {
-		if _, ok := generatedEnvoyFilters[e.Name]; !ok || e.Namespace != config.RootNamespace() {
+		key := component.EnvoyFilterKey{
+			Namespace: e.Namespace,
+			Name:      e.Name,
+		}
+		if _, ok := generatedEnvoyFilters[key]; !ok {
 			logger.Info("delete EnvoyFilter", "name", e.Name, "namespace", e.Namespace)
 			if err := o.Delete(ctx, e); err != nil {
 				return fmt.Errorf("failed to delete EnvoyFilter: %w, namespacedName: %v",
 					err, types.NamespacedName{Name: e.Name, Namespace: e.Namespace})
 			}
 		} else {
-			preEnvoyFilterMap[e.Name] = e
+			preEnvoyFilterMap[key] = e
 		}
 	}
 
-	for _, ef := range generatedEnvoyFilters {
-		envoyfilter, ok := preEnvoyFilterMap[ef.Name]
+	for key, ef := range generatedEnvoyFilters {
+		envoyfilter, ok := preEnvoyFilterMap[key]
 		if !ok {
 			logger.Info("create EnvoyFilter", "name", ef.Name, "namespace", ef.Namespace)
-			fillEnvoyFilterMeta(ef)
 
 			if err := o.Create(ctx, ef); err != nil {
 				nsName := types.NamespacedName{Name: ef.Name, Namespace: ef.Namespace}
@@ -95,7 +89,6 @@ func (o *k8sOutput) FromHTTPFilterPolicy(ctx context.Context, generatedEnvoyFilt
 			}
 
 			logger.Info("update EnvoyFilter", "name", ef.Name, "namespace", ef.Namespace)
-			fillEnvoyFilterMeta(ef)
 			// Address metadata.resourceVersion: Invalid value: 0x0 error
 			ef.SetResourceVersion(envoyfilter.ResourceVersion)
 			if err := o.Update(ctx, ef); err != nil {

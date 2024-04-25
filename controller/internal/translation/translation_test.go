@@ -144,12 +144,12 @@ func TestTranslate(t *testing.T) {
 			require.NoError(t, err)
 
 			defaultEnvoyFilters := istio.DefaultEnvoyFilters()
-			for name := range defaultEnvoyFilters {
+			for key := range defaultEnvoyFilters {
 				found := false
 				for _, ef := range fs.EnvoyFilters {
-					if ef.Name == name {
+					if ef.Name == key.Name {
 						found = true
-						delete(fs.EnvoyFilters, name)
+						delete(fs.EnvoyFilters, key)
 						break
 					}
 				}
@@ -161,6 +161,9 @@ func TestTranslate(t *testing.T) {
 				out = append(out, ef)
 			}
 			sort.Slice(out, func(i, j int) bool {
+				if out[i].Namespace != out[j].Namespace {
+					return out[i].Namespace < out[j].Namespace
+				}
 				return out[i].Name < out[j].Name
 			})
 			d, _ := yaml.Marshal(out)
@@ -219,9 +222,9 @@ func TestPlugins(t *testing.T) {
 
 			defaultEnvoyFilters := istio.DefaultEnvoyFilters()
 			expPlugin := fmt.Sprintf("htnn.filters.http.%s", snakeToCamel(name))
-			for name := range defaultEnvoyFilters {
+			for key := range defaultEnvoyFilters {
 				for _, ef := range fs.EnvoyFilters {
-					if ef.Name == name {
+					if ef.Name == key.Name {
 						if ef.Name == "htnn-http-filter" {
 							kept := []*istioapi.EnvoyFilter_EnvoyConfigObjectPatch{}
 							for _, cp := range ef.Spec.ConfigPatches {
@@ -233,7 +236,7 @@ func TestPlugins(t *testing.T) {
 							}
 							ef.Spec.ConfigPatches = kept
 						} else {
-							delete(fs.EnvoyFilters, name)
+							delete(fs.EnvoyFilters, key)
 						}
 						break
 					}
@@ -248,6 +251,9 @@ func TestPlugins(t *testing.T) {
 				out = append(out, ef)
 			}
 			sort.Slice(out, func(i, j int) bool {
+				if out[i].Namespace != out[j].Namespace {
+					return out[i].Namespace < out[j].Namespace
+				}
 				return out[i].Name < out[j].Name
 			})
 			d, _ := yaml.Marshal(out)

@@ -29,11 +29,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"mosn.io/htnn/controller/internal/config"
 	"mosn.io/htnn/controller/internal/istio"
 	"mosn.io/htnn/controller/internal/log"
 	"mosn.io/htnn/controller/internal/metrics"
-	"mosn.io/htnn/controller/internal/model"
 	"mosn.io/htnn/controller/pkg/component"
 	mosniov1 "mosn.io/htnn/types/apis/v1"
 )
@@ -43,10 +41,6 @@ type ConsumerReconciler struct {
 	component.ResourceManager
 	Output component.Output
 }
-
-const (
-	ConsumerEnvoyFilterName = "htnn-consumer"
-)
 
 //+kubebuilder:rbac:groups=htnn.mosn.io,resources=consumers,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=htnn.mosn.io,resources=consumers/status,verbs=get;update;patch
@@ -141,12 +135,6 @@ func (r *ConsumerReconciler) generateCustomResource(ctx context.Context, state *
 	}
 
 	ef := istio.GenerateConsumers(consumerData)
-	ef.Namespace = config.RootNamespace()
-	ef.Name = ConsumerEnvoyFilterName
-	if ef.Labels == nil {
-		ef.Labels = map[string]string{}
-	}
-	ef.Labels[model.LabelCreatedBy] = "Consumer"
 
 	return r.Output.FromConsumer(ctx, ef)
 }
