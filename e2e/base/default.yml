@@ -5,21 +5,6 @@ kind: Namespace
 metadata:
   name: e2e
 ---
-apiVersion: networking.istio.io/v1beta1
-kind: Gateway
-metadata:
-  name: default
-spec:
-  selector:
-    istio: ingressgateway
-  servers:
-  - hosts:
-    - default.local
-    port:
-      name: http
-      number: 18000
-      protocol: HTTP
----
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
@@ -63,6 +48,134 @@ spec:
       containers:
       - name: backend
         # From https://github.com/kubernetes-sigs/ingress-controller-conformance/tree/master/images/echoserver
+        image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231013-v0.8.1-133-g3959576a
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        resources:
+          requests:
+            cpu: 10m
+---
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: default
+  namespace: istio-system
+  # TODO: move the data plane out to e2e ns once we can use operator to deploy ingressgateway.
+  # Currently, the operator doesn't support specifying data plane image.
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - hosts:
+    - default.local
+    port:
+      name: http
+      number: 18000
+      protocol: HTTP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: istio-system
+spec:
+  selector:
+    app: backend
+  ports:
+  - protocol: TCP
+    port: 8080
+    targetPort: 3000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  labels:
+    app: backend
+  namespace: istio-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+      - name: backend
+        image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231013-v0.8.1-133-g3959576a
+        env:
+        - name: POD_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        resources:
+          requests:
+            cpu: 10m
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: e2e-another
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: default
+  namespace: e2e-another
+spec:
+  gatewayClassName: istio
+  listeners:
+  - name: default
+    hostname: "localhost"
+    port: 10000
+    protocol: HTTP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: e2e-another
+spec:
+  selector:
+    app: backend
+  ports:
+  - protocol: TCP
+    port: 8080
+    targetPort: 3000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: e2e-another
+  labels:
+    app: backend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+      - name: backend
         image: gcr.io/k8s-staging-gateway-api/echo-basic:v20231013-v0.8.1-133-g3959576a
         env:
         - name: POD_NAME

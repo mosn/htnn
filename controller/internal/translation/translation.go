@@ -61,3 +61,7 @@ type HTTPFilterPolicyWrapper struct {
 
 	scope PolicyScope
 }
+
+type Proxy struct {
+	Namespace string
+}

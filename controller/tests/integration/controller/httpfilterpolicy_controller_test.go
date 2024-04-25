@@ -54,16 +54,23 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 		interval = time.Millisecond * 250
 	)
 
-	Context("When validating HTTPFilterPolicy", func() {
-		BeforeEach(func() {
-			var policies mosniov1.HTTPFilterPolicyList
-			if err := k8sClient.List(ctx, &policies); err == nil {
-				for _, e := range policies.Items {
-					pkg.DeleteK8sResource(ctx, k8sClient, &e)
-				}
+	AfterEach(func() {
+		var policies mosniov1.HTTPFilterPolicyList
+		if err := k8sClient.List(ctx, &policies); err == nil {
+			for _, e := range policies.Items {
+				pkg.DeleteK8sResource(ctx, k8sClient, &e)
 			}
-		})
+		}
 
+		var envoyfilters istiov1a3.EnvoyFilterList
+		if err := k8sClient.List(ctx, &envoyfilters); err == nil {
+			for _, e := range envoyfilters.Items {
+				pkg.DeleteK8sResource(ctx, k8sClient, e)
+			}
+		}
+	})
+
+	Context("When validating HTTPFilterPolicy", func() {
 		It("deal with invalid crd", func() {
 			ctx := context.Background()
 			input := []map[string]interface{}{}
@@ -154,41 +161,13 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 		})
 	})
 
-	var (
-		DefaultVirtualService *istiov1a3.VirtualService
-		DefaultIstioGateway   *istiov1a3.Gateway
-	)
-
 	Context("When reconciling HTTPFilterPolicy with VirtualService", func() {
+		var (
+			DefaultVirtualService *istiov1a3.VirtualService
+			DefaultIstioGateway   *istiov1a3.Gateway
+		)
+
 		BeforeEach(func() {
-			var policies mosniov1.HTTPFilterPolicyList
-			if err := k8sClient.List(ctx, &policies); err == nil {
-				for _, e := range policies.Items {
-					pkg.DeleteK8sResource(ctx, k8sClient, &e)
-				}
-			}
-
-			var virtualservices istiov1a3.VirtualServiceList
-			if err := k8sClient.List(ctx, &virtualservices); err == nil {
-				for _, e := range virtualservices.Items {
-					pkg.DeleteK8sResource(ctx, k8sClient, e)
-				}
-			}
-
-			var gateways istiov1a3.GatewayList
-			if err := k8sClient.List(ctx, &gateways); err == nil {
-				for _, e := range gateways.Items {
-					pkg.DeleteK8sResource(ctx, k8sClient, e)
-				}
-			}
-
-			var envoyfilters istiov1a3.EnvoyFilterList
-			if err := k8sClient.List(ctx, &envoyfilters); err == nil {
-				for _, e := range envoyfilters.Items {
-					pkg.DeleteK8sResource(ctx, k8sClient, e)
-				}
-			}
-
 			input := []map[string]interface{}{}
 			mustReadHTTPFilterPolicy("default_istio", &input)
 
@@ -202,7 +181,22 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 				}
 				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
 			}
+		})
 
+		AfterEach(func() {
+			var virtualservices istiov1a3.VirtualServiceList
+			if err := k8sClient.List(ctx, &virtualservices); err == nil {
+				for _, e := range virtualservices.Items {
+					pkg.DeleteK8sResource(ctx, k8sClient, e)
+				}
+			}
+
+			var gateways istiov1a3.GatewayList
+			if err := k8sClient.List(ctx, &gateways); err == nil {
+				for _, e := range gateways.Items {
+					pkg.DeleteK8sResource(ctx, k8sClient, e)
+				}
+			}
 		})
 
 		It("deal with virtualservice", func() {
@@ -229,13 +223,15 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 
 			names := []string{}
 			for _, ef := range envoyfilters.Items {
-				Expect(ef.Namespace).To(Equal("istio-system"))
 				names = append(names, ef.Name)
 				if ef.Name == "htnn-h-default.local" {
+					Expect(ef.Namespace).To(Equal("default"))
 					Expect(len(ef.Spec.ConfigPatches)).To(Equal(1))
 					cp := ef.Spec.ConfigPatches[0]
 					Expect(cp.ApplyTo).To(Equal(istioapi.EnvoyFilter_HTTP_ROUTE))
 					Expect(cp.Match.GetRouteConfiguration().GetVhost().Name).To(Equal("default.local:8888"))
+				} else {
+					Expect(ef.Namespace).To(Equal("istio-system"))
 				}
 			}
 			Expect(names).To(ConsistOf([]string{"htnn-http-filter", "htnn-h-default.local"}))
@@ -480,9 +476,12 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 
 			names := []string{}
 			for _, ef := range envoyfilters.Items {
-				Expect(ef.Namespace).To(Equal("istio-system"))
 				names = append(names, ef.Name)
 				if ef.Name == "htnn-http-filter" {
+					Expect(ef.Namespace).To(Equal("istio-system"))
+					Expect(len(ef.Spec.ConfigPatches) > 0).Should(BeTrue())
+				} else if ef.Name == "htnn-h-default.local" {
+					Expect(ef.Namespace).To(Equal("default"))
 					Expect(len(ef.Spec.ConfigPatches) > 0).Should(BeTrue())
 				}
 			}
@@ -583,9 +582,9 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 
 			names := []string{}
 			for _, ef := range envoyfilters.Items {
-				Expect(ef.Namespace).To(Equal("istio-system"))
 				names = append(names, ef.Name)
 				if ef.Name == "htnn-h-default.local" {
+					Expect(ef.Namespace).To(Equal("default"))
 					Expect(len(ef.Spec.ConfigPatches)).To(Equal(1))
 					cp := ef.Spec.ConfigPatches[0]
 					Expect(cp.ApplyTo).To(Equal(istioapi.EnvoyFilter_HTTP_ROUTE))
@@ -839,29 +838,26 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 
 	})
 
-	var (
-		DefaultK8sGateway *gwapiv1b1.Gateway
-	)
-
 	Context("When reconciling HTTPFilterPolicy with HTTPRoute", func() {
+		var (
+			DefaultK8sGateway *gwapiv1b1.Gateway
+		)
+
 		BeforeEach(func() {
-			// Clean up the resources created by previous tests. We don't use AfterEach
-			// in the previous test so we can check the resources when we only run the specific
-			// test after the test is finished.
-			var virtualservices istiov1a3.VirtualServiceList
-			if err := k8sClient.List(ctx, &virtualservices); err == nil {
-				for _, e := range virtualservices.Items {
-					pkg.DeleteK8sResource(ctx, k8sClient, e)
-				}
-			}
+			input := []map[string]interface{}{}
+			mustReadHTTPFilterPolicy("default_gwapi", &input)
 
-			var policies mosniov1.HTTPFilterPolicyList
-			if err := k8sClient.List(ctx, &policies); err == nil {
-				for _, e := range policies.Items {
-					pkg.DeleteK8sResource(ctx, k8sClient, &e)
+			for _, in := range input {
+				obj := pkg.MapToObj(in)
+				gvk := obj.GetObjectKind().GroupVersionKind()
+				if gvk.Group == "gateway.networking.k8s.io" && gvk.Kind == "Gateway" {
+					DefaultK8sGateway = obj.(*gwapiv1b1.Gateway)
 				}
+				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
 			}
+		})
 
+		AfterEach(func() {
 			var httproutes gwapiv1b1.HTTPRouteList
 			if err := k8sClient.List(ctx, &httproutes); err == nil {
 				for _, e := range httproutes.Items {
@@ -875,26 +871,6 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 					pkg.DeleteK8sResource(ctx, k8sClient, &e)
 				}
 			}
-
-			var envoyfilters istiov1a3.EnvoyFilterList
-			if err := k8sClient.List(ctx, &envoyfilters); err == nil {
-				for _, e := range envoyfilters.Items {
-					pkg.DeleteK8sResource(ctx, k8sClient, e)
-				}
-			}
-
-			input := []map[string]interface{}{}
-			mustReadHTTPFilterPolicy("default_gwapi", &input)
-
-			for _, in := range input {
-				obj := pkg.MapToObj(in)
-				gvk := obj.GetObjectKind().GroupVersionKind()
-				if gvk.Group == "gateway.networking.k8s.io" && gvk.Kind == "Gateway" {
-					DefaultK8sGateway = obj.(*gwapiv1b1.Gateway)
-				}
-				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
-			}
-
 		})
 
 		It("deal with httproute", func() {
@@ -922,9 +898,9 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 
 			names := []string{}
 			for _, ef := range envoyfilters.Items {
-				Expect(ef.Namespace).To(Equal("istio-system"))
 				names = append(names, ef.Name)
 				if ef.Name == "htnn-h-default.local" {
+					Expect(ef.Namespace).To(Equal("default"))
 					Expect(len(ef.Spec.ConfigPatches)).To(Equal(1))
 					cp := ef.Spec.ConfigPatches[0]
 					Expect(cp.ApplyTo).To(Equal(istioapi.EnvoyFilter_HTTP_ROUTE))
@@ -1127,6 +1103,16 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 			os.Setenv("HTNN_ENABLE_NATIVE_PLUGIN", "false")
 			config.Init()
 
+			input := []map[string]interface{}{}
+			mustReadHTTPFilterPolicy("default_gwapi", &input)
+
+			for _, in := range input {
+				obj := pkg.MapToObj(in)
+				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
+			}
+		})
+
+		AfterEach(func() {
 			var httproutes gwapiv1b1.HTTPRouteList
 			if err := k8sClient.List(ctx, &httproutes); err == nil {
 				for _, e := range httproutes.Items {
@@ -1141,23 +1127,6 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 				}
 			}
 
-			var policies mosniov1.HTTPFilterPolicyList
-			if err := k8sClient.List(ctx, &policies); err == nil {
-				for _, e := range policies.Items {
-					pkg.DeleteK8sResource(ctx, k8sClient, &e)
-				}
-			}
-
-			input := []map[string]interface{}{}
-			mustReadHTTPFilterPolicy("default_gwapi", &input)
-
-			for _, in := range input {
-				obj := pkg.MapToObj(in)
-				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
-			}
-		})
-
-		AfterEach(func() {
 			os.Setenv("HTNN_ENABLE_NATIVE_PLUGIN", "")
 			config.Init()
 		})
@@ -1180,7 +1149,6 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 			}, timeout, interval).Should(BeTrue())
 
 			for _, ef := range envoyfilters.Items {
-				Expect(ef.Namespace).To(Equal("istio-system"))
 				if ef.Name == "htnn-h-default.local" {
 					Expect(len(ef.Spec.ConfigPatches)).To(Equal(1))
 					cp := ef.Spec.ConfigPatches[0]

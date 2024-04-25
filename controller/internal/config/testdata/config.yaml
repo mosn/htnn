@@ -1,8 +1,0 @@
-# Remember to update the config/config.default.yaml after adding a new item
-enable_gateway_api: false
-enable_embedded_mode: false
-enable_native_plugin: false
-envoy:
-  go_so_path: /usr/local/golang.so
-istio:
-  root_namespace: htnn

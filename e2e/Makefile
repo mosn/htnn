@@ -41,7 +41,7 @@ delete-cluster: kind
 
 .PHONY: e2e-build-controller-image
 e2e-build-controller-image:
-	cd ../controller/ && IMG=htnn/e2e-cp:0.1.0 make docker-build
+	cd ../controller/ && IMG=htnn/e2e-cp:0.1.0 CONTROLLER_BASE_IMAGE=docker.io/istio/pilot:$(ISTIO_VERSION) make docker-build
 
 e2e-build-so:
 	cd ../plugins/ && make build-so && mv libgolang.so ../e2e/
@@ -54,8 +54,7 @@ e2e-prepare-data-plane-image: e2e-build-so kind
 .PHONY: deploy-istio
 deploy-istio:
 	$(KUBECTL) apply -f ./base/istio_prestart.yaml
-	ISTIO_VERSION=1.21.2 ./istio.sh install
-	$(KUBECTL) wait --timeout=5m -n istio-system deployment/istio-ingressgateway --for=condition=Available
+	ISTIO_VERSION=$(ISTIO_VERSION) ./istio.sh install
 
 .PHONY: deploy-controller
 deploy-controller: kind kubectl
@@ -71,7 +70,6 @@ run-e2e:
 
 # To update the control plane, run `make e2e-prepare-controller-image deploy-controller`, and the delete
 # the istiod pod to trigger restart.
-# For example, `kubectl get pods -n istio-system | grep 'istiod-' | awk '{print $1}' | xargs kubectl delete pod -n istio-system`.
 # To update the data plane, run `make e2e-prepare-data-plane-image` to update the image and then delete
 # the ingressgateway pod to trigger restart.
 .PHONY: e2e-ci

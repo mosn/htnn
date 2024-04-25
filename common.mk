@@ -32,6 +32,7 @@ DEV_TOOLS_IMAGE ?= ghcr.io/mosn/htnn-dev-tools:2024-03-05
 VERSION   = $(shell cat VERSION)
 GIT_VERSION     = $(shell git log -1 --pretty=format:%h)
 
+ISTIO_VERSION = 1.21.2
 MIN_K8S_VERSION = 1.26.0
 
 GO_PROD_MODULES = api types controller plugins # To make life simper, we only run linter on 'prod modules'

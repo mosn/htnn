@@ -26,6 +26,7 @@ import (
 
 	"mosn.io/htnn/controller/internal/istio"
 	"mosn.io/htnn/controller/internal/model"
+	"mosn.io/htnn/controller/pkg/component"
 )
 
 const (
@@ -73,7 +74,7 @@ func envoyFilterName(vhost *model.VirtualHost) string {
 
 // finalState is the end of the translation. We convert the state to EnvoyFilter and write it to k8s.
 type FinalState struct {
-	EnvoyFilters map[string]*istiov1a3.EnvoyFilter
+	EnvoyFilters map[component.EnvoyFilterKey]*istiov1a3.EnvoyFilter
 }
 
 type envoyFilterWrapper struct {
@@ -85,33 +86,49 @@ func toFinalState(_ *Ctx, state *mergedState) (*FinalState, error) {
 	efs := istio.DefaultEnvoyFilters()
 	efList := []*envoyFilterWrapper{}
 
-	for _, host := range state.Hosts {
-		for routeName, route := range host.Routes {
-			ef := istio.GenerateRouteFilter(host.VirtualHost, routeName, route.Config)
-			name := envoyFilterName(host.VirtualHost)
-			ef.SetName(name)
+	for proxy, hostRules := range state.Hosts {
+		for _, host := range hostRules {
+			for routeName, route := range host.Routes {
+				ef := istio.GenerateRouteFilter(host.VirtualHost, routeName, route.Config)
+				// Set the EnvoyFilter's namespace to the workload's namespace.
+				// For k8s Gateway API, the workload's namespace is equal to the Gateway's namespace.
+				// For Istio API, we will require env var PILOT_SCOPE_GATEWAY_TO_NAMESPACE to be set.
+				// If PILOT_SCOPE_GATEWAY_TO_NAMESPACE is not set, people need to follow the convention
+				// that the namespace of workload matches the namespace of gateway.
+				ns := proxy.Namespace
+				ef.SetNamespace(ns)
+				name := envoyFilterName(host.VirtualHost)
+				ef.SetName(name)
+				if ef.Labels == nil {
+					ef.Labels = map[string]string{}
+				}
+				ef.Labels[model.LabelCreatedBy] = "HTTPFilterPolicy"
 
-			efList = append(efList, &envoyFilterWrapper{
-				EnvoyFilter: ef,
-				info:        route.Info,
-			})
+				efList = append(efList, &envoyFilterWrapper{
+					EnvoyFilter: ef,
+					info:        route.Info,
+				})
+			}
 		}
 	}
 
 	// Merge EnvoyFilters with same name. The number of EnvoyFilters is equal to the number of
 	// configured domains.
-	efws := map[string]*envoyFilterWrapper{}
+	efws := map[component.EnvoyFilterKey]*envoyFilterWrapper{}
 	for _, ef := range efList {
-		name := ef.GetName()
-		if curr, ok := efws[name]; ok {
+		key := component.EnvoyFilterKey{
+			Namespace: ef.GetNamespace(),
+			Name:      ef.GetName(),
+		}
+		if curr, ok := efws[key]; ok {
 			curr.Spec.ConfigPatches = append(curr.Spec.ConfigPatches, ef.Spec.ConfigPatches...)
 			curr.info.Merge(ef.info)
 		} else {
-			efws[name] = ef
+			efws[key] = ef
 		}
 	}
 
-	for name, ef := range efws {
+	for key, ef := range efws {
 		if ef.info != nil {
 			ef.SetAnnotations(map[string]string{
 				AnnotationInfo: ef.info.String(),
@@ -129,7 +146,7 @@ func toFinalState(_ *Ctx, state *mergedState) (*FinalState, error) {
 			}
 			return aVhost.GetRoute().Name < bVhost.GetRoute().Name
 		})
-		efs[name] = ef.EnvoyFilter
+		efs[key] = ef.EnvoyFilter
 	}
 
 	return &FinalState{

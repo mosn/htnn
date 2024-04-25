@@ -44,6 +44,7 @@ var (
 
 var goSoPath = "/etc/libgolang.so"
 
+// Should match the Go shared library put in the data plane image
 func GoSoPath() string {
 	configLock.RLock()
 	defer configLock.RUnlock()
@@ -52,6 +53,9 @@ func GoSoPath() string {
 
 var rootNamespace = "istio-system"
 
+// Should match istio's rootNamespace configuration.
+// See https://istio.io/latest/docs/reference/config/istio.mesh.v1alpha1/#MeshConfig for more info.
+// This field is automatically configured when HTNN controller is run in the istiod.
 func RootNamespace() string {
 	configLock.RLock()
 	defer configLock.RUnlock()
@@ -60,6 +64,9 @@ func RootNamespace() string {
 
 var enableGatewayAPI = true
 
+// If this is set to true, support for Kubernetes gateway-api will be enabled.
+// In addition to this being enabled, the gateway-api CRDs need to be installed.
+// This field is automatically configured when HTNN controller is run in the istiod.
 func EnableGatewayAPI() bool {
 	configLock.RLock()
 	defer configLock.RUnlock()
@@ -68,6 +75,7 @@ func EnableGatewayAPI() bool {
 
 var enableEmbeddedMode = true
 
+// Enable embedded mode so that HTNN won't check the annotation of the target resource.
 func EnableEmbeddedMode() bool {
 	configLock.RLock()
 	defer configLock.RUnlock()
@@ -76,6 +84,10 @@ func EnableEmbeddedMode() bool {
 
 var enableNativePlugin = true
 
+// Enable Native plugin. Sometimes we may need to disable all native plugins, because:
+// 1. Only want to use Go plugins
+// 2. A custom Envoy is used and it doesn't support all Envoy's http filters as the default
+// open source one.
 func EnableNativePlugin() bool {
 	configLock.RLock()
 	defer configLock.RUnlock()
@@ -96,20 +108,7 @@ func Init() {
 	vp := viper.NewWithOptions(viper.EnvKeyReplacer(&envStringReplacer{}))
 	vp.SetEnvPrefix("HTNN")
 	vp.AutomaticEnv()
-	// a config item `envoy.go_so_path` can be set with env `HTNN_ENVOY_GO_SO_PATH`, which is prior to the value in config file
-
-	vp.SetConfigName("config")
-	vp.SetConfigType("yaml")
-	vp.AddConfigPath(".")
-	vp.AddConfigPath("./config")
-
-	if err := vp.ReadInConfig(); err != nil {
-		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
-			log.Errorf("read config file failed, err: %v", err)
-		}
-	} else {
-		log.Infof("use config file [%s]", vp.ConfigFileUsed())
-	}
+	// a config item `envoy.go_so_path` can be set with env `HTNN_ENVOY_GO_SO_PATH`
 
 	updateStringIfSet(vp, "envoy.go_so_path", &goSoPath)
 	updateStringIfSet(vp, "istio.root_namespace", &rootNamespace)

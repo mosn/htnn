@@ -36,7 +36,9 @@ import (
 )
 
 const (
-	DefaultNamespace = "e2e"
+	IstioRootNamespace = "istio-system"
+	DefaultNamespace   = "e2e"
+	AnotherNamespace   = "e2e-another"
 )
 
 func Prepare(t *testing.T, client client.Client, source string) {

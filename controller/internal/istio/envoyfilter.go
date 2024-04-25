@@ -26,6 +26,7 @@ import (
 	"mosn.io/htnn/api/pkg/plugins"
 	ctrlcfg "mosn.io/htnn/controller/internal/config"
 	"mosn.io/htnn/controller/internal/model"
+	"mosn.io/htnn/controller/pkg/component"
 )
 
 func MustNewStruct(fields map[string]interface{}) *structpb.Struct {
@@ -48,8 +49,8 @@ type configWrapper struct {
 	filter map[string]interface{}
 }
 
-func DefaultEnvoyFilters() map[string]*istiov1a3.EnvoyFilter {
-	efs := map[string]*istiov1a3.EnvoyFilter{}
+func DefaultEnvoyFilters() map[component.EnvoyFilterKey]*istiov1a3.EnvoyFilter {
+	efs := map[component.EnvoyFilterKey]*istiov1a3.EnvoyFilter{}
 
 	defaultMatch := &istioapi.EnvoyFilter_EnvoyConfigObjectMatch{
 		// As currently we only support Gateway cases, here we hardcode the context
@@ -149,9 +150,17 @@ func DefaultEnvoyFilters() map[string]*istiov1a3.EnvoyFilter {
 		}
 	}
 
-	efs[DefaultHttpFilter] = &istiov1a3.EnvoyFilter{
+	key := component.EnvoyFilterKey{
+		Namespace: ctrlcfg.RootNamespace(),
+		Name:      DefaultHttpFilter,
+	}
+	efs[key] = &istiov1a3.EnvoyFilter{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: DefaultHttpFilter,
+			Namespace: ctrlcfg.RootNamespace(),
+			Name:      DefaultHttpFilter,
+			Labels: map[string]string{
+				model.LabelCreatedBy: "HTTPFilterPolicy",
+			},
 		},
 		Spec: istioapi.EnvoyFilter{
 			ConfigPatches: patches,
@@ -172,6 +181,7 @@ func GenerateRouteFilter(host *model.VirtualHost, route string, config map[strin
 	}
 
 	return &istiov1a3.EnvoyFilter{
+		// We don't set ObjectMeta here because this EnvoyFilter will be merged later
 		Spec: istioapi.EnvoyFilter{
 			ConfigPatches: []*istioapi.EnvoyFilter_EnvoyConfigObjectPatch{
 				{
@@ -197,6 +207,13 @@ func GenerateRouteFilter(host *model.VirtualHost, route string, config map[strin
 
 func GenerateConsumers(consumers map[string]interface{}) *istiov1a3.EnvoyFilter {
 	return &istiov1a3.EnvoyFilter{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: ctrlcfg.RootNamespace(),
+			Name:      ECDSConsumerName,
+			Labels: map[string]string{
+				model.LabelCreatedBy: "Consumer",
+			},
+		},
 		Spec: istioapi.EnvoyFilter{
 			ConfigPatches: []*istioapi.EnvoyFilter_EnvoyConfigObjectPatch{
 				{
