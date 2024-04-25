@@ -43,5 +43,5 @@
           name: htnn.filters.http.cors
           typed_config:
             '@type': type.googleapis.com/envoy.extensions.filters.http.cors.v3.Cors
-    priority: 100
+    priority: -10
   status: {}

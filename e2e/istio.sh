@@ -28,6 +28,7 @@ install() {
     $ISTIOCTL install --set profile=default -y
     $ISTIOCTL version
     # the image name should be in ns/name format, otherwise istio will add ":ver" suffix to it
+    # FIXME: turn on "--set .values.pilot.env.HTNN_ENABLE_LDS_PLUGIN_VIA_ECDS=true \" once everything is ready
     $ISTIOCTL manifest apply \
         --set .values.pilot.image="htnn/e2e-cp:0.1.0" \
         --set .values.pilot.env.ISTIO_DELTA_XDS=true \

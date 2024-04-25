@@ -88,5 +88,4 @@
           typed_config:
             '@type': type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
             statPrefix: http_local_rate_limiter
-    priority: 100
   status: {}

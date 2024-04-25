@@ -44,5 +44,5 @@
           name: htnn.filters.http.fault
           typed_config:
             '@type': type.googleapis.com/envoy.extensions.filters.http.fault.v3.HTTPFault
-    priority: 100
+    priority: -10
   status: {}

@@ -45,5 +45,5 @@
             '@type': type.googleapis.com/envoy.extensions.filters.http.bandwidth_limit.v3.BandwidthLimit
             limitKbps: 1
             statPrefix: bandwidth_limiter
-    priority: 100
+    priority: -10
   status: {}
