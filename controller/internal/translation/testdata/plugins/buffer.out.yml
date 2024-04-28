@@ -42,5 +42,5 @@
           typed_config:
             '@type': type.googleapis.com/envoy.extensions.filters.http.buffer.v3.Buffer
             maxRequestBytes: 42
-    priority: 100
+    priority: -10
   status: {}

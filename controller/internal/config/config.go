@@ -94,6 +94,24 @@ func EnableNativePlugin() bool {
 	return enableNativePlugin
 }
 
+// LDS Plugin Via ECDS is disabled by default, because
+// 1. Per-LDS ECDS may be expensive in some cases.
+// 2. We can't disable a LDS plugin via ECDS. So every route under this LDS will execute it.
+//
+// You can enable it if
+// 1. You are using HTNN as south-north gateway.
+// 2. The number of LDS is limited. Better to run a benchmark by yourself to see if it's suitable for you.
+// 3. You need LDS level plugin.
+var enableLDSPluginViaECDS = false
+
+// Enable dispatching LDS plugin via ECDS. If we dispatch LDS plugin via LDS directly, it will cause
+// connection close.
+func EnableLDSPluginViaECDS() bool {
+	configLock.RLock()
+	defer configLock.RUnlock()
+	return enableLDSPluginViaECDS
+}
+
 type envStringReplacer struct {
 }
 
@@ -116,6 +134,7 @@ func Init() {
 	updateBoolIfSet(vp, "enable_gateway_api", &enableGatewayAPI)
 	updateBoolIfSet(vp, "enable_embedded_mode", &enableEmbeddedMode)
 	updateBoolIfSet(vp, "enable_native_plugin", &enableNativePlugin)
+	updateBoolIfSet(vp, "enable_lds_plugin_via_ecds", &enableLDSPluginViaECDS)
 
 	postInit()
 }

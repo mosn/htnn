@@ -215,6 +215,47 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 			},
 			err: "invalid LocalRateLimit.StatPrefix: value length must be at least 1 runes",
 		},
+		{
+			name: "ok, Istio Gateway",
+			policy: &HTTPFilterPolicy{
+				Spec: HTTPFilterPolicySpec{
+					TargetRef: &gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: "networking.istio.io",
+							Kind:  "Gateway",
+						},
+					},
+					Filters: map[string]HTTPPlugin{
+						"animal": {
+							Config: runtime.RawExtension{
+								Raw: []byte(`{"pet":"cat"}`),
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "not implemented, Istio Gateway with Native Plugin",
+			policy: &HTTPFilterPolicy{
+				Spec: HTTPFilterPolicySpec{
+					TargetRef: &gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: "networking.istio.io",
+							Kind:  "Gateway",
+						},
+					},
+					Filters: map[string]HTTPPlugin{
+						"localRatelimit": {
+							Config: runtime.RawExtension{
+								Raw: []byte(`{}`),
+							},
+						},
+					},
+				},
+			},
+			err: "configure native plugins to the Gateway is not implemented",
+		},
 	}
 
 	for _, tt := range tests {

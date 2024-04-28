@@ -22,6 +22,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	"mosn.io/htnn/controller/internal/log"
 	mosniov1 "mosn.io/htnn/types/apis/v1"
 )
 
@@ -37,16 +38,39 @@ type HTTPRoutePolicies struct {
 	Gateways      []*gwapiv1b1.Gateway
 }
 
+type ServerPort struct {
+	Bind     string
+	Number   uint32
+	Protocol string
+}
+
+type IstioGatewayPolicies struct {
+	Gateway      *istiov1a3.Gateway
+	Ports        map[ServerPort]struct{}
+	PortPolicies map[ServerPort][]*HTTPFilterPolicyWrapper
+}
+
+type ServerPortKey struct {
+	Namespace string
+	ServerPort
+}
+
 // InitState is the beginning of our translation.
 type InitState struct {
 	VirtualServicePolicies map[types.NamespacedName]*VirtualServicePolicies
 	HTTPRoutePolicies      map[types.NamespacedName]*HTTPRoutePolicies
+
+	IstioGatewayPolicies     map[types.NamespacedName]*IstioGatewayPolicies
+	ServerPortToIstioGateway map[ServerPortKey]*istiov1a3.Gateway
 }
 
 func NewInitState() *InitState {
 	return &InitState{
 		VirtualServicePolicies: make(map[types.NamespacedName]*VirtualServicePolicies),
 		HTTPRoutePolicies:      make(map[types.NamespacedName]*HTTPRoutePolicies),
+
+		IstioGatewayPolicies:     make(map[types.NamespacedName]*IstioGatewayPolicies),
+		ServerPortToIstioGateway: make(map[ServerPortKey]*istiov1a3.Gateway),
 	}
 }
 
@@ -156,6 +180,65 @@ func (s *InitState) AddPolicyForHTTPRoute(policy *mosniov1.HTTPFilterPolicy, rou
 		hp.RoutePolicies[name] = append(hp.RoutePolicies[name], &HTTPFilterPolicyWrapper{
 			HTTPFilterPolicy: policy,
 			scope:            PolicyScopeRoute,
+		})
+	}
+}
+
+func (s *InitState) AddIstioGateway(gw *istiov1a3.Gateway) {
+	s.AddPolicyForIstioGateway(nil, gw)
+}
+
+func (s *InitState) AddPolicyForIstioGateway(policy *mosniov1.HTTPFilterPolicy, gw *istiov1a3.Gateway) {
+	nn := types.NamespacedName{
+		Namespace: gw.Namespace,
+		Name:      gw.Name,
+	}
+
+	gwp, ok := s.IstioGatewayPolicies[nn]
+	if !ok {
+		gwp = &IstioGatewayPolicies{
+			Gateway:      gw,
+			Ports:        map[ServerPort]struct{}{},
+			PortPolicies: map[ServerPort][]*HTTPFilterPolicyWrapper{},
+		}
+		s.IstioGatewayPolicies[nn] = gwp
+	}
+
+	for _, svr := range gw.Spec.Servers {
+		proto := mosniov1.NormalizeIstioProtocol(svr.Port.Protocol)
+		if proto != "HTTP" && proto != "HTTPS" {
+			continue
+		}
+
+		port := ServerPort{
+			Bind:     svr.Bind,
+			Number:   svr.Port.Number,
+			Protocol: proto,
+		}
+
+		// If two Gateways have the same port + protocol, like TLS with different hostnames,
+		// skip the second one.
+		k := ServerPortKey{Namespace: gw.Namespace, ServerPort: port}
+		prevGw := s.ServerPortToIstioGateway[k]
+		if prevGw != nil {
+			if policy != nil {
+				log.Errorf("Gateway %s/%s has the same server port %+v with gateway %s/%s, ignore the policies target it."+
+					" Maybe we can support Gateway level policy via RDS in the future?",
+					gw.Namespace, gw.Name, prevGw.Namespace, prevGw.Name, port)
+			}
+			continue
+		}
+
+		s.ServerPortToIstioGateway[k] = gw
+
+		gwp.Ports[port] = struct{}{}
+		if policy == nil {
+			continue
+		}
+
+		gwp.PortPolicies[port] = append(gwp.PortPolicies[port], &HTTPFilterPolicyWrapper{
+			HTTPFilterPolicy: policy,
+			scope:            PolicyScopeGateway,
 		})
 	}
 }
