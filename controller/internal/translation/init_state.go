@@ -23,6 +23,7 @@ import (
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"mosn.io/htnn/controller/internal/log"
+	"mosn.io/htnn/controller/internal/model"
 	mosniov1 "mosn.io/htnn/types/apis/v1"
 )
 
@@ -44,8 +45,8 @@ type ServerPort struct {
 	Protocol string
 }
 
-type IstioGatewayPolicies struct {
-	Gateway      *istiov1a3.Gateway
+type GatewayPolicies struct {
+	Gateway      *model.Gateway
 	Ports        map[ServerPort]struct{}
 	PortPolicies map[ServerPort][]*HTTPFilterPolicyWrapper
 }
@@ -60,8 +61,8 @@ type InitState struct {
 	VirtualServicePolicies map[types.NamespacedName]*VirtualServicePolicies
 	HTTPRoutePolicies      map[types.NamespacedName]*HTTPRoutePolicies
 
-	IstioGatewayPolicies     map[types.NamespacedName]*IstioGatewayPolicies
-	ServerPortToIstioGateway map[ServerPortKey]*istiov1a3.Gateway
+	GatewayPolicies     map[types.NamespacedName]*GatewayPolicies
+	ServerPortToGateway map[ServerPortKey]*model.Gateway
 }
 
 func NewInitState() *InitState {
@@ -69,8 +70,8 @@ func NewInitState() *InitState {
 		VirtualServicePolicies: make(map[types.NamespacedName]*VirtualServicePolicies),
 		HTTPRoutePolicies:      make(map[types.NamespacedName]*HTTPRoutePolicies),
 
-		IstioGatewayPolicies:     make(map[types.NamespacedName]*IstioGatewayPolicies),
-		ServerPortToIstioGateway: make(map[ServerPortKey]*istiov1a3.Gateway),
+		GatewayPolicies:     make(map[types.NamespacedName]*GatewayPolicies),
+		ServerPortToGateway: make(map[ServerPortKey]*model.Gateway),
 	}
 }
 
@@ -194,14 +195,19 @@ func (s *InitState) AddPolicyForIstioGateway(policy *mosniov1.HTTPFilterPolicy, 
 		Name:      gw.Name,
 	}
 
-	gwp, ok := s.IstioGatewayPolicies[nn]
+	gwp, ok := s.GatewayPolicies[nn]
 	if !ok {
-		gwp = &IstioGatewayPolicies{
-			Gateway:      gw,
+		gwp = &GatewayPolicies{
+			Gateway: &model.Gateway{
+				NsName: &types.NamespacedName{
+					Namespace: gw.Namespace,
+					Name:      gw.Name,
+				},
+			},
 			Ports:        map[ServerPort]struct{}{},
 			PortPolicies: map[ServerPort][]*HTTPFilterPolicyWrapper{},
 		}
-		s.IstioGatewayPolicies[nn] = gwp
+		s.GatewayPolicies[nn] = gwp
 	}
 
 	for _, svr := range gw.Spec.Servers {
@@ -216,31 +222,74 @@ func (s *InitState) AddPolicyForIstioGateway(policy *mosniov1.HTTPFilterPolicy, 
 			Protocol: proto,
 		}
 
-		// If two Gateways have the same port + protocol, like TLS with different hostnames,
-		// skip the second one.
-		k := ServerPortKey{Namespace: gw.Namespace, ServerPort: port}
-		prevGw := s.ServerPortToIstioGateway[k]
-		if prevGw != nil {
-			if policy != nil {
-				log.Errorf("Gateway %s/%s has the same server port %+v with gateway %s/%s, ignore the policies target it."+
-					" Maybe we can support Gateway level policy via RDS in the future?",
-					gw.Namespace, gw.Name, prevGw.Namespace, prevGw.Name, port)
-			}
-			continue
-		}
-
-		s.ServerPortToIstioGateway[k] = gw
-
-		gwp.Ports[port] = struct{}{}
-		if policy == nil {
-			continue
-		}
-
-		gwp.PortPolicies[port] = append(gwp.PortPolicies[port], &HTTPFilterPolicyWrapper{
-			HTTPFilterPolicy: policy,
-			scope:            PolicyScopeGateway,
-		})
+		s.addPolicyForGateway(policy, gwp, port)
 	}
+}
+
+func (s *InitState) AddK8sGateway(gw *gwapiv1b1.Gateway) {
+	s.AddPolicyForK8sGateway(nil, gw)
+}
+
+func (s *InitState) AddPolicyForK8sGateway(policy *mosniov1.HTTPFilterPolicy, gw *gwapiv1b1.Gateway) {
+	nn := types.NamespacedName{
+		Namespace: gw.Namespace,
+		Name:      gw.Name,
+	}
+
+	gwp, ok := s.GatewayPolicies[nn]
+	if !ok {
+		gwp = &GatewayPolicies{
+			Gateway: &model.Gateway{
+				NsName: &types.NamespacedName{
+					Namespace: gw.Namespace,
+					Name:      gw.Name,
+				},
+			},
+			Ports:        map[ServerPort]struct{}{},
+			PortPolicies: map[ServerPort][]*HTTPFilterPolicyWrapper{},
+		}
+		s.GatewayPolicies[nn] = gwp
+	}
+
+	for _, ls := range gw.Spec.Listeners {
+		proto := mosniov1.NormalizeK8sGatewayProtocol(ls.Protocol)
+		if proto != "HTTP" && proto != "HTTPS" {
+			continue
+		}
+
+		port := ServerPort{
+			Number:   uint32(ls.Port),
+			Protocol: proto,
+		}
+		s.addPolicyForGateway(policy, gwp, port)
+	}
+}
+
+func (s *InitState) addPolicyForGateway(policy *mosniov1.HTTPFilterPolicy, gwp *GatewayPolicies, port ServerPort) {
+	// If two Gateways have the same port + protocol, like TLS with different hostnames,
+	// skip the second one.
+	k := ServerPortKey{Namespace: gwp.Gateway.NsName.Namespace, ServerPort: port}
+	prevGw := s.ServerPortToGateway[k]
+	if prevGw != nil {
+		if policy != nil {
+			log.Errorf("Gateway %s has the same server port %+v with gateway %s, ignore the policies target it."+
+				" Maybe we can support Gateway level policy via RDS in the future?",
+				gwp.Gateway.NsName, prevGw.NsName, port)
+		}
+		return
+	}
+
+	s.ServerPortToGateway[k] = gwp.Gateway
+
+	gwp.Ports[port] = struct{}{}
+	if policy == nil {
+		return
+	}
+
+	gwp.PortPolicies[port] = append(gwp.PortPolicies[port], &HTTPFilterPolicyWrapper{
+		HTTPFilterPolicy: policy,
+		scope:            PolicyScopeGateway,
+	})
 }
 
 func (s *InitState) Process(original_ctx context.Context) (*FinalState, error) {
@@ -249,5 +298,6 @@ func (s *InitState) Process(original_ctx context.Context) (*FinalState, error) {
 	ctx := &Ctx{
 		Context: original_ctx,
 	}
+
 	return toDataPlaneState(ctx, s)
 }

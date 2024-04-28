@@ -418,6 +418,27 @@ func (r *HTTPFilterPolicyReconciler) resolveIstioGateway(ctx context.Context,
 	return nil
 }
 
+func (r *HTTPFilterPolicyReconciler) resolveK8sGateway(ctx context.Context,
+	policy *mosniov1.HTTPFilterPolicy, initState *translation.InitState) error {
+
+	ref := policy.Spec.TargetRef
+	nsName := types.NamespacedName{Name: string(ref.Name), Namespace: policy.Namespace}
+	var gateway gwapiv1b1.Gateway
+	err := r.Get(ctx, nsName, &gateway)
+	if err != nil {
+		if !apierrors.IsNotFound(err) {
+			return fmt.Errorf("failed to get K8S Gateway: %w, NamespacedName: %v", err, nsName)
+		}
+
+		policy.SetAccepted(gwapiv1a2.PolicyReasonTargetNotFound)
+		return nil
+	}
+
+	initState.AddPolicyForK8sGateway(policy, &gateway)
+	policy.SetAccepted(gwapiv1a2.PolicyReasonAccepted)
+	return nil
+}
+
 func (r *HTTPFilterPolicyReconciler) policyToTranslationState(ctx context.Context,
 	policies *mosniov1.HTTPFilterPolicyList) (*translation.InitState, error) {
 
@@ -490,8 +511,14 @@ func (r *HTTPFilterPolicyReconciler) policyToTranslationState(ctx context.Contex
 				istioGwIdx[key] = append(istioGwIdx[key], policy)
 				err = r.resolveIstioGateway(ctx, policy, initState)
 			}
-		} else if ref.Group == "gateway.networking.k8s.io" && ref.Kind == "HTTPRoute" {
-			err = r.resolveHTTPRoute(ctx, policy, initState, k8sGwIdx)
+		} else if ref.Group == "gateway.networking.k8s.io" {
+			if ref.Kind == "HTTPRoute" {
+				err = r.resolveHTTPRoute(ctx, policy, initState, k8sGwIdx)
+			} else if ref.Kind == "Gateway" && supportGatewayPolicy {
+				key := getK8sKey(nsName.Namespace, nsName.Name)
+				k8sGwIdx[key] = append(k8sGwIdx[key], policy)
+				err = r.resolveK8sGateway(ctx, policy, initState)
+			}
 		}
 		if err != nil {
 			return nil, err
@@ -542,6 +569,18 @@ func (r *HTTPFilterPolicyReconciler) policyToTranslationState(ctx context.Contex
 
 		for _, gw := range gateways.Items {
 			initState.AddIstioGateway(gw)
+		}
+
+		if config.EnableGatewayAPI() {
+			var k8sGateways gwapiv1b1.GatewayList
+			if err := r.List(ctx, &k8sGateways); err != nil {
+				return nil, fmt.Errorf("failed to list k8s Gateway: %w", err)
+			}
+
+			for i := range k8sGateways.Items {
+				initState.AddK8sGateway(&k8sGateways.Items[i])
+			}
+
 		}
 	}
 
@@ -602,7 +641,7 @@ func (v *customResourceIndexer) FindAffectedObjects(ctx context.Context, obj com
 	}
 
 	if config.EnableLDSPluginViaECDS() {
-		if v.Group == "networking.istio.io" && v.Kind == "Gateway" {
+		if (v.Group == "networking.istio.io" || v.Group == "gateway.networking.k8s.io") && v.Kind == "Gateway" {
 			log.Infof("Resource changed, trigger reconciliation, group: %s, kind: %s, namespace: %s, name: %s",
 				obj.GetGroup(), obj.GetKind(), obj.GetNamespace(), obj.GetName())
 			return triggerReconciliation()

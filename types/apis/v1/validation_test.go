@@ -256,6 +256,47 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 			},
 			err: "configure native plugins to the Gateway is not implemented",
 		},
+		{
+			name: "ok, k8s Gateway",
+			policy: &HTTPFilterPolicy{
+				Spec: HTTPFilterPolicySpec{
+					TargetRef: &gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: "gateway.networking.k8s.io",
+							Kind:  "Gateway",
+						},
+					},
+					Filters: map[string]HTTPPlugin{
+						"animal": {
+							Config: runtime.RawExtension{
+								Raw: []byte(`{"pet":"cat"}`),
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "not implemented, k8s Gateway with Native Plugin",
+			policy: &HTTPFilterPolicy{
+				Spec: HTTPFilterPolicySpec{
+					TargetRef: &gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: "gateway.networking.k8s.io",
+							Kind:  "Gateway",
+						},
+					},
+					Filters: map[string]HTTPPlugin{
+						"localRatelimit": {
+							Config: runtime.RawExtension{
+								Raw: []byte(`{}`),
+							},
+						},
+					},
+				},
+			},
+			err: "configure native plugins to the Gateway is not implemented",
+		},
 	}
 
 	for _, tt := range tests {

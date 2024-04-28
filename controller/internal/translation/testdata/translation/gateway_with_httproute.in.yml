@@ -1,0 +1,64 @@
+features:
+  enableLDSPluginViaECDS: true
+gateway:
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    name: gateway
+    namespace: default
+  spec:
+    gatewayClassName: istio
+    listeners:
+    - name: gateway
+      port: 1234
+      protocol: HTTP
+httproute:
+  gateway:
+    - apiVersion: gateway.networking.k8s.io/v1
+      kind: HTTPRoute
+      metadata:
+        name: http
+      spec:
+        parentRefs:
+        - name: gateway
+          port: 1234
+        hostnames: ["default.local"]
+        rules:
+        - matches:
+          - path:
+              type: PathPrefix
+              value: /
+          backendRefs:
+          - name: blah
+            port: 8000
+httpFilterPolicy:
+  gateway:
+  - apiVersion: htnn.mosn.io/v1
+    kind: HTTPFilterPolicy
+    metadata:
+      name: policy
+      namespace: default
+    spec:
+      targetRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: gateway
+      filters:
+        animal:
+          config:
+            hostName: goldfish
+  http:
+  - apiVersion: htnn.mosn.io/v1
+    kind: HTTPFilterPolicy
+    metadata:
+      name: policy2
+      namespace: default
+    spec:
+      targetRef:
+        group: gateway.networking.k8s.io
+        kind: HTTPRoute
+        name: http
+      filters:
+        animal:
+          config:
+            hostName: cat
