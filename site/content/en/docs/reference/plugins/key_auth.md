@@ -52,13 +52,41 @@ spec:
         key: rick
 ```
 
-Assumed we provide a configuration to `http://127.0.0.1:10000/` like:
+Assumed we have the HTTPRoute below attached to `localhost:10000`, and a backend server listening to port `8080`:
 
 ```yaml
-keys:
-  - name: Authorization
-  - name: ak
-    source: QUERY
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: default
+spec:
+  parentRefs:
+  - name: default
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - name: backend
+      port: 8080
+---
+apiVersion: htnn.mosn.io/v1
+kind: HTTPFilterPolicy
+metadata:
+  name: policy
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: default
+  filters:
+    keyAuth:
+      config:
+        keys:
+        - name: Authorization
+        - name: ak
+          source: QUERY
 ```
 
 The header `Authorization` will be checked first and then query argument `ak` will be checked after.
@@ -66,24 +94,24 @@ The header `Authorization` will be checked first and then query argument `ak` wi
 Let's try it out:
 
 ```
-$ curl -I http://127.0.0.1:10000/ -H "Authorization: rick"
+$ curl -I http://localhost:10000/ -H "Authorization: rick"
 HTTP/1.1 200 OK
 ```
 
 ```
-$ curl -I http://127.0.0.1:10000/ -H "Authorization: morty"
+$ curl -I http://localhost:10000/ -H "Authorization: morty"
 HTTP/1.1 401 Unauthorized
 ```
 
 ```
-$ curl -I 'http://127.0.0.1:10000/?ak=rick'
+$ curl -I 'http://localhost:10000/?ak=rick'
 HTTP/1.1 200 OK
 ```
 
 Note that if a configured `key` exists in the request, the subsequent `key` in `keys` will not be used to authenticate the client:
 
 ```
-$ curl -I 'http://127.0.0.1:10000/?ak=rick' -H "Authorization: morty"
+$ curl -I 'http://localhost:10000/?ak=rick' -H "Authorization: morty"
 HTTP/1.1 401 Unauthorized
 ```
 

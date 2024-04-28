@@ -64,15 +64,44 @@ g, alice, admin
 
 The above configuration allows anyone to access the homepage (/) using a GET request. However, only users with admin permissions (alice) can access other pages and use other request methods.
 
-Now we provide a configuration to `http://localhost:10000/` like:
+Assumed we have the HTTPRoute below attached to `localhost:10000`, and a backend server listening to port `8080`:
 
 ```yaml
-rule:
-    models: ./example.conf
-    policy: ./example.csv
-token:
-    source: header
-    name: user
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: default
+spec:
+  parentRefs:
+  - name: default
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - name: backend
+      port: 8080
+---
+apiVersion: htnn.mosn.io/v1
+kind: HTTPFilterPolicy
+metadata:
+  name: policy
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: default
+  filters:
+    casbin:
+      config:
+        rule:
+          # Assumed that we have mounted the Casbin data in the Envoy's pod
+          models: ./example.conf
+          policy: ./example.csv
+        token:
+          source: header
+          name: user
 ```
 
 If we make a GET request to the homepage:

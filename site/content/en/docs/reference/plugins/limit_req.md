@@ -27,10 +27,38 @@ Requests are counted by client IP by default. You can also configure `key` to us
 
 ## Usage
 
-Assumed we provide a configuration to `http://localhost:10000/` like:
+Assumed we have the HTTPRoute below attached to `localhost:10000`, and a backend server listening to port `8080`:
 
 ```yaml
-average: 1 # limit request to 1 request per second
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: default
+spec:
+  parentRefs:
+  - name: default
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - name: backend
+      port: 8080
+---
+apiVersion: htnn.mosn.io/v1
+kind: HTTPFilterPolicy
+metadata:
+  name: policy
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: default
+  filters:
+    keyAuth:
+      config:
+        average: 1 # limit request to 1 request per second
 ```
 
 The first request will get a `200` status code, and subsequent requests will be dropped with `429`:

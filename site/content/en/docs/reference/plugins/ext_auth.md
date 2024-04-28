@@ -54,11 +54,41 @@ Each client request runs this plugin will trigger an authorization request. The 
 * Path from the original client request, after the configured prefix
 * Header `Authorization` from the original client request
 
-Assumed we provide a configuration to `http://localhost:10000/` like:
+Assumed we have the HTTPRoute below attached to `localhost:10000`, and a backend server listening to port `8080`:
 
 ```yaml
-httpService:
-    url: "http://127.0.0.1:10001/ext_auth"
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: default
+spec:
+  parentRefs:
+  - name: default
+  hostnames:
+  - localhost
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - name: backend
+      port: 8080
+---
+apiVersion: htnn.mosn.io/v1
+kind: HTTPFilterPolicy
+metadata:
+  name: policy
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: default
+  filters:
+    extAuth:
+      config:
+        httpService:
+          url: "http://127.0.0.1:10001/ext_auth"
 ```
 
 If we make a GET request with a path called `users`:

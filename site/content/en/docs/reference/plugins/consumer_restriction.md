@@ -61,7 +61,7 @@ spec:
         key: doraemon
 ```
 
-Suppose we have provided the following configuration to `http://localhost:10000/time_travel`:
+Suppose we have provided the following configuration to `http://localhost:10000/time_travel, and a backend server listening to port `8080``:
 
 ```yaml
 apiVersion: gateway.networking.k8s.io/v1
@@ -71,7 +71,6 @@ metadata:
 spec:
   parentRefs:
   - name: default
-    namespace: default
   rules:
   - matches:
     - path:

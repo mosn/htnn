@@ -51,7 +51,7 @@ spec:
         - x-custom-a
 ```
 
-Suppose we provide the following configuration to `http://localhost:10000/`:
+Assumed we have the HTTPRoute below attached to `localhost:10000`, and a backend server listening to port `8080`:
 
 ```yaml
 apiVersion: gateway.networking.k8s.io/v1
@@ -61,7 +61,6 @@ metadata:
 spec:
   parentRefs:
   - name: default
-    namespace: default
   rules:
   - matches:
     - path:
