@@ -17,6 +17,7 @@ package translation
 import (
 	"context"
 	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"sort"
@@ -32,6 +33,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"mosn.io/htnn/api/pkg/plugins"
+	"mosn.io/htnn/controller/internal/config"
 	"mosn.io/htnn/controller/internal/istio"
 	_ "mosn.io/htnn/controller/plugins"    // register plugins
 	_ "mosn.io/htnn/controller/registries" // register registries
@@ -55,6 +57,10 @@ func mustUnmarshal(t *testing.T, fn string, out interface{}) {
 	require.NoError(t, yaml.UnmarshalStrict(input, out, yaml.DisallowUnknownFields))
 }
 
+type Features struct {
+	EnableLDSPluginViaECDS bool `json:"enableLDSPluginViaECDS"`
+}
+
 type testInput struct {
 	// we use sigs.k8s.io/yaml which uses JSON under the hover
 	HTTPFilterPolicy map[string][]*mosniov1.HTTPFilterPolicy `json:"httpFilterPolicy"`
@@ -64,6 +70,8 @@ type testInput struct {
 
 	HTTPRoute map[string][]*gwapiv1b1.HTTPRoute `json:"httpRoute"`
 	Gateway   []*gwapiv1b1.Gateway              `json:"gateway"`
+
+	Features *Features `json:"features"`
 }
 
 func TestTranslate(t *testing.T) {
@@ -74,6 +82,21 @@ func TestTranslate(t *testing.T) {
 		t.Run(testName(inputFile), func(t *testing.T) {
 			input := &testInput{}
 			mustUnmarshal(t, inputFile, input)
+
+			if input.Features != nil {
+				feats := input.Features
+				if feats.EnableLDSPluginViaECDS {
+					os.Setenv("HTNN_ENABLE_LDS_PLUGIN_VIA_ECDS", "true")
+				}
+				config.Init()
+
+				defer func() {
+					if feats.EnableLDSPluginViaECDS {
+						os.Setenv("HTNN_ENABLE_LDS_PLUGIN_VIA_ECDS", "false")
+					}
+					config.Init()
+				}()
+			}
 
 			s := NewInitState()
 
@@ -130,8 +153,14 @@ func TestTranslate(t *testing.T) {
 					}
 				}
 			}
+
+			hfpsMap := maps.Clone(input.HTTPFilterPolicy)
 			for name, wrapper := range vsToGws {
-				hfps := input.HTTPFilterPolicy[name]
+				hfps := hfpsMap[name]
+				if hfps != nil {
+					// Currently, a policy can only target one resource.
+					delete(hfpsMap, name)
+				}
 				for _, hfp := range hfps {
 					if hfp.Namespace == "" {
 						hfp.SetNamespace("default")
@@ -140,16 +169,33 @@ func TestTranslate(t *testing.T) {
 				}
 			}
 
+			// For gateway-only cases
+			for _, gw := range input.IstioGateway {
+				name := gw.Name
+				hfps := hfpsMap[name]
+				for _, hfp := range hfps {
+					if hfp.Namespace == "" {
+						hfp.SetNamespace("default")
+					}
+					s.AddPolicyForIstioGateway(hfp, gw)
+				}
+			}
+			if config.EnableLDSPluginViaECDS() {
+				for _, gw := range input.IstioGateway {
+					s.AddIstioGateway(gw)
+				}
+			}
+
 			fs, err := s.Process(context.Background())
 			require.NoError(t, err)
 
 			defaultEnvoyFilters := istio.DefaultEnvoyFilters()
-			for name := range defaultEnvoyFilters {
+			for key := range defaultEnvoyFilters {
 				found := false
 				for _, ef := range fs.EnvoyFilters {
-					if ef.Name == name {
+					if ef.Name == key.Name {
 						found = true
-						delete(fs.EnvoyFilters, name)
+						delete(fs.EnvoyFilters, key)
 						break
 					}
 				}
@@ -161,6 +207,9 @@ func TestTranslate(t *testing.T) {
 				out = append(out, ef)
 			}
 			sort.Slice(out, func(i, j int) bool {
+				if out[i].Namespace != out[j].Namespace {
+					return out[i].Namespace < out[j].Namespace
+				}
 				return out[i].Name < out[j].Name
 			})
 			d, _ := yaml.Marshal(out)
@@ -219,9 +268,9 @@ func TestPlugins(t *testing.T) {
 
 			defaultEnvoyFilters := istio.DefaultEnvoyFilters()
 			expPlugin := fmt.Sprintf("htnn.filters.http.%s", snakeToCamel(name))
-			for name := range defaultEnvoyFilters {
+			for key := range defaultEnvoyFilters {
 				for _, ef := range fs.EnvoyFilters {
-					if ef.Name == name {
+					if ef.Name == key.Name {
 						if ef.Name == "htnn-http-filter" {
 							kept := []*istioapi.EnvoyFilter_EnvoyConfigObjectPatch{}
 							for _, cp := range ef.Spec.ConfigPatches {
@@ -233,7 +282,7 @@ func TestPlugins(t *testing.T) {
 							}
 							ef.Spec.ConfigPatches = kept
 						} else {
-							delete(fs.EnvoyFilters, name)
+							delete(fs.EnvoyFilters, key)
 						}
 						break
 					}
@@ -248,6 +297,9 @@ func TestPlugins(t *testing.T) {
 				out = append(out, ef)
 			}
 			sort.Slice(out, func(i, j int) bool {
+				if out[i].Namespace != out[j].Namespace {
+					return out[i].Namespace < out[j].Namespace
+				}
 				return out[i].Name < out[j].Name
 			})
 			d, _ := yaml.Marshal(out)

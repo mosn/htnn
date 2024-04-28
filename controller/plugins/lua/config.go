@@ -20,8 +20,8 @@ import (
 )
 
 func init() {
-	plugins.RegisterHttpPlugin("outerLua", &prePlugin{})
-	plugins.RegisterHttpPlugin("innerLua", &postPlugin{})
+	plugins.RegisterHttpPlugin("outerLua", &outerPlugin{})
+	plugins.RegisterHttpPlugin("innerLua", &innerPlugin{})
 }
 
 type plugin struct {
@@ -39,12 +39,12 @@ func (p *plugin) HTTPFilterConfigPlaceholder() map[string]interface{} {
 	}
 }
 
-type prePlugin struct {
+type outerPlugin struct {
 	plugin
-	lua.PrePlugin
+	lua.OuterPlugin
 }
 
-type postPlugin struct {
+type innerPlugin struct {
 	plugin
-	lua.PostPlugin
+	lua.InnerPlugin
 }

@@ -49,7 +49,7 @@ func init() {
 
 			c := suite.K8sClient()
 			ctx := context.Background()
-			nsName := types.NamespacedName{Name: "policy", Namespace: k8s.DefaultNamespace}
+			nsName := types.NamespacedName{Name: "policy", Namespace: k8s.IstioRootNamespace}
 			var policy mosniov1.HTTPFilterPolicy
 			err = c.Get(ctx, nsName, &policy)
 			require.NoError(t, err)

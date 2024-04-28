@@ -17,8 +17,6 @@ package controller
 import (
 	"context"
 	"encoding/json"
-	"os"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -34,18 +32,11 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"mosn.io/htnn/controller/internal/config"
 	"mosn.io/htnn/controller/internal/model"
 	"mosn.io/htnn/controller/internal/translation"
-	"mosn.io/htnn/controller/tests/integration/helper"
 	"mosn.io/htnn/controller/tests/pkg"
 	mosniov1 "mosn.io/htnn/types/apis/v1"
 )
-
-func mustReadHTTPFilterPolicy(fn string, out *[]map[string]interface{}) {
-	fn = filepath.Join("testdata", "httpfilterpolicy", fn+".yml")
-	helper.MustReadInput(fn, out)
-}
 
 var _ = Describe("HTTPFilterPolicy controller", func() {
 
@@ -223,13 +214,15 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 
 			names := []string{}
 			for _, ef := range envoyfilters.Items {
-				Expect(ef.Namespace).To(Equal("istio-system"))
 				names = append(names, ef.Name)
 				if ef.Name == "htnn-h-default.local" {
+					Expect(ef.Namespace).To(Equal("default"))
 					Expect(len(ef.Spec.ConfigPatches)).To(Equal(1))
 					cp := ef.Spec.ConfigPatches[0]
 					Expect(cp.ApplyTo).To(Equal(istioapi.EnvoyFilter_HTTP_ROUTE))
 					Expect(cp.Match.GetRouteConfiguration().GetVhost().Name).To(Equal("default.local:8888"))
+				} else {
+					Expect(ef.Namespace).To(Equal("istio-system"))
 				}
 			}
 			Expect(names).To(ConsistOf([]string{"htnn-http-filter", "htnn-h-default.local"}))
@@ -474,9 +467,12 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 
 			names := []string{}
 			for _, ef := range envoyfilters.Items {
-				Expect(ef.Namespace).To(Equal("istio-system"))
 				names = append(names, ef.Name)
 				if ef.Name == "htnn-http-filter" {
+					Expect(ef.Namespace).To(Equal("istio-system"))
+					Expect(len(ef.Spec.ConfigPatches) > 0).Should(BeTrue())
+				} else if ef.Name == "htnn-h-default.local" {
+					Expect(ef.Namespace).To(Equal("default"))
 					Expect(len(ef.Spec.ConfigPatches) > 0).Should(BeTrue())
 				}
 			}
@@ -577,9 +573,9 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 
 			names := []string{}
 			for _, ef := range envoyfilters.Items {
-				Expect(ef.Namespace).To(Equal("istio-system"))
 				names = append(names, ef.Name)
 				if ef.Name == "htnn-h-default.local" {
+					Expect(ef.Namespace).To(Equal("default"))
 					Expect(len(ef.Spec.ConfigPatches)).To(Equal(1))
 					cp := ef.Spec.ConfigPatches[0]
 					Expect(cp.ApplyTo).To(Equal(istioapi.EnvoyFilter_HTTP_ROUTE))
@@ -893,9 +889,9 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 
 			names := []string{}
 			for _, ef := range envoyfilters.Items {
-				Expect(ef.Namespace).To(Equal("istio-system"))
 				names = append(names, ef.Name)
 				if ef.Name == "htnn-h-default.local" {
+					Expect(ef.Namespace).To(Equal("default"))
 					Expect(len(ef.Spec.ConfigPatches)).To(Equal(1))
 					cp := ef.Spec.ConfigPatches[0]
 					Expect(cp.ApplyTo).To(Equal(istioapi.EnvoyFilter_HTTP_ROUTE))
@@ -1089,78 +1085,6 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 				cond := policy.Status.Conditions[0]
 				return cond.Reason == string(gwapiv1a2.PolicyReasonTargetNotFound)
 			}, timeout, interval).Should(BeTrue())
-		})
-	})
-
-	Context("When disabling native plugins", func() {
-		BeforeEach(func() {
-			// use env to set the conf
-			os.Setenv("HTNN_ENABLE_NATIVE_PLUGIN", "false")
-			config.Init()
-
-			input := []map[string]interface{}{}
-			mustReadHTTPFilterPolicy("default_gwapi", &input)
-
-			for _, in := range input {
-				obj := pkg.MapToObj(in)
-				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
-			}
-		})
-
-		AfterEach(func() {
-			var httproutes gwapiv1b1.HTTPRouteList
-			if err := k8sClient.List(ctx, &httproutes); err == nil {
-				for _, e := range httproutes.Items {
-					pkg.DeleteK8sResource(ctx, k8sClient, &e)
-				}
-			}
-
-			var gateways gwapiv1b1.GatewayList
-			if err := k8sClient.List(ctx, &gateways); err == nil {
-				for _, e := range gateways.Items {
-					pkg.DeleteK8sResource(ctx, k8sClient, &e)
-				}
-			}
-
-			os.Setenv("HTNN_ENABLE_NATIVE_PLUGIN", "")
-			config.Init()
-		})
-
-		It("should not produce correndsponding filters", func() {
-			ctx := context.Background()
-			input := []map[string]interface{}{}
-			mustReadHTTPFilterPolicy("native_plugin", &input)
-			for _, in := range input {
-				obj := pkg.MapToObj(in)
-				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
-			}
-
-			var envoyfilters istiov1a3.EnvoyFilterList
-			Eventually(func() bool {
-				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
-					return false
-				}
-				return len(envoyfilters.Items) == 2
-			}, timeout, interval).Should(BeTrue())
-
-			for _, ef := range envoyfilters.Items {
-				Expect(ef.Namespace).To(Equal("istio-system"))
-				if ef.Name == "htnn-h-default.local" {
-					Expect(len(ef.Spec.ConfigPatches)).To(Equal(1))
-					cp := ef.Spec.ConfigPatches[0]
-					filters := cp.Patch.Value.AsMap()["typed_per_filter_config"].(map[string]interface{})
-					Expect(filters["htnn.filters.http.golang"]).NotTo(BeNil())
-					Expect(filters["htnn.filters.http.localRatelimit"]).To(BeNil())
-				} else {
-					Expect(ef.Name).To(Equal("htnn-http-filter"))
-					cps := ef.Spec.ConfigPatches
-					for _, cp := range cps {
-						if cp.ApplyTo == istioapi.EnvoyFilter_HTTP_FILTER {
-							Expect(cp.Patch.Value.AsMap()["name"]).To(Equal("htnn.filters.http.golang"))
-						}
-					}
-				}
-			}
 		})
 	})
 

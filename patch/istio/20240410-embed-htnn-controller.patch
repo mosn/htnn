@@ -94,10 +94,10 @@ index 34cf0a690d..a1d970a45b 100644
  		go s.configController.Run(stop)
 diff --git a/pilot/pkg/config/htnn/component.go b/pilot/pkg/config/htnn/component.go
 new file mode 100644
-index 0000000000..a6f038f095
+index 0000000000..275fcc02e9
 --- /dev/null
 +++ b/pilot/pkg/config/htnn/component.go
-@@ -0,0 +1,187 @@
+@@ -0,0 +1,174 @@
 +// Copyright The HTNN Authors.
 +//
 +// Licensed under the Apache License, Version 2.0 (the "License");
@@ -156,43 +156,32 @@ index 0000000000..a6f038f095
 +	return o
 +}
 +
-+func addHTNNMark(cfg *config.Config) {
-+	ann := cfg.Annotations
-+	if ann == nil {
-+		ann = make(map[string]string)
-+	}
-+	ann[model.CreatedByHTNN] = "true"
-+	cfg.Annotations = ann
-+}
-+
-+func convertEnvoyFilterToConfig(ef *istiov1a3.EnvoyFilter, ns string) *config.Config {
++func convertEnvoyFilterToConfig(ef *istiov1a3.EnvoyFilter) *config.Config {
 +	cfg := &config.Config{
 +		Meta: config.Meta{
 +			GroupVersionKind:  gvk.EnvoyFilter,
 +			CreationTimestamp: time.Now(),
 +			// Only copy fields used by istio during generating xDS
 +			Name:        ef.Name,
-+			Namespace:   ns,
++			Namespace:   ef.Namespace,
 +			Labels:      ef.Labels,
 +			Annotations: ef.Annotations,
 +		},
 +		Spec: &ef.Spec,
 +	}
-+	addHTNNMark(cfg)
 +	return cfg
 +}
 +
-+func (o *output) FromHTTPFilterPolicy(_ context.Context, generatedEnvoyFilters map[string]*istiov1a3.EnvoyFilter) error {
-+	// We have to use []config.Config because the other methods in PushContext expect it
-+	efs := make([]config.Config, 0, len(generatedEnvoyFilters))
-+	rootNamespace := o.ctrl.RootNamespace()
++func (o *output) FromHTTPFilterPolicy(_ context.Context, generatedEnvoyFilters map[component.EnvoyFilterKey]*istiov1a3.EnvoyFilter) error {
++	efs := make(map[string][]config.Config, 0)
 +
 +	log.Infof("write %d generated envoy filters to PushContext", len(generatedEnvoyFilters))
 +
-+	for _, ef := range generatedEnvoyFilters {
-+		log.Debugf("generate envoy filter %s: %+v", ef.Name, &ef.Spec)
++	for key, ef := range generatedEnvoyFilters {
++		log.Debugf("generate envoy filter %+v", ef)
 +
-+		efs = append(efs, *convertEnvoyFilterToConfig(ef, rootNamespace))
++		ns := key.Namespace
++		efs[ns] = append(efs[ns], *convertEnvoyFilterToConfig(ef))
 +	}
 +	// We don't write the generated filters to the cache here because the cache is read-only
 +	o.ctrl.SetHTTPFilterPolicyEnvoyFilters(efs)
@@ -200,11 +189,9 @@ index 0000000000..a6f038f095
 +}
 +
 +func (o *output) FromConsumer(ctx context.Context, ef *istiov1a3.EnvoyFilter) error {
-+	rootNamespace := o.ctrl.RootNamespace()
++	log.Debugf("generate envoy filter %+v", ef)
 +
-+	log.Debugf("generate envoy filter %s: %+v", ef.Name, &ef.Spec)
-+
-+	cfg := convertEnvoyFilterToConfig(ef, rootNamespace)
++	cfg := convertEnvoyFilterToConfig(ef)
 +	o.ctrl.SetConsumerEnvoyFilter(cfg)
 +	return nil
 +}
@@ -287,10 +274,10 @@ index 0000000000..a6f038f095
 +}
 diff --git a/pilot/pkg/config/htnn/controller.go b/pilot/pkg/config/htnn/controller.go
 new file mode 100644
-index 0000000000..78aaab57e8
+index 0000000000..307135ab70
 --- /dev/null
 +++ b/pilot/pkg/config/htnn/controller.go
-@@ -0,0 +1,297 @@
+@@ -0,0 +1,307 @@
 +// Copyright The HTNN Authors.
 +//
 +// Licensed under the Apache License, Version 2.0 (the "License");
@@ -339,7 +326,7 @@ index 0000000000..78aaab57e8
 +	consumerReconciler         istio.ConsumerReconciler
 +
 +	currContext            *model.PushContext
-+	efFromHTTPFilterPolicy []config.Config
++	efFromHTTPFilterPolicy map[string][]config.Config
 +	efFromConsumer         *config.Config
 +	rootNamespace          string
 +	cache                  model.ConfigStore
@@ -389,9 +376,11 @@ index 0000000000..78aaab57e8
 +		}
 +	}
 +
-+	for _, ef := range c.efFromHTTPFilterPolicy {
-+		if ef.Name == name && ef.Namespace == namespace {
-+			return &ef
++	if efList, ok := c.efFromHTTPFilterPolicy[namespace]; ok {
++		for _, ef := range efList {
++			if name == ef.Name {
++				return &ef
++			}
 +		}
 +	}
 +	return nil
@@ -402,15 +391,23 @@ index 0000000000..78aaab57e8
 +		return nil
 +	}
 +
-+	if namespace != "" && namespace != c.rootNamespace {
-+		return nil
++	if namespace == "" {
++		efList := []config.Config{}
++		for _, efs := range c.efFromHTTPFilterPolicy {
++			efList = append(efList, efs...)
++		}
++		if c.efFromConsumer != nil {
++			efList = append(efList, *c.efFromConsumer)
++		}
++		return efList
 +	}
 +
 +	// We return the internal structure directly as istio claims that the returned data should be read-only
-+	if c.efFromConsumer != nil {
-+		return append(c.efFromHTTPFilterPolicy, *c.efFromConsumer)
++	efList := c.efFromHTTPFilterPolicy[namespace]
++	if c.efFromConsumer != nil && namespace == c.rootNamespace {
++		return append(efList, *c.efFromConsumer)
 +	}
-+	return c.efFromHTTPFilterPolicy
++	return efList
 +}
 +
 +// This controller should only be used in the aggregateConfigController, which is read-only
@@ -551,7 +548,7 @@ index 0000000000..78aaab57e8
 +	return c.rootNamespace
 +}
 +
-+func (c *Controller) SetHTTPFilterPolicyEnvoyFilters(efs []config.Config) {
++func (c *Controller) SetHTTPFilterPolicyEnvoyFilters(efs map[string][]config.Config) {
 +	c.efFromHTTPFilterPolicy = efs
 +}
 +
@@ -1337,7 +1334,7 @@ index dbe58a075b..742ee8be2d 100644
  func OutboundListenerClass(t NodeType) istionetworking.ListenerClass {
  	if t == Router {
 diff --git a/pilot/pkg/model/push_context.go b/pilot/pkg/model/push_context.go
-index 7ba2e93a75..061a3acd7a 100644
+index 7ba2e93a75..3b1d5f2155 100644
 --- a/pilot/pkg/model/push_context.go
 +++ b/pilot/pkg/model/push_context.go
 @@ -1282,6 +1282,7 @@ func (ps *PushContext) createNewContext(env *Environment) error {
@@ -1364,8 +1361,8 @@ index 7ba2e93a75..061a3acd7a 100644
  		var efw *EnvoyFilterWrapper
 -		if features.OptimizedConfigRebuild {
 +		var fromHTNN bool
-+		if envoyFilterConfig.Annotations != nil {
-+			_, fromHTNN = envoyFilterConfig.Annotations[CreatedByHTNN]
++		if envoyFilterConfig.Labels != nil {
++			_, fromHTNN = envoyFilterConfig.Labels[CreatedByHTNN]
 +		}
 +		if !fromHTNN && features.OptimizedConfigRebuild {
  			key := ConfigKey{Kind: kind.EnvoyFilter, Namespace: envoyFilterConfig.Namespace, Name: envoyFilterConfig.Name}
@@ -1373,7 +1370,7 @@ index 7ba2e93a75..061a3acd7a 100644
  				// Reuse the previous EnvoyFilterWrapper if it exists and hasn't changed when optimized config rebuild is enabled
 diff --git a/pilot/pkg/model/push_context_htnn.go b/pilot/pkg/model/push_context_htnn.go
 new file mode 100644
-index 0000000000..0d5b419885
+index 0000000000..20cf0837a2
 --- /dev/null
 +++ b/pilot/pkg/model/push_context_htnn.go
 @@ -0,0 +1,38 @@
@@ -1400,7 +1397,7 @@ index 0000000000..0d5b419885
 +)
 +
 +const (
-+	CreatedByHTNN = "htnn.mosn.io/created-by-htnn"
++	CreatedByHTNN = "htnn.mosn.io/created-by"
 +)
 +
 +func (ps *PushContext) initHTNNResources(env *Environment, configsUpdated sets.Set[ConfigKey]) bool {

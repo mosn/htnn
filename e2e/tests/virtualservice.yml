@@ -2,6 +2,7 @@ apiVersion: networking.istio.io/v1beta1
 kind: VirtualService
 metadata:
   name: vs
+  namespace: istio-system
 spec:
   gateways:
   - default
@@ -21,6 +22,7 @@ apiVersion: htnn.mosn.io/v1
 kind: HTTPFilterPolicy
 metadata:
   name: policy
+  namespace: istio-system
 spec:
   targetRef:
     group: networking.istio.io

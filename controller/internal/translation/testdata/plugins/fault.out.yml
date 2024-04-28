@@ -1,6 +1,7 @@
 - metadata:
     creationTimestamp: null
     name: htnn-h-default.local
+    namespace: default
   spec:
     configPatches:
     - applyTo: HTTP_ROUTE
@@ -25,6 +26,7 @@
 - metadata:
     creationTimestamp: null
     name: htnn-http-filter
+    namespace: istio-system
   spec:
     configPatches:
     - applyTo: HTTP_FILTER
@@ -42,5 +44,5 @@
           name: htnn.filters.http.fault
           typed_config:
             '@type': type.googleapis.com/envoy.extensions.filters.http.fault.v3.HTTPFault
-    priority: 100
+    priority: -10
   status: {}

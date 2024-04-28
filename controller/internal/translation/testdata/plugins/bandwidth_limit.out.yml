@@ -1,6 +1,7 @@
 - metadata:
     creationTimestamp: null
     name: htnn-h-default.local
+    namespace: default
   spec:
     configPatches:
     - applyTo: HTTP_ROUTE
@@ -24,6 +25,7 @@
 - metadata:
     creationTimestamp: null
     name: htnn-http-filter
+    namespace: istio-system
   spec:
     configPatches:
     - applyTo: HTTP_FILTER
@@ -43,5 +45,5 @@
             '@type': type.googleapis.com/envoy.extensions.filters.http.bandwidth_limit.v3.BandwidthLimit
             limitKbps: 1
             statPrefix: bandwidth_limiter
-    priority: 100
+    priority: -10
   status: {}

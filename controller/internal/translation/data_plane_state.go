@@ -32,7 +32,7 @@ import (
 
 // dataPlaneState converts the init state to the structure used by the data plane
 type dataPlaneState struct {
-	Hosts map[string]*hostPolicy
+	Proxies map[Proxy]*proxyConfig
 }
 
 type hostPolicy struct {
@@ -43,6 +43,16 @@ type hostPolicy struct {
 type routePolicy struct {
 	NsName   *types.NamespacedName
 	Policies []*HTTPFilterPolicyWrapper
+}
+
+type gatewayPolicy struct {
+	NsName   *types.NamespacedName
+	Policies []*HTTPFilterPolicyWrapper
+}
+
+type proxyConfig struct {
+	Gateways map[string]*gatewayPolicy
+	Hosts    map[string]*hostPolicy
 }
 
 func isWildCarded(s string) bool {
@@ -83,10 +93,10 @@ func buildVirtualHostsWithIstioGw(host string, nsName *types.NamespacedName, gws
 								Namespace: gw.Namespace,
 								Name:      gw.Name,
 							},
-							Port: port,
 						},
-						NsName: nsName,
-						Name:   name,
+						ECDSResourceName: getECDSResourceName(gw.Namespace, getLDSName(svr.Bind, port)),
+						NsName:           nsName,
+						Name:             name,
 					})
 				}
 			}
@@ -108,10 +118,11 @@ func buildVirtualHostsWithK8sGw(host string, ls *gwapiv1.Listener, nsName, gwNsN
 		vhs = append(vhs, &model.VirtualHost{
 			Gateway: &model.Gateway{
 				NsName: gwNsName,
-				Port:   uint32(ls.Port),
 			},
-			NsName: nsName,
-			Name:   name,
+			// When Istio converts k8s gateway to istio gateway, the bind field is empty
+			ECDSResourceName: getECDSResourceName(gwNsName.Namespace, getLDSName("", uint32(ls.Port))),
+			NsName:           nsName,
+			Name:             name,
 		})
 	}
 	return vhs
@@ -165,9 +176,83 @@ var (
 	wildcardHostnams = []gwapiv1.Hostname{"*"}
 )
 
+func addVirtualHostToProxy(vh *model.VirtualHost, proxies map[Proxy]*proxyConfig, routes map[string]*routePolicy) {
+	p := Proxy{
+		Namespace: vh.Gateway.NsName.Namespace,
+	}
+
+	proxy, ok := proxies[p]
+	if !ok {
+		proxies[p] = &proxyConfig{
+			Hosts: make(map[string]*hostPolicy),
+		}
+		proxy = proxies[p]
+	}
+
+	if host, ok := proxy.Hosts[vh.Name]; ok {
+		// TODO: add route name collision detection
+		// Currently, it is the webhook or the user configuration to guarantee the same route
+		// name won't be used in different VirtualServices that share the same host.
+		// For HTTPRoute, Istio guarantees the default route name is unique
+		for routeName, policy := range routes {
+			host.Routes[routeName] = policy
+		}
+	} else {
+		policy := &hostPolicy{
+			VirtualHost: vh,
+			Routes:      routes,
+		}
+		proxy.Hosts[vh.Name] = policy
+	}
+}
+
+func getLDSName(bind string, port uint32) string {
+	// TODO: consider the dual network stack
+	// We don't support unix socket. Is there someone using it on production?
+	if bind == "" {
+		bind = "0.0.0.0"
+	}
+	// TODO: set Protocol for QUIC
+	return fmt.Sprintf("%s_%d", bind, port)
+}
+
+func addServerPortToProxy(gw *istiov1a3.Gateway, serverPort ServerPort, proxies map[Proxy]*proxyConfig, policies []*HTTPFilterPolicyWrapper) {
+	name := getLDSName(serverPort.Bind, serverPort.Number)
+	p := Proxy{
+		Namespace: gw.Namespace,
+	}
+	proxy, ok := proxies[p]
+	if !ok {
+		proxies[p] = &proxyConfig{
+			Gateways: make(map[string]*gatewayPolicy),
+		}
+		proxy = proxies[p]
+	}
+	if proxy.Gateways == nil {
+		// The proxy has RDS level policies, so here we need to init the LDS part
+		proxy.Gateways = make(map[string]*gatewayPolicy)
+	}
+
+	if proxy.Gateways[name] != nil {
+		// already added, skipped
+		return
+	}
+
+	gwPolicy := &gatewayPolicy{
+		NsName: &types.NamespacedName{
+			Namespace: gw.Namespace,
+			Name:      gw.Name,
+		},
+	}
+	if len(policies) > 0 {
+		gwPolicy.Policies = policies
+	}
+	proxy.Gateways[name] = gwPolicy
+}
+
 func toDataPlaneState(ctx *Ctx, state *InitState) (*FinalState, error) {
 	s := &dataPlaneState{
-		Hosts: make(map[string]*hostPolicy),
+		Proxies: make(map[Proxy]*proxyConfig),
 	}
 	for id, vsp := range state.VirtualServicePolicies {
 		id := id // the copied id will be referenced by address later
@@ -193,20 +278,7 @@ func toDataPlaneState(ctx *Ctx, state *InitState) (*FinalState, error) {
 				continue
 			}
 			for _, vh := range vhs {
-				if host, ok := s.Hosts[vh.Name]; ok {
-					// TODO: add route name collision detection
-					// Currently, it is the webhook or the user configuration to guarantee the same route
-					// name won't be used in different VirtualServices that share the same host.
-					for routeName, policy := range routes {
-						host.Routes[routeName] = policy
-					}
-				} else {
-					policy := &hostPolicy{
-						VirtualHost: vh,
-						Routes:      routes,
-					}
-					s.Hosts[vh.Name] = policy
-				}
+				addVirtualHostToProxy(vh, s.Proxies, routes)
 			}
 		}
 	}
@@ -264,21 +336,20 @@ func toDataPlaneState(ctx *Ctx, state *InitState) (*FinalState, error) {
 						continue
 					}
 					for _, vh := range vhs {
-						if host, ok := s.Hosts[vh.Name]; ok {
-							// Istio guarantees the default route name is unique
-							for routeName, policy := range routes {
-								host.Routes[routeName] = policy
-							}
-						} else {
-							policy := &hostPolicy{
-								VirtualHost: vh,
-								Routes:      routes,
-							}
-							s.Hosts[vh.Name] = policy
-						}
+						addVirtualHostToProxy(vh, s.Proxies, routes)
 					}
 				}
 			}
+		}
+	}
+
+	for _, gwp := range state.IstioGatewayPolicies {
+		for serverPort, policies := range gwp.PortPolicies {
+			addServerPortToProxy(gwp.Gateway, serverPort, s.Proxies, policies)
+		}
+		// Port with Policies should be added first
+		for serverPort := range gwp.Ports {
+			addServerPortToProxy(gwp.Gateway, serverPort, s.Proxies, nil)
 		}
 	}
 

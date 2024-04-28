@@ -1,6 +1,9 @@
 - metadata:
     creationTimestamp: null
+    labels:
+      htnn.mosn.io/created-by: HTTPFilterPolicy
     name: htnn-http-filter
+    namespace: istio-system
   spec:
     configPatches:
     - applyTo: HTTP_FILTER
@@ -85,5 +88,4 @@
           typed_config:
             '@type': type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit
             statPrefix: http_local_rate_limiter
-    priority: 100
   status: {}

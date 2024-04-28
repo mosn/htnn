@@ -2,84 +2,70 @@ istioGateway:
 - apiVersion: networking.istio.io/v1beta1
   kind: Gateway
   metadata:
-    name: httpbin-gateway
-    namespace: default
+    name: test
+    namespace: test
   spec:
     selector:
       istio: ingressgateway
     servers:
     - hosts:
-      - httpbin.example.com
+      - "*.test.com"
       port:
         name: http
         number: 80
         protocol: HTTP
-    - hosts:
-      - httpbin.example.com
-      port:
-        name: https
-        number: 443
-        protocol: HTTPS
 - apiVersion: networking.istio.io/v1beta1
   kind: Gateway
   metadata:
-    name: httpbin-test-gateway
+    name: test2
     namespace: default
   spec:
     selector:
       istio: ingressgateway
     servers:
     - hosts:
-      - httpbin.test.com
+      - "*.test.com"
       port:
         name: http
-        number: 8080
+        number: 80
         protocol: HTTP
 virtualService:
-  httpbin-gateway:
+  test:
     - apiVersion: networking.istio.io/v1beta1
       kind: VirtualService
       metadata:
-        name: httpbin
-        namespace: default
+        name: test
+        namespace: test
       spec:
         gateways:
-        - httpbin-gateway
-        - httpbin-test-gateway
+        - test
         hosts:
-        - httpbin.example.com
-        - httpbin.test.com
+        - "a.test.com"
         http:
         - match:
           - uri:
-              prefix: /status
-          - uri:
-              prefix: /delay
+              prefix: /
           name: policy
           route:
           - destination:
               host: httpbin
               port:
                 number: 8000
-  httpbin-test-gateway:
+  test2:
     - apiVersion: networking.istio.io/v1beta1
       kind: VirtualService
       metadata:
-        name: httpbin
+        name: test2
         namespace: default
       spec:
         gateways:
-        - httpbin-gateway
-        - httpbin-test-gateway
+        - test2
         hosts:
-        - httpbin.example.com
-        - httpbin.test.com
+        - "a.test.com"
         http:
         - match:
           - uri:
-              prefix: /status
-          - uri:
-              prefix: /delay
+              prefix: /
           name: policy
           route:
           - destination:
@@ -87,18 +73,33 @@ virtualService:
               port:
                 number: 8000
 httpFilterPolicy:
-  httpbin:
+  test:
   - apiVersion: htnn.mosn.io/v1
     kind: HTTPFilterPolicy
     metadata:
-      name: policy
+      name: test
+      namespace: test
+    spec:
+      targetRef:
+        group: networking.istio.io
+        kind: VirtualService
+        name: test
+      filters:
+        animal:
+          config:
+            pet: cat
+  test2:
+  - apiVersion: htnn.mosn.io/v1
+    kind: HTTPFilterPolicy
+    metadata:
+      name: test2
       namespace: default
     spec:
       targetRef:
         group: networking.istio.io
         kind: VirtualService
-        name: httpbin
+        name: test2
       filters:
         animal:
           config:
-            hostName: goldfish
+            pet: dog

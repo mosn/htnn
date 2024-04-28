@@ -26,6 +26,7 @@ import (
 	"mosn.io/htnn/api/pkg/plugins"
 	ctrlcfg "mosn.io/htnn/controller/internal/config"
 	"mosn.io/htnn/controller/internal/model"
+	"mosn.io/htnn/controller/pkg/component"
 )
 
 func MustNewStruct(fields map[string]interface{}) *structpb.Struct {
@@ -48,8 +49,8 @@ type configWrapper struct {
 	filter map[string]interface{}
 }
 
-func DefaultEnvoyFilters() map[string]*istiov1a3.EnvoyFilter {
-	efs := map[string]*istiov1a3.EnvoyFilter{}
+func DefaultEnvoyFilters() map[component.EnvoyFilterKey]*istiov1a3.EnvoyFilter {
+	efs := map[component.EnvoyFilterKey]*istiov1a3.EnvoyFilter{}
 
 	defaultMatch := &istioapi.EnvoyFilter_EnvoyConfigObjectMatch{
 		// As currently we only support Gateway cases, here we hardcode the context
@@ -149,13 +150,20 @@ func DefaultEnvoyFilters() map[string]*istiov1a3.EnvoyFilter {
 		}
 	}
 
-	efs[DefaultHttpFilter] = &istiov1a3.EnvoyFilter{
+	key := component.EnvoyFilterKey{
+		Namespace: ctrlcfg.RootNamespace(),
+		Name:      DefaultHttpFilter,
+	}
+	efs[key] = &istiov1a3.EnvoyFilter{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: DefaultHttpFilter,
+			Namespace: ctrlcfg.RootNamespace(),
+			Name:      DefaultHttpFilter,
+			Labels: map[string]string{
+				model.LabelCreatedBy: "HTTPFilterPolicy",
+			},
 		},
 		Spec: istioapi.EnvoyFilter{
 			ConfigPatches: patches,
-			Priority:      100, // the priority is specific to silent the warning for relative operation
 		},
 	}
 
@@ -172,6 +180,7 @@ func GenerateRouteFilter(host *model.VirtualHost, route string, config map[strin
 	}
 
 	return &istiov1a3.EnvoyFilter{
+		// We don't set ObjectMeta here because this EnvoyFilter will be merged later
 		Spec: istioapi.EnvoyFilter{
 			ConfigPatches: []*istioapi.EnvoyFilter_EnvoyConfigObjectPatch{
 				{
@@ -195,8 +204,85 @@ func GenerateRouteFilter(host *model.VirtualHost, route string, config map[strin
 	}
 }
 
+func GenerateLDSFilterViaECDS(key string, ldsName string, config map[string]interface{}) *istiov1a3.EnvoyFilter {
+	ef := &istiov1a3.EnvoyFilter{
+		Spec: istioapi.EnvoyFilter{
+			ConfigPatches: []*istioapi.EnvoyFilter_EnvoyConfigObjectPatch{
+				{
+					ApplyTo: istioapi.EnvoyFilter_HTTP_FILTER,
+					Match: &istioapi.EnvoyFilter_EnvoyConfigObjectMatch{
+						ObjectTypes: &istioapi.EnvoyFilter_EnvoyConfigObjectMatch_Listener{
+							Listener: &istioapi.EnvoyFilter_ListenerMatch{
+								Name: ldsName,
+								FilterChain: &istioapi.EnvoyFilter_ListenerMatch_FilterChainMatch{
+									Filter: &istioapi.EnvoyFilter_ListenerMatch_FilterMatch{
+										Name: "envoy.filters.network.http_connection_manager",
+										SubFilter: &istioapi.EnvoyFilter_ListenerMatch_SubFilterMatch{
+											Name: "htnn.filters.http.golang",
+										},
+									},
+								},
+							},
+						},
+					},
+					Patch: &istioapi.EnvoyFilter_Patch{
+						Operation: istioapi.EnvoyFilter_Patch_INSERT_BEFORE,
+						Value: MustNewStruct(map[string]interface{}{
+							"name": key,
+							"config_discovery": map[string]interface{}{
+								"apply_default_config_without_warming": true,
+								"default_config": map[string]interface{}{
+									"@type":        "type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.Config",
+									"library_id":   "fm",
+									"library_path": ctrlcfg.GoSoPath(),
+									"plugin_name":  "fm",
+								},
+								"config_source": map[string]interface{}{
+									"ads": map[string]interface{}{},
+								},
+								"type_urls": []interface{}{
+									"type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.Config",
+								},
+							},
+						}),
+					},
+				},
+			},
+		},
+	}
+	if config != nil {
+		ef.Spec.ConfigPatches = append(ef.Spec.ConfigPatches, &istioapi.EnvoyFilter_EnvoyConfigObjectPatch{
+			ApplyTo: istioapi.EnvoyFilter_EXTENSION_CONFIG,
+			Patch: &istioapi.EnvoyFilter_Patch{
+				Operation: istioapi.EnvoyFilter_Patch_ADD,
+				Value: MustNewStruct(map[string]interface{}{
+					"name": key,
+					"typed_config": map[string]interface{}{
+						"@type":        "type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.Config",
+						"library_id":   "fm",
+						"library_path": ctrlcfg.GoSoPath(),
+						"plugin_name":  "fm",
+						"plugin_config": map[string]interface{}{
+							"@type": "type.googleapis.com/xds.type.v3.TypedStruct",
+							"value": config,
+						},
+					},
+				}),
+			},
+		})
+	}
+	return ef
+}
+
 func GenerateConsumers(consumers map[string]interface{}) *istiov1a3.EnvoyFilter {
 	return &istiov1a3.EnvoyFilter{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: ctrlcfg.RootNamespace(),
+			Name:      ECDSConsumerName,
+			Labels: map[string]string{
+				model.LabelCreatedBy: "Consumer",
+			},
+		},
 		Spec: istioapi.EnvoyFilter{
 			ConfigPatches: []*istioapi.EnvoyFilter_EnvoyConfigObjectPatch{
 				{
