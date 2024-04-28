@@ -1,6 +1,7 @@
 - metadata:
     creationTimestamp: null
     name: htnn-h-default.local
+    namespace: default
   spec:
     configPatches:
     - applyTo: HTTP_ROUTE
@@ -26,6 +27,7 @@
 - metadata:
     creationTimestamp: null
     name: htnn-http-filter
+    namespace: istio-system
   spec:
     configPatches:
     - applyTo: HTTP_FILTER
@@ -46,5 +48,5 @@
             grpcService:
               envoy_grpc:
                 cluster_name: xds-grpc
-    priority: 100
+    priority: -10
   status: {}
