@@ -2210,18 +2210,19 @@ index 252669af19..9d4532cdbe 100644
    - kind: "CustomResourceDefinition"
      plural: "customresourcedefinitions"
 diff --git a/pkg/config/validation/validation.go b/pkg/config/validation/validation.go
-index 56f6971290..63b1946fe9 100644
+index 56f6971290..fb57f3961b 100644
 --- a/pkg/config/validation/validation.go
 +++ b/pkg/config/validation/validation.go
-@@ -37,6 +37,7 @@ import (
+@@ -37,6 +37,8 @@ import (
  	"google.golang.org/protobuf/types/descriptorpb"
  	"google.golang.org/protobuf/types/known/anypb"
  	"google.golang.org/protobuf/types/known/durationpb"
++	"mosn.io/htnn/controller/pkg/constant"
 +	mosniov1 "mosn.io/htnn/types/apis/v1"
  
  	"istio.io/api/annotation"
  	extensions "istio.io/api/extensions/v1alpha1"
-@@ -2018,6 +2019,36 @@ func validateOneOfSelectorType(selector *type_beta.WorkloadSelector, targetRef *
+@@ -2018,6 +2020,36 @@ func validateOneOfSelectorType(selector *type_beta.WorkloadSelector, targetRef *
  	return
  }
  
@@ -2258,6 +2259,30 @@ index 56f6971290..63b1946fe9 100644
  // ValidateAuthorizationPolicy checks that AuthorizationPolicy is well-formed.
  var ValidateAuthorizationPolicy = registerValidateFunc("ValidateAuthorizationPolicy",
  	func(cfg config.Config) (Warning, error) {
+@@ -2317,6 +2349,23 @@ var ValidateVirtualService = registerValidateFunc("ValidateVirtualService",
+ 		if !ok {
+ 			return nil, errors.New("cannot cast to virtual service")
+ 		}
++
++		if cfg.Annotations != nil {
++			hfp := cfg.Annotations[constant.AnnotationHTTPFilterPolicy]
++			if hfp != "" {
++				var policy mosniov1.HTTPFilterPolicy
++				err := json.Unmarshal([]byte(hfp), &policy)
++				if err != nil {
++					return nil, fmt.Errorf("cannot unmarshal HTTPFilterPolicy: %v", err)
++				}
++
++				err = mosniov1.ValidateHTTPFilterPolicyStrictly(&policy)
++				if err != nil {
++					return nil, fmt.Errorf("invalid HTTPFilterPolicy: %v", err)
++				}
++			}
++		}
++
+ 		errs := Validation{}
+ 		if len(virtualService.Hosts) == 0 {
+ 			// This must be delegate - enforce delegate validations.
 diff --git a/pkg/kube/client.go b/pkg/kube/client.go
 index 999c319fdd..ed22c7fb01 100644
 --- a/pkg/kube/client.go

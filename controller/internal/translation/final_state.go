@@ -27,6 +27,7 @@ import (
 	"mosn.io/htnn/controller/internal/istio"
 	"mosn.io/htnn/controller/internal/model"
 	"mosn.io/htnn/controller/pkg/component"
+	"mosn.io/htnn/controller/pkg/constant"
 )
 
 const (
@@ -171,7 +172,7 @@ func toFinalState(_ *Ctx, state *mergedState) (*FinalState, error) {
 		if ef.Labels == nil {
 			ef.Labels = map[string]string{}
 		}
-		ef.Labels[model.LabelCreatedBy] = "HTTPFilterPolicy"
+		ef.Labels[constant.LabelCreatedBy] = "HTTPFilterPolicy"
 
 		// Sort here to avoid EnvoyFilter change caused by the order of ConfigPatch.
 		sort.Slice(ef.Spec.ConfigPatches, func(i, j int) bool {

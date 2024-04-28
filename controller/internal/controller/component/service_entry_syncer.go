@@ -27,7 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"mosn.io/htnn/controller/internal/config"
-	"mosn.io/htnn/controller/internal/model"
+	"mosn.io/htnn/controller/pkg/constant"
 )
 
 type serviceEntrySyncer struct {
@@ -78,7 +78,7 @@ func (syncer *serviceEntrySyncer) addToK8s(ctx context.Context, service string, 
 	if se.Labels == nil {
 		se.Labels = map[string]string{}
 	}
-	se.Labels[model.LabelCreatedBy] = "ServiceRegistry"
+	se.Labels[constant.LabelCreatedBy] = "ServiceRegistry"
 	se.Name = service
 
 	syncer.logger.Info("create ServiceEntry", "name", service, "namespace", ns)
@@ -147,7 +147,7 @@ func (syncer *serviceEntrySyncer) sync() {
 	c := syncer.client
 	ctx := context.Background()
 	var serviceEntries istiov1a3.ServiceEntryList
-	err := c.List(ctx, &serviceEntries, client.MatchingLabels{model.LabelCreatedBy: "ServiceRegistry"})
+	err := c.List(ctx, &serviceEntries, client.MatchingLabels{constant.LabelCreatedBy: "ServiceRegistry"})
 	if err != nil {
 		syncer.logger.Error(err, "failed to list service entries")
 		return

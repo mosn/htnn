@@ -175,6 +175,32 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 			err: "namespace in TargetRef doesn't match HTTPFilterPolicy's namespace",
 		},
 		{
+			name: "Filters in SubPolicies",
+			policy: &HTTPFilterPolicy{
+				Spec: HTTPFilterPolicySpec{
+					TargetRef: &gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: "networking.istio.io",
+							Kind:  "VirtualService",
+						},
+					},
+					SubPolicies: []HTTPFilterSubPolicy{
+						{
+							SectionName: sectionName,
+							Filters: map[string]HTTPPlugin{
+								"property": {
+									Config: runtime.RawExtension{
+										Raw: []byte(`{"pet":"cat"}`),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			strictErr: "unknown http filter: property",
+		},
+		{
 			name: "targetRef.SectionName and SubPolicies can not be used together",
 			policy: &HTTPFilterPolicy{
 				Spec: HTTPFilterPolicySpec{

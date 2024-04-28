@@ -43,6 +43,44 @@ func ValidateHTTPFilterPolicyStrictly(policy *HTTPFilterPolicy) error {
 	return validateHTTPFilterPolicy(policy, true)
 }
 
+func validateFilter(name string, filter HTTPPlugin, strict bool, targetGateway bool) error {
+	p := plugins.LoadHttpPluginType(name)
+	if p == nil {
+		if strict {
+			return errors.New("unknown http filter: " + name)
+		}
+		return nil
+	}
+
+	if targetGateway {
+		switch p.Order().Position {
+		case plugins.OrderPositionOuter, plugins.OrderPositionInner:
+			// We can't directly provide different ECDS for every native plugins. There will
+			// be more than 20 native plugins in the future, and it's not reasonable to provide
+			// such number (20 x the number of LDS) of ECDS resources. Perhaps we can use
+			// composite filter to solve this problem?
+			return errors.New("configure native plugins to the Gateway is not implemented")
+		}
+	}
+
+	data := filter.Config.Raw
+	conf := p.Config()
+	var err error
+	if strict {
+		err = proto.UnmarshalJSONStrictly(data, conf)
+	} else {
+		err = proto.UnmarshalJSON(data, conf)
+	}
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal for filter %s: %w", name, err)
+	}
+
+	if err := conf.Validate(); err != nil {
+		return fmt.Errorf("invalid config for filter %s: %w", name, err)
+	}
+	return nil
+}
+
 func validateHTTPFilterPolicy(policy *HTTPFilterPolicy, strict bool) error {
 	targetGateway := false
 	ref := policy.Spec.TargetRef
@@ -86,39 +124,19 @@ func validateHTTPFilterPolicy(policy *HTTPFilterPolicy, strict bool) error {
 	}
 
 	for name, filter := range policy.Spec.Filters {
-		p := plugins.LoadHttpPluginType(name)
-		if p == nil {
-			if strict {
-				return errors.New("unknown http filter: " + name)
-			}
-			continue
-		}
-
-		if targetGateway {
-			switch p.Order().Position {
-			case plugins.OrderPositionOuter, plugins.OrderPositionInner:
-				// We can't directly provide different ECDS for every native plugins. There will
-				// be more than 20 native plugins in the future, and it's not reasonable to provide
-				// such number (20 x the number of LDS) of ECDS resources. Perhaps we can use
-				// composite filter to solve this problem?
-				return errors.New("configure native plugins to the Gateway is not implemented")
-			}
-		}
-
-		data := filter.Config.Raw
-		conf := p.Config()
-		var err error
-		if strict {
-			err = proto.UnmarshalJSONStrictly(data, conf)
-		} else {
-			err = proto.UnmarshalJSON(data, conf)
-		}
+		err := validateFilter(name, filter, strict, targetGateway)
 		if err != nil {
-			return fmt.Errorf("failed to unmarshal for filter %s: %w", name, err)
+			return err
 		}
+	}
 
-		if err := conf.Validate(); err != nil {
-			return fmt.Errorf("invalid config for filter %s: %w", name, err)
+	for _, policy := range policy.Spec.SubPolicies {
+		for name, filter := range policy.Filters {
+			err := validateFilter(name, filter, strict, targetGateway)
+			if err != nil {
+				return err
+			}
+
 		}
 	}
 

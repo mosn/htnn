@@ -32,8 +32,8 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
-	"mosn.io/htnn/controller/internal/model"
 	"mosn.io/htnn/controller/internal/translation"
+	"mosn.io/htnn/controller/pkg/constant"
 	"mosn.io/htnn/controller/tests/pkg"
 	mosniov1 "mosn.io/htnn/types/apis/v1"
 )
@@ -715,7 +715,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 			}, timeout, interval).Should(BeTrue())
 
 			// update annotation
-			virtualService.Annotations[model.AnnotationHTTPFilterPolicy] = `{"apiVersion":"htnn.mosn.io/v1","kind":"HTTPFilterPolicy","metadata":{"name":"policy","namespace":"default"},"spec":{"filters":{"demo":{"config":{"hostName":"Zhang"}}}}}`
+			virtualService.Annotations[constant.AnnotationHTTPFilterPolicy] = `{"apiVersion":"htnn.mosn.io/v1","kind":"HTTPFilterPolicy","metadata":{"name":"policy","namespace":"default"},"spec":{"filters":{"demo":{"config":{"hostName":"Zhang"}}}}}`
 			err = k8sClient.Update(ctx, virtualService)
 			Expect(err).NotTo(HaveOccurred())
 			Eventually(func() bool {

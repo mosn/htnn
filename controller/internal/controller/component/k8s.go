@@ -26,8 +26,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"mosn.io/htnn/controller/internal/log"
-	"mosn.io/htnn/controller/internal/model"
 	"mosn.io/htnn/controller/pkg/component"
+	"mosn.io/htnn/controller/pkg/constant"
 )
 
 type k8sOutput struct {
@@ -51,7 +51,7 @@ func (o *k8sOutput) FromHTTPFilterPolicy(ctx context.Context, generatedEnvoyFilt
 
 	var envoyfilters istiov1a3.EnvoyFilterList
 	if err := o.List(ctx, &envoyfilters,
-		client.MatchingLabels{model.LabelCreatedBy: "HTTPFilterPolicy"},
+		client.MatchingLabels{constant.LabelCreatedBy: "HTTPFilterPolicy"},
 	); err != nil {
 		return fmt.Errorf("failed to list EnvoyFilter: %w", err)
 	}
@@ -106,7 +106,7 @@ func (o *k8sOutput) FromConsumer(ctx context.Context, ef *istiov1a3.EnvoyFilter)
 
 	nsName := types.NamespacedName{Name: ef.Name, Namespace: ef.Namespace}
 	var envoyfilters istiov1a3.EnvoyFilterList
-	if err := o.List(ctx, &envoyfilters, client.MatchingLabels{model.LabelCreatedBy: "Consumer"}); err != nil {
+	if err := o.List(ctx, &envoyfilters, client.MatchingLabels{constant.LabelCreatedBy: "Consumer"}); err != nil {
 		return fmt.Errorf("failed to list EnvoyFilter: %w", err)
 	}
 

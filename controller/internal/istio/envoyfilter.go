@@ -27,6 +27,7 @@ import (
 	ctrlcfg "mosn.io/htnn/controller/internal/config"
 	"mosn.io/htnn/controller/internal/model"
 	"mosn.io/htnn/controller/pkg/component"
+	"mosn.io/htnn/controller/pkg/constant"
 )
 
 func MustNewStruct(fields map[string]interface{}) *structpb.Struct {
@@ -159,7 +160,7 @@ func DefaultEnvoyFilters() map[component.EnvoyFilterKey]*istiov1a3.EnvoyFilter {
 			Namespace: ctrlcfg.RootNamespace(),
 			Name:      DefaultHttpFilter,
 			Labels: map[string]string{
-				model.LabelCreatedBy: "HTTPFilterPolicy",
+				constant.LabelCreatedBy: "HTTPFilterPolicy",
 			},
 		},
 		Spec: istioapi.EnvoyFilter{
@@ -280,7 +281,7 @@ func GenerateConsumers(consumers map[string]interface{}) *istiov1a3.EnvoyFilter 
 			Namespace: ctrlcfg.RootNamespace(),
 			Name:      ECDSConsumerName,
 			Labels: map[string]string{
-				model.LabelCreatedBy: "Consumer",
+				constant.LabelCreatedBy: "Consumer",
 			},
 		},
 		Spec: istioapi.EnvoyFilter{
