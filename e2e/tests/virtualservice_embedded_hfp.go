@@ -25,6 +25,7 @@ import (
 	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	"k8s.io/apimachinery/pkg/types"
 
+	"mosn.io/htnn/controller/pkg/constant"
 	"mosn.io/htnn/e2e/pkg/k8s"
 	"mosn.io/htnn/e2e/pkg/suite"
 )
@@ -71,6 +72,21 @@ func init() {
 			require.NoError(t, err)
 			// Should generate EnvoyFilter again
 			require.Equal(t, "hello,", req.Headers["Doraemon"][0])
+
+			// test webhook
+			route.SetAnnotations(map[string]string{constant.AnnotationHTTPFilterPolicy: "invalid"})
+			err = c.Update(ctx, &route)
+			require.ErrorContains(t, err, "configuration is invalid: cannot unmarshal HTTPFilterPolicy: ")
+
+			incorrectPolicy := `{"apiVersion":"htnn.mosn.io/v1","kind":"HTTPFilterPolicy","metadata":{"name":"policy"},"spec":{"filters":{"demo":{"config":{"hostName":"micky"}}},"subPolicies":[{"sectionName":"route","filters":{"demo":{"config":{"hostName":["doraemon"]}}}}]}}`
+			route.SetAnnotations(map[string]string{constant.AnnotationHTTPFilterPolicy: incorrectPolicy})
+			err = c.Update(ctx, &route)
+			require.ErrorContains(t, err, "configuration is invalid: invalid HTTPFilterPolicy: ")
+
+			incorrectWhenValidateStrictlyPolicy := `{"apiVersion":"htnn.mosn.io/v1","kind":"HTTPFilterPolicy","metadata":{"name":"policy"},"spec":{"filters":{"demo":{"config":{"hostName":"micky"}},"unknown":{"config":{}}}}}`
+			route.SetAnnotations(map[string]string{constant.AnnotationHTTPFilterPolicy: incorrectWhenValidateStrictlyPolicy})
+			err = c.Update(ctx, &route)
+			require.ErrorContains(t, err, "configuration is invalid: invalid HTTPFilterPolicy: ")
 		},
 	})
 }

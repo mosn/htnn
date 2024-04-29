@@ -41,9 +41,9 @@ import (
 	"mosn.io/htnn/controller/internal/config"
 	"mosn.io/htnn/controller/internal/log"
 	"mosn.io/htnn/controller/internal/metrics"
-	"mosn.io/htnn/controller/internal/model"
 	"mosn.io/htnn/controller/internal/translation"
 	"mosn.io/htnn/controller/pkg/component"
+	"mosn.io/htnn/controller/pkg/constant"
 	mosniov1 "mosn.io/htnn/types/apis/v1"
 )
 
@@ -507,12 +507,12 @@ func (r *HTTPFilterPolicyReconciler) policyToTranslationState(ctx context.Contex
 
 		for _, vs := range virtualServices.Items {
 			ann := vs.GetAnnotations()
-			if ann == nil || ann[model.AnnotationHTTPFilterPolicy] == "" {
+			if ann == nil || ann[constant.AnnotationHTTPFilterPolicy] == "" {
 				continue
 			}
 
 			var policy mosniov1.HTTPFilterPolicy
-			err := json.Unmarshal([]byte(ann[model.AnnotationHTTPFilterPolicy]), &policy)
+			err := json.Unmarshal([]byte(ann[constant.AnnotationHTTPFilterPolicy]), &policy)
 			if err != nil {
 				log.Errorf("failed to unmarshal policy out from VirtualService, err: %v, name: %s, namespace: %s", err, vs.Name, vs.Namespace)
 				continue
@@ -594,7 +594,7 @@ func (v *customResourceIndexer) UpdateIndex(idx map[string][]*mosniov1.HTTPFilte
 func (v *customResourceIndexer) FindAffectedObjects(ctx context.Context, obj component.ResourceMeta) []reconcile.Request {
 	if config.EnableEmbeddedMode() {
 		ann := obj.GetAnnotations()
-		if ann != nil && ann[model.AnnotationHTTPFilterPolicy] != "" {
+		if ann != nil && ann[constant.AnnotationHTTPFilterPolicy] != "" {
 			log.Infof("Target with embedded HTTPFilterPolicy changed, trigger reconciliation, group: %s, kind: %s, namespace: %s, name: %s",
 				obj.GetGroup(), obj.GetKind(), obj.GetNamespace(), obj.GetName())
 			return triggerReconciliation()

@@ -78,7 +78,7 @@ lint-go:
 fmt-go: install-go-fmtter
 	$(foreach PKG, $(GO_MODULES), \
 		pushd ./${PKG} && \
-			go mod tidy || exit 1; \
+			go mod tidy -e || exit 1; \
 			$(LOCALBIN)/gosimports -w -local ${PROJECT_NAME} . || exit 1; \
 		popd; \
 	)
