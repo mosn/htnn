@@ -1,0 +1,85 @@
+- metadata:
+    annotations:
+      htnn.mosn.io/info: '{"httpfilterpolicies":["default/policy"]}'
+    creationTimestamp: null
+    labels:
+      htnn.mosn.io/created-by: HTTPFilterPolicy
+    name: htnn-h-default
+    namespace: default
+  spec:
+    configPatches:
+    - applyTo: HTTP_FILTER
+      match:
+        listener:
+          filterChain:
+            filter:
+              name: envoy.filters.network.http_connection_manager
+              subFilter:
+                name: htnn.filters.http.golang
+          name: 0.0.0.0_1234
+      patch:
+        operation: INSERT_BEFORE
+        value:
+          config_discovery:
+            apply_default_config_without_warming: true
+            config_source:
+              ads: {}
+            default_config:
+              '@type': type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.Config
+              library_id: fm
+              library_path: /etc/libgolang.so
+              plugin_name: fm
+            type_urls:
+            - type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.Config
+          name: htnn-default-0.0.0.0_1234-golang-filter
+    - applyTo: EXTENSION_CONFIG
+      patch:
+        operation: ADD
+        value:
+          name: htnn-default-0.0.0.0_1234-golang-filter
+          typed_config:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.Config
+            library_id: fm
+            library_path: /etc/libgolang.so
+            plugin_config:
+              '@type': type.googleapis.com/xds.type.v3.TypedStruct
+              value:
+                plugins:
+                - config:
+                    hostName: goldfish
+                  name: animal
+            plugin_name: fm
+  status: {}
+- metadata:
+    annotations:
+      htnn.mosn.io/info: '{"httpfilterpolicies":["default/policy2"]}'
+    creationTimestamp: null
+    labels:
+      htnn.mosn.io/created-by: HTTPFilterPolicy
+    name: htnn-h-default.local
+    namespace: default
+  spec:
+    configPatches:
+    - applyTo: HTTP_ROUTE
+      match:
+        routeConfiguration:
+          vhost:
+            name: default.local:1234
+            route:
+              name: default.http.0
+      patch:
+        operation: MERGE
+        value:
+          typed_per_filter_config:
+            htnn-default-0.0.0.0_1234-golang-filter:
+              '@type': type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.ConfigsPerRoute
+              plugins_config:
+                fm:
+                  config:
+                    '@type': type.googleapis.com/xds.type.v3.TypedStruct
+                    value:
+                      plugins:
+                      - config:
+                          hostName: cat
+                        name: animal
+  status: {}

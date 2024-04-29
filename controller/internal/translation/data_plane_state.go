@@ -216,10 +216,10 @@ func getLDSName(bind string, port uint32) string {
 	return fmt.Sprintf("%s_%d", bind, port)
 }
 
-func addServerPortToProxy(gw *istiov1a3.Gateway, serverPort ServerPort, proxies map[Proxy]*proxyConfig, policies []*HTTPFilterPolicyWrapper) {
+func addServerPortToProxy(gw *model.Gateway, serverPort ServerPort, proxies map[Proxy]*proxyConfig, policies []*HTTPFilterPolicyWrapper) {
 	name := getLDSName(serverPort.Bind, serverPort.Number)
 	p := Proxy{
-		Namespace: gw.Namespace,
+		Namespace: gw.NsName.Namespace,
 	}
 	proxy, ok := proxies[p]
 	if !ok {
@@ -239,10 +239,7 @@ func addServerPortToProxy(gw *istiov1a3.Gateway, serverPort ServerPort, proxies 
 	}
 
 	gwPolicy := &gatewayPolicy{
-		NsName: &types.NamespacedName{
-			Namespace: gw.Namespace,
-			Name:      gw.Name,
-		},
+		NsName: gw.NsName,
 	}
 	if len(policies) > 0 {
 		gwPolicy.Policies = policies
@@ -343,7 +340,7 @@ func toDataPlaneState(ctx *Ctx, state *InitState) (*FinalState, error) {
 		}
 	}
 
-	for _, gwp := range state.IstioGatewayPolicies {
+	for _, gwp := range state.GatewayPolicies {
 		for serverPort, policies := range gwp.PortPolicies {
 			addServerPortToProxy(gwp.Gateway, serverPort, s.Proxies, policies)
 		}

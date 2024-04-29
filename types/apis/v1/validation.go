@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"mosn.io/htnn/api/pkg/plugins"
 	"mosn.io/htnn/types/pkg/proto"
@@ -113,8 +114,11 @@ func validateHTTPFilterPolicy(policy *HTTPFilterPolicy, strict bool) error {
 				// TODO: implement the Gateway support via RDS, so it matches the model 100%.
 				validTarget = true
 			}
-		} else if ref.Group == "gateway.networking.k8s.io" && ref.Kind == "HTTPRoute" {
-			validTarget = true
+		} else if ref.Group == "gateway.networking.k8s.io" {
+			switch ref.Kind {
+			case "HTTPRoute", "Gateway":
+				validTarget = true
+			}
 		}
 		if !validTarget {
 			return errors.New("unsupported targetRef.group or targetRef.kind")
@@ -182,6 +186,11 @@ func ValidateGateway(gw *istiov1a3.Gateway) error {
 		}
 	}
 	return nil
+}
+
+func NormalizeK8sGatewayProtocol(protocol gwapiv1.ProtocolType) string {
+	// So far, all k8s gateway protocols are valid istio protocols
+	return NormalizeIstioProtocol(string(protocol))
 }
 
 func ValidateConsumer(c *Consumer) error {

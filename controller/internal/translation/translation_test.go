@@ -122,13 +122,38 @@ func TestTranslate(t *testing.T) {
 					}
 				}
 			}
+			hfpsMap := maps.Clone(input.HTTPFilterPolicy)
 			for name, wrapper := range hrToGws {
 				hfps := input.HTTPFilterPolicy[name]
+				if hfps != nil {
+					// Currently, a policy can only target one resource.
+					delete(hfpsMap, name)
+				}
 				for _, hfp := range hfps {
 					if hfp.Namespace == "" {
 						hfp.SetNamespace("default")
 					}
 					s.AddPolicyForHTTPRoute(hfp, wrapper.hr, wrapper.gws)
+				}
+			}
+
+			// For gateway-only cases
+			for _, gw := range input.Gateway {
+				name := gw.Name
+				hfps := hfpsMap[name]
+				if hfps != nil {
+					delete(hfpsMap, name)
+				}
+				for _, hfp := range hfps {
+					if hfp.Namespace == "" {
+						hfp.SetNamespace("default")
+					}
+					s.AddPolicyForK8sGateway(hfp, gw)
+				}
+			}
+			if config.EnableLDSPluginViaECDS() {
+				for _, gw := range input.Gateway {
+					s.AddK8sGateway(gw)
 				}
 			}
 
@@ -154,11 +179,9 @@ func TestTranslate(t *testing.T) {
 				}
 			}
 
-			hfpsMap := maps.Clone(input.HTTPFilterPolicy)
 			for name, wrapper := range vsToGws {
 				hfps := hfpsMap[name]
 				if hfps != nil {
-					// Currently, a policy can only target one resource.
 					delete(hfpsMap, name)
 				}
 				for _, hfp := range hfps {
