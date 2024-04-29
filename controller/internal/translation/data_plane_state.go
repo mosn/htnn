@@ -26,6 +26,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	"mosn.io/htnn/controller/internal/config"
 	"mosn.io/htnn/controller/internal/log"
 	"mosn.io/htnn/controller/internal/model"
 )
@@ -207,10 +208,15 @@ func addVirtualHostToProxy(vh *model.VirtualHost, proxies map[Proxy]*proxyConfig
 }
 
 func getLDSName(bind string, port uint32) string {
-	// TODO: consider the dual network stack
 	// We don't support unix socket. Is there someone using it on production?
 	if bind == "" {
-		bind = "0.0.0.0"
+		// Istio will select the corresponding IP automatically according to the node's IP address type.
+		// We don't manage the node message, so let the user to specify the bind address by themselves.
+		if config.UseWildcardIPv6InLDSName() {
+			bind = "::"
+		} else {
+			bind = "0.0.0.0"
+		}
 	}
 	// TODO: set Protocol for QUIC
 	return fmt.Sprintf("%s_%d", bind, port)

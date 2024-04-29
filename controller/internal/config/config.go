@@ -112,6 +112,16 @@ func EnableLDSPluginViaECDS() bool {
 	return enableLDSPluginViaECDS
 }
 
+var useWildcardIPv6InLDSName = false
+
+// Use wildcard IPv6 address as the default prefix of the LDS name. Turn this on if your gateway is
+// listening on an IPv6 address by default.
+func UseWildcardIPv6InLDSName() bool {
+	configLock.RLock()
+	defer configLock.RUnlock()
+	return useWildcardIPv6InLDSName
+}
+
 type envStringReplacer struct {
 }
 
@@ -135,6 +145,7 @@ func Init() {
 	updateBoolIfSet(vp, "enable_embedded_mode", &enableEmbeddedMode)
 	updateBoolIfSet(vp, "enable_native_plugin", &enableNativePlugin)
 	updateBoolIfSet(vp, "enable_lds_plugin_via_ecds", &enableLDSPluginViaECDS)
+	updateBoolIfSet(vp, "use_wildcard_ipv6_in_lds_name", &useWildcardIPv6InLDSName)
 
 	postInit()
 }
