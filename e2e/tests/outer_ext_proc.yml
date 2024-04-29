@@ -1,0 +1,17 @@
+apiVersion: htnn.mosn.io/v1
+kind: HTTPFilterPolicy
+metadata:
+  name: policy
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: default
+  filters:
+    outerExtProc:
+      config:
+        grpcService:
+          envoyGrpc:
+            clusterName: outbound|8080||backend.e2e.svc.cluster.local
+        processingMode:
+          requestBodyMode: NONE

@@ -23,6 +23,7 @@ import (
 	_ "mosn.io/htnn/types/plugins/cors"
 	_ "mosn.io/htnn/types/plugins/demo"
 	_ "mosn.io/htnn/types/plugins/ext_auth"
+	_ "mosn.io/htnn/types/plugins/ext_proc"
 	_ "mosn.io/htnn/types/plugins/fault"
 	_ "mosn.io/htnn/types/plugins/hmac_auth"
 	_ "mosn.io/htnn/types/plugins/key_auth"
