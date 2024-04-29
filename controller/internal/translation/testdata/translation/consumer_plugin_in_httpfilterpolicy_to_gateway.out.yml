@@ -1,4 +1,6 @@
 - metadata:
+    annotations:
+      htnn.mosn.io/info: '{"httpfilterpolicies":["default/policy"]}'
     creationTimestamp: null
     labels:
       htnn.mosn.io/created-by: HTTPFilterPolicy
@@ -41,6 +43,12 @@
             library_path: /etc/libgolang.so
             plugin_config:
               '@type': type.googleapis.com/xds.type.v3.TypedStruct
-              value: {}
+              value:
+                namespace: default
+                plugins:
+                - config:
+                    keys:
+                    - name: apikey
+                  name: keyAuth
             plugin_name: fm
   status: {}

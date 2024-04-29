@@ -221,7 +221,14 @@ func translateFilterManagerConfigToPolicyInECDS(fmc *filtermanager.FilterManager
 	consumerNeeded := false
 	for _, plugin := range fmc.Plugins {
 		name := plugin.Name
-		p := plugins.LoadHttpPluginType(name)
+		p := plugins.LoadHttpPlugin(name)
+		if p != nil {
+			// Native plugin is not supported
+			continue
+		}
+
+		// For Go Plugins, only the type is registered
+		p = plugins.LoadHttpPluginType(name)
 		// As we don't reject configuration with unknown plugin to keep compatibility...
 		if p == nil {
 			continue
@@ -231,14 +238,9 @@ func translateFilterManagerConfigToPolicyInECDS(fmc *filtermanager.FilterManager
 		// we validated the filter at the beginning, so theorily err should not happen
 		_ = json.Unmarshal(plugin.Config.([]byte), &cfg)
 
-		_, ok := p.(plugins.GoPlugin)
-		if !ok {
-			continue
-		}
-
 		plugin.Config = cfg
 		goFilterManager.Plugins = append(goFilterManager.Plugins, plugin)
-		_, ok = p.(plugins.ConsumerPlugin)
+		_, ok := p.(plugins.ConsumerPlugin)
 		if ok {
 			consumerNeeded = true
 		}
