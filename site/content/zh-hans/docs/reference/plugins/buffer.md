@@ -33,7 +33,6 @@ metadata:
 spec:
   parentRefs:
   - name: default
-    namespace: default
   rules:
   - matches:
     - path:

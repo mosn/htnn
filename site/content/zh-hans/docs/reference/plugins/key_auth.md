@@ -45,7 +45,6 @@ apiVersion: htnn.mosn.io/v1
 kind: Consumer
 metadata:
   name: consumer
-  namespace: default
 spec:
   auth:
     keyAuth:
@@ -53,13 +52,41 @@ spec:
         key: rick
 ```
 
-假设我们提供了如下配置到 `http://127.0.0.1:10000/`：
+假设我们有下面附加到 `localhost:10000` 的 HTTPRoute，并且有一个后端服务器监听端口 `8080`：
 
 ```yaml
-keys:
-  - name: Authorization
-  - name: ak
-    source: QUERY
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: default
+spec:
+  parentRefs:
+  - name: default
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - name: backend
+      port: 8080
+---
+apiVersion: htnn.mosn.io/v1
+kind: HTTPFilterPolicy
+metadata:
+  name: policy
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: default
+  filters:
+    keyAuth:
+      config:
+        keys:
+        - name: Authorization
+        - name: ak
+          source: QUERY
 ```
 
 插件将首先检查请求头 `Authorization`，然后检查查询参数 `ak`。
@@ -67,24 +94,24 @@ keys:
 让我们试一试：
 
 ```
-$ curl -I http://127.0.0.1:10000/ -H "Authorization: rick"
+$ curl -I http://localhost:10000/ -H "Authorization: rick"
 HTTP/1.1 200 OK
 ```
 
 ```
-$ curl -I http://127.0.0.1:10000/ -H "Authorization: morty"
+$ curl -I http://localhost:10000/ -H "Authorization: morty"
 HTTP/1.1 401 Unauthorized
 ```
 
 ```
-$ curl -I 'http://127.0.0.1:10000/?ak=rick'
+$ curl -I 'http://localhost:10000/?ak=rick'
 HTTP/1.1 200 OK
 ```
 
 注意，如果请求中存在一个配置的 `key`，那么在 `keys` 中后续的 `key` 将不会用于认证客户端：
 
 ```
-$ curl -I 'http://127.0.0.1:10000/?ak=rick' -H "Authorization: morty"
+$ curl -I 'http://localhost:10000/?ak=rick' -H "Authorization: morty"
 HTTP/1.1 401 Unauthorized
 ```
 

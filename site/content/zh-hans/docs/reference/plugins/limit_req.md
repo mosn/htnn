@@ -28,10 +28,38 @@ title: Limit Req
 
 ## 用法
 
-假设我们为 `http://localhost:10000/` 提供了如下配置：
+假设我们有下面附加到 `localhost:10000` 的 HTTPRoute，并且有一个后端服务器监听端口 `8080`：
 
 ```yaml
-average: 1 # 限制请求到每秒 1 次
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: default
+spec:
+  parentRefs:
+  - name: default
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - name: backend
+      port: 8080
+---
+apiVersion: htnn.mosn.io/v1
+kind: HTTPFilterPolicy
+metadata:
+  name: policy
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: default
+  filters:
+    keyAuth:
+      config:
+        average: 1 # 限制请求到每秒 1 次
 ```
 
 第一个请求将获得 `200` 状态码，随后的请求将以 `429` 被丢弃：

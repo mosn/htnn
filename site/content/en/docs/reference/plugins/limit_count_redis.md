@@ -53,8 +53,9 @@ Requests are counted by client IP by default. You can also configure `key` to us
 
 ## Usage
 
-First, let's start a Redis listening on port 6379.
-Suppose we provided the following configuration to `http://localhost:10000/`:
+First, let's assume we have a Redis service `redis.service` which is listening on port 6379.
+
+Assumed we have the HTTPRoute below attached to `localhost:10000`, and a backend server listening to port `8080`:
 
 ```yaml
 apiVersion: gateway.networking.k8s.io/v1
@@ -64,7 +65,6 @@ metadata:
 spec:
   parentRefs:
   - name: default
-    namespace: default
   rules:
   - matches:
     - path:
@@ -86,7 +86,7 @@ spec:
   filters:
     limitCountRedis:
       config:
-        address: "0.0.0.0:6379"
+        address: "redis.service:6379"
         enableLimitQuotaHeaders: true
         failureModeDeny: true
         rules:

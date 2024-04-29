@@ -87,17 +87,12 @@ Here is the JSON data OPA sends back to HTNN, set by the configured policy:
 
 ### Interact with Remote OPA service
 
-First of all, launch the Open Policy Agent:
+First of all, assumed we have the Open Policy Agent run as `opa.service`.
+
+Let's add a policy:
 
 ```shell
-cd ./plugins/tests/integration/testdata/services
-docker-compose up opa
-```
-
-Once the OPA service is ready, we can add a policy:
-
-```shell
-curl -X PUT '127.0.0.1:8181/v1/policies/test' \
+curl -X PUT 'opa.service:8181/v1/policies/test' \
     -H 'Content-Type: text/plain' \
     -d 'package test
 
@@ -111,13 +106,40 @@ allow {
 }'
 ```
 
-Then we provide a configuration to `http://localhost:10000/echo` like:
+Assumed we have the HTTPRoute below attached to `localhost:10000`, and a backend server listening to port `8080`:
 
 ```yaml
-opa:
-    remote:
-        url: "http://opa:8181"
-        policy: test
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: default
+spec:
+  parentRefs:
+  - name: default
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - name: backend
+      port: 8080
+---
+apiVersion: htnn.mosn.io/v1
+kind: HTTPFilterPolicy
+metadata:
+  name: policy
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: default
+  filters:
+    opa:
+      config:
+        remote:
+          url: "http://opa.service:8181"
+          policy: test
 ```
 
 As you can see, the policy `test` will be used to evaluate the input that we send to the OPA service.
