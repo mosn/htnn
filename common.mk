@@ -20,10 +20,10 @@ TARGET_SO       = libgolang.so
 PROJECT_NAME    = mosn.io/htnn
 # Both images use glibc 2.31. Ensure libc in the images match each other.
 BUILD_IMAGE     ?= golang:1.21-bullseye
-# This is the envoyproxy/envoy:contrib-v1.29.2
-# Use docker inspect --format='{{index .RepoDigests 0}}' envoyproxy/envoy:contrib-v1.29.2
+# This is the envoyproxy/envoy:contrib-v1.29.4
+# Use docker inspect --format='{{index .RepoDigests 0}}' envoyproxy/envoy:contrib-v1.29.4
 # to get the sha256 ID
-PROXY_IMAGE     ?= envoyproxy/envoy@sha256:c47136604751274b30fa7a89132314b8e3586d54d8f8cc30d7a911a9ecc5e11c
+PROXY_IMAGE     ?= envoyproxy/envoy@sha256:490f58e109735df4326bac2736ed41e062ce541d3851d634ccbf24552e5b4ce5
 # We don't use istio/proxyv2 because it is not designed to be run separately (need to work around permission issue).
 
 # We may need to use timestamp if we need to update the image in one PR
@@ -32,6 +32,7 @@ DEV_TOOLS_IMAGE ?= ghcr.io/mosn/htnn-dev-tools:2024-03-05
 VERSION   = $(shell cat VERSION)
 GIT_VERSION     = $(shell git log -1 --pretty=format:%h)
 
+ISTIO_VERSION = 1.21.2
 MIN_K8S_VERSION = 1.26.0
 
 GO_PROD_MODULES = api types controller plugins # To make life simper, we only run linter on 'prod modules'
