@@ -41,7 +41,7 @@ delete-cluster: kind
 
 .PHONY: e2e-build-controller-image
 e2e-build-controller-image:
-	cd ../controller/ && IMG=htnn/e2e-cp:0.1.0 make docker-build
+	cd ../controller/ && IMG=htnn/e2e-cp:0.1.0 CONTROLLER_BASE_IMAGE=docker.io/istio/pilot:$(ISTIO_VERSION) make docker-build
 
 e2e-build-so:
 	cd ../plugins/ && make build-so && mv libgolang.so ../e2e/
@@ -54,7 +54,7 @@ e2e-prepare-data-plane-image: e2e-build-so kind
 .PHONY: deploy-istio
 deploy-istio:
 	$(KUBECTL) apply -f ./base/istio_prestart.yaml
-	ISTIO_VERSION=1.21.0 ./istio.sh install
+	ISTIO_VERSION=$(ISTIO_VERSION) ./istio.sh install
 
 .PHONY: deploy-controller
 deploy-controller: kind kubectl

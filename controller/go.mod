@@ -23,7 +23,7 @@ go 1.21.5
 
 require (
 	github.com/agiledragon/gomonkey/v2 v2.11.0
-	github.com/envoyproxy/go-control-plane v0.12.1-0.20240117015050-472addddff92
+	github.com/envoyproxy/go-control-plane v0.12.1-0.20240326194405-485b2263e153
 	github.com/go-logr/logr v1.4.1
 	github.com/go-logr/zapr v1.3.0
 	github.com/nacos-group/nacos-sdk-go v1.1.4
@@ -36,8 +36,8 @@ require (
 	golang.org/x/text v0.14.0
 	google.golang.org/protobuf v1.33.0
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
-	istio.io/api v1.21.0
-	istio.io/client-go v1.21.0
+	istio.io/api v1.21.2
+	istio.io/client-go v1.21.2
 	k8s.io/api v0.29.3
 	k8s.io/apimachinery v0.29.3
 	k8s.io/client-go v0.29.3
@@ -95,9 +95,10 @@ require (
 	github.com/open-policy-agent/opa v0.63.0 // indirect
 	github.com/pelletier/go-toml/v2 v2.1.0 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
+	github.com/planetscale/vtprotobuf v0.5.1-0.20231212170721-e7d721933795 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/prometheus/client_golang v1.19.0 // indirect
-	github.com/prometheus/client_model v0.5.0 // indirect
+	github.com/prometheus/client_model v0.6.0 // indirect
 	github.com/prometheus/common v0.48.0 // indirect
 	github.com/prometheus/procfs v0.12.0 // indirect
 	github.com/rcrowley/go-metrics v0.0.0-20200313005456-10cdbea86bc0 // indirect
