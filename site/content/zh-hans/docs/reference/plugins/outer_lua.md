@@ -25,7 +25,7 @@ title: Outer Lua
 
 ## 配置
 
-参见对应的 [Envoy 文档](https://www.envoyproxy.io/docs/envoy/v1.29.2/configuration/http/http_filters/lua_filter)。
+参见对应的 [Envoy 文档](https://www.envoyproxy.io/docs/envoy/v1.29.4/configuration/http/http_filters/lua_filter)。
 
 ## 用法
 
