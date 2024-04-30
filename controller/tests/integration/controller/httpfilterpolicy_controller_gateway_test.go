@@ -46,12 +46,27 @@ var _ = Describe("HTTPFilterPolicy controller, for gateway", func() {
 			}
 		}
 
+		Eventually(func() bool {
+			if err := k8sClient.List(ctx, &policies); err != nil {
+				return false
+			}
+			return len(policies.Items) == 0
+		}, timeout, interval).Should(BeTrue())
+
 		var envoyfilters istiov1a3.EnvoyFilterList
 		if err := k8sClient.List(ctx, &envoyfilters); err == nil {
 			for _, e := range envoyfilters.Items {
 				pkg.DeleteK8sResource(ctx, k8sClient, e)
 			}
 		}
+
+		Eventually(func() bool {
+			if err := k8sClient.List(ctx, &envoyfilters); err != nil {
+				return false
+			}
+			return len(envoyfilters.Items) == 0
+		}, timeout, interval).Should(BeTrue())
+
 	})
 
 	Context("When generating LDS plugin configuration via ECDS (Istio Gateway)", func() {
@@ -59,14 +74,6 @@ var _ = Describe("HTTPFilterPolicy controller, for gateway", func() {
 			// use env to set the conf
 			os.Setenv("HTNN_ENABLE_LDS_PLUGIN_VIA_ECDS", "true")
 			config.Init()
-
-			input := []map[string]interface{}{}
-			mustReadHTTPFilterPolicy("default_istio", &input)
-
-			for _, in := range input {
-				obj := pkg.MapToObj(in)
-				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
-			}
 		})
 
 		AfterEach(func() {
@@ -89,32 +96,45 @@ var _ = Describe("HTTPFilterPolicy controller, for gateway", func() {
 		})
 
 		It("should produce HTTP filter with discovery for ECDS", func() {
+			input := []map[string]interface{}{}
+			mustReadHTTPFilterPolicy("default_istio", &input)
+
+			for _, in := range input {
+				obj := pkg.MapToObj(in)
+				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
+			}
+
 			var envoyfilters istiov1a3.EnvoyFilterList
 			Eventually(func() bool {
 				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
 					return false
 				}
-				return len(envoyfilters.Items) == 2
-			}, timeout, interval).Should(BeTrue())
+				efFound := false
+				for _, ef := range envoyfilters.Items {
+					if ef.Name == "htnn-h-default" {
+						efFound = true
 
-			efFound := false
-			for _, ef := range envoyfilters.Items {
-				if ef.Name == "htnn-h-default" {
-					efFound = true
-
-					Expect(len(ef.Spec.ConfigPatches)).To(Equal(2))
-					cp := ef.Spec.ConfigPatches[0]
-					Expect(cp.ApplyTo).To(Equal(istioapi.EnvoyFilter_HTTP_FILTER))
-					cp = ef.Spec.ConfigPatches[1]
-					Expect(cp.ApplyTo).To(Equal(istioapi.EnvoyFilter_EXTENSION_CONFIG))
+						Expect(len(ef.Spec.ConfigPatches)).To(Equal(2))
+						cp := ef.Spec.ConfigPatches[0]
+						Expect(cp.ApplyTo).To(Equal(istioapi.EnvoyFilter_HTTP_FILTER))
+						cp = ef.Spec.ConfigPatches[1]
+						Expect(cp.ApplyTo).To(Equal(istioapi.EnvoyFilter_EXTENSION_CONFIG))
+					}
 				}
-			}
-			Expect(efFound).To(BeTrue())
+				return efFound
+			}, timeout, interval).Should(BeTrue())
 		})
 
 		It("deal with Istio gateway", func() {
 			ctx := context.Background()
 			input := []map[string]interface{}{}
+			mustReadHTTPFilterPolicy("default_istio", &input)
+
+			for _, in := range input {
+				obj := pkg.MapToObj(in)
+				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
+			}
+
 			mustReadHTTPFilterPolicy("istio_gateway", &input)
 
 			for _, in := range input {
@@ -185,14 +205,6 @@ var _ = Describe("HTTPFilterPolicy controller, for gateway", func() {
 		BeforeEach(func() {
 			os.Setenv("HTNN_ENABLE_LDS_PLUGIN_VIA_ECDS", "true")
 			config.Init()
-
-			input := []map[string]interface{}{}
-			mustReadHTTPFilterPolicy("default_gwapi", &input)
-
-			for _, in := range input {
-				obj := pkg.MapToObj(in)
-				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
-			}
 		})
 
 		AfterEach(func() {
@@ -215,32 +227,45 @@ var _ = Describe("HTTPFilterPolicy controller, for gateway", func() {
 		})
 
 		It("should produce HTTP filter with discovery for ECDS", func() {
+			input := []map[string]interface{}{}
+			mustReadHTTPFilterPolicy("default_gwapi", &input)
+
+			for _, in := range input {
+				obj := pkg.MapToObj(in)
+				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
+			}
+
 			var envoyfilters istiov1a3.EnvoyFilterList
 			Eventually(func() bool {
 				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
 					return false
 				}
-				return len(envoyfilters.Items) == 2
-			}, timeout, interval).Should(BeTrue())
+				efFound := false
+				for _, ef := range envoyfilters.Items {
+					if ef.Name == "htnn-h-default" {
+						efFound = true
 
-			efFound := false
-			for _, ef := range envoyfilters.Items {
-				if ef.Name == "htnn-h-default" {
-					efFound = true
-
-					Expect(len(ef.Spec.ConfigPatches)).To(Equal(2))
-					cp := ef.Spec.ConfigPatches[0]
-					Expect(cp.ApplyTo).To(Equal(istioapi.EnvoyFilter_HTTP_FILTER))
-					cp = ef.Spec.ConfigPatches[1]
-					Expect(cp.ApplyTo).To(Equal(istioapi.EnvoyFilter_EXTENSION_CONFIG))
+						Expect(len(ef.Spec.ConfigPatches)).To(Equal(2))
+						cp := ef.Spec.ConfigPatches[0]
+						Expect(cp.ApplyTo).To(Equal(istioapi.EnvoyFilter_HTTP_FILTER))
+						cp = ef.Spec.ConfigPatches[1]
+						Expect(cp.ApplyTo).To(Equal(istioapi.EnvoyFilter_EXTENSION_CONFIG))
+					}
 				}
-			}
-			Expect(efFound).To(BeTrue())
+				return efFound
+			}, timeout, interval).Should(BeTrue())
 		})
 
 		It("deal with k8s gateway", func() {
 			ctx := context.Background()
 			input := []map[string]interface{}{}
+			mustReadHTTPFilterPolicy("default_gwapi", &input)
+
+			for _, in := range input {
+				obj := pkg.MapToObj(in)
+				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
+			}
+
 			mustReadHTTPFilterPolicy("gateway", &input)
 
 			for _, in := range input {

@@ -67,6 +67,7 @@ func TestRegistries(t *testing.T) {
 var _ = BeforeSuite(func() {
 	zlog := zap.New(zap.WriteTo(GinkgoWriter), zap.UseDevMode(true))
 	logf.SetLogger(zlog)
+	log.InitLogger("console")
 	log.SetLogger(log.WrapLogr(zlog))
 	ctx, cancel = context.WithCancel(context.TODO())
 
