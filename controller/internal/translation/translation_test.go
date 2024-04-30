@@ -58,7 +58,8 @@ func mustUnmarshal(t *testing.T, fn string, out interface{}) {
 }
 
 type Features struct {
-	EnableLDSPluginViaECDS bool `json:"enableLDSPluginViaECDS"`
+	EnableLDSPluginViaECDS   bool `json:"enableLDSPluginViaECDS"`
+	UseWildcardIPv6InLDSName bool `json:"useWildcardIPv6InLDSName"`
 }
 
 type testInput struct {
@@ -88,11 +89,17 @@ func TestTranslate(t *testing.T) {
 				if feats.EnableLDSPluginViaECDS {
 					os.Setenv("HTNN_ENABLE_LDS_PLUGIN_VIA_ECDS", "true")
 				}
+				if feats.UseWildcardIPv6InLDSName {
+					os.Setenv("HTNN_USE_WILDCARD_IPV6_IN_LDS_NAME", "true")
+				}
 				config.Init()
 
 				defer func() {
 					if feats.EnableLDSPluginViaECDS {
 						os.Setenv("HTNN_ENABLE_LDS_PLUGIN_VIA_ECDS", "false")
+					}
+					if feats.UseWildcardIPv6InLDSName {
+						os.Setenv("HTNN_USE_WILDCARD_IPV6_IN_LDS_NAME", "false")
 					}
 					config.Init()
 				}()

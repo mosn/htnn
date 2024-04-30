@@ -28,6 +28,7 @@ func setEnvForTest() {
 	os.Setenv("HTNN_ENVOY_GO_SO_PATH", "/usr/local/golang.so")
 	os.Setenv("HTNN_ISTIO_ROOT_NAMESPACE", "htnn")
 	os.Setenv("HTNN_ENABLE_LDS_PLUGIN_VIA_ECDS", "true")
+	os.Setenv("HTNN_USE_WILDCARD_IPV6_IN_LDS_NAME", "true")
 }
 
 func TestInit(t *testing.T) {
@@ -40,6 +41,7 @@ func TestInit(t *testing.T) {
 	assert.Equal(t, "/etc/libgolang.so", GoSoPath())
 	assert.Equal(t, "istio-system", RootNamespace())
 	assert.Equal(t, false, EnableLDSPluginViaECDS())
+	assert.Equal(t, false, UseWildcardIPv6InLDSName())
 
 	setEnvForTest()
 	Init()
@@ -50,4 +52,5 @@ func TestInit(t *testing.T) {
 	assert.Equal(t, "/usr/local/golang.so", GoSoPath())
 	assert.Equal(t, "htnn", RootNamespace())
 	assert.Equal(t, true, EnableLDSPluginViaECDS())
+	assert.Equal(t, true, UseWildcardIPv6InLDSName())
 }
