@@ -33,6 +33,7 @@ install() {
         --set .values.pilot.env.ISTIO_DELTA_XDS=true \
         --set .values.pilot.env.PILOT_SCOPE_GATEWAY_TO_NAMESPACE=true \
         --set .values.pilot.env.PILOT_ENABLE_HTNN=true \
+        --set .values.pilot.env.HTNN_ENABLE_LDS_PLUGIN_VIA_ECDS=true \
         --set .values.pilot.env.UNSAFE_PILOT_ENABLE_RUNTIME_ASSERTIONS=true \
         --set .values.pilot.env.UNSAFE_PILOT_ENABLE_DELTA_TEST=true \
         --set .values.global.proxy.image="htnn/e2e-dp:0.1.0" \

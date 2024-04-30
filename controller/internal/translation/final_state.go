@@ -27,10 +27,13 @@ import (
 	"mosn.io/htnn/controller/internal/istio"
 	"mosn.io/htnn/controller/internal/model"
 	"mosn.io/htnn/controller/pkg/component"
+	"mosn.io/htnn/controller/pkg/constant"
 )
 
 const (
 	AnnotationInfo = "htnn.mosn.io/info"
+
+	DefaultEnvoyFilterPriority = -10
 )
 
 var (
@@ -43,7 +46,7 @@ var (
 // 3. Allow merging the same route configuration into virtual host level.
 // There are also some drawbacks. For example, a domain shared by hundreds of VirtualServices will
 // cause one big EnvoyFilter. Let's see if it's a problem.
-func envoyFilterName(vhost *model.VirtualHost) string {
+func envoyFilterNameFromVirtualHost(vhost *model.VirtualHost) string {
 	// Strip the port number. We don't need to create two EnvoyFilters for :80 and :443.
 	domain, port, _ := net.SplitHostPort(vhost.Name)
 	// We join the host & port in toDataPlaneState so the domain is not nil
@@ -82,11 +85,19 @@ type envoyFilterWrapper struct {
 	info *Info
 }
 
+func getECDSResourceName(workloadNamespace string, ldsName string) string {
+	return fmt.Sprintf("htnn-%s-%s-golang-filter", workloadNamespace, ldsName)
+}
+
 func toFinalState(_ *Ctx, state *mergedState) (*FinalState, error) {
 	efs := istio.DefaultEnvoyFilters()
+	for _, ef := range efs {
+		ef.Spec.Priority = DefaultEnvoyFilterPriority
+	}
 	efList := []*envoyFilterWrapper{}
 
-	for proxy, hostRules := range state.Hosts {
+	for proxy, cfg := range state.Proxies {
+		hostRules := cfg.Hosts
 		for _, host := range hostRules {
 			for routeName, route := range host.Routes {
 				ef := istio.GenerateRouteFilter(host.VirtualHost, routeName, route.Config)
@@ -97,18 +108,36 @@ func toFinalState(_ *Ctx, state *mergedState) (*FinalState, error) {
 				// that the namespace of workload matches the namespace of gateway.
 				ns := proxy.Namespace
 				ef.SetNamespace(ns)
-				name := envoyFilterName(host.VirtualHost)
+				name := envoyFilterNameFromVirtualHost(host.VirtualHost)
 				ef.SetName(name)
-				if ef.Labels == nil {
-					ef.Labels = map[string]string{}
-				}
-				ef.Labels[model.LabelCreatedBy] = "HTTPFilterPolicy"
 
 				efList = append(efList, &envoyFilterWrapper{
 					EnvoyFilter: ef,
 					info:        route.Info,
 				})
 			}
+		}
+
+		gateways := cfg.Gateways
+		for name, gateway := range gateways {
+			ns := proxy.Namespace
+			key := getECDSResourceName(ns, name)
+			var config map[string]interface{}
+			var info *Info
+			if gateway.Policy != nil {
+				config = gateway.Policy.Config
+				info = gateway.Policy.Info
+			}
+
+			ef := istio.GenerateLDSFilterViaECDS(key, name, config)
+			ef.SetNamespace(ns)
+			// Put all LDS level golang filters of the same namespace into the same EnvoyFilter.
+			ef.SetName(fmt.Sprintf("htnn-h-%s", ns))
+
+			efList = append(efList, &envoyFilterWrapper{
+				EnvoyFilter: ef,
+				info:        info,
+			})
 		}
 	}
 
@@ -122,7 +151,13 @@ func toFinalState(_ *Ctx, state *mergedState) (*FinalState, error) {
 		}
 		if curr, ok := efws[key]; ok {
 			curr.Spec.ConfigPatches = append(curr.Spec.ConfigPatches, ef.Spec.ConfigPatches...)
-			curr.info.Merge(ef.info)
+			if ef.info != nil {
+				if curr.info == nil {
+					curr.info = ef.info
+				} else {
+					curr.info.Merge(ef.info)
+				}
+			}
 		} else {
 			efws[key] = ef
 		}
@@ -134,11 +169,25 @@ func toFinalState(_ *Ctx, state *mergedState) (*FinalState, error) {
 				AnnotationInfo: ef.info.String(),
 			})
 		}
+		if ef.Labels == nil {
+			ef.Labels = map[string]string{}
+		}
+		ef.Labels[constant.LabelCreatedBy] = "HTTPFilterPolicy"
+
 		// Sort here to avoid EnvoyFilter change caused by the order of ConfigPatch.
-		// Each ConfigPatch should have a unique (vhost, routeName).
 		sort.Slice(ef.Spec.ConfigPatches, func(i, j int) bool {
 			a := ef.Spec.ConfigPatches[i]
 			b := ef.Spec.ConfigPatches[j]
+			aName := a.Patch.Value.AsMap()["name"]
+			bName := b.Patch.Value.AsMap()["name"]
+			if aName != nil && bName != nil {
+				// EnvoyFilter for ECDS
+				return aName.(string) < bName.(string)
+			} else if aName != nil {
+				return true
+			} else if bName != nil {
+				return false
+			}
 			aVhost := a.Match.GetRouteConfiguration().GetVhost()
 			bVhost := b.Match.GetRouteConfiguration().GetVhost()
 			if aVhost.Name != bVhost.Name {

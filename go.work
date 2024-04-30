@@ -18,11 +18,11 @@
 go 1.21.5
 
 use (
-    ./site
-    ./api
-    ./types
-    ./controller
-    ./plugins
-    ./e2e
-    ./external/istio
+	./api
+	./controller
+	./e2e
+	./external/istio
+	./plugins
+	./site
+	./types
 )

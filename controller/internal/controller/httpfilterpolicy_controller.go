@@ -41,9 +41,9 @@ import (
 	"mosn.io/htnn/controller/internal/config"
 	"mosn.io/htnn/controller/internal/log"
 	"mosn.io/htnn/controller/internal/metrics"
-	"mosn.io/htnn/controller/internal/model"
 	"mosn.io/htnn/controller/internal/translation"
 	"mosn.io/htnn/controller/pkg/component"
+	"mosn.io/htnn/controller/pkg/constant"
 	mosniov1 "mosn.io/htnn/types/apis/v1"
 )
 
@@ -390,6 +390,55 @@ func (r *HTTPFilterPolicyReconciler) resolveHTTPRoute(ctx context.Context,
 	return nil
 }
 
+func (r *HTTPFilterPolicyReconciler) resolveIstioGateway(ctx context.Context,
+	policy *mosniov1.HTTPFilterPolicy, initState *translation.InitState) error {
+
+	ref := policy.Spec.TargetRef
+	nsName := types.NamespacedName{Name: string(ref.Name), Namespace: policy.Namespace}
+	var gateway istiov1a3.Gateway
+	err := r.Get(ctx, nsName, &gateway)
+	if err != nil {
+		if !apierrors.IsNotFound(err) {
+			return fmt.Errorf("failed to get Istio Gateway: %w, NamespacedName: %v", err, nsName)
+		}
+
+		policy.SetAccepted(gwapiv1a2.PolicyReasonTargetNotFound)
+		return nil
+	}
+
+	err = mosniov1.ValidateGateway(&gateway)
+	if err != nil {
+		log.Infof("unsupported Istio Gateway, name: %s, namespace: %s, reason: %v", gateway.Name, gateway.Namespace, err.Error())
+		policy.SetAccepted(gwapiv1a2.PolicyReasonTargetNotFound, err.Error())
+		return nil
+	}
+
+	initState.AddPolicyForIstioGateway(policy, &gateway)
+	policy.SetAccepted(gwapiv1a2.PolicyReasonAccepted)
+	return nil
+}
+
+func (r *HTTPFilterPolicyReconciler) resolveK8sGateway(ctx context.Context,
+	policy *mosniov1.HTTPFilterPolicy, initState *translation.InitState) error {
+
+	ref := policy.Spec.TargetRef
+	nsName := types.NamespacedName{Name: string(ref.Name), Namespace: policy.Namespace}
+	var gateway gwapiv1b1.Gateway
+	err := r.Get(ctx, nsName, &gateway)
+	if err != nil {
+		if !apierrors.IsNotFound(err) {
+			return fmt.Errorf("failed to get K8S Gateway: %w, NamespacedName: %v", err, nsName)
+		}
+
+		policy.SetAccepted(gwapiv1a2.PolicyReasonTargetNotFound)
+		return nil
+	}
+
+	initState.AddPolicyForK8sGateway(policy, &gateway)
+	policy.SetAccepted(gwapiv1a2.PolicyReasonAccepted)
+	return nil
+}
+
 func (r *HTTPFilterPolicyReconciler) policyToTranslationState(ctx context.Context,
 	policies *mosniov1.HTTPFilterPolicyList) (*translation.InitState, error) {
 
@@ -423,6 +472,8 @@ func (r *HTTPFilterPolicyReconciler) policyToTranslationState(ctx context.Contex
 		r.httpRouteIndexer.UpdateIndex(hrIdx)
 	}
 
+	supportGatewayPolicy := config.EnableLDSPluginViaECDS()
+
 	for i := range policies.Items {
 		policy := &policies.Items[i]
 		ref := policy.Spec.TargetRef
@@ -452,10 +503,22 @@ func (r *HTTPFilterPolicyReconciler) policyToTranslationState(ctx context.Contex
 		}
 
 		var err error
-		if ref.Group == "networking.istio.io" && ref.Kind == "VirtualService" {
-			err = r.resolveVirtualService(ctx, policy, initState, istioGwIdx)
-		} else if ref.Group == "gateway.networking.k8s.io" && ref.Kind == "HTTPRoute" {
-			err = r.resolveHTTPRoute(ctx, policy, initState, k8sGwIdx)
+		if ref.Group == "networking.istio.io" {
+			if ref.Kind == "VirtualService" {
+				err = r.resolveVirtualService(ctx, policy, initState, istioGwIdx)
+			} else if ref.Kind == "Gateway" && supportGatewayPolicy {
+				key := getK8sKey(nsName.Namespace, nsName.Name)
+				istioGwIdx[key] = append(istioGwIdx[key], policy)
+				err = r.resolveIstioGateway(ctx, policy, initState)
+			}
+		} else if ref.Group == "gateway.networking.k8s.io" {
+			if ref.Kind == "HTTPRoute" {
+				err = r.resolveHTTPRoute(ctx, policy, initState, k8sGwIdx)
+			} else if ref.Kind == "Gateway" && supportGatewayPolicy {
+				key := getK8sKey(nsName.Namespace, nsName.Name)
+				k8sGwIdx[key] = append(k8sGwIdx[key], policy)
+				err = r.resolveK8sGateway(ctx, policy, initState)
+			}
 		}
 		if err != nil {
 			return nil, err
@@ -471,12 +534,12 @@ func (r *HTTPFilterPolicyReconciler) policyToTranslationState(ctx context.Contex
 
 		for _, vs := range virtualServices.Items {
 			ann := vs.GetAnnotations()
-			if ann == nil || ann[model.AnnotationHTTPFilterPolicy] == "" {
+			if ann == nil || ann[constant.AnnotationHTTPFilterPolicy] == "" {
 				continue
 			}
 
 			var policy mosniov1.HTTPFilterPolicy
-			err := json.Unmarshal([]byte(ann[model.AnnotationHTTPFilterPolicy]), &policy)
+			err := json.Unmarshal([]byte(ann[constant.AnnotationHTTPFilterPolicy]), &policy)
 			if err != nil {
 				log.Errorf("failed to unmarshal policy out from VirtualService, err: %v, name: %s, namespace: %s", err, vs.Name, vs.Namespace)
 				continue
@@ -496,6 +559,29 @@ func (r *HTTPFilterPolicyReconciler) policyToTranslationState(ctx context.Contex
 		}
 
 		r.virtualServiceIndexer.UpdateIndex(vsIdx)
+	}
+
+	if config.EnableLDSPluginViaECDS() {
+		var gateways istiov1a3.GatewayList
+		if err := r.List(ctx, &gateways); err != nil {
+			return nil, fmt.Errorf("failed to list Istio Gateway: %w", err)
+		}
+
+		for _, gw := range gateways.Items {
+			initState.AddIstioGateway(gw)
+		}
+
+		if config.EnableGatewayAPI() {
+			var k8sGateways gwapiv1b1.GatewayList
+			if err := r.List(ctx, &k8sGateways); err != nil {
+				return nil, fmt.Errorf("failed to list k8s Gateway: %w", err)
+			}
+
+			for i := range k8sGateways.Items {
+				initState.AddK8sGateway(&k8sGateways.Items[i])
+			}
+
+		}
 	}
 
 	// Only update index when the processing is successful. This prevents gateways from being partially indexed.
@@ -547,8 +633,16 @@ func (v *customResourceIndexer) UpdateIndex(idx map[string][]*mosniov1.HTTPFilte
 func (v *customResourceIndexer) FindAffectedObjects(ctx context.Context, obj component.ResourceMeta) []reconcile.Request {
 	if config.EnableEmbeddedMode() {
 		ann := obj.GetAnnotations()
-		if ann != nil && ann[model.AnnotationHTTPFilterPolicy] != "" {
+		if ann != nil && ann[constant.AnnotationHTTPFilterPolicy] != "" {
 			log.Infof("Target with embedded HTTPFilterPolicy changed, trigger reconciliation, group: %s, kind: %s, namespace: %s, name: %s",
+				obj.GetGroup(), obj.GetKind(), obj.GetNamespace(), obj.GetName())
+			return triggerReconciliation()
+		}
+	}
+
+	if config.EnableLDSPluginViaECDS() {
+		if (v.Group == "networking.istio.io" || v.Group == "gateway.networking.k8s.io") && v.Kind == "Gateway" {
+			log.Infof("Resource changed, trigger reconciliation, group: %s, kind: %s, namespace: %s, name: %s",
 				obj.GetGroup(), obj.GetKind(), obj.GetNamespace(), obj.GetName())
 			return triggerReconciliation()
 		}

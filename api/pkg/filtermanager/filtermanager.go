@@ -90,9 +90,7 @@ func (p *FilterManagerConfigParser) Parse(any *anypb.Any, callbacks capi.ConfigC
 
 	// No configuration
 	if any.GetTypeUrl() == "" {
-		conf := &filterManagerConfig{
-			parsed: []*model.ParsedFilterConfig{},
-		}
+		conf := initFilterManagerConfig("")
 		return conf, nil
 	}
 

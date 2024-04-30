@@ -244,3 +244,4 @@ webhooks:
     scope: '*'
   sideEffects: None
   timeoutSeconds: 10
+# Don't add istio resource after this resource - there's a race that the webhook is updating and causes the validation to fail

@@ -20,11 +20,11 @@ import (
 
 type Gateway struct {
 	NsName *types.NamespacedName
-	Port   uint32
 }
 
 type VirtualHost struct {
-	Gateway *Gateway
-	NsName  *types.NamespacedName
-	Name    string
+	Gateway          *Gateway
+	NsName           *types.NamespacedName
+	Name             string
+	ECDSResourceName string
 }

@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"mosn.io/htnn/api/pkg/plugins"
 	"mosn.io/htnn/types/pkg/proto"
@@ -43,7 +44,46 @@ func ValidateHTTPFilterPolicyStrictly(policy *HTTPFilterPolicy) error {
 	return validateHTTPFilterPolicy(policy, true)
 }
 
+func validateFilter(name string, filter HTTPPlugin, strict bool, targetGateway bool) error {
+	p := plugins.LoadHttpPluginType(name)
+	if p == nil {
+		if strict {
+			return errors.New("unknown http filter: " + name)
+		}
+		return nil
+	}
+
+	if targetGateway {
+		switch p.Order().Position {
+		case plugins.OrderPositionOuter, plugins.OrderPositionInner:
+			// We can't directly provide different ECDS for every native plugins. There will
+			// be more than 20 native plugins in the future, and it's not reasonable to provide
+			// such number (20 x the number of LDS) of ECDS resources. Perhaps we can use
+			// composite filter to solve this problem?
+			return errors.New("configure native plugins to the Gateway is not implemented")
+		}
+	}
+
+	data := filter.Config.Raw
+	conf := p.Config()
+	var err error
+	if strict {
+		err = proto.UnmarshalJSONStrictly(data, conf)
+	} else {
+		err = proto.UnmarshalJSON(data, conf)
+	}
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal for filter %s: %w", name, err)
+	}
+
+	if err := conf.Validate(); err != nil {
+		return fmt.Errorf("invalid config for filter %s: %w", name, err)
+	}
+	return nil
+}
+
 func validateHTTPFilterPolicy(policy *HTTPFilterPolicy, strict bool) error {
+	targetGateway := false
 	ref := policy.Spec.TargetRef
 	if ref != nil {
 		if ref.Namespace != nil {
@@ -60,39 +100,47 @@ func validateHTTPFilterPolicy(policy *HTTPFilterPolicy, strict bool) error {
 		}
 
 		validTarget := false
-		if ref.Group == "networking.istio.io" && ref.Kind == "VirtualService" {
-			validTarget = true
-		} else if ref.Group == "gateway.networking.k8s.io" && ref.Kind == "HTTPRoute" {
-			validTarget = true
+		if ref.Group == "networking.istio.io" {
+			switch ref.Kind {
+			case "VirtualService":
+				validTarget = true
+			case "Gateway":
+				// To target HTTPFilterPolicy to Gateway, ensure environment variable "HTNN_ENABLE_LDS_PLUGIN_VIA_ECDS"
+				// is set to "true" in the controller.
+				// Note that the Gateway support may be different than you think. As we attach the generated ECDS to the
+				// LDS, and istio will merge multiple Gateways which listen on the same port to a LDS, so the HTTPFilterPolicy
+				// will not just target one Gateway if you have multiple Gateway which listen on the same port but have different hostname.
+				//
+				// TODO: implement the Gateway support via RDS, so it matches the model 100%.
+				validTarget = true
+			}
+		} else if ref.Group == "gateway.networking.k8s.io" {
+			switch ref.Kind {
+			case "HTTPRoute", "Gateway":
+				validTarget = true
+			}
 		}
 		if !validTarget {
 			return errors.New("unsupported targetRef.group or targetRef.kind")
 		}
+
+		targetGateway = ref.Kind == "Gateway"
 	}
 
 	for name, filter := range policy.Spec.Filters {
-		p := plugins.LoadHttpPluginType(name)
-		if p == nil {
-			if strict {
-				return errors.New("unknown http filter: " + name)
-			}
-			continue
-		}
-
-		data := filter.Config.Raw
-		conf := p.Config()
-		var err error
-		if strict {
-			err = proto.UnmarshalJSONStrictly(data, conf)
-		} else {
-			err = proto.UnmarshalJSON(data, conf)
-		}
+		err := validateFilter(name, filter, strict, targetGateway)
 		if err != nil {
-			return fmt.Errorf("failed to unmarshal for filter %s: %w", name, err)
+			return err
 		}
+	}
 
-		if err := conf.Validate(); err != nil {
-			return fmt.Errorf("invalid config for filter %s: %w", name, err)
+	for _, policy := range policy.Spec.SubPolicies {
+		for name, filter := range policy.Filters {
+			err := validateFilter(name, filter, strict, targetGateway)
+			if err != nil {
+				return err
+			}
+
 		}
 	}
 
@@ -116,16 +164,33 @@ func ValidateVirtualService(vs *istiov1a3.VirtualService) error {
 	return nil
 }
 
+func NormalizeIstioProtocol(protocol string) string {
+	return strings.ToUpper(protocol)
+}
+
 func ValidateGateway(gw *istiov1a3.Gateway) error {
-	// TODO: support it
-	for _, svr := range gw.Spec.Servers {
+	for i, svr := range gw.Spec.Servers {
+		if svr.Port == nil {
+			return fmt.Errorf("spec.servers[%d].port: Required value", i)
+		}
+		proto := NormalizeIstioProtocol(svr.Port.Protocol)
+		if proto != "HTTP" && proto != "HTTPS" {
+			return fmt.Errorf("spec.servers[%d].port.protocol: Only HTTP and HTTPS are supported", i)
+		}
+
 		for _, host := range svr.Hosts {
 			if strings.ContainsRune(host, '/') {
+				// TODO: support it
 				return errors.New("Gateway has host with namespace is not supported")
 			}
 		}
 	}
 	return nil
+}
+
+func NormalizeK8sGatewayProtocol(protocol gwapiv1.ProtocolType) string {
+	// So far, all k8s gateway protocols are valid istio protocols
+	return NormalizeIstioProtocol(string(protocol))
 }
 
 func ValidateConsumer(c *Consumer) error {

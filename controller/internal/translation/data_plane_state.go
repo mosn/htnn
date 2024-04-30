@@ -26,13 +26,14 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	"mosn.io/htnn/controller/internal/config"
 	"mosn.io/htnn/controller/internal/log"
 	"mosn.io/htnn/controller/internal/model"
 )
 
 // dataPlaneState converts the init state to the structure used by the data plane
 type dataPlaneState struct {
-	Hosts map[Proxy]map[string]*hostPolicy
+	Proxies map[Proxy]*proxyConfig
 }
 
 type hostPolicy struct {
@@ -43,6 +44,16 @@ type hostPolicy struct {
 type routePolicy struct {
 	NsName   *types.NamespacedName
 	Policies []*HTTPFilterPolicyWrapper
+}
+
+type gatewayPolicy struct {
+	NsName   *types.NamespacedName
+	Policies []*HTTPFilterPolicyWrapper
+}
+
+type proxyConfig struct {
+	Gateways map[string]*gatewayPolicy
+	Hosts    map[string]*hostPolicy
 }
 
 func isWildCarded(s string) bool {
@@ -83,10 +94,10 @@ func buildVirtualHostsWithIstioGw(host string, nsName *types.NamespacedName, gws
 								Namespace: gw.Namespace,
 								Name:      gw.Name,
 							},
-							Port: port,
 						},
-						NsName: nsName,
-						Name:   name,
+						ECDSResourceName: getECDSResourceName(gw.Namespace, getLDSName(svr.Bind, port)),
+						NsName:           nsName,
+						Name:             name,
 					})
 				}
 			}
@@ -108,10 +119,11 @@ func buildVirtualHostsWithK8sGw(host string, ls *gwapiv1.Listener, nsName, gwNsN
 		vhs = append(vhs, &model.VirtualHost{
 			Gateway: &model.Gateway{
 				NsName: gwNsName,
-				Port:   uint32(ls.Port),
 			},
-			NsName: nsName,
-			Name:   name,
+			// When Istio converts k8s gateway to istio gateway, the bind field is empty
+			ECDSResourceName: getECDSResourceName(gwNsName.Namespace, getLDSName("", uint32(ls.Port))),
+			NsName:           nsName,
+			Name:             name,
 		})
 	}
 	return vhs
@@ -165,18 +177,20 @@ var (
 	wildcardHostnams = []gwapiv1.Hostname{"*"}
 )
 
-func addVirtualHostToProxy(vh *model.VirtualHost, hosts map[Proxy]map[string]*hostPolicy, routes map[string]*routePolicy) {
+func addVirtualHostToProxy(vh *model.VirtualHost, proxies map[Proxy]*proxyConfig, routes map[string]*routePolicy) {
 	p := Proxy{
 		Namespace: vh.Gateway.NsName.Namespace,
 	}
 
-	proxy, ok := hosts[p]
+	proxy, ok := proxies[p]
 	if !ok {
-		hosts[p] = make(map[string]*hostPolicy)
-		proxy = hosts[p]
+		proxies[p] = &proxyConfig{
+			Hosts: make(map[string]*hostPolicy),
+		}
+		proxy = proxies[p]
 	}
 
-	if host, ok := proxy[vh.Name]; ok {
+	if host, ok := proxy.Hosts[vh.Name]; ok {
 		// TODO: add route name collision detection
 		// Currently, it is the webhook or the user configuration to guarantee the same route
 		// name won't be used in different VirtualServices that share the same host.
@@ -189,13 +203,59 @@ func addVirtualHostToProxy(vh *model.VirtualHost, hosts map[Proxy]map[string]*ho
 			VirtualHost: vh,
 			Routes:      routes,
 		}
-		proxy[vh.Name] = policy
+		proxy.Hosts[vh.Name] = policy
 	}
+}
+
+func getLDSName(bind string, port uint32) string {
+	// We don't support unix socket. Is there someone using it on production?
+	if bind == "" {
+		// Istio will select the corresponding IP automatically according to the node's IP address type.
+		// We don't manage the node message, so let the user to specify the bind address by themselves.
+		if config.UseWildcardIPv6InLDSName() {
+			bind = "::"
+		} else {
+			bind = "0.0.0.0"
+		}
+	}
+	// TODO: set Protocol for QUIC
+	return fmt.Sprintf("%s_%d", bind, port)
+}
+
+func addServerPortToProxy(gw *model.Gateway, serverPort ServerPort, proxies map[Proxy]*proxyConfig, policies []*HTTPFilterPolicyWrapper) {
+	name := getLDSName(serverPort.Bind, serverPort.Number)
+	p := Proxy{
+		Namespace: gw.NsName.Namespace,
+	}
+	proxy, ok := proxies[p]
+	if !ok {
+		proxies[p] = &proxyConfig{
+			Gateways: make(map[string]*gatewayPolicy),
+		}
+		proxy = proxies[p]
+	}
+	if proxy.Gateways == nil {
+		// The proxy has RDS level policies, so here we need to init the LDS part
+		proxy.Gateways = make(map[string]*gatewayPolicy)
+	}
+
+	if proxy.Gateways[name] != nil {
+		// already added, skipped
+		return
+	}
+
+	gwPolicy := &gatewayPolicy{
+		NsName: gw.NsName,
+	}
+	if len(policies) > 0 {
+		gwPolicy.Policies = policies
+	}
+	proxy.Gateways[name] = gwPolicy
 }
 
 func toDataPlaneState(ctx *Ctx, state *InitState) (*FinalState, error) {
 	s := &dataPlaneState{
-		Hosts: make(map[Proxy]map[string]*hostPolicy),
+		Proxies: make(map[Proxy]*proxyConfig),
 	}
 	for id, vsp := range state.VirtualServicePolicies {
 		id := id // the copied id will be referenced by address later
@@ -221,7 +281,7 @@ func toDataPlaneState(ctx *Ctx, state *InitState) (*FinalState, error) {
 				continue
 			}
 			for _, vh := range vhs {
-				addVirtualHostToProxy(vh, s.Hosts, routes)
+				addVirtualHostToProxy(vh, s.Proxies, routes)
 			}
 		}
 	}
@@ -279,10 +339,20 @@ func toDataPlaneState(ctx *Ctx, state *InitState) (*FinalState, error) {
 						continue
 					}
 					for _, vh := range vhs {
-						addVirtualHostToProxy(vh, s.Hosts, routes)
+						addVirtualHostToProxy(vh, s.Proxies, routes)
 					}
 				}
 			}
+		}
+	}
+
+	for _, gwp := range state.GatewayPolicies {
+		for serverPort, policies := range gwp.PortPolicies {
+			addServerPortToProxy(gwp.Gateway, serverPort, s.Proxies, policies)
+		}
+		// Port with Policies should be added first
+		for serverPort := range gwp.Ports {
+			addServerPortToProxy(gwp.Gateway, serverPort, s.Proxies, nil)
 		}
 	}
 

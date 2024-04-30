@@ -12,10 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package model
+package tests
 
-const (
-	LabelCreatedBy = "htnn.mosn.io/created-by"
+import (
+	"testing"
 
-	AnnotationHTTPFilterPolicy = "htnn.mosn.io/httpfilterpolicy"
+	"github.com/stretchr/testify/require"
+
+	"mosn.io/htnn/e2e/pkg/suite"
 )
+
+func init() {
+	suite.Register(suite.Test{
+		Manifests: []string{"base/httproute.yml"},
+		Run: func(t *testing.T, suite *suite.Suite) {
+			rsp, err := suite.Get("/echo", nil)
+			require.NoError(t, err)
+			require.Equal(t, 500, rsp.StatusCode)
+		},
+	})
+}

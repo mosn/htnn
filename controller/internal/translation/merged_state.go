@@ -26,6 +26,7 @@ import (
 	"mosn.io/htnn/api/pkg/filtermanager"
 	fmModel "mosn.io/htnn/api/pkg/filtermanager/model"
 	"mosn.io/htnn/api/pkg/plugins"
+	ctrlcfg "mosn.io/htnn/controller/internal/config"
 	"mosn.io/htnn/controller/internal/model"
 	mosniov1 "mosn.io/htnn/types/apis/v1"
 )
@@ -35,12 +36,21 @@ import (
 // 2. merge policy among different hierarchies
 // 3. transform a plugin to different plugins if needed
 type mergedState struct {
-	Hosts map[Proxy]map[string]*mergedHostPolicy
+	Proxies map[Proxy]*mergedProxyConfig
+}
+
+type mergedProxyConfig struct {
+	Hosts    map[string]*mergedHostPolicy
+	Gateways map[string]*mergedGatewayPolicy
 }
 
 type mergedHostPolicy struct {
 	VirtualHost *model.VirtualHost
 	Routes      map[string]*mergedPolicy
+}
+
+type mergedGatewayPolicy struct {
+	Policy *mergedPolicy
 }
 
 type mergedPolicy struct {
@@ -94,41 +104,18 @@ func stripUnknowFields(m map[string]interface{}, fieldDescs protoreflect.FieldDe
 	}
 }
 
-func toMergedPolicy(rp *routePolicy) *mergedPolicy {
-	policies := rp.Policies
-	sortHttpFilterPolicy(policies)
+type PolicyKind int
 
-	p := &mosniov1.HTTPFilterPolicy{
-		Spec: mosniov1.HTTPFilterPolicySpec{
-			Filters: make(map[string]mosniov1.HTTPPlugin),
-		},
-	}
+const (
+	PolicyKindRDS PolicyKind = iota
+	PolicyKindECDS
+)
 
-	// use map to deduplicate policies, especially for the sub-policies
-	usedHFP := make(map[string]struct{}, len(policies))
-	for _, policy := range policies {
-		used := false
-		for name, filter := range policy.Spec.Filters {
-			if _, ok := p.Spec.Filters[name]; !ok {
-				p.Spec.Filters[name] = filter
-				used = true
-			}
-		}
+func translateFilterManagerConfigToPolicyInRDS(fmc *filtermanager.FilterManagerConfig,
+	nsName *types.NamespacedName, virtualHost *model.VirtualHost) map[string]interface{} {
 
-		if used {
-			usedHFP[toNsName(policy)] = struct{}{}
-		}
-	}
+	config := map[string]interface{}{}
 
-	info := &Info{
-		HTTPFilterPolicies: make([]string, 0, len(usedHFP)),
-	}
-	for s := range usedHFP {
-		info.HTTPFilterPolicies = append(info.HTTPFilterPolicies, s)
-	}
-	slices.Sort(info.HTTPFilterPolicies) // order is required for later procession
-
-	fmc := translateHTTPFilterPolicyToFilterManagerConfig(p)
 	nativeFilters := []*fmModel.FilterConfig{}
 	goFilterManager := &filtermanager.FilterManagerConfig{
 		Plugins: []*fmModel.FilterConfig{},
@@ -182,10 +169,9 @@ func toMergedPolicy(rp *routePolicy) *mergedPolicy {
 		}
 	}
 	if consumerNeeded {
-		goFilterManager.Namespace = rp.NsName.Namespace
+		goFilterManager.Namespace = nsName.Namespace
 	}
 
-	config := map[string]interface{}{}
 	if len(goFilterManager.Plugins) > 0 {
 		v := map[string]interface{}{}
 		if goFilterManager.Namespace != "" {
@@ -200,7 +186,11 @@ func toMergedPolicy(rp *routePolicy) *mergedPolicy {
 		}
 		v["plugins"] = plugins
 
-		config["htnn.filters.http.golang"] = map[string]interface{}{
+		golangFilterName := "htnn.filters.http.golang"
+		if ctrlcfg.EnableLDSPluginViaECDS() {
+			golangFilterName = virtualHost.ECDSResourceName
+		}
+		config[golangFilterName] = map[string]interface{}{
 			"@type": "type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.ConfigsPerRoute",
 			"plugins_config": map[string]interface{}{
 				"fm": map[string]interface{}{
@@ -218,43 +208,110 @@ func toMergedPolicy(rp *routePolicy) *mergedPolicy {
 		config[name] = filter.Config
 	}
 
+	return config
+}
+
+func translateFilterManagerConfigToPolicyInECDS(fmc *filtermanager.FilterManagerConfig, nsName *types.NamespacedName) map[string]interface{} {
+	config := map[string]interface{}{}
+
+	goFilterManager := &filtermanager.FilterManagerConfig{
+		Plugins: []*fmModel.FilterConfig{},
+	}
+
+	consumerNeeded := false
+	for _, plugin := range fmc.Plugins {
+		name := plugin.Name
+		p := plugins.LoadHttpPluginType(name)
+		// As we don't reject configuration with unknown plugin to keep compatibility...
+		if p == nil {
+			continue
+		}
+
+		var cfg interface{}
+		// we validated the filter at the beginning, so theorily err should not happen
+		_ = json.Unmarshal(plugin.Config.([]byte), &cfg)
+
+		_, ok := p.(plugins.GoPlugin)
+		if !ok {
+			continue
+		}
+
+		plugin.Config = cfg
+		goFilterManager.Plugins = append(goFilterManager.Plugins, plugin)
+		_, ok = p.(plugins.ConsumerPlugin)
+		if ok {
+			consumerNeeded = true
+		}
+	}
+	if consumerNeeded {
+		goFilterManager.Namespace = nsName.Namespace
+	}
+
+	if len(goFilterManager.Plugins) > 0 {
+		if goFilterManager.Namespace != "" {
+			config["namespace"] = goFilterManager.Namespace
+		}
+		plugins := make([]interface{}, len(goFilterManager.Plugins))
+		for i, plugin := range goFilterManager.Plugins {
+			plugins[i] = map[string]interface{}{
+				"name":   plugin.Name,
+				"config": plugin.Config,
+			}
+		}
+		config["plugins"] = plugins
+	}
+
+	return config
+}
+
+func toMergedPolicy(nsName *types.NamespacedName, policies []*HTTPFilterPolicyWrapper,
+	policyKind PolicyKind, virtualHost *model.VirtualHost) *mergedPolicy {
+
+	sortHttpFilterPolicy(policies)
+
+	p := &mosniov1.HTTPFilterPolicy{
+		Spec: mosniov1.HTTPFilterPolicySpec{
+			Filters: make(map[string]mosniov1.HTTPPlugin),
+		},
+	}
+
+	// use map to deduplicate policies, especially for the sub-policies
+	usedHFP := make(map[string]struct{}, len(policies))
+	for _, policy := range policies {
+		used := false
+		for name, filter := range policy.Spec.Filters {
+			if _, ok := p.Spec.Filters[name]; !ok {
+				p.Spec.Filters[name] = filter
+				used = true
+			}
+		}
+
+		if used {
+			usedHFP[toNsName(policy)] = struct{}{}
+		}
+	}
+
+	info := &Info{
+		HTTPFilterPolicies: make([]string, 0, len(usedHFP)),
+	}
+	for s := range usedHFP {
+		info.HTTPFilterPolicies = append(info.HTTPFilterPolicies, s)
+	}
+	slices.Sort(info.HTTPFilterPolicies) // order is required for later procession
+
+	fmc := translateHTTPFilterPolicyToFilterManagerConfig(p)
+	var config map[string]interface{}
+	if policyKind == PolicyKindRDS {
+		config = translateFilterManagerConfigToPolicyInRDS(fmc, nsName, virtualHost)
+	} else if policyKind == PolicyKindECDS {
+		config = translateFilterManagerConfigToPolicyInECDS(fmc, nsName)
+	}
+
 	return &mergedPolicy{
 		Config: config,
 		Info:   info,
-		NsName: rp.NsName,
+		NsName: nsName,
 	}
-}
-
-func sortPlugins(ps []*fmModel.FilterConfig) {
-	sort.Slice(ps, func(i, j int) bool {
-		return plugins.ComparePluginOrder(ps[i].Name, ps[j].Name)
-	})
-}
-
-func toMergedState(ctx *Ctx, state *dataPlaneState) (*FinalState, error) {
-	s := &mergedState{
-		Hosts: make(map[Proxy]map[string]*mergedHostPolicy),
-	}
-
-	for proxy, hosts := range state.Hosts {
-		merged := make(map[string]*mergedHostPolicy)
-		for name, host := range hosts {
-			mh := &mergedHostPolicy{
-				VirtualHost: host.VirtualHost,
-				Routes:      make(map[string]*mergedPolicy),
-			}
-
-			for routeName, route := range host.Routes {
-				mergedPolicy := toMergedPolicy(route)
-				mh.Routes[routeName] = mergedPolicy
-			}
-
-			merged[name] = mh
-		}
-		s.Hosts[proxy] = merged
-	}
-
-	return toFinalState(ctx, s)
 }
 
 func translateHTTPFilterPolicyToFilterManagerConfig(policy *mosniov1.HTTPFilterPolicy) *filtermanager.FilterManagerConfig {
@@ -270,4 +327,50 @@ func translateHTTPFilterPolicyToFilterManagerConfig(policy *mosniov1.HTTPFilterP
 
 	sortPlugins(fmc.Plugins)
 	return fmc
+}
+
+func sortPlugins(ps []*fmModel.FilterConfig) {
+	sort.Slice(ps, func(i, j int) bool {
+		return plugins.ComparePluginOrder(ps[i].Name, ps[j].Name)
+	})
+}
+
+func toMergedState(ctx *Ctx, state *dataPlaneState) (*FinalState, error) {
+	s := &mergedState{
+		Proxies: make(map[Proxy]*mergedProxyConfig),
+	}
+
+	for proxy, cfg := range state.Proxies {
+		mergedHosts := make(map[string]*mergedHostPolicy)
+		for name, host := range cfg.Hosts {
+			mh := &mergedHostPolicy{
+				VirtualHost: host.VirtualHost,
+				Routes:      make(map[string]*mergedPolicy),
+			}
+
+			for routeName, route := range host.Routes {
+				mergedPolicy := toMergedPolicy(route.NsName, route.Policies, PolicyKindRDS, mh.VirtualHost)
+				mh.Routes[routeName] = mergedPolicy
+			}
+
+			mergedHosts[name] = mh
+		}
+
+		mergedGateways := make(map[string]*mergedGatewayPolicy)
+		for name, gateway := range cfg.Gateways {
+			mg := &mergedGatewayPolicy{}
+			if len(gateway.Policies) > 0 {
+				mg.Policy = toMergedPolicy(gateway.NsName, gateway.Policies, PolicyKindECDS, nil)
+			}
+
+			mergedGateways[name] = mg
+		}
+
+		s.Proxies[proxy] = &mergedProxyConfig{
+			Hosts:    mergedHosts,
+			Gateways: mergedGateways,
+		}
+	}
+
+	return toFinalState(ctx, s)
 }

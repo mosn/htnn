@@ -52,8 +52,10 @@ type PolicyScope int
 
 const (
 	// sort from small to large
-	PolicyScopeRule  PolicyScope = iota // a route in a VirtualService or a rule in xRoute
-	PolicyScopeRoute                    // a VirtualService or a xRoute
+	PolicyScopeRule    PolicyScope = iota // a route in a VirtualService or a rule in xRoute
+	PolicyScopeRoute                      // a VirtualService or a xRoute
+	PolicyScopePort                       // a port in a Gateway
+	PolicyScopeGateway                    // a Istio/k8s Gateway
 )
 
 type HTTPFilterPolicyWrapper struct {

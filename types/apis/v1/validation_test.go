@@ -175,6 +175,32 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 			err: "namespace in TargetRef doesn't match HTTPFilterPolicy's namespace",
 		},
 		{
+			name: "Filters in SubPolicies",
+			policy: &HTTPFilterPolicy{
+				Spec: HTTPFilterPolicySpec{
+					TargetRef: &gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: "networking.istio.io",
+							Kind:  "VirtualService",
+						},
+					},
+					SubPolicies: []HTTPFilterSubPolicy{
+						{
+							SectionName: sectionName,
+							Filters: map[string]HTTPPlugin{
+								"property": {
+									Config: runtime.RawExtension{
+										Raw: []byte(`{"pet":"cat"}`),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			strictErr: "unknown http filter: property",
+		},
+		{
 			name: "targetRef.SectionName and SubPolicies can not be used together",
 			policy: &HTTPFilterPolicy{
 				Spec: HTTPFilterPolicySpec{
@@ -214,6 +240,88 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 				},
 			},
 			err: "invalid LocalRateLimit.StatPrefix: value length must be at least 1 runes",
+		},
+		{
+			name: "ok, Istio Gateway",
+			policy: &HTTPFilterPolicy{
+				Spec: HTTPFilterPolicySpec{
+					TargetRef: &gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: "networking.istio.io",
+							Kind:  "Gateway",
+						},
+					},
+					Filters: map[string]HTTPPlugin{
+						"animal": {
+							Config: runtime.RawExtension{
+								Raw: []byte(`{"pet":"cat"}`),
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "not implemented, Istio Gateway with Native Plugin",
+			policy: &HTTPFilterPolicy{
+				Spec: HTTPFilterPolicySpec{
+					TargetRef: &gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: "networking.istio.io",
+							Kind:  "Gateway",
+						},
+					},
+					Filters: map[string]HTTPPlugin{
+						"localRatelimit": {
+							Config: runtime.RawExtension{
+								Raw: []byte(`{}`),
+							},
+						},
+					},
+				},
+			},
+			err: "configure native plugins to the Gateway is not implemented",
+		},
+		{
+			name: "ok, k8s Gateway",
+			policy: &HTTPFilterPolicy{
+				Spec: HTTPFilterPolicySpec{
+					TargetRef: &gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: "gateway.networking.k8s.io",
+							Kind:  "Gateway",
+						},
+					},
+					Filters: map[string]HTTPPlugin{
+						"animal": {
+							Config: runtime.RawExtension{
+								Raw: []byte(`{"pet":"cat"}`),
+							},
+						},
+					},
+				},
+			},
+		},
+		{
+			name: "not implemented, k8s Gateway with Native Plugin",
+			policy: &HTTPFilterPolicy{
+				Spec: HTTPFilterPolicySpec{
+					TargetRef: &gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: "gateway.networking.k8s.io",
+							Kind:  "Gateway",
+						},
+					},
+					Filters: map[string]HTTPPlugin{
+						"localRatelimit": {
+							Config: runtime.RawExtension{
+								Raw: []byte(`{}`),
+							},
+						},
+					},
+				},
+			},
+			err: "configure native plugins to the Gateway is not implemented",
 		},
 	}
 

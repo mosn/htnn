@@ -53,9 +53,9 @@ title: Limit Count Redis
 
 ## 用法
 
-首先，让我们先启动一个 Redis，监听 6379 端口。
+首先，让我们假设现在有一个 Redis 服务 `redis.service` 正在监听 6379 端口。
 
-假设我们提供了如下配置到 `http://localhost:10000/`：
+假设我们有下面附加到 `localhost:10000` 的 HTTPRoute，并且有一个后端服务器监听端口 `8080`：
 
 ```yaml
 apiVersion: gateway.networking.k8s.io/v1
@@ -65,7 +65,6 @@ metadata:
 spec:
   parentRefs:
   - name: default
-    namespace: default
   rules:
   - matches:
     - path:
@@ -87,7 +86,7 @@ spec:
   filters:
     limitCountRedis:
       config:
-        address: "0.0.0.0:6379"
+        address: "redis.service:6379"
         enableLimitQuotaHeaders: true
         failureModeDeny: true
         rules:

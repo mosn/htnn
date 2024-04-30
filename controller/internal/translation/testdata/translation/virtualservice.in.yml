@@ -19,7 +19,7 @@ istioGateway:
       port:
         name: https
         number: 443
-        protocol: HTTP
+        protocol: HTTPS
 - apiVersion: networking.istio.io/v1beta1
   kind: Gateway
   metadata:

@@ -1,0 +1,52 @@
+- metadata:
+    creationTimestamp: null
+    name: htnn-h-default.local
+    namespace: default
+  spec:
+    configPatches:
+    - applyTo: HTTP_ROUTE
+      match:
+        routeConfiguration:
+          vhost:
+            name: default.local:80
+            route:
+              name: default/default
+      patch:
+        operation: MERGE
+        value:
+          typed_per_filter_config:
+            htnn.filters.http.innerExtProc:
+              '@type': type.googleapis.com/envoy.extensions.filters.http.ext_proc.v3.ExtProcPerRoute
+              overrides:
+                grpcService:
+                  envoyGrpc:
+                    clusterName: ext_proc_cluster
+                processingMode:
+                  requestBodyMode: NONE
+  status: {}
+- metadata:
+    creationTimestamp: null
+    name: htnn-http-filter
+    namespace: istio-system
+  spec:
+    configPatches:
+    - applyTo: HTTP_FILTER
+      match:
+        listener:
+          filterChain:
+            filter:
+              name: envoy.filters.network.http_connection_manager
+              subFilter:
+                name: envoy.filters.http.router
+      patch:
+        operation: INSERT_BEFORE
+        value:
+          disabled: true
+          name: htnn.filters.http.innerExtProc
+          typed_config:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.ext_proc.v3.ExternalProcessor
+            grpcService:
+              envoy_grpc:
+                cluster_name: xds-grpc
+    priority: -10
+  status: {}

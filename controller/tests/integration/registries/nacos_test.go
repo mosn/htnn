@@ -29,7 +29,7 @@ import (
 	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"mosn.io/htnn/controller/internal/model"
+	"mosn.io/htnn/controller/pkg/constant"
 	"mosn.io/htnn/controller/tests/integration/helper"
 	"mosn.io/htnn/controller/tests/pkg"
 	mosniov1 "mosn.io/htnn/types/apis/v1"
@@ -63,7 +63,7 @@ func disableNacos(nacosInstance string) {
 
 func listServiceEntries() []*istiov1a3.ServiceEntry {
 	var entries istiov1a3.ServiceEntryList
-	Expect(k8sClient.List(ctx, &entries, client.MatchingLabels{model.LabelCreatedBy: "ServiceRegistry"})).Should(Succeed())
+	Expect(k8sClient.List(ctx, &entries, client.MatchingLabels{constant.LabelCreatedBy: "ServiceRegistry"})).Should(Succeed())
 	return entries.Items
 }
 
