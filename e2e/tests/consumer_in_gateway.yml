@@ -60,10 +60,25 @@ metadata:
 spec:
   targetRef:
     group: gateway.networking.k8s.io
-    kind: HTTPRoute
+    kind: Gateway
     name: default
   filters:
     keyAuth:
       config:
         keys:
         - name: Authorization
+---
+apiVersion: htnn.mosn.io/v1
+kind: HTTPFilterPolicy
+metadata:
+  name: policy2
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: default
+  filters:
+    demo:
+      config:
+        # this filter will be overridden by the filter in the consumer
+        hostName: doraemon

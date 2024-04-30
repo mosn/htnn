@@ -24,6 +24,7 @@ message Config {
   bool encode = 3;
   bool headers = 4;
   bool data = 5;
+  string reply_msg = 6;
 }
 
 message BadPluginConfig {

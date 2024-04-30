@@ -129,6 +129,35 @@ func (cp *ControlPlane) updateConfig(t *testing.T, res Resources) {
 }
 
 func (cp *ControlPlane) UseGoPluginConfig(t *testing.T, config *filtermanager.FilterManagerConfig, dp *data_plane.DataPlane) {
+	testRoute := &route.Route{
+		Match: &route.RouteMatch{
+			PathSpecifier: &route.RouteMatch_Prefix{
+				Prefix: "/",
+			},
+		},
+		Action: &route.Route_Route{
+			Route: &route.RouteAction{
+				ClusterSpecifier: &route.RouteAction_Cluster{
+					Cluster: "backend",
+				},
+			},
+		},
+	}
+	if config != nil {
+		testRoute.TypedPerFilterConfig = map[string]*any1.Any{
+			"htnn.filters.http.golang": proto.MessageToAny(&golang.ConfigsPerRoute{
+				PluginsConfig: map[string]*golang.RouterPlugin{
+					"fm": {
+						Override: &golang.RouterPlugin_Config{
+							Config: proto.MessageToAny(
+								FilterManagerConfigToTypedStruct(config)),
+						},
+					},
+				},
+			}),
+		}
+	}
+
 	cp.updateConfig(t, Resources{
 		resource.RouteType: []types.Resource{
 			&route.RouteConfiguration{
@@ -148,6 +177,18 @@ func (cp *ControlPlane) UseGoPluginConfig(t *testing.T, config *filtermanager.Fi
 									DirectResponse: &route.DirectResponseAction{
 										Status: 200,
 									},
+								},
+								TypedPerFilterConfig: map[string]*any1.Any{
+									"htnn.filters.http.golang": proto.MessageToAny(&golang.ConfigsPerRoute{
+										PluginsConfig: map[string]*golang.RouterPlugin{
+											"fm": {
+												Override: &golang.RouterPlugin_Config{
+													Config: proto.MessageToAny(
+														FilterManagerConfigToTypedStruct(NewPluinConfig(nil))),
+												},
+											},
+										},
+									}),
 								},
 							},
 							{
@@ -174,32 +215,7 @@ func (cp *ControlPlane) UseGoPluginConfig(t *testing.T, config *filtermanager.Fi
 									}),
 								},
 							},
-							{
-								Match: &route.RouteMatch{
-									PathSpecifier: &route.RouteMatch_Prefix{
-										Prefix: "/",
-									},
-								},
-								Action: &route.Route_Route{
-									Route: &route.RouteAction{
-										ClusterSpecifier: &route.RouteAction_Cluster{
-											Cluster: "backend",
-										},
-									},
-								},
-								TypedPerFilterConfig: map[string]*any1.Any{
-									"htnn.filters.http.golang": proto.MessageToAny(&golang.ConfigsPerRoute{
-										PluginsConfig: map[string]*golang.RouterPlugin{
-											"fm": {
-												Override: &golang.RouterPlugin_Config{
-													Config: proto.MessageToAny(
-														FilterManagerConfigToTypedStruct(config)),
-												},
-											},
-										},
-									}),
-								},
-							},
+							testRoute,
 						},
 					},
 				},

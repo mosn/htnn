@@ -29,8 +29,9 @@ var (
 )
 
 type bootstrap struct {
-	backendRoutes []map[string]interface{}
-	consumers     map[string]map[string]interface{}
+	backendRoutes    []map[string]interface{}
+	consumers        map[string]map[string]interface{}
+	httpFilterGolang map[string]interface{}
 }
 
 func Bootstrap() *bootstrap {
@@ -69,6 +70,11 @@ func (b *bootstrap) AddConsumer(name string, c map[string]interface{}) *bootstra
 	return b
 }
 
+func (b *bootstrap) SetHTTPFilterGolang(cfg map[string]interface{}) *bootstrap {
+	b.httpFilterGolang = cfg
+	return b
+}
+
 func (b *bootstrap) WriteTo(cfgFile *os.File) error {
 	var root map[string]interface{}
 	// check if the input is valid yaml
@@ -85,10 +91,31 @@ func (b *bootstrap) WriteTo(cfgFile *os.File) error {
 	}
 	vh["routes"] = routes
 
-	cf := root["static_resources"].(map[string]interface{})["listeners"].([]interface{})[0].(map[string]interface{})["filter_chains"].([]interface{})[0].(map[string]interface{})["filters"].([]interface{})[0].(map[string]interface{})["typed_config"].(map[string]interface{})["http_filters"].([]interface{})[0].(map[string]interface{})["typed_config"].(map[string]interface{})
+	http_filters := root["static_resources"].(map[string]interface{})["listeners"].([]interface{})[0].(map[string]interface{})["filter_chains"].([]interface{})[0].(map[string]interface{})["filters"].([]interface{})[0].(map[string]interface{})["typed_config"].(map[string]interface{})["http_filters"].([]interface{})
+
+	var cf map[string]interface{}
+	for _, hf := range http_filters {
+		if hf.(map[string]interface{})["name"] == "htnn-consumer" {
+			cf = hf.(map[string]interface{})["typed_config"].(map[string]interface{})
+		}
+	}
+
 	consumers := cf["plugin_config"].(map[string]interface{})["value"].(map[string]interface{})["ns"].(map[string]interface{})
 	for name, c := range b.consumers {
 		consumers[name] = c
+	}
+
+	if b.httpFilterGolang != nil {
+		for _, hf := range http_filters {
+			if hf.(map[string]interface{})["name"] == "htnn.filters.http.golang" {
+				wrapper := map[string]interface{}{
+					"@type": "type.googleapis.com/xds.type.v3.TypedStruct",
+					"value": b.httpFilterGolang,
+				}
+				hf.(map[string]interface{})["disabled"] = false
+				hf.(map[string]interface{})["typed_config"].(map[string]interface{})["plugin_config"] = wrapper
+			}
+		}
 	}
 
 	res, err := yaml.Marshal(&root)
