@@ -2,24 +2,24 @@
 title: Local Ratelimit
 ---
 
-## Description
+## 说明
 
-The `localRatelimit` plugin limits the number of requests per second, by leveraging Envoy's `local_ratelimit` filter. The plugin is run before authentication.
+`localRatelimit` 插件通过利用 Envoy 的 `local_ratelimit` 过滤器，限制了每秒请求的数量。该插件在运行认证插件之前运行。
 
-## Attribute
+## 属性
 
 |       |         |
 |-------|---------|
 | Type  | Traffic |
 | Order | Outer   |
 
-## Configuration
+## 配置
 
-See the corresponding [Envoy documentation](https://www.envoyproxy.io/docs/envoy/v1.29.2/configuration/http/http_filters/local_rate_limit_filter).
+请参阅相应的 [Envoy 文档](https://www.envoyproxy.io/docs/envoy/v1.29.2/configuration/http/http_filters/local_rate_limit_filter)。
 
-## Usage
+## 用法
 
-Assumed we have the HTTPRoute below attached to `localhost:10000`, and a backend server listening to port `8080`:
+假设我们有下面附加到 `localhost:10000` 的 HTTPRoute，并且有一个后端服务器监听端口 `8080`：
 
 ```yaml
 apiVersion: gateway.networking.k8s.io/v1
@@ -39,7 +39,7 @@ spec:
       port: 8080
 ```
 
-By applying the configuration below, the rate of requests to `http://localhost:10000/` is limited to 1 request per second:
+通过应用下述配置，`http://localhost:10000/` 的请求速率被限制为每秒 1 个请求:
 
 ```yaml
 apiVersion: htnn.mosn.io/v1
@@ -69,7 +69,7 @@ spec:
             denominator: HUNDRED
 ```
 
-We can test it out:
+我们可以进行测试:
 
 ```
 $ while true; do curl -I http://localhost:10000/ 2>/dev/null | head -1 ;done
