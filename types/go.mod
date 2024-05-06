@@ -28,7 +28,7 @@ require (
 	github.com/google/cel-go v0.20.1
 	github.com/open-policy-agent/opa v0.64.1
 	github.com/stretchr/testify v1.9.0
-	golang.org/x/text v0.14.0
+	golang.org/x/text v0.15.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20240325203815-454cdb8f5daa
 	google.golang.org/protobuf v1.33.0
 	istio.io/api v1.21.2
