@@ -30,7 +30,7 @@ require (
 	github.com/stretchr/testify v1.9.0
 	golang.org/x/text v0.14.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20240325203815-454cdb8f5daa
-	google.golang.org/protobuf v1.33.0
+	google.golang.org/protobuf v1.34.0
 	istio.io/api v1.21.2
 	istio.io/client-go v1.21.2
 	k8s.io/apimachinery v0.29.3
