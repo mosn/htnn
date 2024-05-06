@@ -36,7 +36,7 @@ require (
 	github.com/stretchr/testify v1.9.0
 	golang.org/x/oauth2 v0.19.0
 	golang.org/x/time v0.5.0
-	google.golang.org/protobuf v1.33.0
+	google.golang.org/protobuf v1.34.0
 	mosn.io/htnn/api v0.2.1
 	mosn.io/htnn/types v0.2.1
 )
