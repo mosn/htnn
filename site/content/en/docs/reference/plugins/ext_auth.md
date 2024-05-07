@@ -133,4 +133,4 @@ When the server responds with HTTP status 200, the client request is authorized.
 
 When the server is unreachable or the status is 5xx, the client request is rejected with status code configured by `statusOnError`.
 
-When the server returns the other HTTP status, the client request is rejected with the status code returned. If the `allowedUpstreamHeaders` is configured, authorization response headers that have a correspondent match will be set to the client's response.
+When the server returns the other HTTP status, the client request is rejected with the status code returned. If the `allowedClientHeaders` is configured, authorization response headers that have a correspondent match will be set to the client's response.

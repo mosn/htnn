@@ -27,8 +27,11 @@ import (
 // This tool does what the third party linters don't
 
 func lintSite() error {
+	enDocs := map[string]struct{}{}
+	zhHansDocs := map[string]struct{}{}
+
 	// walk through directory
-	return filepath.Walk(filepath.Join("site", "content"), func(path string, info fs.FileInfo, err error) error {
+	err := filepath.Walk(filepath.Join("site", "content"), func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -53,6 +56,12 @@ func lintSite() error {
 		}
 
 		if ext == ".md" {
+			if strings.Contains(path, "en/") {
+				enDocs[strings.TrimPrefix(path, "site/content/en/")] = struct{}{}
+			} else if strings.Contains(path, "zh-hans/") {
+				zhHansDocs[strings.TrimPrefix(path, "site/content/zh-hans/")] = struct{}{}
+			}
+
 			data, err := os.ReadFile(path)
 			if err != nil {
 				return err
@@ -86,6 +95,24 @@ func lintSite() error {
 		}
 		return nil
 	})
+	if err != nil {
+		return err
+	}
+
+	// don't treat this as an error
+	for doc := range enDocs {
+		if _, ok := zhHansDocs[doc]; !ok {
+			fmt.Printf("file %s is missing in Simplified Chinese documentation", doc)
+		}
+	}
+	for doc := range zhHansDocs {
+		if _, ok := enDocs[doc]; !ok {
+			fmt.Printf("file %s is missing in English documentation", doc)
+		}
+	}
+	// TODO: Check if the attribute tables are consistent
+
+	return nil
 }
 
 func contains(set []string, s string) bool {

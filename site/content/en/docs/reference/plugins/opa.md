@@ -38,6 +38,16 @@ Either `remote` or `local` is required.
 
 ## Data exchange
 
+Assumed the original client request is:
+
+```
+GET /?a=1&b= HTTP/1.1
+Host: localhost:10000
+Pet: dog
+Fruit: apple
+Fruit: banana
+```
+
 Here is the JSON data HTNN sends to the OPA:
 
 ```json
@@ -164,17 +174,16 @@ We can also configure the policy rules directly. Assumed we provide a configurat
 
 ```yaml
 opa:
+  config:
     local:
-        text: |
-            package test
-            import input.request
-
-            default allow = false
-
-            # allow GET request only
-            allow {
-                request.method == "GET"
-            }
+      text: |
+        package test
+        import input.request
+        default allow = false
+        # allow GET request only
+        allow {
+            request.method == "GET"
+        }
 ```
 
 Now, to test it out:
