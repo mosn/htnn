@@ -22,12 +22,12 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-	"k8s.io/apimachinery/pkg/runtime"
+	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	"k8s.io/apimachinery/pkg/types"
 
+	"mosn.io/htnn/controller/pkg/constant"
 	"mosn.io/htnn/e2e/pkg/k8s"
 	"mosn.io/htnn/e2e/pkg/suite"
-	mosniov1 "mosn.io/htnn/types/apis/v1"
 )
 
 func init() {
@@ -39,61 +39,38 @@ func init() {
 			client := &http.Client{Transport: tr, Timeout: 10 * time.Second}
 			rsp, err := client.Get("http://default.local:18000/echo")
 			require.NoError(t, err)
-			// run extAuth from parent
-			require.Equal(t, 403, rsp.StatusCode)
+			req, _, err := suite.Capture(rsp)
+			require.NoError(t, err)
+			require.Equal(t, "hello,", req.Headers["Rick"][0])
 
 			c := suite.K8sClient()
 			ctx := context.Background()
-			nsName := types.NamespacedName{Name: "policy", Namespace: k8s.IstioRootNamespace}
-			var policy mosniov1.HTTPFilterPolicy
-			err = c.Get(ctx, nsName, &policy)
+			nsName := types.NamespacedName{Name: "vs", Namespace: k8s.IstioRootNamespace}
+			var route istiov1a3.VirtualService
+			err = c.Get(ctx, nsName, &route)
 			require.NoError(t, err)
 
-			// run with extAuth removed
-			delete(policy.Spec.Filters, "extAuth")
-			err = c.Update(ctx, &policy)
+			policyToMerged := `{"apiVersion":"htnn.mosn.io/v1","kind":"HTTPFilterPolicy","metadata":{"name":"policy"},"spec":{"filters":{"demo":{"config":{"hostName":"micky"}}}}}`
+			route.SetAnnotations(map[string]string{constant.AnnotationHTTPFilterPolicy: policyToMerged})
+			err = c.Update(ctx, &route)
 			require.NoError(t, err)
 			time.Sleep(1 * time.Second)
-
-			rsp, err = client.Get("http://default.local:18000/echo")
-			require.NoError(t, err)
-			// run demo from child
-			req, _, err := suite.Capture(rsp)
-			require.NoError(t, err)
-			require.Equal(t, "hello,", req.Headers["Nobi-Nobita"][0])
-
-			nsName = types.NamespacedName{Name: "policy2", Namespace: k8s.IstioRootNamespace}
-			err = c.Get(ctx, nsName, &policy)
-			require.NoError(t, err)
-			err = c.Delete(ctx, &policy)
-			require.NoError(t, err)
-			time.Sleep(1 * time.Second)
-
-			// run demo from parent
 			rsp, err = client.Get("http://default.local:18000/echo")
 			require.NoError(t, err)
 			req, _, err = suite.Capture(rsp)
 			require.NoError(t, err)
-			require.Equal(t, "hello,", req.Headers["Doraemon"][0])
+			require.Equal(t, "hello,", req.Headers["Micky"][0])
 
-			// run new demo config from parent
-			nsName = types.NamespacedName{Name: "policy", Namespace: k8s.IstioRootNamespace}
-			err = c.Get(ctx, nsName, &policy)
-			require.NoError(t, err)
-
-			policy.Spec.Filters["demo"] = mosniov1.HTTPPlugin{
-				Config: runtime.RawExtension{
-					Raw: []byte(`{"hostName":"Rick"}`),
-				},
-			}
-			err = c.Update(ctx, &policy)
+			// Use Gateway's conf back
+			route.SetAnnotations(nil)
+			err = c.Update(ctx, &route)
 			require.NoError(t, err)
 			time.Sleep(1 * time.Second)
-
 			rsp, err = client.Get("http://default.local:18000/echo")
 			require.NoError(t, err)
 			req, _, err = suite.Capture(rsp)
 			require.NoError(t, err)
+			require.Equal(t, 0, len(req.Headers["Doraemon"]))
 			require.Equal(t, "hello,", req.Headers["Rick"][0])
 		},
 	})
