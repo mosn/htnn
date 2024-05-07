@@ -13,9 +13,12 @@
 # limitations under the License.
 
 PROJECT_NAME    = mosn.io/htnn
+ISTIO_VERSION ?= 1.21.2
+GATEWAY_API_VERSION ?= 1.0.0
+
 # Image URL to use all building/pushing image targets
 IMG ?= htnn-controller:latest
-CONTROLLER_BASE_IMAGE ?= docker.io/istio/pilot:1.21.2
+CONTROLLER_BASE_IMAGE ?= docker.io/istio/pilot:$(ISTIO_VERSION)
 
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.28.0
@@ -73,13 +76,23 @@ manifests: controller-gen ## Generate WebhookConfiguration, ClusterRole and Cust
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
 	$(CONTROLLER_GEN) object:headerFile="../types/hack/boilerplate.go.txt" paths="../types/..."
 
+.PHONY: install-crd-deps
+install-crd-deps:
+	test -d tests/testdata/crd || mkdir -p tests/testdata/crd
+	test -f tests/testdata/crd/gateway-api-$(GATEWAY_API_VERSION).yaml || \
+		wget https://github.com/kubernetes-sigs/gateway-api/releases/download/v$(GATEWAY_API_VERSION)/standard-install.yaml -O \
+			tests/testdata/crd/gateway-api-$(GATEWAY_API_VERSION).yaml
+	test -f tests/testdata/crd/istio-$(ISTIO_VERSION).yaml || \
+		wget https://raw.githubusercontent.com/istio/istio/$(ISTIO_VERSION)/manifests/charts/base/crds/crd-all.gen.yaml -O \
+			tests/testdata/crd/istio-$(ISTIO_VERSION).yaml
+
 .PHONY: test
-test: manifests generate envtest ## Run tests.
+test: manifests generate envtest install-crd-deps ## Run tests.
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test -gcflags="all=-N -l" -race \
 		./... -coverprofile cover.out -covermode=atomic -coverpkg=${PROJECT_NAME}/...
 
 .PHONY: benchmark
-benchmark: manifests generate envtest ## Run benchmarks
+benchmark: manifests generate envtest install-crd-deps  ## Run benchmarks
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test -tags benchmark -timeout=1200s -v ./tests/benchmark/...
 
 ##@ Build

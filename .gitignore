@@ -29,4 +29,5 @@ controller/config/config.yaml
 controller/**/cache
 controller/**/log
 !controller/internal/log
+controller/tests/testdata/crd/
 go.work.sum
