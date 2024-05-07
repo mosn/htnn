@@ -895,6 +895,18 @@ index b113480..bd13c63 100644
  	}
  	return "Kube"
  }
+diff --git a/pkg/config/schema/codegen/templates/clients.go.tmpl b/pkg/config/schema/codegen/templates/clients.go.tmpl
+index 7a70752..1c9ff44 100644
+--- a/pkg/config/schema/codegen/templates/clients.go.tmpl
++++ b/pkg/config/schema/codegen/templates/clients.go.tmpl
+@@ -17,6 +17,7 @@ import (
+ 	"k8s.io/apimachinery/pkg/runtime"
+ 	kubeext "k8s.io/apiextensions-apiserver/pkg/client/clientset/clientset"
+ 	"k8s.io/client-go/kubernetes"
++	"k8s.io/client-go/tools/cache"
+ 	istioclient "istio.io/client-go/pkg/clientset/versioned"
+ 	gatewayapiclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
+ 	apiistioioapiextensionsv1alpha1 "istio.io/client-go/pkg/apis/extensions/v1alpha1"
 diff --git a/pkg/config/schema/codegen/templates/collections.go.tmpl b/pkg/config/schema/codegen/templates/collections.go.tmpl
 index 8e35e84..35c609c 100644
 --- a/pkg/config/schema/codegen/templates/collections.go.tmpl

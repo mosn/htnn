@@ -26,4 +26,5 @@ pushd "$TARGET_ISTIO_DIR"
 go install golang.org/x/tools/cmd/goimports@latest # required by codegen
 go run pkg/config/schema/codegen/tools/collections.main.go
 go mod tidy
+git diff @
 popd
