@@ -251,27 +251,25 @@ func GenerateLDSFilterViaECDS(key string, ldsName string, config map[string]inte
 			},
 		},
 	}
-	if config != nil {
-		ef.Spec.ConfigPatches = append(ef.Spec.ConfigPatches, &istioapi.EnvoyFilter_EnvoyConfigObjectPatch{
-			ApplyTo: istioapi.EnvoyFilter_EXTENSION_CONFIG,
-			Patch: &istioapi.EnvoyFilter_Patch{
-				Operation: istioapi.EnvoyFilter_Patch_ADD,
-				Value: MustNewStruct(map[string]interface{}{
-					"name": key,
-					"typed_config": map[string]interface{}{
-						"@type":        "type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.Config",
-						"library_id":   "fm",
-						"library_path": ctrlcfg.GoSoPath(),
-						"plugin_name":  "fm",
-						"plugin_config": map[string]interface{}{
-							"@type": "type.googleapis.com/xds.type.v3.TypedStruct",
-							"value": config,
-						},
+	ef.Spec.ConfigPatches = append(ef.Spec.ConfigPatches, &istioapi.EnvoyFilter_EnvoyConfigObjectPatch{
+		ApplyTo: istioapi.EnvoyFilter_EXTENSION_CONFIG,
+		Patch: &istioapi.EnvoyFilter_Patch{
+			Operation: istioapi.EnvoyFilter_Patch_ADD,
+			Value: MustNewStruct(map[string]interface{}{
+				"name": key,
+				"typed_config": map[string]interface{}{
+					"@type":        "type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.Config",
+					"library_id":   "fm",
+					"library_path": ctrlcfg.GoSoPath(),
+					"plugin_name":  "fm",
+					"plugin_config": map[string]interface{}{
+						"@type": "type.googleapis.com/xds.type.v3.TypedStruct",
+						"value": config,
 					},
-				}),
-			},
-		})
-	}
+				},
+			}),
+		},
+	})
 	return ef
 }
 

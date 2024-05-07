@@ -99,16 +99,21 @@ var _ = Describe("Consumer controller", func() {
 			Expect(cs[0].Reason).To(Equal(string(mosniov1.ReasonAccepted)))
 
 			var envoyfilters istiov1a3.EnvoyFilterList
+			var ef *istiov1a3.EnvoyFilter
 			Eventually(func() bool {
 				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
 					return false
 				}
-				return len(envoyfilters.Items) == 1 && envoyfilters.Items[0].Namespace == "istio-system"
+				for _, item := range envoyfilters.Items {
+					if item.Name == "htnn-consumer" {
+						ef = item
+						return true
+					}
+				}
+				return false
 			}, timeout, interval).Should(BeTrue())
 
-			ef := envoyfilters.Items[0]
 			Expect(ef.Namespace).To(Equal("istio-system"))
-			Expect(ef.Name).To(Equal("htnn-consumer"))
 			Expect(len(ef.Spec.ConfigPatches)).To(Equal(2))
 			cp := ef.Spec.ConfigPatches[0]
 			Expect(cp.ApplyTo).To(Equal(istioapi.EnvoyFilter_EXTENSION_CONFIG))
@@ -198,10 +203,16 @@ var _ = Describe("Consumer controller", func() {
 				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
 					return false
 				}
-				return len(envoyfilters.Items) == 1
+				for _, item := range envoyfilters.Items {
+					if item.Name == "htnn-consumer" {
+						ef = item
+						return true
+					}
+				}
+				return false
 			}, timeout, interval).Should(BeTrue())
 
-			value = envoyfilters.Items[0].Spec.ConfigPatches[0].Patch.Value.AsMap()
+			value = ef.Spec.ConfigPatches[0].Patch.Value.AsMap()
 			typedCfg = value["typed_config"].(map[string]interface{})
 			pluginCfg = typedCfg["plugin_config"].(map[string]interface{})
 

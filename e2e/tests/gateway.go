@@ -12,27 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-syntax = "proto3";
+package tests
 
-package api.plugins.tests.integration;
+import (
+	"testing"
 
-option go_package = "mosn.io/htnn/api/plugins/tests/integration";
+	"github.com/stretchr/testify/require"
 
-message Config {
-  bool need = 1;
-  bool decode = 2;
-  bool encode = 3;
-  bool headers = 4;
-  bool data = 5;
-  string reply_msg = 6;
-}
+	"mosn.io/htnn/e2e/pkg/suite"
+)
 
-message BadPluginConfig {
-  bool panic_in_factory = 1;
-  bool panic_in_parse = 2;
-  bool error_in_init = 3;
-}
-
-message ConsumerConfig {
-  string name = 1;
+func init() {
+	suite.Register(suite.Test{
+		Run: func(t *testing.T, suite *suite.Suite) {
+			rsp, err := suite.Get("/echo", nil)
+			require.NoError(t, err)
+			req, _, err := suite.Capture(rsp)
+			require.NoError(t, err)
+			require.Equal(t, "hello,", req.Headers["Doraemon"][0])
+		},
+	})
 }

@@ -46,12 +46,27 @@ var _ = Describe("HTTPFilterPolicy controller, for gateway", func() {
 			}
 		}
 
+		Eventually(func() bool {
+			if err := k8sClient.List(ctx, &policies); err != nil {
+				return false
+			}
+			return len(policies.Items) == 0
+		}, timeout, interval).Should(BeTrue())
+
 		var envoyfilters istiov1a3.EnvoyFilterList
 		if err := k8sClient.List(ctx, &envoyfilters); err == nil {
 			for _, e := range envoyfilters.Items {
 				pkg.DeleteK8sResource(ctx, k8sClient, e)
 			}
 		}
+
+		Eventually(func() bool {
+			if err := k8sClient.List(ctx, &envoyfilters); err != nil {
+				return false
+			}
+			return len(envoyfilters.Items) == 0
+		}, timeout, interval).Should(BeTrue())
+
 	})
 
 	Context("When generating LDS plugin configuration via ECDS (Istio Gateway)", func() {
@@ -59,14 +74,6 @@ var _ = Describe("HTTPFilterPolicy controller, for gateway", func() {
 			// use env to set the conf
 			os.Setenv("HTNN_ENABLE_LDS_PLUGIN_VIA_ECDS", "true")
 			config.Init()
-
-			input := []map[string]interface{}{}
-			mustReadHTTPFilterPolicy("default_istio", &input)
-
-			for _, in := range input {
-				obj := pkg.MapToObj(in)
-				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
-			}
 		})
 
 		AfterEach(func() {
@@ -89,30 +96,45 @@ var _ = Describe("HTTPFilterPolicy controller, for gateway", func() {
 		})
 
 		It("should produce HTTP filter with discovery for ECDS", func() {
+			input := []map[string]interface{}{}
+			mustReadHTTPFilterPolicy("default_istio", &input)
+
+			for _, in := range input {
+				obj := pkg.MapToObj(in)
+				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
+			}
+
 			var envoyfilters istiov1a3.EnvoyFilterList
 			Eventually(func() bool {
 				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
 					return false
 				}
-				return len(envoyfilters.Items) == 2
-			}, timeout, interval).Should(BeTrue())
+				efFound := false
+				for _, ef := range envoyfilters.Items {
+					if ef.Name == "htnn-h-default" {
+						efFound = true
 
-			efFound := false
-			for _, ef := range envoyfilters.Items {
-				if ef.Name == "htnn-h-default" {
-					efFound = true
-
-					Expect(len(ef.Spec.ConfigPatches)).To(Equal(1))
-					cp := ef.Spec.ConfigPatches[0]
-					Expect(cp.ApplyTo).To(Equal(istioapi.EnvoyFilter_HTTP_FILTER))
+						Expect(len(ef.Spec.ConfigPatches)).To(Equal(2))
+						cp := ef.Spec.ConfigPatches[0]
+						Expect(cp.ApplyTo).To(Equal(istioapi.EnvoyFilter_HTTP_FILTER))
+						cp = ef.Spec.ConfigPatches[1]
+						Expect(cp.ApplyTo).To(Equal(istioapi.EnvoyFilter_EXTENSION_CONFIG))
+					}
 				}
-			}
-			Expect(efFound).To(BeTrue())
+				return efFound
+			}, timeout, interval).Should(BeTrue())
 		})
 
 		It("deal with Istio gateway", func() {
 			ctx := context.Background()
 			input := []map[string]interface{}{}
+			mustReadHTTPFilterPolicy("default_istio", &input)
+
+			for _, in := range input {
+				obj := pkg.MapToObj(in)
+				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
+			}
+
 			mustReadHTTPFilterPolicy("istio_gateway", &input)
 
 			for _, in := range input {
@@ -129,8 +151,8 @@ var _ = Describe("HTTPFilterPolicy controller, for gateway", func() {
 					return false
 				}
 				for _, ef := range envoyfilters.Items {
-					// One from the default gateway, and two from the istio_gateway input
-					if ef.Name == "htnn-h-default" && len(ef.Spec.ConfigPatches) == 3 {
+					// Two from the default gateway, and two from the istio_gateway input
+					if ef.Name == "htnn-h-default" && len(ef.Spec.ConfigPatches) == 4 {
 						return true
 					}
 				}
@@ -138,19 +160,19 @@ var _ = Describe("HTTPFilterPolicy controller, for gateway", func() {
 			}, timeout, interval).Should(BeTrue())
 
 			ecdsFound := false
+			names := []string{}
 			for _, ef := range envoyfilters.Items {
 				if ef.Name == "htnn-h-default" {
 					for _, cp := range ef.Spec.ConfigPatches {
 						if cp.ApplyTo == istioapi.EnvoyFilter_EXTENSION_CONFIG {
 							ecdsFound = true
-							name := cp.Patch.Value.AsMap()["name"].(string)
-							Expect(name).To(Equal("htnn-default-0.0.0.0_8989-golang-filter"))
-							break
+							names = append(names, cp.Patch.Value.AsMap()["name"].(string))
 						}
 					}
 				}
 			}
 			Expect(ecdsFound).To(BeTrue())
+			Expect(names).To(ConsistOf([]string{"htnn-default-0.0.0.0_8989-golang-filter", "htnn-default-0.0.0.0_8888-golang-filter"}))
 
 			var policies mosniov1.HTTPFilterPolicyList
 			Eventually(func() bool {
@@ -164,19 +186,18 @@ var _ = Describe("HTTPFilterPolicy controller, for gateway", func() {
 					if len(policy.Status.Conditions) == 0 {
 						return false
 					}
+					if policy.Name == "policy" {
+						if policy.Status.Conditions[0].Reason != string(gwapiv1a2.PolicyReasonAccepted) {
+							return false
+						}
+					} else {
+						if policy.Status.Conditions[0].Reason != string(gwapiv1a2.PolicyReasonTargetNotFound) {
+							return false
+						}
+					}
 				}
 				return true
 			}, timeout, interval).Should(BeTrue())
-
-			for _, policy := range policies.Items {
-				cond := policy.Status.Conditions[0]
-				switch policy.Name {
-				case "policy":
-					Expect(cond.Reason).To(Equal(string(gwapiv1a2.PolicyReasonAccepted)))
-				default:
-					Expect(cond.Reason).To(Equal(string(gwapiv1a2.PolicyReasonTargetNotFound)))
-				}
-			}
 		})
 	})
 
@@ -184,14 +205,6 @@ var _ = Describe("HTTPFilterPolicy controller, for gateway", func() {
 		BeforeEach(func() {
 			os.Setenv("HTNN_ENABLE_LDS_PLUGIN_VIA_ECDS", "true")
 			config.Init()
-
-			input := []map[string]interface{}{}
-			mustReadHTTPFilterPolicy("default_gwapi", &input)
-
-			for _, in := range input {
-				obj := pkg.MapToObj(in)
-				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
-			}
 		})
 
 		AfterEach(func() {
@@ -214,30 +227,45 @@ var _ = Describe("HTTPFilterPolicy controller, for gateway", func() {
 		})
 
 		It("should produce HTTP filter with discovery for ECDS", func() {
+			input := []map[string]interface{}{}
+			mustReadHTTPFilterPolicy("default_gwapi", &input)
+
+			for _, in := range input {
+				obj := pkg.MapToObj(in)
+				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
+			}
+
 			var envoyfilters istiov1a3.EnvoyFilterList
 			Eventually(func() bool {
 				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
 					return false
 				}
-				return len(envoyfilters.Items) == 2
-			}, timeout, interval).Should(BeTrue())
+				efFound := false
+				for _, ef := range envoyfilters.Items {
+					if ef.Name == "htnn-h-default" {
+						efFound = true
 
-			efFound := false
-			for _, ef := range envoyfilters.Items {
-				if ef.Name == "htnn-h-default" {
-					efFound = true
-
-					Expect(len(ef.Spec.ConfigPatches)).To(Equal(1))
-					cp := ef.Spec.ConfigPatches[0]
-					Expect(cp.ApplyTo).To(Equal(istioapi.EnvoyFilter_HTTP_FILTER))
+						Expect(len(ef.Spec.ConfigPatches)).To(Equal(2))
+						cp := ef.Spec.ConfigPatches[0]
+						Expect(cp.ApplyTo).To(Equal(istioapi.EnvoyFilter_HTTP_FILTER))
+						cp = ef.Spec.ConfigPatches[1]
+						Expect(cp.ApplyTo).To(Equal(istioapi.EnvoyFilter_EXTENSION_CONFIG))
+					}
 				}
-			}
-			Expect(efFound).To(BeTrue())
+				return efFound
+			}, timeout, interval).Should(BeTrue())
 		})
 
 		It("deal with k8s gateway", func() {
 			ctx := context.Background()
 			input := []map[string]interface{}{}
+			mustReadHTTPFilterPolicy("default_gwapi", &input)
+
+			for _, in := range input {
+				obj := pkg.MapToObj(in)
+				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
+			}
+
 			mustReadHTTPFilterPolicy("gateway", &input)
 
 			for _, in := range input {
@@ -254,8 +282,8 @@ var _ = Describe("HTTPFilterPolicy controller, for gateway", func() {
 					return false
 				}
 				for _, ef := range envoyfilters.Items {
-					// One from the default gateway, and two from the gateway input
-					if ef.Name == "htnn-h-default" && len(ef.Spec.ConfigPatches) == 3 {
+					// Two from the default gateway, and two from the gateway input
+					if ef.Name == "htnn-h-default" && len(ef.Spec.ConfigPatches) == 4 {
 						return true
 					}
 				}
@@ -263,19 +291,19 @@ var _ = Describe("HTTPFilterPolicy controller, for gateway", func() {
 			}, timeout, interval).Should(BeTrue())
 
 			ecdsFound := false
+			names := []string{}
 			for _, ef := range envoyfilters.Items {
 				if ef.Name == "htnn-h-default" {
 					for _, cp := range ef.Spec.ConfigPatches {
 						if cp.ApplyTo == istioapi.EnvoyFilter_EXTENSION_CONFIG {
 							ecdsFound = true
-							name := cp.Patch.Value.AsMap()["name"].(string)
-							Expect(name).To(Equal("htnn-default-0.0.0.0_8989-golang-filter"))
-							break
+							names = append(names, cp.Patch.Value.AsMap()["name"].(string))
 						}
 					}
 				}
 			}
 			Expect(ecdsFound).To(BeTrue())
+			Expect(names).To(ConsistOf([]string{"htnn-default-0.0.0.0_8989-golang-filter", "htnn-default-0.0.0.0_8888-golang-filter"}))
 
 			var policies mosniov1.HTTPFilterPolicyList
 			Eventually(func() bool {
@@ -289,19 +317,18 @@ var _ = Describe("HTTPFilterPolicy controller, for gateway", func() {
 					if len(policy.Status.Conditions) == 0 {
 						return false
 					}
+					if policy.Name == "policy" {
+						if policy.Status.Conditions[0].Reason != string(gwapiv1a2.PolicyReasonAccepted) {
+							return false
+						}
+					} else {
+						if policy.Status.Conditions[0].Reason != string(gwapiv1a2.PolicyReasonTargetNotFound) {
+							return false
+						}
+					}
 				}
 				return true
 			}, timeout, interval).Should(BeTrue())
-
-			for _, policy := range policies.Items {
-				cond := policy.Status.Conditions[0]
-				switch policy.Name {
-				case "policy":
-					Expect(cond.Reason).To(Equal(string(gwapiv1a2.PolicyReasonAccepted)))
-				default:
-					Expect(cond.Reason).To(Equal(string(gwapiv1a2.PolicyReasonTargetNotFound)))
-				}
-			}
 		})
 	})
 

@@ -61,11 +61,13 @@ type filterManagerConfig struct {
 	parsed []*model.ParsedFilterConfig
 	pool   *sync.Pool
 
-	initOnceNonblockingly func()
+	namespace string
 }
 
 func initFilterManagerConfig(namespace string) *filterManagerConfig {
-	config := &filterManagerConfig{}
+	config := &filterManagerConfig{
+		namespace: namespace,
+	}
 	config.pool = &sync.Pool{
 		New: func() any {
 			callbacks := &filterManagerCallbackHandler{
@@ -81,8 +83,81 @@ func initFilterManagerConfig(namespace string) *filterManagerConfig {
 			return fm
 		},
 	}
-	config.initOnceNonblockingly = func() {}
 	return config
+}
+
+// Merge merges another filterManagerConfig into a copy of current filterManagerConfig, and then returns
+// the copy
+func (conf *filterManagerConfig) Merge(another *filterManagerConfig) *filterManagerConfig {
+	ns := conf.namespace
+	if ns == "" {
+		ns = another.namespace
+	}
+
+	// It's tough to do the data plane merge right. We don't use shallow copy, which may share
+	// data structure accidentally. We don't use deep copy all the fields, which may copy unexpected computed data.
+	// Let's copy fields manually.
+	cp := initFilterManagerConfig(ns)
+	cp.parsed = make([]*model.ParsedFilterConfig, 0, len(conf.parsed)+len(another.parsed))
+	// For now, we don't deepcopy the config. The config may contain connection to the external
+	// service, for example, a Redis cluster. Not sure if it is safe to deepcopy them. So far,
+	// sharing the config created from route when the previous HTTP filter existed is fine.
+	cp.parsed = append(cp.parsed, conf.parsed...)
+
+	// O(n^2) is fine as n is small
+	for _, toAdd := range another.parsed {
+		needAdd := true
+		for _, fc := range conf.parsed {
+			if fc.Name == toAdd.Name {
+				// The filter is already in the current config, skip it
+				needAdd = false
+				break
+			}
+		}
+
+		if needAdd {
+			// For now, we don't deepcopy the config from HTTP filter. Consider a case,
+			// a HTTP filter, which is shared by 1000 routes, has a hugh ACL. If we deepcopy
+			// it, the memory usage is too expensive.
+			cp.parsed = append(cp.parsed, toAdd)
+		}
+	}
+	sort.Slice(cp.parsed, func(i, j int) bool {
+		return pkgPlugins.ComparePluginOrder(cp.parsed[i].Name, cp.parsed[j].Name)
+	})
+
+	// recompute fields which will be different after merging
+	cp.consumerFiltersEndAt = len(cp.parsed)
+	for i, fc := range cp.parsed {
+		_, ok := pkgPlugins.LoadHttpPlugin(fc.Name).(pkgPlugins.ConsumerPlugin)
+		if !ok {
+			cp.consumerFiltersEndAt = i
+			break
+		}
+	}
+
+	api.LogInfof("after merged http filter, filtermanager config: %+v", cp)
+	if api.GetLogLevel() <= api.LogLevelDebug {
+		for _, fc := range cp.parsed {
+			api.LogDebugf("after merged http filter, plugin: %s, config: %+v", fc.Name, fc.ParsedConfig)
+		}
+	}
+	return cp
+}
+
+func (conf *filterManagerConfig) InitOnce() {
+	for _, fc := range conf.parsed {
+		config := fc.ParsedConfig
+		if initer, ok := config.(pkgPlugins.Initer); ok {
+			fc.InitOnce.Do(func() {
+				// For now, we have nothing to provide as config callbacks
+				err := initer.Init(nil)
+				if err != nil {
+					fc.Factory = NewInternalErrorFactory(fc.Name, err)
+				}
+			})
+		}
+	}
 }
 
 func (p *FilterManagerConfigParser) Parse(any *anypb.Any, callbacks capi.ConfigCallbackHandler) (interface{}, error) {
@@ -158,35 +233,17 @@ func (p *FilterManagerConfigParser) Parse(any *anypb.Any, callbacks capi.ConfigC
 	}
 	conf.consumerFiltersEndAt = consumerFiltersEndAt
 
-	conf.initOnceNonblockingly = sync.OnceFunc(func() {
-		for i, fc := range conf.parsed {
-			config := fc.ParsedConfig
-			if initer, ok := config.(pkgPlugins.Initer); ok {
-				// For now, we have nothing to provide as config callbacks
-				err := initer.Init(nil)
-				if err != nil {
-					conf.parsed[i].Factory = NewInternalErrorFactory(fc.Name, err)
-				}
-			}
-		}
-	})
-
 	return conf, nil
 }
 
 func (p *FilterManagerConfigParser) Merge(parent interface{}, child interface{}) interface{} {
-	// We have considered to implemented a Merge Policy between the LDS's filter & RDS's per route
-	// config. A thought is to reuse the current Merge method. For example, considering we have
-	// LDS:
-	//	 - name: A
-	//	   pet: cat
-	// RDS:
-	//	 - name: A
-	//	   pet: dog
-	// we will call plugin A's Merge method, which will produce `pet: [cat, dog]` or `pet: dog`.
-	// As there is no real world use case for the Merge feature, I decide to delay its implementation
-	// to avoid premature design.
-	return child
+	httpFilterCfg := parent.(*filterManagerConfig)
+	routeCfg := child.(*filterManagerConfig)
+	if httpFilterCfg == nil || len(httpFilterCfg.parsed) == 0 {
+		return routeCfg
+	}
+
+	return routeCfg.Merge(httpFilterCfg)
 }
 
 type filterManager struct {
@@ -420,14 +477,14 @@ func FilterManagerFactory(c interface{}) capi.StreamFilterFactory {
 			}
 		}()
 
-		conf.initOnceNonblockingly()
+		conf.InitOnce()
 
 		fm := conf.pool.Get().(*filterManager)
 		fm.callbacks.FilterCallbackHandler = cb
 
 		canSkipMethod := fm.canSkipMethod
 		if canSkipMethod == nil {
-			// the `canSkipMethod` can't be initialized in initOnceNonblockingly,
+			// the `canSkipMethod` can't be initialized in InitOnce,
 			// as it depends on the filter which is created per request.
 			canSkipMethod = newSkipMethodsMap()
 		}
@@ -676,6 +733,22 @@ func (m *filterManager) DecodeHeaders(headers capi.RequestHeaderMap, endStream b
 				sort.Slice(m.filters, func(i, j int) bool {
 					return pkgPlugins.ComparePluginOrder(m.filters[i].Name, m.filters[j].Name)
 				})
+
+				if api.GetLogLevel() <= api.LogLevelDebug {
+					for _, f := range m.filters {
+						fc := c.FilterConfigs[f.Name]
+						if fc == nil {
+							// the plugin is not from consumer
+							for _, cfg := range m.config.parsed {
+								if cfg.Name == f.Name {
+									fc = cfg
+									break
+								}
+							}
+						}
+						api.LogDebugf("after merged consumer, plugin: %s, config: %+v", f.Name, fc.ParsedConfig)
+					}
+				}
 			}
 		}
 

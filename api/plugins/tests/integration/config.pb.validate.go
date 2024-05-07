@@ -66,6 +66,8 @@ func (m *Config) validate(all bool) error {
 
 	// no validation rules for Data
 
+	// no validation rules for ReplyMsg
+
 	if len(errors) > 0 {
 		return ConfigMultiError(errors)
 	}

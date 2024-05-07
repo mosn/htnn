@@ -18,6 +18,7 @@ import (
 	"errors"
 	"net/http"
 	"runtime/debug"
+	"strconv"
 	"strings"
 
 	"mosn.io/htnn/api/pkg/filtermanager/api"
@@ -190,7 +191,12 @@ func (f *localReplyFilter) NewLocalResponse(reply string) *api.LocalResponse {
 	if len(runFilters) > 0 {
 		hdr.Set("order", strings.Join(runFilters, "|"))
 	}
-	return &api.LocalResponse{Code: 206, Msg: "ok", Header: hdr}
+
+	msg := "ok"
+	if f.config.ReplyMsg != "" {
+		msg = f.config.ReplyMsg
+	}
+	return &api.LocalResponse{Code: 206, Msg: msg, Header: hdr}
 }
 
 func (f *localReplyFilter) DecodeRequest(headers api.RequestHeaderMap, buf api.BufferInstance, trailer api.RequestTrailerMap) api.ResultAction {
@@ -361,10 +367,56 @@ func (f *consumerFilter) DecodeHeaders(headers api.RequestHeaderMap, endStream b
 	return api.Continue
 }
 
+type initConfig struct {
+	Config
+
+	initCounter int
+}
+
+func (c *initConfig) Init(cb api.ConfigCallbackHandler) error {
+	api.LogInfof("init at %s", string(debug.Stack()))
+	c.initCounter++
+	return nil
+}
+
+var _ plugins.Initer = &initConfig{}
+
+type initPlugin struct {
+	plugins.PluginMethodDefaultImpl
+}
+
+func (p *initPlugin) Config() api.PluginConfig {
+	return &initConfig{}
+}
+
+func (p *initPlugin) Factory() api.FilterFactory {
+	return initFactory
+}
+
+func initFactory(c interface{}, callbacks api.FilterCallbackHandler) api.Filter {
+	return &initFilter{
+		callbacks: callbacks,
+		config:    c.(*initConfig),
+	}
+}
+
+type initFilter struct {
+	api.PassThroughFilter
+
+	callbacks api.FilterCallbackHandler
+	config    *initConfig
+}
+
+func (f *initFilter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {
+	headers.Add("InitCounter", strconv.Itoa(f.config.initCounter))
+	return api.Continue
+}
+
 func init() {
 	plugins.RegisterHttpPlugin("stream", &streamPlugin{})
 	plugins.RegisterHttpPlugin("buffer", &bufferPlugin{})
 	plugins.RegisterHttpPlugin("localReply", &localReplyPlugin{})
 	plugins.RegisterHttpPlugin("bad", &badPlugin{})
 	plugins.RegisterHttpPlugin("consumer", &consumerPlugin{})
+	plugins.RegisterHttpPlugin("init", &initPlugin{})
 }
