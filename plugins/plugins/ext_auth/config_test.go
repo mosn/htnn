@@ -67,3 +67,37 @@ func TestBadConfig(t *testing.T) {
 		})
 	}
 }
+
+func TestValidConfig(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+		err   string
+	}{
+		{
+			name: "empty authorizationRequest",
+			input: `{"httpService":{
+				"url":"http://127.0.0.1",
+				"authorizationRequest":{}
+			}}`,
+		},
+		{
+			name: "empty authorizationResponse",
+			input: `{"httpService":{
+				"url":"http://127.0.0.1",
+				"authorizationResponse":{}
+			}}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			conf := &config{}
+			err := protojson.Unmarshal([]byte(tt.input), conf)
+			if err == nil {
+				err = conf.Validate()
+			}
+			assert.Nil(t, err)
+		})
+	}
+}
