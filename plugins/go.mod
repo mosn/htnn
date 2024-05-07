@@ -34,7 +34,7 @@ require (
 	github.com/open-policy-agent/opa v0.64.1
 	github.com/redis/go-redis/v9 v9.5.1
 	github.com/stretchr/testify v1.9.0
-	golang.org/x/oauth2 v0.19.0
+	golang.org/x/oauth2 v0.20.0
 	golang.org/x/time v0.5.0
 	google.golang.org/protobuf v1.34.0
 	mosn.io/htnn/api v0.2.1
