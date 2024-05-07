@@ -92,7 +92,7 @@ fmt-go: install-go-fmtter
 .PHONY: lint-proto
 lint-proto: $(LOCALBIN)
 	test -x $(LOCALBIN)/buf || GOBIN=$(LOCALBIN) go install github.com/bufbuild/buf/cmd/buf@v1.28.1
-	$(LOCALBIN)/buf lint --exclude-path ./external
+	$(LOCALBIN)/buf lint
 
 .PHONY: fmt-proto
 fmt-proto: dev-tools
