@@ -29,7 +29,7 @@ The `limitCountRedis` plugin implements a global fixed window rate-limiting by s
 | statusOnError           | [StatusCode](../../type#statuscode) | False    |                            | The status code used to deny requests when Redis is inaccessible and `failureModeDeny` is true. Defaults to 500.                   |
 | rateLimitedStatus       | [StatusCode](../../type#statuscode) | False    |                            | The status code for responses denied due to rate-limiting. Defaults to 429. This setting only takes effect when it's 400 or above. |
 
-Each rule's count is independent. Rate-limiting action is triggered once any rule's quota is exhausted. Responses that are denied due to rate-limiting will include the header `x-envoy-ratelimited: true`. If `enableLimitQuotaHeaders` is set to `true`, all responses will include the following three headers:
+Each rule's count is independent. Rate-limiting action is triggered once any rule's quota is exhausted. Responses that are denied due to rate-limiting will include the header `x-envoy-ratelimited: true`. If `enableLimitQuotaHeaders` is set to `true` and accessing to redis succeed, all responses will include the following three headers:
 
 * `x-ratelimit-limit`: Represents the applied rate-limiting rule. The format is "the rule with the least remaining quota, (rule quota;w=time window){one or more rules}", e.g., `2, 2;w=60`.
 * `x-ratelimit-remaining`: Represents the remaining quota of the rule with the least remaining quota, with a minimum value of `0`.

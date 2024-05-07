@@ -29,7 +29,7 @@ title: Limit Count Redis
 | statusOnError           | [StatusCode](../../type#statuscode) | 否   |                            | 当无法访问 Redis 且 `failureModeDeny` 为 true 时，拒绝请求使用的状态码。默认为 500. |
 | rateLimitedStatus       | [StatusCode](../../type#statuscode) | 否   |                            | 因限流产生的拒绝响应的状态码。默认为 429. 该配置仅在不小于 400 时生效。             |
 
-每个规则的统计是独立的。当任一规则的额度用完后，就会触发限流操作。因限流产生的拒绝的响应中会包含 header `x-envoy-ratelimited: true`。如果配置了 `enableLimitQuotaHeaders` 为 `true`，所有响应中都会包括下面三个头：
+每个规则的统计是独立的。当任一规则的额度用完后，就会触发限流操作。因限流产生的拒绝的响应中会包含 header `x-envoy-ratelimited: true`。如果配置了 `enableLimitQuotaHeaders` 为 `true` 且访问 Redis 成功，所有响应中都会包括下面三个头：
 
 * `x-ratelimit-limit`：表示当前应用的限流规则。格式为“当前剩余额度最少的规则, (规则额度;w=时间窗口){1个或多个规则}”，例如 `2, 2;w=60`。
 * `x-ratelimit-remaining`：表示当前剩余额度最少的规则的剩余额度，最小值为 `0`。

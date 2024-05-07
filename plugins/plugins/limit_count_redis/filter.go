@@ -179,6 +179,10 @@ func (f *filter) EncodeHeaders(headers api.ResponseHeaderMap, endStream bool) ap
 	if !config.EnableLimitQuotaHeaders {
 		return api.Continue
 	}
+	if len(f.ress) == 0 {
+		// If the redis call is failed, we don't know the correct value of limit quota headers.
+		return api.Continue
+	}
 
 	var minCount uint32
 	var minRemain int64 = math.MaxUint32

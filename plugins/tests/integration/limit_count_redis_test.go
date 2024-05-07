@@ -404,6 +404,23 @@ func TestLimitCountRedisBadService(t *testing.T) {
 				assert.Equal(t, 500, resp.StatusCode)
 			},
 		},
+		{
+			name: "bad redis, don't produce limit quota headers",
+			config: control_plane.NewSinglePluinConfig("limitCountRedis", map[string]interface{}{
+				"address": "redisx:6379",
+				"rules": []interface{}{
+					map[string]interface{}{
+						"count":      1,
+						"timeWindow": "1s",
+					},
+				},
+				"enableLimitQuotaHeaders": true,
+			}),
+			run: func(t *testing.T) {
+				resp, _ := dp.Head("/echo", nil)
+				assert.Equal(t, 200, resp.StatusCode)
+			},
+		},
 	}
 
 	for _, tt := range tests {
