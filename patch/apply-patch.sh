@@ -23,5 +23,7 @@ for patch in istio/*.patch; do
 done
 
 pushd "$TARGET_ISTIO_DIR"
+go install golang.org/x/tools/cmd/goimports@latest # required by codegen
+go run pkg/config/schema/codegen/tools/collections.main.go
 go mod tidy
 popd

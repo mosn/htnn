@@ -1,5 +1,5 @@
 diff --git a/pilot/pkg/bootstrap/config_compare.go b/pilot/pkg/bootstrap/config_compare.go
-index f1f4f2b0ab..3c437bff1a 100644
+index f1f4f2b..3c437bf 100644
 --- a/pilot/pkg/bootstrap/config_compare.go
 +++ b/pilot/pkg/bootstrap/config_compare.go
 @@ -31,8 +31,9 @@ func needsPush(prev config.Config, curr config.Config) bool {
@@ -33,68 +33,97 @@ index f1f4f2b0ab..3c437bff1a 100644
  		}
  	}
 diff --git a/pilot/pkg/bootstrap/configcontroller.go b/pilot/pkg/bootstrap/configcontroller.go
-index 34cf0a690d..a1d970a45b 100644
+index 34cf0a6..f5f5ed7 100644
 --- a/pilot/pkg/bootstrap/configcontroller.go
 +++ b/pilot/pkg/bootstrap/configcontroller.go
-@@ -24,6 +24,7 @@ import (
- 	meshconfig "istio.io/api/mesh/v1alpha1"
- 	"istio.io/istio/pilot/pkg/autoregistration"
- 	configaggregate "istio.io/istio/pilot/pkg/config/aggregate"
-+	"istio.io/istio/pilot/pkg/config/htnn"
- 	"istio.io/istio/pilot/pkg/config/kube/crdclient"
- 	"istio.io/istio/pilot/pkg/config/kube/gateway"
- 	ingress "istio.io/istio/pilot/pkg/config/kube/ingress"
-@@ -113,6 +114,11 @@ func (s *Server) initConfigController(args *PilotArgs) error {
+@@ -113,6 +113,10 @@ func (s *Server) initConfigController(args *PilotArgs) error {
  		})
  	}
  
-+	htnnCtrl := &htnn.Controller{}
 +	if features.EnableHTNN {
-+		s.ConfigStores = append(s.ConfigStores, htnnCtrl)
++		s.addHTNNControllerToConfigStores()
 +	}
 +
  	// Wrap the config controller with a cache.
  	aggregateConfigController, err := configaggregate.MakeCache(s.ConfigStores)
  	if err != nil {
-@@ -123,6 +129,35 @@ func (s *Server) initConfigController(args *PilotArgs) error {
+@@ -123,6 +127,10 @@ func (s *Server) initConfigController(args *PilotArgs) error {
  	// Create the config store.
  	s.environment.ConfigStore = aggregateConfigController
  
 +	if features.EnableHTNN {
-+		htnnCtrl.Init(s.environment)
-+		s.environment.HTNNController = htnnCtrl
-+
-+		// TODO: add feature gate like EnableGatewayAPIStatus
-+		if s.statusManager == nil {
-+			s.initStatusManager(args)
-+		}
-+		s.addTerminatingStartFunc("htnn status", func(stop <-chan struct{}) error {
-+			leaderelection.
-+				NewLeaderElection(args.Namespace, args.PodName, leaderelection.HTNNStatusController, args.Revision, s.kubeClient).
-+				AddRunFunction(func(leaderStop <-chan struct{}) {
-+					log.Infof("Starting htnn status writer")
-+					htnnCtrl.SetStatusWrite(true, s.statusManager)
-+
-+					// Trigger a push so we can recompute status
-+					s.XDSServer.ConfigUpdate(&model.PushRequest{
-+						Full:   true,
-+						Reason: model.NewReasonStats(model.GlobalUpdate),
-+					})
-+					<-leaderStop
-+					log.Infof("Stopping htnn status writer")
-+					htnnCtrl.SetStatusWrite(false, nil)
-+				}).
-+				Run(stop)
-+			return nil
-+		})
++		s.startHTNNController(args)
 +	}
 +
  	// Defer starting the controller until after the service is created.
  	s.addStartFunc("config controller", func(stop <-chan struct{}) error {
  		go s.configController.Run(stop)
+diff --git a/pilot/pkg/bootstrap/htnn.go b/pilot/pkg/bootstrap/htnn.go
+new file mode 100644
+index 0000000..68b1df7
+--- /dev/null
++++ b/pilot/pkg/bootstrap/htnn.go
+@@ -0,0 +1,57 @@
++// Copyright The HTNN Authors.
++//
++// Licensed under the Apache License, Version 2.0 (the "License");
++// you may not use this file except in compliance with the License.
++// You may obtain a copy of the License at
++//
++//     http://www.apache.org/licenses/LICENSE-2.0
++//
++// Unless required by applicable law or agreed to in writing, software
++// distributed under the License is distributed on an "AS IS" BASIS,
++// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++// See the License for the specific language governing permissions and
++// limitations under the License.
++
++package bootstrap
++
++import (
++	"istio.io/istio/pilot/pkg/config/htnn"
++	"istio.io/istio/pilot/pkg/leaderelection"
++	"istio.io/istio/pilot/pkg/model"
++	"istio.io/istio/pkg/log"
++)
++
++func (s *Server) addHTNNControllerToConfigStores() {
++	htnnCtrl := &htnn.Controller{}
++	s.ConfigStores = append(s.ConfigStores, htnnCtrl)
++	s.environment.HTNNController = htnnCtrl
++}
++
++func (s *Server) startHTNNController(args *PilotArgs) {
++	htnnCtrl := s.environment.HTNNController.(*htnn.Controller)
++	htnnCtrl.Init(s.environment)
++
++	// TODO: add feature gate like EnableGatewayAPIStatus
++	if s.statusManager == nil {
++		s.initStatusManager(args)
++	}
++	s.addTerminatingStartFunc("htnn status", func(stop <-chan struct{}) error {
++		leaderelection.
++			NewLeaderElection(args.Namespace, args.PodName, leaderelection.HTNNStatusController, args.Revision, s.kubeClient).
++			AddRunFunction(func(leaderStop <-chan struct{}) {
++				log.Infof("Starting htnn status writer")
++				htnnCtrl.SetStatusWrite(true, s.statusManager)
++
++				// Trigger a push so we can recompute status
++				s.XDSServer.ConfigUpdate(&model.PushRequest{
++					Full:   true,
++					Reason: model.NewReasonStats(model.GlobalUpdate),
++				})
++				<-leaderStop
++				log.Infof("Stopping htnn status writer")
++				htnnCtrl.SetStatusWrite(false, nil)
++			}).
++			Run(stop)
++		return nil
++	})
++}
 diff --git a/pilot/pkg/config/htnn/component.go b/pilot/pkg/config/htnn/component.go
 new file mode 100644
-index 0000000000..275fcc02e9
+index 0000000..275fcc0
 --- /dev/null
 +++ b/pilot/pkg/config/htnn/component.go
 @@ -0,0 +1,174 @@
@@ -274,7 +303,7 @@ index 0000000000..275fcc02e9
 +}
 diff --git a/pilot/pkg/config/htnn/controller.go b/pilot/pkg/config/htnn/controller.go
 new file mode 100644
-index 0000000000..307135ab70
+index 0000000..307135a
 --- /dev/null
 +++ b/pilot/pkg/config/htnn/controller.go
 @@ -0,0 +1,307 @@
@@ -587,7 +616,7 @@ index 0000000000..307135ab70
 +}
 diff --git a/pilot/pkg/config/htnn/htnn.go b/pilot/pkg/config/htnn/htnn.go
 new file mode 100644
-index 0000000000..9bd0be3935
+index 0000000..9bd0be3
 --- /dev/null
 +++ b/pilot/pkg/config/htnn/htnn.go
 @@ -0,0 +1,40 @@
@@ -632,16 +661,10 @@ index 0000000000..9bd0be3935
 +	istio.InitMetrics(&MetricProvider{})
 +}
 diff --git a/pilot/pkg/config/kube/crdclient/client.go b/pilot/pkg/config/kube/crdclient/client.go
-index 6e07fea8e6..44583980e4 100644
+index 6e07fea..26e5d66 100644
 --- a/pilot/pkg/config/kube/crdclient/client.go
 +++ b/pilot/pkg/config/kube/crdclient/client.go
-@@ -38,11 +38,13 @@ import (
- 	_ "k8s.io/client-go/plugin/pkg/client/auth/gcp"  // import GKE cluster authentication plugin
- 	_ "k8s.io/client-go/plugin/pkg/client/auth/oidc" // import OIDC cluster authentication plugin, e.g. for Tectonic
- 
-+	networking "istio.io/api/networking/v1alpha3"
- 	"istio.io/istio/pilot/pkg/features"
- 	"istio.io/istio/pilot/pkg/model"
+@@ -43,6 +43,7 @@ import (
  	"istio.io/istio/pkg/config"
  	"istio.io/istio/pkg/config/schema/collection"
  	"istio.io/istio/pkg/config/schema/collections"
@@ -649,628 +672,64 @@ index 6e07fea8e6..44583980e4 100644
  	"istio.io/istio/pkg/config/schema/resource"
  	"istio.io/istio/pkg/kube"
  	"istio.io/istio/pkg/kube/controllers"
-@@ -290,6 +292,22 @@ func TranslateObject(r runtime.Object, gvk config.GroupVersionKind, domainSuffix
+@@ -290,6 +291,11 @@ func TranslateObject(r runtime.Object, gvk config.GroupVersionKind, domainSuffix
  	}
  	c := translateFunc(r)
  	c.Domain = domainSuffix
 +
-+	if gvk == schemagvk.VirtualService {
-+		spec := c.Spec.(*networking.VirtualService)
-+		for _, httpRoute := range spec.Http {
-+			if httpRoute.Name == "" {
-+				// The generated name is designed not to be referred by Policy's SectionName directly.
-+				// If you need to refer to it, you need to specify the name by yourself.
-+				httpRoute.Name = fmt.Sprintf("%s.%s", c.Namespace, c.Name)
-+				// We don't encode the Kind into the generated name, as we think sane user won't create
-+				// VirtualService and HTTPRoute with the same name in the same namespace for the same host.
-+				// Choosing one is enough.
-+			}
-+			// If the name is specified by user, the same route name should not be used in different VirtualServices.
-+		}
++	if features.EnableHTNN && gvk == schemagvk.VirtualService {
++		fixVirtualService(&c)
 +	}
 +
  	return c
  }
  
-diff --git a/pilot/pkg/config/kube/crdclient/types.gen.go b/pilot/pkg/config/kube/crdclient/types.gen.go
-index ef76a6c255..4b1e3787d2 100644
---- a/pilot/pkg/config/kube/crdclient/types.gen.go
-+++ b/pilot/pkg/config/kube/crdclient/types.gen.go
-@@ -9,6 +9,7 @@ import (
- 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
- 	"k8s.io/apimachinery/pkg/runtime"
- 	"k8s.io/apimachinery/pkg/types"
-+	"sigs.k8s.io/controller-runtime/pkg/client"
- 
- 	"istio.io/istio/pkg/config"
- 	"istio.io/istio/pkg/config/schema/gvk"
-@@ -22,6 +23,7 @@ import (
- 	k8sioapidiscoveryv1 "k8s.io/api/discovery/v1"
- 	k8sioapinetworkingv1 "k8s.io/api/networking/v1"
- 	k8sioapiextensionsapiserverpkgapisapiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-+	mosniohtnntypesapisv1 "mosn.io/htnn/types/apis/v1"
- 	sigsk8siogatewayapiapisv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
- 	sigsk8siogatewayapiapisv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
- 
-@@ -45,6 +47,11 @@ func create(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1
- 			ObjectMeta: objMeta,
- 			Spec:       *(cfg.Spec.(*istioioapisecurityv1beta1.AuthorizationPolicy)),
- 		}, metav1.CreateOptions{})
-+	case gvk.Consumer:
-+		return c.MOSN().ApisV1().Consumers(cfg.Namespace).Create(context.TODO(), &mosniohtnntypesapisv1.Consumer{
-+			ObjectMeta: objMeta,
-+			Spec:       *(cfg.Spec.(*mosniohtnntypesapisv1.ConsumerSpec)),
-+		}, metav1.CreateOptions{})
- 	case gvk.DestinationRule:
- 		return c.Istio().NetworkingV1alpha3().DestinationRules(cfg.Namespace).Create(context.TODO(), &apiistioioapinetworkingv1alpha3.DestinationRule{
- 			ObjectMeta: objMeta,
-@@ -70,6 +77,11 @@ func create(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1
- 			ObjectMeta: objMeta,
- 			Spec:       *(cfg.Spec.(*sigsk8siogatewayapiapisv1beta1.GatewayClassSpec)),
- 		}, metav1.CreateOptions{})
-+	case gvk.HTTPFilterPolicy:
-+		return c.MOSN().ApisV1().HTTPFilterPolicies(cfg.Namespace).Create(context.TODO(), &mosniohtnntypesapisv1.HTTPFilterPolicy{
-+			ObjectMeta: objMeta,
-+			Spec:       *(cfg.Spec.(*mosniohtnntypesapisv1.HTTPFilterPolicySpec)),
-+		}, metav1.CreateOptions{})
- 	case gvk.HTTPRoute:
- 		return c.GatewayAPI().GatewayV1beta1().HTTPRoutes(cfg.Namespace).Create(context.TODO(), &sigsk8siogatewayapiapisv1beta1.HTTPRoute{
- 			ObjectMeta: objMeta,
-@@ -162,6 +174,11 @@ func update(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1
- 			ObjectMeta: objMeta,
- 			Spec:       *(cfg.Spec.(*istioioapisecurityv1beta1.AuthorizationPolicy)),
- 		}, metav1.UpdateOptions{})
-+	case gvk.Consumer:
-+		return c.MOSN().ApisV1().Consumers(cfg.Namespace).Update(context.TODO(), &mosniohtnntypesapisv1.Consumer{
-+			ObjectMeta: objMeta,
-+			Spec:       *(cfg.Spec.(*mosniohtnntypesapisv1.ConsumerSpec)),
-+		}, metav1.UpdateOptions{})
- 	case gvk.DestinationRule:
- 		return c.Istio().NetworkingV1alpha3().DestinationRules(cfg.Namespace).Update(context.TODO(), &apiistioioapinetworkingv1alpha3.DestinationRule{
- 			ObjectMeta: objMeta,
-@@ -187,6 +204,11 @@ func update(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (metav1
- 			ObjectMeta: objMeta,
- 			Spec:       *(cfg.Spec.(*sigsk8siogatewayapiapisv1beta1.GatewayClassSpec)),
- 		}, metav1.UpdateOptions{})
-+	case gvk.HTTPFilterPolicy:
-+		return c.MOSN().ApisV1().HTTPFilterPolicies(cfg.Namespace).Update(context.TODO(), &mosniohtnntypesapisv1.HTTPFilterPolicy{
-+			ObjectMeta: objMeta,
-+			Spec:       *(cfg.Spec.(*mosniohtnntypesapisv1.HTTPFilterPolicySpec)),
-+		}, metav1.UpdateOptions{})
- 	case gvk.HTTPRoute:
- 		return c.GatewayAPI().GatewayV1beta1().HTTPRoutes(cfg.Namespace).Update(context.TODO(), &sigsk8siogatewayapiapisv1beta1.HTTPRoute{
- 			ObjectMeta: objMeta,
-@@ -279,6 +301,11 @@ func updateStatus(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (
- 			ObjectMeta: objMeta,
- 			Status:     *(cfg.Status.(*istioioapimetav1alpha1.IstioStatus)),
- 		}, metav1.UpdateOptions{})
-+	case gvk.Consumer:
-+		return c.MOSN().ApisV1().Consumers(cfg.Namespace).UpdateStatus(context.TODO(), &mosniohtnntypesapisv1.Consumer{
-+			ObjectMeta: objMeta,
-+			Status:     *(cfg.Status.(*mosniohtnntypesapisv1.ConsumerStatus)),
-+		}, metav1.UpdateOptions{})
- 	case gvk.DestinationRule:
- 		return c.Istio().NetworkingV1alpha3().DestinationRules(cfg.Namespace).UpdateStatus(context.TODO(), &apiistioioapinetworkingv1alpha3.DestinationRule{
- 			ObjectMeta: objMeta,
-@@ -304,6 +331,11 @@ func updateStatus(c kube.Client, cfg config.Config, objMeta metav1.ObjectMeta) (
- 			ObjectMeta: objMeta,
- 			Status:     *(cfg.Status.(*sigsk8siogatewayapiapisv1beta1.GatewayClassStatus)),
- 		}, metav1.UpdateOptions{})
-+	case gvk.HTTPFilterPolicy:
-+		return c.MOSN().ApisV1().HTTPFilterPolicies(cfg.Namespace).UpdateStatus(context.TODO(), &mosniohtnntypesapisv1.HTTPFilterPolicy{
-+			ObjectMeta: objMeta,
-+			Status:     *(cfg.Status.(*mosniohtnntypesapisv1.HTTPFilterPolicyStatus)),
-+		}, metav1.UpdateOptions{})
- 	case gvk.HTTPRoute:
- 		return c.GatewayAPI().GatewayV1beta1().HTTPRoutes(cfg.Namespace).UpdateStatus(context.TODO(), &sigsk8siogatewayapiapisv1beta1.HTTPRoute{
- 			ObjectMeta: objMeta,
-@@ -404,6 +436,21 @@ func patch(c kube.Client, orig config.Config, origMeta metav1.ObjectMeta, mod co
- 		}
- 		return c.Istio().SecurityV1beta1().AuthorizationPolicies(orig.Namespace).
- 			Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "pilot-discovery"})
-+	case gvk.Consumer:
-+		oldRes := &mosniohtnntypesapisv1.Consumer{
-+			ObjectMeta: origMeta,
-+			Spec:       *(orig.Spec.(*mosniohtnntypesapisv1.ConsumerSpec)),
-+		}
-+		modRes := &mosniohtnntypesapisv1.Consumer{
-+			ObjectMeta: modMeta,
-+			Spec:       *(mod.Spec.(*mosniohtnntypesapisv1.ConsumerSpec)),
-+		}
-+		patchBytes, err := genPatchBytes(oldRes, modRes, typ)
-+		if err != nil {
-+			return nil, err
-+		}
-+		return c.MOSN().ApisV1().Consumers(orig.Namespace).
-+			Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "pilot-discovery"})
- 	case gvk.DestinationRule:
- 		oldRes := &apiistioioapinetworkingv1alpha3.DestinationRule{
- 			ObjectMeta: origMeta,
-@@ -479,6 +526,21 @@ func patch(c kube.Client, orig config.Config, origMeta metav1.ObjectMeta, mod co
- 		}
- 		return c.GatewayAPI().GatewayV1beta1().GatewayClasses().
- 			Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "pilot-discovery"})
-+	case gvk.HTTPFilterPolicy:
-+		oldRes := &mosniohtnntypesapisv1.HTTPFilterPolicy{
-+			ObjectMeta: origMeta,
-+			Spec:       *(orig.Spec.(*mosniohtnntypesapisv1.HTTPFilterPolicySpec)),
-+		}
-+		modRes := &mosniohtnntypesapisv1.HTTPFilterPolicy{
-+			ObjectMeta: modMeta,
-+			Spec:       *(mod.Spec.(*mosniohtnntypesapisv1.HTTPFilterPolicySpec)),
-+		}
-+		patchBytes, err := genPatchBytes(oldRes, modRes, typ)
-+		if err != nil {
-+			return nil, err
-+		}
-+		return c.MOSN().ApisV1().HTTPFilterPolicies(orig.Namespace).
-+			Patch(context.TODO(), orig.Name, typ, patchBytes, metav1.PatchOptions{FieldManager: "pilot-discovery"})
- 	case gvk.HTTPRoute:
- 		oldRes := &sigsk8siogatewayapiapisv1beta1.HTTPRoute{
- 			ObjectMeta: origMeta,
-@@ -732,6 +794,8 @@ func delete(c kube.Client, typ config.GroupVersionKind, name, namespace string,
- 	switch typ {
- 	case gvk.AuthorizationPolicy:
- 		return c.Istio().SecurityV1beta1().AuthorizationPolicies(namespace).Delete(context.TODO(), name, deleteOptions)
-+	case gvk.Consumer:
-+		return c.MOSN().ApisV1().Consumers(namespace).Delete(context.TODO(), name, deleteOptions)
- 	case gvk.DestinationRule:
- 		return c.Istio().NetworkingV1alpha3().DestinationRules(namespace).Delete(context.TODO(), name, deleteOptions)
- 	case gvk.EnvoyFilter:
-@@ -742,6 +806,8 @@ func delete(c kube.Client, typ config.GroupVersionKind, name, namespace string,
- 		return c.Istio().NetworkingV1alpha3().Gateways(namespace).Delete(context.TODO(), name, deleteOptions)
- 	case gvk.GatewayClass:
- 		return c.GatewayAPI().GatewayV1beta1().GatewayClasses().Delete(context.TODO(), name, deleteOptions)
-+	case gvk.HTTPFilterPolicy:
-+		return c.MOSN().ApisV1().HTTPFilterPolicies(namespace).Delete(context.TODO(), name, deleteOptions)
- 	case gvk.HTTPRoute:
- 		return c.GatewayAPI().GatewayV1beta1().HTTPRoutes(namespace).Delete(context.TODO(), name, deleteOptions)
- 	case gvk.KubernetesGateway:
-@@ -836,6 +902,25 @@ var translationMap = map[config.GroupVersionKind]func(r runtime.Object) config.C
- 			Spec: obj,
- 		}
- 	},
-+	gvk.Consumer: func(r runtime.Object) config.Config {
-+		obj := r.(*mosniohtnntypesapisv1.Consumer)
-+		return config.Config{
-+			Meta: config.Meta{
-+				GroupVersionKind:  gvk.Consumer,
-+				Name:              obj.Name,
-+				Namespace:         obj.Namespace,
-+				Labels:            obj.Labels,
-+				Annotations:       obj.Annotations,
-+				ResourceVersion:   obj.ResourceVersion,
-+				CreationTimestamp: obj.CreationTimestamp.Time,
-+				OwnerReferences:   obj.OwnerReferences,
-+				UID:               string(obj.UID),
-+				Generation:        obj.Generation,
-+			},
-+			Spec:   &obj.Spec,
-+			Status: &obj.Status,
-+		}
-+	},
- 	gvk.CustomResourceDefinition: func(r runtime.Object) config.Config {
- 		obj := r.(*k8sioapiextensionsapiserverpkgapisapiextensionsv1.CustomResourceDefinition)
- 		return config.Config{
-@@ -1021,6 +1106,25 @@ var translationMap = map[config.GroupVersionKind]func(r runtime.Object) config.C
- 			Status: &obj.Status,
- 		}
- 	},
-+	gvk.HTTPFilterPolicy: func(r runtime.Object) config.Config {
-+		obj := r.(*mosniohtnntypesapisv1.HTTPFilterPolicy)
-+		return config.Config{
-+			Meta: config.Meta{
-+				GroupVersionKind:  gvk.HTTPFilterPolicy,
-+				Name:              obj.Name,
-+				Namespace:         obj.Namespace,
-+				Labels:            obj.Labels,
-+				Annotations:       obj.Annotations,
-+				ResourceVersion:   obj.ResourceVersion,
-+				CreationTimestamp: obj.CreationTimestamp.Time,
-+				OwnerReferences:   obj.OwnerReferences,
-+				UID:               string(obj.UID),
-+				Generation:        obj.Generation,
-+			},
-+			Spec:   &obj.Spec,
-+			Status: &obj.Status,
-+		}
-+	},
- 	gvk.HTTPRoute: func(r runtime.Object) config.Config {
- 		obj := r.(*sigsk8siogatewayapiapisv1beta1.HTTPRoute)
- 		return config.Config{
-@@ -1542,3 +1646,389 @@ var translationMap = map[config.GroupVersionKind]func(r runtime.Object) config.C
- 		}
- 	},
- }
+diff --git a/pilot/pkg/config/kube/crdclient/htnn.go b/pilot/pkg/config/kube/crdclient/htnn.go
+new file mode 100644
+index 0000000..58d032c
+--- /dev/null
++++ b/pilot/pkg/config/kube/crdclient/htnn.go
+@@ -0,0 +1,37 @@
++// Copyright The HTNN Authors.
++//
++// Licensed under the Apache License, Version 2.0 (the "License");
++// you may not use this file except in compliance with the License.
++// You may obtain a copy of the License at
++//
++//     http://www.apache.org/licenses/LICENSE-2.0
++//
++// Unless required by applicable law or agreed to in writing, software
++// distributed under the License is distributed on an "AS IS" BASIS,
++// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++// See the License for the specific language governing permissions and
++// limitations under the License.
 +
-+// Only copy required fields for now
-+// TODO: optimize it!
-+var ConfigToObjectMap = map[config.GroupVersionKind]func(c *config.Config) client.Object{
-+	gvk.AuthorizationPolicy: func(c *config.Config) client.Object {
-+		obj := &apiistioioapisecurityv1beta1.AuthorizationPolicy{
-+			ObjectMeta: metav1.ObjectMeta{
-+				Name:        c.Name,
-+				Namespace:   c.Namespace,
-+				Labels:      c.Labels,
-+				Annotations: c.Annotations,
-+				Generation:  c.Generation,
-+			},
-+			Spec: *(c.Spec.(*istioioapisecurityv1beta1.AuthorizationPolicy)),
++package crdclient
++
++import (
++	"fmt"
++
++	networking "istio.io/api/networking/v1alpha3"
++	"istio.io/istio/pkg/config"
++)
++
++func fixVirtualService(c *config.Config) {
++	spec := c.Spec.(*networking.VirtualService)
++	for _, httpRoute := range spec.Http {
++		if httpRoute.Name == "" {
++			// The generated name is designed not to be referred by Policy's SectionName directly.
++			// If you need to refer to it, you need to specify the name by yourself.
++			httpRoute.Name = fmt.Sprintf("%s.%s", c.Namespace, c.Name)
++			// We don't encode the Kind into the generated name, as we think sane user won't create
++			// VirtualService and HTTPRoute with the same name in the same namespace for the same host.
++			// Choosing one is enough.
 +		}
-+		if c.Status != nil {
-+			obj.Status = *(c.Status.(*istioioapimetav1alpha1.IstioStatus))
-+		}
-+		return obj
-+	},
-+	gvk.Consumer: func(c *config.Config) client.Object {
-+		obj := &mosniohtnntypesapisv1.Consumer{
-+			ObjectMeta: metav1.ObjectMeta{
-+				Name:        c.Name,
-+				Namespace:   c.Namespace,
-+				Labels:      c.Labels,
-+				Annotations: c.Annotations,
-+				Generation:  c.Generation,
-+			},
-+			Spec: *(c.Spec.(*mosniohtnntypesapisv1.ConsumerSpec)),
-+		}
-+		if c.Status != nil {
-+			obj.Status = *(c.Status.(*mosniohtnntypesapisv1.ConsumerStatus))
-+		}
-+		return obj
-+	},
-+	gvk.DestinationRule: func(c *config.Config) client.Object {
-+		obj := &apiistioioapinetworkingv1alpha3.DestinationRule{
-+			ObjectMeta: metav1.ObjectMeta{
-+				Name:        c.Name,
-+				Namespace:   c.Namespace,
-+				Labels:      c.Labels,
-+				Annotations: c.Annotations,
-+				Generation:  c.Generation,
-+			},
-+			Spec: *(c.Spec.(*istioioapinetworkingv1alpha3.DestinationRule)),
-+		}
-+		if c.Status != nil {
-+			obj.Status = *(c.Status.(*istioioapimetav1alpha1.IstioStatus))
-+		}
-+		return obj
-+	},
-+	gvk.EnvoyFilter: func(c *config.Config) client.Object {
-+		obj := &apiistioioapinetworkingv1alpha3.EnvoyFilter{
-+			ObjectMeta: metav1.ObjectMeta{
-+				Name:        c.Name,
-+				Namespace:   c.Namespace,
-+				Labels:      c.Labels,
-+				Annotations: c.Annotations,
-+				Generation:  c.Generation,
-+			},
-+			Spec: *(c.Spec.(*istioioapinetworkingv1alpha3.EnvoyFilter)),
-+		}
-+		if c.Status != nil {
-+			obj.Status = *(c.Status.(*istioioapimetav1alpha1.IstioStatus))
-+		}
-+		return obj
-+	},
-+	gvk.GRPCRoute: func(c *config.Config) client.Object {
-+		obj := &sigsk8siogatewayapiapisv1alpha2.GRPCRoute{
-+			ObjectMeta: metav1.ObjectMeta{
-+				Name:        c.Name,
-+				Namespace:   c.Namespace,
-+				Labels:      c.Labels,
-+				Annotations: c.Annotations,
-+				Generation:  c.Generation,
-+			},
-+			Spec: *(c.Spec.(*sigsk8siogatewayapiapisv1alpha2.GRPCRouteSpec)),
-+		}
-+		if c.Status != nil {
-+			obj.Status = *(c.Status.(*sigsk8siogatewayapiapisv1alpha2.GRPCRouteStatus))
-+		}
-+		return obj
-+	},
-+	gvk.Gateway: func(c *config.Config) client.Object {
-+		obj := &apiistioioapinetworkingv1alpha3.Gateway{
-+			ObjectMeta: metav1.ObjectMeta{
-+				Name:        c.Name,
-+				Namespace:   c.Namespace,
-+				Labels:      c.Labels,
-+				Annotations: c.Annotations,
-+				Generation:  c.Generation,
-+			},
-+			Spec: *(c.Spec.(*istioioapinetworkingv1alpha3.Gateway)),
-+		}
-+		if c.Status != nil {
-+			obj.Status = *(c.Status.(*istioioapimetav1alpha1.IstioStatus))
-+		}
-+		return obj
-+	},
-+	gvk.GatewayClass: func(c *config.Config) client.Object {
-+		obj := &sigsk8siogatewayapiapisv1beta1.GatewayClass{
-+			ObjectMeta: metav1.ObjectMeta{
-+				Name:        c.Name,
-+				Namespace:   c.Namespace,
-+				Labels:      c.Labels,
-+				Annotations: c.Annotations,
-+				Generation:  c.Generation,
-+			},
-+			Spec: *(c.Spec.(*sigsk8siogatewayapiapisv1beta1.GatewayClassSpec)),
-+		}
-+		if c.Status != nil {
-+			obj.Status = *(c.Status.(*sigsk8siogatewayapiapisv1beta1.GatewayClassStatus))
-+		}
-+		return obj
-+	},
-+	gvk.HTTPFilterPolicy: func(c *config.Config) client.Object {
-+		obj := &mosniohtnntypesapisv1.HTTPFilterPolicy{
-+			ObjectMeta: metav1.ObjectMeta{
-+				Name:        c.Name,
-+				Namespace:   c.Namespace,
-+				Labels:      c.Labels,
-+				Annotations: c.Annotations,
-+				Generation:  c.Generation,
-+			},
-+			Spec: *(c.Spec.(*mosniohtnntypesapisv1.HTTPFilterPolicySpec)),
-+		}
-+		if c.Status != nil {
-+			obj.Status = *(c.Status.(*mosniohtnntypesapisv1.HTTPFilterPolicyStatus))
-+		}
-+		return obj
-+	},
-+	gvk.HTTPRoute: func(c *config.Config) client.Object {
-+		obj := &sigsk8siogatewayapiapisv1beta1.HTTPRoute{
-+			ObjectMeta: metav1.ObjectMeta{
-+				Name:        c.Name,
-+				Namespace:   c.Namespace,
-+				Labels:      c.Labels,
-+				Annotations: c.Annotations,
-+				Generation:  c.Generation,
-+			},
-+			Spec: *(c.Spec.(*sigsk8siogatewayapiapisv1beta1.HTTPRouteSpec)),
-+		}
-+		if c.Status != nil {
-+			obj.Status = *(c.Status.(*sigsk8siogatewayapiapisv1beta1.HTTPRouteStatus))
-+		}
-+		return obj
-+	},
-+	gvk.KubernetesGateway: func(c *config.Config) client.Object {
-+		obj := &sigsk8siogatewayapiapisv1beta1.Gateway{
-+			ObjectMeta: metav1.ObjectMeta{
-+				Name:        c.Name,
-+				Namespace:   c.Namespace,
-+				Labels:      c.Labels,
-+				Annotations: c.Annotations,
-+				Generation:  c.Generation,
-+			},
-+			Spec: *(c.Spec.(*sigsk8siogatewayapiapisv1beta1.GatewaySpec)),
-+		}
-+		if c.Status != nil {
-+			obj.Status = *(c.Status.(*sigsk8siogatewayapiapisv1beta1.GatewayStatus))
-+		}
-+		return obj
-+	},
-+	gvk.PeerAuthentication: func(c *config.Config) client.Object {
-+		obj := &apiistioioapisecurityv1beta1.PeerAuthentication{
-+			ObjectMeta: metav1.ObjectMeta{
-+				Name:        c.Name,
-+				Namespace:   c.Namespace,
-+				Labels:      c.Labels,
-+				Annotations: c.Annotations,
-+				Generation:  c.Generation,
-+			},
-+			Spec: *(c.Spec.(*istioioapisecurityv1beta1.PeerAuthentication)),
-+		}
-+		if c.Status != nil {
-+			obj.Status = *(c.Status.(*istioioapimetav1alpha1.IstioStatus))
-+		}
-+		return obj
-+	},
-+	gvk.ProxyConfig: func(c *config.Config) client.Object {
-+		obj := &apiistioioapinetworkingv1beta1.ProxyConfig{
-+			ObjectMeta: metav1.ObjectMeta{
-+				Name:        c.Name,
-+				Namespace:   c.Namespace,
-+				Labels:      c.Labels,
-+				Annotations: c.Annotations,
-+				Generation:  c.Generation,
-+			},
-+			Spec: *(c.Spec.(*istioioapinetworkingv1beta1.ProxyConfig)),
-+		}
-+		if c.Status != nil {
-+			obj.Status = *(c.Status.(*istioioapimetav1alpha1.IstioStatus))
-+		}
-+		return obj
-+	},
-+	gvk.ReferenceGrant: func(c *config.Config) client.Object {
-+		obj := &sigsk8siogatewayapiapisv1beta1.ReferenceGrant{
-+			ObjectMeta: metav1.ObjectMeta{
-+				Name:        c.Name,
-+				Namespace:   c.Namespace,
-+				Labels:      c.Labels,
-+				Annotations: c.Annotations,
-+				Generation:  c.Generation,
-+			},
-+			Spec: *(c.Spec.(*sigsk8siogatewayapiapisv1beta1.ReferenceGrantSpec)),
-+		}
-+		return obj
-+	},
-+	gvk.RequestAuthentication: func(c *config.Config) client.Object {
-+		obj := &apiistioioapisecurityv1beta1.RequestAuthentication{
-+			ObjectMeta: metav1.ObjectMeta{
-+				Name:        c.Name,
-+				Namespace:   c.Namespace,
-+				Labels:      c.Labels,
-+				Annotations: c.Annotations,
-+				Generation:  c.Generation,
-+			},
-+			Spec: *(c.Spec.(*istioioapisecurityv1beta1.RequestAuthentication)),
-+		}
-+		if c.Status != nil {
-+			obj.Status = *(c.Status.(*istioioapimetav1alpha1.IstioStatus))
-+		}
-+		return obj
-+	},
-+	gvk.ServiceEntry: func(c *config.Config) client.Object {
-+		obj := &apiistioioapinetworkingv1alpha3.ServiceEntry{
-+			ObjectMeta: metav1.ObjectMeta{
-+				Name:        c.Name,
-+				Namespace:   c.Namespace,
-+				Labels:      c.Labels,
-+				Annotations: c.Annotations,
-+				Generation:  c.Generation,
-+			},
-+			Spec: *(c.Spec.(*istioioapinetworkingv1alpha3.ServiceEntry)),
-+		}
-+		if c.Status != nil {
-+			obj.Status = *(c.Status.(*istioioapimetav1alpha1.IstioStatus))
-+		}
-+		return obj
-+	},
-+	gvk.Sidecar: func(c *config.Config) client.Object {
-+		obj := &apiistioioapinetworkingv1alpha3.Sidecar{
-+			ObjectMeta: metav1.ObjectMeta{
-+				Name:        c.Name,
-+				Namespace:   c.Namespace,
-+				Labels:      c.Labels,
-+				Annotations: c.Annotations,
-+				Generation:  c.Generation,
-+			},
-+			Spec: *(c.Spec.(*istioioapinetworkingv1alpha3.Sidecar)),
-+		}
-+		if c.Status != nil {
-+			obj.Status = *(c.Status.(*istioioapimetav1alpha1.IstioStatus))
-+		}
-+		return obj
-+	},
-+	gvk.TCPRoute: func(c *config.Config) client.Object {
-+		obj := &sigsk8siogatewayapiapisv1alpha2.TCPRoute{
-+			ObjectMeta: metav1.ObjectMeta{
-+				Name:        c.Name,
-+				Namespace:   c.Namespace,
-+				Labels:      c.Labels,
-+				Annotations: c.Annotations,
-+				Generation:  c.Generation,
-+			},
-+			Spec: *(c.Spec.(*sigsk8siogatewayapiapisv1alpha2.TCPRouteSpec)),
-+		}
-+		if c.Status != nil {
-+			obj.Status = *(c.Status.(*sigsk8siogatewayapiapisv1alpha2.TCPRouteStatus))
-+		}
-+		return obj
-+	},
-+	gvk.TLSRoute: func(c *config.Config) client.Object {
-+		obj := &sigsk8siogatewayapiapisv1alpha2.TLSRoute{
-+			ObjectMeta: metav1.ObjectMeta{
-+				Name:        c.Name,
-+				Namespace:   c.Namespace,
-+				Labels:      c.Labels,
-+				Annotations: c.Annotations,
-+				Generation:  c.Generation,
-+			},
-+			Spec: *(c.Spec.(*sigsk8siogatewayapiapisv1alpha2.TLSRouteSpec)),
-+		}
-+		if c.Status != nil {
-+			obj.Status = *(c.Status.(*sigsk8siogatewayapiapisv1alpha2.TLSRouteStatus))
-+		}
-+		return obj
-+	},
-+	gvk.Telemetry: func(c *config.Config) client.Object {
-+		obj := &apiistioioapitelemetryv1alpha1.Telemetry{
-+			ObjectMeta: metav1.ObjectMeta{
-+				Name:        c.Name,
-+				Namespace:   c.Namespace,
-+				Labels:      c.Labels,
-+				Annotations: c.Annotations,
-+				Generation:  c.Generation,
-+			},
-+			Spec: *(c.Spec.(*istioioapitelemetryv1alpha1.Telemetry)),
-+		}
-+		if c.Status != nil {
-+			obj.Status = *(c.Status.(*istioioapimetav1alpha1.IstioStatus))
-+		}
-+		return obj
-+	},
-+	gvk.UDPRoute: func(c *config.Config) client.Object {
-+		obj := &sigsk8siogatewayapiapisv1alpha2.UDPRoute{
-+			ObjectMeta: metav1.ObjectMeta{
-+				Name:        c.Name,
-+				Namespace:   c.Namespace,
-+				Labels:      c.Labels,
-+				Annotations: c.Annotations,
-+				Generation:  c.Generation,
-+			},
-+			Spec: *(c.Spec.(*sigsk8siogatewayapiapisv1alpha2.UDPRouteSpec)),
-+		}
-+		if c.Status != nil {
-+			obj.Status = *(c.Status.(*sigsk8siogatewayapiapisv1alpha2.UDPRouteStatus))
-+		}
-+		return obj
-+	},
-+	gvk.VirtualService: func(c *config.Config) client.Object {
-+		obj := &apiistioioapinetworkingv1alpha3.VirtualService{
-+			ObjectMeta: metav1.ObjectMeta{
-+				Name:        c.Name,
-+				Namespace:   c.Namespace,
-+				Labels:      c.Labels,
-+				Annotations: c.Annotations,
-+				Generation:  c.Generation,
-+			},
-+			Spec: *(c.Spec.(*istioioapinetworkingv1alpha3.VirtualService)),
-+		}
-+		if c.Status != nil {
-+			obj.Status = *(c.Status.(*istioioapimetav1alpha1.IstioStatus))
-+		}
-+		return obj
-+	},
-+	gvk.WasmPlugin: func(c *config.Config) client.Object {
-+		obj := &apiistioioapiextensionsv1alpha1.WasmPlugin{
-+			ObjectMeta: metav1.ObjectMeta{
-+				Name:        c.Name,
-+				Namespace:   c.Namespace,
-+				Labels:      c.Labels,
-+				Annotations: c.Annotations,
-+				Generation:  c.Generation,
-+			},
-+			Spec: *(c.Spec.(*istioioapiextensionsv1alpha1.WasmPlugin)),
-+		}
-+		if c.Status != nil {
-+			obj.Status = *(c.Status.(*istioioapimetav1alpha1.IstioStatus))
-+		}
-+		return obj
-+	},
-+	gvk.WorkloadEntry: func(c *config.Config) client.Object {
-+		obj := &apiistioioapinetworkingv1alpha3.WorkloadEntry{
-+			ObjectMeta: metav1.ObjectMeta{
-+				Name:        c.Name,
-+				Namespace:   c.Namespace,
-+				Labels:      c.Labels,
-+				Annotations: c.Annotations,
-+				Generation:  c.Generation,
-+			},
-+			Spec: *(c.Spec.(*istioioapinetworkingv1alpha3.WorkloadEntry)),
-+		}
-+		if c.Status != nil {
-+			obj.Status = *(c.Status.(*istioioapimetav1alpha1.IstioStatus))
-+		}
-+		return obj
-+	},
-+	gvk.WorkloadGroup: func(c *config.Config) client.Object {
-+		obj := &apiistioioapinetworkingv1alpha3.WorkloadGroup{
-+			ObjectMeta: metav1.ObjectMeta{
-+				Name:        c.Name,
-+				Namespace:   c.Namespace,
-+				Labels:      c.Labels,
-+				Annotations: c.Annotations,
-+				Generation:  c.Generation,
-+			},
-+			Spec: *(c.Spec.(*istioioapinetworkingv1alpha3.WorkloadGroup)),
-+		}
-+		if c.Status != nil {
-+			obj.Status = *(c.Status.(*istioioapimetav1alpha1.IstioStatus))
-+		}
-+		return obj
-+	},
++		// If the name is specified by user, the same route name should not be used in different VirtualServices.
++	}
 +}
 diff --git a/pilot/pkg/features/htnn.go b/pilot/pkg/features/htnn.go
 new file mode 100644
-index 0000000000..cb1214e629
+index 0000000..cb1214e
 --- /dev/null
 +++ b/pilot/pkg/features/htnn.go
 @@ -0,0 +1,24 @@
@@ -1299,7 +758,7 @@ index 0000000000..cb1214e629
 +		"If enabled, Pilot will watch HTNN resources").Get()
 +)
 diff --git a/pilot/pkg/leaderelection/leaderelection.go b/pilot/pkg/leaderelection/leaderelection.go
-index 627860bce7..a0ce6a30f5 100644
+index 627860b..a0ce6a3 100644
 --- a/pilot/pkg/leaderelection/leaderelection.go
 +++ b/pilot/pkg/leaderelection/leaderelection.go
 @@ -45,6 +45,7 @@ const (
@@ -1311,7 +770,7 @@ index 627860bce7..a0ce6a30f5 100644
  	AnalyzeController       = "istio-analyze-leader"
  	// GatewayDeploymentController controls translating Kubernetes Gateway objects into various derived
 diff --git a/pilot/pkg/model/context.go b/pilot/pkg/model/context.go
-index dbe58a075b..742ee8be2d 100644
+index dbe58a0..742ee8b 100644
 --- a/pilot/pkg/model/context.go
 +++ b/pilot/pkg/model/context.go
 @@ -111,6 +111,7 @@ type Environment struct {
@@ -1334,28 +793,32 @@ index dbe58a075b..742ee8be2d 100644
  func OutboundListenerClass(t NodeType) istionetworking.ListenerClass {
  	if t == Router {
 diff --git a/pilot/pkg/model/push_context.go b/pilot/pkg/model/push_context.go
-index 7ba2e93a75..3b1d5f2155 100644
+index 7ba2e93..4bf7833 100644
 --- a/pilot/pkg/model/push_context.go
 +++ b/pilot/pkg/model/push_context.go
-@@ -1282,6 +1282,7 @@ func (ps *PushContext) createNewContext(env *Environment) error {
+@@ -1282,6 +1282,9 @@ func (ps *PushContext) createNewContext(env *Environment) error {
  	ps.initTelemetry(env)
  	ps.initProxyConfigs(env)
  	ps.initWasmPlugins(env)
-+	ps.initHTNNResources(env, nil)
++	if features.EnableHTNN {
++		ps.initHTNNResources(env, nil)
++	}
  	ps.initEnvoyFilters(env, nil, nil)
  	ps.initGateways(env)
  	ps.initAmbient(env)
-@@ -1396,6 +1397,9 @@ func (ps *PushContext) updateContext(
+@@ -1396,6 +1399,11 @@ func (ps *PushContext) updateContext(
  		ps.wasmPluginsByNamespace = oldPushContext.wasmPluginsByNamespace
  	}
  
-+	generated := ps.initHTNNResources(env, pushReq.ConfigsUpdated)
-+	envoyFiltersChanged = envoyFiltersChanged || generated
++	if features.EnableHTNN {
++		generated := ps.initHTNNResources(env, pushReq.ConfigsUpdated)
++		envoyFiltersChanged = envoyFiltersChanged || generated
++	}
 +
  	if envoyFiltersChanged {
  		ps.initEnvoyFilters(env, changedEnvoyFilters, oldPushContext.envoyFiltersByNamespace)
  	} else {
-@@ -2116,7 +2120,11 @@ func (ps *PushContext) initEnvoyFilters(env *Environment, changed sets.Set[Confi
+@@ -2116,7 +2124,11 @@ func (ps *PushContext) initEnvoyFilters(env *Environment, changed sets.Set[Confi
  
  	for _, envoyFilterConfig := range envoyFilterConfigs {
  		var efw *EnvoyFilterWrapper
@@ -1370,10 +833,10 @@ index 7ba2e93a75..3b1d5f2155 100644
  				// Reuse the previous EnvoyFilterWrapper if it exists and hasn't changed when optimized config rebuild is enabled
 diff --git a/pilot/pkg/model/push_context_htnn.go b/pilot/pkg/model/push_context_htnn.go
 new file mode 100644
-index 0000000000..20cf0837a2
+index 0000000..e68586d
 --- /dev/null
 +++ b/pilot/pkg/model/push_context_htnn.go
-@@ -0,0 +1,38 @@
+@@ -0,0 +1,32 @@
 +// Copyright The HTNN Authors.
 +//
 +// Licensed under the Apache License, Version 2.0 (the "License");
@@ -1390,9 +853,7 @@ index 0000000000..20cf0837a2
 +
 +package model
 +
-+// We put HTNN modifications to a separate file if possible
 +import (
-+	"istio.io/istio/pilot/pkg/features"
 +	"istio.io/istio/pkg/util/sets"
 +)
 +
@@ -1401,10 +862,6 @@ index 0000000000..20cf0837a2
 +)
 +
 +func (ps *PushContext) initHTNNResources(env *Environment, configsUpdated sets.Set[ConfigKey]) bool {
-+	if !features.EnableHTNN {
-+		return false
-+	}
-+
 +	efGenerated, err := env.HTNNController.Reconcile(ps, configsUpdated)
 +	if err != nil {
 +		log.Errorf("failed to reconcile HTNN resources: %s", err)
@@ -1413,7 +870,7 @@ index 0000000000..20cf0837a2
 +	return efGenerated
 +}
 diff --git a/pilot/pkg/xds/ecds.go b/pilot/pkg/xds/ecds.go
-index 305d1ebd75..d06d645065 100644
+index 305d1eb..d06d645 100644
 --- a/pilot/pkg/xds/ecds.go
 +++ b/pilot/pkg/xds/ecds.go
 @@ -55,6 +55,8 @@ func ecdsNeedsPush(req *model.PushRequest) bool {
@@ -1426,7 +883,7 @@ index 305d1ebd75..d06d645065 100644
  	}
  	return false
 diff --git a/pkg/config/schema/codegen/collections.go b/pkg/config/schema/codegen/collections.go
-index b1134806f9..bd13c63eee 100644
+index b113480..bd13c63 100644
 --- a/pkg/config/schema/codegen/collections.go
 +++ b/pkg/config/schema/codegen/collections.go
 @@ -168,6 +168,8 @@ func toGetter(protoPackage string) string {
@@ -1439,7 +896,7 @@ index b1134806f9..bd13c63eee 100644
  	return "Kube"
  }
 diff --git a/pkg/config/schema/codegen/templates/collections.go.tmpl b/pkg/config/schema/codegen/templates/collections.go.tmpl
-index 8e35e84830..35c609c0ca 100644
+index 8e35e84..35c609c 100644
 --- a/pkg/config/schema/codegen/templates/collections.go.tmpl
 +++ b/pkg/config/schema/codegen/templates/collections.go.tmpl
 @@ -4,6 +4,7 @@
@@ -1497,7 +954,7 @@ index 8e35e84830..35c609c0ca 100644
 +}
 +{{- end }}
 diff --git a/pkg/config/schema/codegen/templates/crdclient.go.tmpl b/pkg/config/schema/codegen/templates/crdclient.go.tmpl
-index 1da41f51ca..a11e26bc8a 100644
+index 1da41f5..a11e26b 100644
 --- a/pkg/config/schema/codegen/templates/crdclient.go.tmpl
 +++ b/pkg/config/schema/codegen/templates/crdclient.go.tmpl
 @@ -15,6 +15,7 @@ import (
@@ -1541,7 +998,7 @@ index 1da41f51ca..a11e26bc8a 100644
 +{{- end }}
 +}
 diff --git a/pkg/config/schema/codegen/templates/kind.go.tmpl b/pkg/config/schema/codegen/templates/kind.go.tmpl
-index 6934505e2a..de76f4f1fc 100644
+index 6934505..de76f4f 100644
 --- a/pkg/config/schema/codegen/templates/kind.go.tmpl
 +++ b/pkg/config/schema/codegen/templates/kind.go.tmpl
 @@ -39,4 +39,17 @@ func MustFromGVK(g config.GroupVersionKind) Kind {
@@ -1564,7 +1021,7 @@ index 6934505e2a..de76f4f1fc 100644
  }
 \ No newline at end of file
 diff --git a/pkg/config/schema/codegen/templates/types.go.tmpl b/pkg/config/schema/codegen/templates/types.go.tmpl
-index 05f87324df..53d59dfb03 100644
+index 05f8732..53d59df 100644
 --- a/pkg/config/schema/codegen/templates/types.go.tmpl
 +++ b/pkg/config/schema/codegen/templates/types.go.tmpl
 @@ -24,6 +24,10 @@ func getGvk(obj any) config.GroupVersionKind {
@@ -1578,348 +1035,8 @@ index 05f87324df..53d59dfb03 100644
  {{- end }}
    default:
      panic(fmt.Sprintf("Unknown type %T", obj))
-diff --git a/pkg/config/schema/collections/collections.gen.go b/pkg/config/schema/collections/collections.gen.go
-index 91f0909c0a..7cc1b90a43 100755
---- a/pkg/config/schema/collections/collections.gen.go
-+++ b/pkg/config/schema/collections/collections.gen.go
-@@ -16,6 +16,7 @@ import (
- 	k8sioapidiscoveryv1 "k8s.io/api/discovery/v1"
- 	k8sioapinetworkingv1 "k8s.io/api/networking/v1"
- 	k8sioapiextensionsapiserverpkgapisapiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-+	mosniohtnntypesapisv1 "mosn.io/htnn/types/apis/v1"
- 	sigsk8siogatewayapiapisv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
- 	sigsk8siogatewayapiapisv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
- 
-@@ -26,6 +27,7 @@ import (
- 	istioioapinetworkingv1beta1 "istio.io/api/networking/v1beta1"
- 	istioioapisecurityv1beta1 "istio.io/api/security/v1beta1"
- 	istioioapitelemetryv1alpha1 "istio.io/api/telemetry/v1alpha1"
-+	"istio.io/istio/pilot/pkg/features"
- 	"istio.io/istio/pkg/config/schema/collection"
- 	"istio.io/istio/pkg/config/schema/resource"
- 	"istio.io/istio/pkg/config/validation"
-@@ -80,6 +82,21 @@ var (
- 		ValidateProto: validation.EmptyValidate,
- 	}.MustBuild()
- 
-+	Consumer = resource.Builder{
-+		Identifier: "Consumer",
-+		Group:      "htnn.mosn.io",
-+		Kind:       "Consumer",
-+		Plural:     "consumers",
-+		Version:    "v1",
-+		Proto:      "htnn.mosn.io.v1.ConsumerSpec", StatusProto: "htnn.mosn.io.v1.ConsumerStatus",
-+		ReflectType: reflect.TypeOf(&mosniohtnntypesapisv1.ConsumerSpec{}).Elem(), StatusType: reflect.TypeOf(&mosniohtnntypesapisv1.ConsumerStatus{}).Elem(),
-+		ProtoPackage: "mosn.io/htnn/types/apis/v1", StatusPackage: "mosn.io/htnn/types/apis/v1",
-+		ClusterScoped: false,
-+		Synthetic:     false,
-+		Builtin:       false,
-+		ValidateProto: validation.ValidateConsumer,
-+	}.MustBuild()
-+
- 	CustomResourceDefinition = resource.Builder{
- 		Identifier:    "CustomResourceDefinition",
- 		Group:         "apiextensions.k8s.io",
-@@ -240,6 +257,21 @@ var (
- 		ValidateProto: validation.EmptyValidate,
- 	}.MustBuild()
- 
-+	HTTPFilterPolicy = resource.Builder{
-+		Identifier: "HTTPFilterPolicy",
-+		Group:      "htnn.mosn.io",
-+		Kind:       "HTTPFilterPolicy",
-+		Plural:     "httpfilterpolicies",
-+		Version:    "v1",
-+		Proto:      "htnn.mosn.io.v1.HTTPFilterPolicySpec", StatusProto: "htnn.mosn.io.v1.HTTPFilterPolicyStatus",
-+		ReflectType: reflect.TypeOf(&mosniohtnntypesapisv1.HTTPFilterPolicySpec{}).Elem(), StatusType: reflect.TypeOf(&mosniohtnntypesapisv1.HTTPFilterPolicyStatus{}).Elem(),
-+		ProtoPackage: "mosn.io/htnn/types/apis/v1", StatusPackage: "mosn.io/htnn/types/apis/v1",
-+		ClusterScoped: false,
-+		Synthetic:     false,
-+		Builtin:       false,
-+		ValidateProto: validation.ValidateHTTPFilterPolicy,
-+	}.MustBuild()
-+
- 	HTTPRoute = resource.Builder{
- 		Identifier: "HTTPRoute",
- 		Group:      "gateway.networking.k8s.io",
-@@ -814,6 +846,11 @@ var (
- 		MustAdd(WorkloadEntry).
- 		MustAdd(WorkloadGroup).
- 		Build()
-+	// HTNN contains collections used provided by HTNN.
-+	HTNN = collection.NewSchemasBuilder().
-+		MustAdd(Consumer).
-+		MustAdd(HTTPFilterPolicy).
-+		Build()
- 
- 	// pilotGatewayAPI contains only collections used by Pilot, including the full Gateway API.
- 	pilotGatewayAPI = collection.NewSchemasBuilder().
-@@ -863,3 +900,12 @@ var (
- 				MustAdd(WorkloadGroup).
- 				Build()
- )
-+
-+func init() {
-+	if features.EnableHTNN {
-+		All = All.Union(HTNN)
-+		Pilot = Pilot.Union(HTNN)
-+		pilotGatewayAPI = pilotGatewayAPI.Union(HTNN)
-+		pilotStableGatewayAPI = pilotStableGatewayAPI.Union(HTNN)
-+	}
-+}
-diff --git a/pkg/config/schema/gvk/resources.gen.go b/pkg/config/schema/gvk/resources.gen.go
-index 4b60b1ff1d..bd93aff45a 100755
---- a/pkg/config/schema/gvk/resources.gen.go
-+++ b/pkg/config/schema/gvk/resources.gen.go
-@@ -14,6 +14,7 @@ var (
- 	AuthorizationPolicy_v1         = config.GroupVersionKind{Group: "security.istio.io", Version: "v1", Kind: "AuthorizationPolicy"}
- 	CertificateSigningRequest      = config.GroupVersionKind{Group: "certificates.k8s.io", Version: "v1", Kind: "CertificateSigningRequest"}
- 	ConfigMap                      = config.GroupVersionKind{Group: "", Version: "v1", Kind: "ConfigMap"}
-+	Consumer                       = config.GroupVersionKind{Group: "htnn.mosn.io", Version: "v1", Kind: "Consumer"}
- 	CustomResourceDefinition       = config.GroupVersionKind{Group: "apiextensions.k8s.io", Version: "v1", Kind: "CustomResourceDefinition"}
- 	DaemonSet                      = config.GroupVersionKind{Group: "apps", Version: "v1", Kind: "DaemonSet"}
- 	Deployment                     = config.GroupVersionKind{Group: "apps", Version: "v1", Kind: "Deployment"}
-@@ -28,6 +29,7 @@ var (
- 	GatewayClass                   = config.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1beta1", Kind: "GatewayClass"}
- 	GatewayClass_v1alpha2          = config.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1alpha2", Kind: "GatewayClass"}
- 	GatewayClass_v1                = config.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1", Kind: "GatewayClass"}
-+	HTTPFilterPolicy               = config.GroupVersionKind{Group: "htnn.mosn.io", Version: "v1", Kind: "HTTPFilterPolicy"}
- 	HTTPRoute                      = config.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1beta1", Kind: "HTTPRoute"}
- 	HTTPRoute_v1alpha2             = config.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1alpha2", Kind: "HTTPRoute"}
- 	HTTPRoute_v1                   = config.GroupVersionKind{Group: "gateway.networking.k8s.io", Version: "v1", Kind: "HTTPRoute"}
-@@ -82,6 +84,8 @@ func ToGVR(g config.GroupVersionKind) (schema.GroupVersionResource, bool) {
- 		return gvr.CertificateSigningRequest, true
- 	case ConfigMap:
- 		return gvr.ConfigMap, true
-+	case Consumer:
-+		return gvr.Consumer, true
- 	case CustomResourceDefinition:
- 		return gvr.CustomResourceDefinition, true
- 	case DaemonSet:
-@@ -110,6 +114,8 @@ func ToGVR(g config.GroupVersionKind) (schema.GroupVersionResource, bool) {
- 		return gvr.GatewayClass_v1alpha2, true
- 	case GatewayClass_v1:
- 		return gvr.GatewayClass_v1, true
-+	case HTTPFilterPolicy:
-+		return gvr.HTTPFilterPolicy, true
- 	case HTTPRoute:
- 		return gvr.HTTPRoute, true
- 	case HTTPRoute_v1alpha2:
-@@ -216,6 +222,8 @@ func FromGVR(g schema.GroupVersionResource) (config.GroupVersionKind, bool) {
- 		return CertificateSigningRequest, true
- 	case gvr.ConfigMap:
- 		return ConfigMap, true
-+	case gvr.Consumer:
-+		return Consumer, true
- 	case gvr.CustomResourceDefinition:
- 		return CustomResourceDefinition, true
- 	case gvr.DaemonSet:
-@@ -236,6 +244,8 @@ func FromGVR(g schema.GroupVersionResource) (config.GroupVersionKind, bool) {
- 		return Gateway, true
- 	case gvr.GatewayClass:
- 		return GatewayClass, true
-+	case gvr.HTTPFilterPolicy:
-+		return HTTPFilterPolicy, true
- 	case gvr.HTTPRoute:
- 		return HTTPRoute, true
- 	case gvr.Ingress:
-diff --git a/pkg/config/schema/gvr/resources.gen.go b/pkg/config/schema/gvr/resources.gen.go
-index d165cd5dc2..1171a6a3a2 100755
---- a/pkg/config/schema/gvr/resources.gen.go
-+++ b/pkg/config/schema/gvr/resources.gen.go
-@@ -11,6 +11,7 @@ var (
- 	AuthorizationPolicy_v1         = schema.GroupVersionResource{Group: "security.istio.io", Version: "v1", Resource: "authorizationpolicies"}
- 	CertificateSigningRequest      = schema.GroupVersionResource{Group: "certificates.k8s.io", Version: "v1", Resource: "certificatesigningrequests"}
- 	ConfigMap                      = schema.GroupVersionResource{Group: "", Version: "v1", Resource: "configmaps"}
-+	Consumer                       = schema.GroupVersionResource{Group: "htnn.mosn.io", Version: "v1", Resource: "consumers"}
- 	CustomResourceDefinition       = schema.GroupVersionResource{Group: "apiextensions.k8s.io", Version: "v1", Resource: "customresourcedefinitions"}
- 	DaemonSet                      = schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "daemonsets"}
- 	Deployment                     = schema.GroupVersionResource{Group: "apps", Version: "v1", Resource: "deployments"}
-@@ -25,6 +26,7 @@ var (
- 	GatewayClass                   = schema.GroupVersionResource{Group: "gateway.networking.k8s.io", Version: "v1beta1", Resource: "gatewayclasses"}
- 	GatewayClass_v1alpha2          = schema.GroupVersionResource{Group: "gateway.networking.k8s.io", Version: "v1alpha2", Resource: "gatewayclasses"}
- 	GatewayClass_v1                = schema.GroupVersionResource{Group: "gateway.networking.k8s.io", Version: "v1", Resource: "gatewayclasses"}
-+	HTTPFilterPolicy               = schema.GroupVersionResource{Group: "htnn.mosn.io", Version: "v1", Resource: "httpfilterpolicies"}
- 	HTTPRoute                      = schema.GroupVersionResource{Group: "gateway.networking.k8s.io", Version: "v1beta1", Resource: "httproutes"}
- 	HTTPRoute_v1alpha2             = schema.GroupVersionResource{Group: "gateway.networking.k8s.io", Version: "v1alpha2", Resource: "httproutes"}
- 	HTTPRoute_v1                   = schema.GroupVersionResource{Group: "gateway.networking.k8s.io", Version: "v1", Resource: "httproutes"}
-@@ -82,6 +84,8 @@ func IsClusterScoped(g schema.GroupVersionResource) bool {
- 		return true
- 	case ConfigMap:
- 		return false
-+	case Consumer:
-+		return false
- 	case CustomResourceDefinition:
- 		return true
- 	case DaemonSet:
-@@ -110,6 +114,8 @@ func IsClusterScoped(g schema.GroupVersionResource) bool {
- 		return true
- 	case GatewayClass_v1:
- 		return true
-+	case HTTPFilterPolicy:
-+		return false
- 	case HTTPRoute:
- 		return false
- 	case HTTPRoute_v1alpha2:
-diff --git a/pkg/config/schema/kind/resources.gen.go b/pkg/config/schema/kind/resources.gen.go
-index a874fdd75c..06a3f6f0bf 100755
---- a/pkg/config/schema/kind/resources.gen.go
-+++ b/pkg/config/schema/kind/resources.gen.go
-@@ -12,6 +12,7 @@ const (
- 	AuthorizationPolicy
- 	CertificateSigningRequest
- 	ConfigMap
-+	Consumer
- 	CustomResourceDefinition
- 	DNSName
- 	DaemonSet
-@@ -23,6 +24,7 @@ const (
- 	GRPCRoute
- 	Gateway
- 	GatewayClass
-+	HTTPFilterPolicy
- 	HTTPRoute
- 	Ingress
- 	IngressClass
-@@ -65,6 +67,8 @@ func (k Kind) String() string {
- 		return "CertificateSigningRequest"
- 	case ConfigMap:
- 		return "ConfigMap"
-+	case Consumer:
-+		return "Consumer"
- 	case CustomResourceDefinition:
- 		return "CustomResourceDefinition"
- 	case DNSName:
-@@ -87,6 +91,8 @@ func (k Kind) String() string {
- 		return "Gateway"
- 	case GatewayClass:
- 		return "GatewayClass"
-+	case HTTPFilterPolicy:
-+		return "HTTPFilterPolicy"
- 	case HTTPRoute:
- 		return "HTTPRoute"
- 	case Ingress:
-@@ -160,6 +166,8 @@ func MustFromGVK(g config.GroupVersionKind) Kind {
- 		return CertificateSigningRequest
- 	case gvk.ConfigMap:
- 		return ConfigMap
-+	case gvk.Consumer:
-+		return Consumer
- 	case gvk.CustomResourceDefinition:
- 		return CustomResourceDefinition
- 	case gvk.DaemonSet:
-@@ -180,6 +188,8 @@ func MustFromGVK(g config.GroupVersionKind) Kind {
- 		return Gateway
- 	case gvk.GatewayClass:
- 		return GatewayClass
-+	case gvk.HTTPFilterPolicy:
-+		return HTTPFilterPolicy
- 	case gvk.HTTPRoute:
- 		return HTTPRoute
- 	case gvk.Ingress:
-@@ -244,3 +254,100 @@ func MustFromGVK(g config.GroupVersionKind) Kind {
- 
- 	panic("unknown kind: " + g.String())
- }
-+
-+func MustToGVK(k Kind) config.GroupVersionKind {
-+	switch k {
-+	case AuthorizationPolicy:
-+		return gvk.AuthorizationPolicy
-+	case CertificateSigningRequest:
-+		return gvk.CertificateSigningRequest
-+	case ConfigMap:
-+		return gvk.ConfigMap
-+	case Consumer:
-+		return gvk.Consumer
-+	case CustomResourceDefinition:
-+		return gvk.CustomResourceDefinition
-+	case DaemonSet:
-+		return gvk.DaemonSet
-+	case Deployment:
-+		return gvk.Deployment
-+	case DestinationRule:
-+		return gvk.DestinationRule
-+	case EndpointSlice:
-+		return gvk.EndpointSlice
-+	case Endpoints:
-+		return gvk.Endpoints
-+	case EnvoyFilter:
-+		return gvk.EnvoyFilter
-+	case GRPCRoute:
-+		return gvk.GRPCRoute
-+	case Gateway:
-+		return gvk.Gateway
-+	case GatewayClass:
-+		return gvk.GatewayClass
-+	case HTTPFilterPolicy:
-+		return gvk.HTTPFilterPolicy
-+	case HTTPRoute:
-+		return gvk.HTTPRoute
-+	case Ingress:
-+		return gvk.Ingress
-+	case IngressClass:
-+		return gvk.IngressClass
-+	case KubernetesGateway:
-+		return gvk.KubernetesGateway
-+	case Lease:
-+		return gvk.Lease
-+	case MeshConfig:
-+		return gvk.MeshConfig
-+	case MeshNetworks:
-+		return gvk.MeshNetworks
-+	case MutatingWebhookConfiguration:
-+		return gvk.MutatingWebhookConfiguration
-+	case Namespace:
-+		return gvk.Namespace
-+	case Node:
-+		return gvk.Node
-+	case PeerAuthentication:
-+		return gvk.PeerAuthentication
-+	case Pod:
-+		return gvk.Pod
-+	case ProxyConfig:
-+		return gvk.ProxyConfig
-+	case ReferenceGrant:
-+		return gvk.ReferenceGrant
-+	case RequestAuthentication:
-+		return gvk.RequestAuthentication
-+	case Secret:
-+		return gvk.Secret
-+	case Service:
-+		return gvk.Service
-+	case ServiceAccount:
-+		return gvk.ServiceAccount
-+	case ServiceEntry:
-+		return gvk.ServiceEntry
-+	case Sidecar:
-+		return gvk.Sidecar
-+	case StatefulSet:
-+		return gvk.StatefulSet
-+	case TCPRoute:
-+		return gvk.TCPRoute
-+	case TLSRoute:
-+		return gvk.TLSRoute
-+	case Telemetry:
-+		return gvk.Telemetry
-+	case UDPRoute:
-+		return gvk.UDPRoute
-+	case ValidatingWebhookConfiguration:
-+		return gvk.ValidatingWebhookConfiguration
-+	case VirtualService:
-+		return gvk.VirtualService
-+	case WasmPlugin:
-+		return gvk.WasmPlugin
-+	case WorkloadEntry:
-+		return gvk.WorkloadEntry
-+	case WorkloadGroup:
-+		return gvk.WorkloadGroup
-+	}
-+
-+	panic("unknown kind: " + k.String())
-+}
 diff --git a/pkg/config/schema/kubeclient/common.go b/pkg/config/schema/kubeclient/common.go
-index 2f82038da6..f13cae0e63 100644
+index 2f82038..f13cae0 100644
 --- a/pkg/config/schema/kubeclient/common.go
 +++ b/pkg/config/schema/kubeclient/common.go
 @@ -27,6 +27,7 @@ import (
@@ -1940,321 +1057,8 @@ index 2f82038da6..f13cae0e63 100644
  	// GatewayAPI returns the gateway-api kube client.
  	GatewayAPI() gatewayapiclient.Interface
  
-diff --git a/pkg/config/schema/kubeclient/resources.gen.go b/pkg/config/schema/kubeclient/resources.gen.go
-index 6bd27b3c5d..b33e1204e7 100755
---- a/pkg/config/schema/kubeclient/resources.gen.go
-+++ b/pkg/config/schema/kubeclient/resources.gen.go
-@@ -19,6 +19,7 @@ import (
- 	"k8s.io/apimachinery/pkg/runtime/schema"
- 	"k8s.io/apimachinery/pkg/watch"
- 	"k8s.io/client-go/tools/cache"
-+	mosniohtnntypesapisv1 "mosn.io/htnn/types/apis/v1"
- 	sigsk8siogatewayapiapisv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
- 	sigsk8siogatewayapiapisv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
- 
-@@ -41,6 +42,8 @@ func GetWriteClient[T runtime.Object](c ClientGetter, namespace string) ktypes.W
- 		return c.Kube().CertificatesV1().CertificateSigningRequests().(ktypes.WriteAPI[T])
- 	case *k8sioapicorev1.ConfigMap:
- 		return c.Kube().CoreV1().ConfigMaps(namespace).(ktypes.WriteAPI[T])
-+	case *mosniohtnntypesapisv1.Consumer:
-+		return c.MOSN().ApisV1().Consumers(namespace).(ktypes.WriteAPI[T])
- 	case *k8sioapiextensionsapiserverpkgapisapiextensionsv1.CustomResourceDefinition:
- 		return c.Ext().ApiextensionsV1().CustomResourceDefinitions().(ktypes.WriteAPI[T])
- 	case *k8sioapiappsv1.DaemonSet:
-@@ -61,6 +64,8 @@ func GetWriteClient[T runtime.Object](c ClientGetter, namespace string) ktypes.W
- 		return c.Istio().NetworkingV1alpha3().Gateways(namespace).(ktypes.WriteAPI[T])
- 	case *sigsk8siogatewayapiapisv1beta1.GatewayClass:
- 		return c.GatewayAPI().GatewayV1beta1().GatewayClasses().(ktypes.WriteAPI[T])
-+	case *mosniohtnntypesapisv1.HTTPFilterPolicy:
-+		return c.MOSN().ApisV1().HTTPFilterPolicies(namespace).(ktypes.WriteAPI[T])
- 	case *sigsk8siogatewayapiapisv1beta1.HTTPRoute:
- 		return c.GatewayAPI().GatewayV1beta1().HTTPRoutes(namespace).(ktypes.WriteAPI[T])
- 	case *k8sioapinetworkingv1.Ingress:
-@@ -130,6 +135,8 @@ func GetClient[T, TL runtime.Object](c ClientGetter, namespace string) ktypes.Re
- 		return c.Kube().CertificatesV1().CertificateSigningRequests().(ktypes.ReadWriteAPI[T, TL])
- 	case *k8sioapicorev1.ConfigMap:
- 		return c.Kube().CoreV1().ConfigMaps(namespace).(ktypes.ReadWriteAPI[T, TL])
-+	case *mosniohtnntypesapisv1.Consumer:
-+		return c.MOSN().ApisV1().Consumers(namespace).(ktypes.ReadWriteAPI[T, TL])
- 	case *k8sioapiextensionsapiserverpkgapisapiextensionsv1.CustomResourceDefinition:
- 		return c.Ext().ApiextensionsV1().CustomResourceDefinitions().(ktypes.ReadWriteAPI[T, TL])
- 	case *k8sioapiappsv1.DaemonSet:
-@@ -150,6 +157,8 @@ func GetClient[T, TL runtime.Object](c ClientGetter, namespace string) ktypes.Re
- 		return c.Istio().NetworkingV1alpha3().Gateways(namespace).(ktypes.ReadWriteAPI[T, TL])
- 	case *sigsk8siogatewayapiapisv1beta1.GatewayClass:
- 		return c.GatewayAPI().GatewayV1beta1().GatewayClasses().(ktypes.ReadWriteAPI[T, TL])
-+	case *mosniohtnntypesapisv1.HTTPFilterPolicy:
-+		return c.MOSN().ApisV1().HTTPFilterPolicies(namespace).(ktypes.ReadWriteAPI[T, TL])
- 	case *sigsk8siogatewayapiapisv1beta1.HTTPRoute:
- 		return c.GatewayAPI().GatewayV1beta1().HTTPRoutes(namespace).(ktypes.ReadWriteAPI[T, TL])
- 	case *k8sioapinetworkingv1.Ingress:
-@@ -219,6 +228,8 @@ func gvrToObject(g schema.GroupVersionResource) runtime.Object {
- 		return &k8sioapicertificatesv1.CertificateSigningRequest{}
- 	case gvr.ConfigMap:
- 		return &k8sioapicorev1.ConfigMap{}
-+	case gvr.Consumer:
-+		return &mosniohtnntypesapisv1.Consumer{}
- 	case gvr.CustomResourceDefinition:
- 		return &k8sioapiextensionsapiserverpkgapisapiextensionsv1.CustomResourceDefinition{}
- 	case gvr.DaemonSet:
-@@ -239,6 +250,8 @@ func gvrToObject(g schema.GroupVersionResource) runtime.Object {
- 		return &apiistioioapinetworkingv1alpha3.Gateway{}
- 	case gvr.GatewayClass:
- 		return &sigsk8siogatewayapiapisv1beta1.GatewayClass{}
-+	case gvr.HTTPFilterPolicy:
-+		return &mosniohtnntypesapisv1.HTTPFilterPolicy{}
- 	case gvr.HTTPRoute:
- 		return &sigsk8siogatewayapiapisv1beta1.HTTPRoute{}
- 	case gvr.Ingress:
-@@ -326,6 +339,13 @@ func getInformerFiltered(c ClientGetter, opts ktypes.InformerOptions, g schema.G
- 		w = func(options metav1.ListOptions) (watch.Interface, error) {
- 			return c.Kube().CoreV1().ConfigMaps(opts.Namespace).Watch(context.Background(), options)
- 		}
-+	case gvr.Consumer:
-+		l = func(options metav1.ListOptions) (runtime.Object, error) {
-+			return c.MOSN().ApisV1().Consumers(opts.Namespace).List(context.Background(), options)
-+		}
-+		w = func(options metav1.ListOptions) (watch.Interface, error) {
-+			return c.MOSN().ApisV1().Consumers(opts.Namespace).Watch(context.Background(), options)
-+		}
- 	case gvr.CustomResourceDefinition:
- 		l = func(options metav1.ListOptions) (runtime.Object, error) {
- 			return c.Ext().ApiextensionsV1().CustomResourceDefinitions().List(context.Background(), options)
-@@ -396,6 +416,13 @@ func getInformerFiltered(c ClientGetter, opts ktypes.InformerOptions, g schema.G
- 		w = func(options metav1.ListOptions) (watch.Interface, error) {
- 			return c.GatewayAPI().GatewayV1beta1().GatewayClasses().Watch(context.Background(), options)
- 		}
-+	case gvr.HTTPFilterPolicy:
-+		l = func(options metav1.ListOptions) (runtime.Object, error) {
-+			return c.MOSN().ApisV1().HTTPFilterPolicies(opts.Namespace).List(context.Background(), options)
-+		}
-+		w = func(options metav1.ListOptions) (watch.Interface, error) {
-+			return c.MOSN().ApisV1().HTTPFilterPolicies(opts.Namespace).Watch(context.Background(), options)
-+		}
- 	case gvr.HTTPRoute:
- 		l = func(options metav1.ListOptions) (runtime.Object, error) {
- 			return c.GatewayAPI().GatewayV1beta1().HTTPRoutes(opts.Namespace).List(context.Background(), options)
-diff --git a/pkg/config/schema/kubetypes/resources.gen.go b/pkg/config/schema/kubetypes/resources.gen.go
-index 5b38cd77df..16f7800a17 100755
---- a/pkg/config/schema/kubetypes/resources.gen.go
-+++ b/pkg/config/schema/kubetypes/resources.gen.go
-@@ -13,6 +13,7 @@ import (
- 	k8sioapidiscoveryv1 "k8s.io/api/discovery/v1"
- 	k8sioapinetworkingv1 "k8s.io/api/networking/v1"
- 	k8sioapiextensionsapiserverpkgapisapiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-+	mosniohtnntypesapisv1 "mosn.io/htnn/types/apis/v1"
- 	sigsk8siogatewayapiapisv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
- 	sigsk8siogatewayapiapisv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
- 
-@@ -37,116 +38,206 @@ func getGvk(obj any) config.GroupVersionKind {
- 		return gvk.AuthorizationPolicy
- 	case *apiistioioapisecurityv1beta1.AuthorizationPolicy:
- 		return gvk.AuthorizationPolicy
-+	case *apiistioioapisecurityv1beta1.AuthorizationPolicyList:
-+		return gvk.AuthorizationPolicy
- 	case *k8sioapicertificatesv1.CertificateSigningRequest:
- 		return gvk.CertificateSigningRequest
-+	case *k8sioapicertificatesv1.CertificateSigningRequestList:
-+		return gvk.CertificateSigningRequest
- 	case *k8sioapicorev1.ConfigMap:
- 		return gvk.ConfigMap
-+	case *k8sioapicorev1.ConfigMapList:
-+		return gvk.ConfigMap
-+	case *mosniohtnntypesapisv1.Consumer:
-+		return gvk.Consumer
-+	case *mosniohtnntypesapisv1.ConsumerList:
-+		return gvk.Consumer
- 	case *k8sioapiextensionsapiserverpkgapisapiextensionsv1.CustomResourceDefinition:
- 		return gvk.CustomResourceDefinition
-+	case *k8sioapiextensionsapiserverpkgapisapiextensionsv1.CustomResourceDefinitionList:
-+		return gvk.CustomResourceDefinition
- 	case *k8sioapiappsv1.DaemonSet:
- 		return gvk.DaemonSet
-+	case *k8sioapiappsv1.DaemonSetList:
-+		return gvk.DaemonSet
- 	case *k8sioapiappsv1.Deployment:
- 		return gvk.Deployment
-+	case *k8sioapiappsv1.DeploymentList:
-+		return gvk.Deployment
- 	case *istioioapinetworkingv1alpha3.DestinationRule:
- 		return gvk.DestinationRule
- 	case *apiistioioapinetworkingv1alpha3.DestinationRule:
- 		return gvk.DestinationRule
-+	case *apiistioioapinetworkingv1alpha3.DestinationRuleList:
-+		return gvk.DestinationRule
- 	case *k8sioapidiscoveryv1.EndpointSlice:
- 		return gvk.EndpointSlice
-+	case *k8sioapidiscoveryv1.EndpointSliceList:
-+		return gvk.EndpointSlice
- 	case *k8sioapicorev1.Endpoints:
- 		return gvk.Endpoints
-+	case *k8sioapicorev1.EndpointsList:
-+		return gvk.Endpoints
- 	case *istioioapinetworkingv1alpha3.EnvoyFilter:
- 		return gvk.EnvoyFilter
- 	case *apiistioioapinetworkingv1alpha3.EnvoyFilter:
- 		return gvk.EnvoyFilter
-+	case *apiistioioapinetworkingv1alpha3.EnvoyFilterList:
-+		return gvk.EnvoyFilter
- 	case *sigsk8siogatewayapiapisv1alpha2.GRPCRoute:
- 		return gvk.GRPCRoute
-+	case *sigsk8siogatewayapiapisv1alpha2.GRPCRouteList:
-+		return gvk.GRPCRoute
- 	case *istioioapinetworkingv1alpha3.Gateway:
- 		return gvk.Gateway
- 	case *apiistioioapinetworkingv1alpha3.Gateway:
- 		return gvk.Gateway
-+	case *apiistioioapinetworkingv1alpha3.GatewayList:
-+		return gvk.Gateway
- 	case *sigsk8siogatewayapiapisv1beta1.GatewayClass:
- 		return gvk.GatewayClass
-+	case *sigsk8siogatewayapiapisv1beta1.GatewayClassList:
-+		return gvk.GatewayClass
-+	case *mosniohtnntypesapisv1.HTTPFilterPolicy:
-+		return gvk.HTTPFilterPolicy
-+	case *mosniohtnntypesapisv1.HTTPFilterPolicyList:
-+		return gvk.HTTPFilterPolicy
- 	case *sigsk8siogatewayapiapisv1beta1.HTTPRoute:
- 		return gvk.HTTPRoute
-+	case *sigsk8siogatewayapiapisv1beta1.HTTPRouteList:
-+		return gvk.HTTPRoute
- 	case *k8sioapinetworkingv1.Ingress:
- 		return gvk.Ingress
-+	case *k8sioapinetworkingv1.IngressList:
-+		return gvk.Ingress
- 	case *k8sioapinetworkingv1.IngressClass:
- 		return gvk.IngressClass
-+	case *k8sioapinetworkingv1.IngressClassList:
-+		return gvk.IngressClass
- 	case *sigsk8siogatewayapiapisv1beta1.Gateway:
- 		return gvk.KubernetesGateway
-+	case *sigsk8siogatewayapiapisv1beta1.GatewayList:
-+		return gvk.KubernetesGateway
- 	case *k8sioapicoordinationv1.Lease:
- 		return gvk.Lease
-+	case *k8sioapicoordinationv1.LeaseList:
-+		return gvk.Lease
- 	case *istioioapimeshv1alpha1.MeshConfig:
- 		return gvk.MeshConfig
- 	case *istioioapimeshv1alpha1.MeshNetworks:
- 		return gvk.MeshNetworks
- 	case *k8sioapiadmissionregistrationv1.MutatingWebhookConfiguration:
- 		return gvk.MutatingWebhookConfiguration
-+	case *k8sioapiadmissionregistrationv1.MutatingWebhookConfigurationList:
-+		return gvk.MutatingWebhookConfiguration
- 	case *k8sioapicorev1.Namespace:
- 		return gvk.Namespace
-+	case *k8sioapicorev1.NamespaceList:
-+		return gvk.Namespace
- 	case *k8sioapicorev1.Node:
- 		return gvk.Node
-+	case *k8sioapicorev1.NodeList:
-+		return gvk.Node
- 	case *istioioapisecurityv1beta1.PeerAuthentication:
- 		return gvk.PeerAuthentication
- 	case *apiistioioapisecurityv1beta1.PeerAuthentication:
- 		return gvk.PeerAuthentication
-+	case *apiistioioapisecurityv1beta1.PeerAuthenticationList:
-+		return gvk.PeerAuthentication
- 	case *k8sioapicorev1.Pod:
- 		return gvk.Pod
-+	case *k8sioapicorev1.PodList:
-+		return gvk.Pod
- 	case *istioioapinetworkingv1beta1.ProxyConfig:
- 		return gvk.ProxyConfig
- 	case *apiistioioapinetworkingv1beta1.ProxyConfig:
- 		return gvk.ProxyConfig
-+	case *apiistioioapinetworkingv1beta1.ProxyConfigList:
-+		return gvk.ProxyConfig
- 	case *sigsk8siogatewayapiapisv1beta1.ReferenceGrant:
- 		return gvk.ReferenceGrant
-+	case *sigsk8siogatewayapiapisv1beta1.ReferenceGrantList:
-+		return gvk.ReferenceGrant
- 	case *istioioapisecurityv1beta1.RequestAuthentication:
- 		return gvk.RequestAuthentication
- 	case *apiistioioapisecurityv1beta1.RequestAuthentication:
- 		return gvk.RequestAuthentication
-+	case *apiistioioapisecurityv1beta1.RequestAuthenticationList:
-+		return gvk.RequestAuthentication
- 	case *k8sioapicorev1.Secret:
- 		return gvk.Secret
-+	case *k8sioapicorev1.SecretList:
-+		return gvk.Secret
- 	case *k8sioapicorev1.Service:
- 		return gvk.Service
-+	case *k8sioapicorev1.ServiceList:
-+		return gvk.Service
- 	case *k8sioapicorev1.ServiceAccount:
- 		return gvk.ServiceAccount
-+	case *k8sioapicorev1.ServiceAccountList:
-+		return gvk.ServiceAccount
- 	case *istioioapinetworkingv1alpha3.ServiceEntry:
- 		return gvk.ServiceEntry
- 	case *apiistioioapinetworkingv1alpha3.ServiceEntry:
- 		return gvk.ServiceEntry
-+	case *apiistioioapinetworkingv1alpha3.ServiceEntryList:
-+		return gvk.ServiceEntry
- 	case *istioioapinetworkingv1alpha3.Sidecar:
- 		return gvk.Sidecar
- 	case *apiistioioapinetworkingv1alpha3.Sidecar:
- 		return gvk.Sidecar
-+	case *apiistioioapinetworkingv1alpha3.SidecarList:
-+		return gvk.Sidecar
- 	case *k8sioapiappsv1.StatefulSet:
- 		return gvk.StatefulSet
-+	case *k8sioapiappsv1.StatefulSetList:
-+		return gvk.StatefulSet
- 	case *sigsk8siogatewayapiapisv1alpha2.TCPRoute:
- 		return gvk.TCPRoute
-+	case *sigsk8siogatewayapiapisv1alpha2.TCPRouteList:
-+		return gvk.TCPRoute
- 	case *sigsk8siogatewayapiapisv1alpha2.TLSRoute:
- 		return gvk.TLSRoute
-+	case *sigsk8siogatewayapiapisv1alpha2.TLSRouteList:
-+		return gvk.TLSRoute
- 	case *istioioapitelemetryv1alpha1.Telemetry:
- 		return gvk.Telemetry
- 	case *apiistioioapitelemetryv1alpha1.Telemetry:
- 		return gvk.Telemetry
-+	case *apiistioioapitelemetryv1alpha1.TelemetryList:
-+		return gvk.Telemetry
- 	case *sigsk8siogatewayapiapisv1alpha2.UDPRoute:
- 		return gvk.UDPRoute
-+	case *sigsk8siogatewayapiapisv1alpha2.UDPRouteList:
-+		return gvk.UDPRoute
- 	case *k8sioapiadmissionregistrationv1.ValidatingWebhookConfiguration:
- 		return gvk.ValidatingWebhookConfiguration
-+	case *k8sioapiadmissionregistrationv1.ValidatingWebhookConfigurationList:
-+		return gvk.ValidatingWebhookConfiguration
- 	case *istioioapinetworkingv1alpha3.VirtualService:
- 		return gvk.VirtualService
- 	case *apiistioioapinetworkingv1alpha3.VirtualService:
- 		return gvk.VirtualService
-+	case *apiistioioapinetworkingv1alpha3.VirtualServiceList:
-+		return gvk.VirtualService
- 	case *istioioapiextensionsv1alpha1.WasmPlugin:
- 		return gvk.WasmPlugin
- 	case *apiistioioapiextensionsv1alpha1.WasmPlugin:
- 		return gvk.WasmPlugin
-+	case *apiistioioapiextensionsv1alpha1.WasmPluginList:
-+		return gvk.WasmPlugin
- 	case *istioioapinetworkingv1alpha3.WorkloadEntry:
- 		return gvk.WorkloadEntry
- 	case *apiistioioapinetworkingv1alpha3.WorkloadEntry:
- 		return gvk.WorkloadEntry
-+	case *apiistioioapinetworkingv1alpha3.WorkloadEntryList:
-+		return gvk.WorkloadEntry
- 	case *istioioapinetworkingv1alpha3.WorkloadGroup:
- 		return gvk.WorkloadGroup
- 	case *apiistioioapinetworkingv1alpha3.WorkloadGroup:
- 		return gvk.WorkloadGroup
-+	case *apiistioioapinetworkingv1alpha3.WorkloadGroupList:
-+		return gvk.WorkloadGroup
- 	default:
- 		panic(fmt.Sprintf("Unknown type %T", obj))
- 	}
 diff --git a/pkg/config/schema/metadata.yaml b/pkg/config/schema/metadata.yaml
-index 252669af19..9d4532cdbe 100644
+index 252669a..9d4532c 100644
 --- a/pkg/config/schema/metadata.yaml
 +++ b/pkg/config/schema/metadata.yaml
 @@ -14,6 +14,31 @@
@@ -2289,23 +1093,37 @@ index 252669af19..9d4532cdbe 100644
    # Kubernetes specific configuration.
    - kind: "CustomResourceDefinition"
      plural: "customresourcedefinitions"
-diff --git a/pkg/config/validation/validation.go b/pkg/config/validation/validation.go
-index 56f6971290..fb57f3961b 100644
---- a/pkg/config/validation/validation.go
-+++ b/pkg/config/validation/validation.go
-@@ -37,6 +37,8 @@ import (
- 	"google.golang.org/protobuf/types/descriptorpb"
- 	"google.golang.org/protobuf/types/known/anypb"
- 	"google.golang.org/protobuf/types/known/durationpb"
-+	"mosn.io/htnn/controller/pkg/constant"
+diff --git a/pkg/config/validation/htnn.go b/pkg/config/validation/htnn.go
+new file mode 100644
+index 0000000..94445d6
+--- /dev/null
++++ b/pkg/config/validation/htnn.go
+@@ -0,0 +1,69 @@
++// Copyright The HTNN Authors.
++//
++// Licensed under the Apache License, Version 2.0 (the "License");
++// you may not use this file except in compliance with the License.
++// You may obtain a copy of the License at
++//
++//     http://www.apache.org/licenses/LICENSE-2.0
++//
++// Unless required by applicable law or agreed to in writing, software
++// distributed under the License is distributed on an "AS IS" BASIS,
++// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++// See the License for the specific language governing permissions and
++// limitations under the License.
++
++package validation
++
++import (
++	"encoding/json"
++	"fmt"
++
++	"istio.io/istio/pkg/config"
++
 +	mosniov1 "mosn.io/htnn/types/apis/v1"
- 
- 	"istio.io/api/annotation"
- 	extensions "istio.io/api/extensions/v1alpha1"
-@@ -2018,6 +2020,36 @@ func validateOneOfSelectorType(selector *type_beta.WorkloadSelector, targetRef *
- 	return
- }
- 
++)
++
 +// ValidateHTTPFilterPolicy checks that HTTPFilterPolicy is well-formed.
 +var ValidateHTTPFilterPolicy = registerValidateFunc("ValidateHTTPFilterPolicy",
 +	func(cfg config.Config) (Warning, error) {
@@ -2336,10 +1154,33 @@ index 56f6971290..fb57f3961b 100644
 +		return warnings, err
 +	})
 +
- // ValidateAuthorizationPolicy checks that AuthorizationPolicy is well-formed.
- var ValidateAuthorizationPolicy = registerValidateFunc("ValidateAuthorizationPolicy",
- 	func(cfg config.Config) (Warning, error) {
-@@ -2317,6 +2349,23 @@ var ValidateVirtualService = registerValidateFunc("ValidateVirtualService",
++func validateEmbededHTTPFilterPolicy(hfp string) error {
++	var policy mosniov1.HTTPFilterPolicy
++	err := json.Unmarshal([]byte(hfp), &policy)
++	if err != nil {
++		return fmt.Errorf("cannot unmarshal HTTPFilterPolicy: %v", err)
++	}
++
++	err = mosniov1.ValidateHTTPFilterPolicyStrictly(&policy)
++	if err != nil {
++		return fmt.Errorf("invalid HTTPFilterPolicy: %v", err)
++	}
++
++	return nil
++}
+diff --git a/pkg/config/validation/validation.go b/pkg/config/validation/validation.go
+index db201a3..4fc3c1a 100644
+--- a/pkg/config/validation/validation.go
++++ b/pkg/config/validation/validation.go
+@@ -37,6 +37,7 @@ import (
+ 	"google.golang.org/protobuf/types/descriptorpb"
+ 	"google.golang.org/protobuf/types/known/anypb"
+ 	"google.golang.org/protobuf/types/known/durationpb"
++	"mosn.io/htnn/controller/pkg/constant"
+ 
+ 	"istio.io/api/annotation"
+ 	extensions "istio.io/api/extensions/v1alpha1"
+@@ -2318,6 +2319,17 @@ var ValidateVirtualService = registerValidateFunc("ValidateVirtualService",
  		if !ok {
  			return nil, errors.New("cannot cast to virtual service")
  		}
@@ -2347,15 +1188,9 @@ index 56f6971290..fb57f3961b 100644
 +		if cfg.Annotations != nil {
 +			hfp := cfg.Annotations[constant.AnnotationHTTPFilterPolicy]
 +			if hfp != "" {
-+				var policy mosniov1.HTTPFilterPolicy
-+				err := json.Unmarshal([]byte(hfp), &policy)
++				err := validateEmbededHTTPFilterPolicy(hfp)
 +				if err != nil {
-+					return nil, fmt.Errorf("cannot unmarshal HTTPFilterPolicy: %v", err)
-+				}
-+
-+				err = mosniov1.ValidateHTTPFilterPolicyStrictly(&policy)
-+				if err != nil {
-+					return nil, fmt.Errorf("invalid HTTPFilterPolicy: %v", err)
++					return nil, err
 +				}
 +			}
 +		}
@@ -2364,7 +1199,7 @@ index 56f6971290..fb57f3961b 100644
  		if len(virtualService.Hosts) == 0 {
  			// This must be delegate - enforce delegate validations.
 diff --git a/pkg/kube/client.go b/pkg/kube/client.go
-index 999c319fdd..ed22c7fb01 100644
+index 999c319..ed22c7f 100644
 --- a/pkg/kube/client.go
 +++ b/pkg/kube/client.go
 @@ -63,6 +63,7 @@ import (
