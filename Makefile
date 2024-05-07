@@ -163,10 +163,14 @@ fmt: fmt-go fmt-proto
 verify-example:
 	cd ./examples/dev_your_plugin && ./verify.sh
 
-TARGET_ISTIO_DIR = $(shell pwd)/external/istio
+TARGET_ISTIO_DIR ?= $(shell pwd)/external/istio
 
 .PHONY: prebuild
 prebuild:
-	git submodule update --init --recursive
-	cd $(TARGET_ISTIO_DIR) && git status | grep -q "nothing to commit, working tree clean" || (echo "istio submodule is not clean, please commit your changes first"; exit 1)
+	if [[ ! -d $(TARGET_ISTIO_DIR) ]]; then \
+		git clone --depth 1 -b $(ISTIO_VERSION) https://github.com/istio/istio $(TARGET_ISTIO_DIR); \
+	else \
+		cd $(TARGET_ISTIO_DIR) && git status | grep -q "nothing to commit, working tree clean" \
+			|| (echo "istio directory is not clean, please commit your changes first"; exit 1); \
+	fi
 	cd ./patch && ./apply-patch.sh $(TARGET_ISTIO_DIR)

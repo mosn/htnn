@@ -21,7 +21,6 @@ use (
 	./api
 	./controller
 	./e2e
-	./external/istio
 	./plugins
 	./site
 	./types
