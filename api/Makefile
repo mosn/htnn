@@ -48,3 +48,8 @@ integration-test:
 	$(foreach PKG, $(shell go list ./plugins/tests/integration/...), \
 		go test -v ${PKG} || exit 1; \
 	)
+
+# The benchmark running time can be controlled via env var HTNN_DATA_PLANE_BENCHMARK_DURATION
+.PHONY: benchmark
+benchmark:
+	go test -tags benchmark -v ./plugins/tests/integration/ -run TestBenchmark
