@@ -237,6 +237,14 @@ jobs:
       with:
         go-version: '1.21'
 
+    - name: test
+      run: |
+        set -x
+        cd external/istio
+        go install golang.org/x/tools/cmd/goimports@latest # required by codegen
+        go run pkg/config/schema/codegen/tools/collections.main.go
+        git diff --exit-code
+
     - name: Example
       run: |
         rm go.work
