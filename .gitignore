@@ -31,3 +31,4 @@ controller/**/log
 !controller/internal/log
 controller/tests/testdata/crd/
 go.work.sum
+external/*

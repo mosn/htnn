@@ -27,7 +27,6 @@ header:
     # ignore file controlled by tools
     - '**/go.sum'
     - 'buf.lock'
-    - '.gitmodules'
     # files can't add license
     - '**/*.pb.validate.go'
     - '**/*.json'
@@ -40,4 +39,5 @@ header:
     - 'site/layouts/**'
     - 'api/internal/cookie/cookie.go'
     - 'controller/registries/nacos/config.go'
+    - 'external/**'
   comment: on-failure
