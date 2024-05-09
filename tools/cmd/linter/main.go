@@ -197,9 +197,6 @@ func lintFilenameForCode(root string) error {
 			return nil
 		}
 
-		if base != "docker-compose.yml" && strings.ContainsRune(base, '-') {
-			return fmt.Errorf("please use '_' instead of '-' in the code file name %s", path)
-		}
 		if strings.ToLower(base) != base {
 			return fmt.Errorf("name %s should be in lowercase", path)
 		}
