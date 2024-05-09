@@ -7,3 +7,4 @@ This list documents each patch:
 * istio/
     * 20240410-htnn-go-mod.patch: Embed HTNN controller into istio. We move the `go.mod`, which may be changed more frequently, to a separate patch.
     * 20240410-embed-htnn-controller.patch: Embed HTNN controller into istio.
+    * 20240508-never-remove-ecds-explicitly.patch: Backport https://github.com/istio/istio/commit/aab0fc6bb0655f5822233458c11605d9ef6b8719 to Istio 1.21.

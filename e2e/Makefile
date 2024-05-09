@@ -66,7 +66,7 @@ undeploy-controller: kubectl
 
 .PHONY: run-e2e
 run-e2e:
-	PATH=$(LOCALBIN):"$(PATH)" go test -v ./...
+	PATH=$(LOCALBIN):"$(PATH)" go test -v ./... || ./collect_e2e_logs.sh
 
 # To update the control plane, run `make e2e-prepare-controller-image deploy-controller`, and the delete
 # the istiod pod to trigger restart.

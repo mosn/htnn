@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # Copyright The HTNN Authors.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,24 +13,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# binaries
-libgolang.so
-bin/
-# test generated files
-*.out
-*.test
-test-envoy/
-# website
-site/public/
-site/resources/
-site/.hugo_build.lock
-site/tmp
-# dev files
-controller/config/config.yaml
-controller/**/cache
-controller/**/log
-!controller/internal/log
-controller/tests/testdata/crd/
-go.work.sum
-external/*
-e2e/log
+
+set -eo pipefail
+
+collect() {
+    ns=$1
+    kubectl get pods -n "$ns" -o yaml > "$ns".log
+    for pod in $(kubectl get pods -n "$ns" | awk '{print $1}' | grep -v "NAME"); do
+        kubectl -n "$ns" logs "$pod" > "$pod"."$ns".log
+    done
+}
+
+mkdir -p log
+pushd log
+collect istio-system
+collect e2e
+collect e2e-another
