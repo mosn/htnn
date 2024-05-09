@@ -47,7 +47,7 @@ func runBenchmark(t *testing.T, clientBin string, url string) {
 		duration = "15s"
 	}
 
-	args := fmt.Sprintf("--http2 -c 8 -d %s --latencies %s", duration, url)
+	args := fmt.Sprintf("-m POST -b helloworld --http2 -c 8 -d %s --latencies %s", duration, url)
 	cli := exec.Command(clientBin, strings.Fields(args)...)
 	out, err := cli.CombinedOutput()
 	require.NoError(t, err, string(out))
@@ -60,7 +60,7 @@ func runBenchmarkWithHeaders(t *testing.T, clientBin string, url string, hdr htt
 		duration = "15s"
 	}
 
-	args := fmt.Sprintf("--http2 -c 8 -d %s --latencies %s", duration, url)
+	args := fmt.Sprintf("-m POST -b helloworld --http2 -c 8 -d %s --latencies %s", duration, url)
 	hdrArgs := []string{}
 	for k, v := range hdr {
 		for _, vv := range v {
