@@ -80,11 +80,11 @@ generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and
 install-crd-deps:
 	test -d tests/testdata/crd || mkdir -p tests/testdata/crd
 	test -f tests/testdata/crd/gateway-api-$(GATEWAY_API_VERSION).yaml || \
-		wget https://github.com/kubernetes-sigs/gateway-api/releases/download/v$(GATEWAY_API_VERSION)/standard-install.yaml -O \
-			tests/testdata/crd/gateway-api-$(GATEWAY_API_VERSION).yaml
+		(wget https://github.com/kubernetes-sigs/gateway-api/releases/download/v$(GATEWAY_API_VERSION)/standard-install.yaml -O \
+			temp.out && mv temp.out tests/testdata/crd/gateway-api-$(GATEWAY_API_VERSION).yaml)
 	test -f tests/testdata/crd/istio-$(ISTIO_VERSION).yaml || \
-		wget https://raw.githubusercontent.com/istio/istio/$(ISTIO_VERSION)/manifests/charts/base/crds/crd-all.gen.yaml -O \
-			tests/testdata/crd/istio-$(ISTIO_VERSION).yaml
+		(wget https://raw.githubusercontent.com/istio/istio/$(ISTIO_VERSION)/manifests/charts/base/crds/crd-all.gen.yaml -O \
+			temp.out && mv temp.out tests/testdata/crd/istio-$(ISTIO_VERSION).yaml)
 
 .PHONY: test
 test: manifests generate envtest install-crd-deps ## Run tests.
