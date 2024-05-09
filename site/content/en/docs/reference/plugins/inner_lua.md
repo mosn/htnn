@@ -10,9 +10,9 @@ Because Envoy uses the onion model to proxy requests, the execution order is:
 
 1. request starts
 2. running other plugins
-3. running innerLua and other plugins in `Inner` group
+3. running `innerLua` and other plugins in `Inner` group
 4. proxy to the upstream
-5. running innerLua and other plugins in `Inner` group with the response
+5. running `innerLua` and other plugins in `Inner` group with the response
 6. running other plugins with the response
 7. request ends
 

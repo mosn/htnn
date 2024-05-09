@@ -9,11 +9,11 @@ title: Outer Lua
 因为 Envoy 使用洋葱模型来代理请求，执行顺序是：
 
 1. 请求开始
-2. 运行 `Outer` 组的 outerLua 和其他插件
+2. 运行 `Outer` 组的 `outerLua` 和其他插件
 3. 运行其他插件
 4. 代理到上游
 5. 运行其他插件处理响应
-6. 运行 `Outer` 组的 outerLua 和其他插件处理响应
+6. 运行 `Outer` 组的 `outerLua` 和其他插件处理响应
 7. 请求结束
 
 ## 属性
@@ -25,7 +25,9 @@ title: Outer Lua
 
 ## 配置
 
-参见对应的 [Envoy 文档](https://www.envoyproxy.io/docs/envoy/v1.29.4/configuration/http/http_filters/lua_filter)。
+具体的配置字段参见对应的 [Envoy 文档](https://www.envoyproxy.io/docs/envoy/v1.29.4/api-v3/extensions/filters/http/lua/v3/lua.proto#extensions-filters-http-lua-v3-luaperroute)。
+
+Lua filter 的工作原理参见 [Envoy 的 Lua filter 介绍](https://www.envoyproxy.io/docs/envoy/v1.29.4/configuration/http/http_filters/lua_filter)。
 
 ## 用法
 
