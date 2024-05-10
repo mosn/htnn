@@ -60,10 +60,10 @@ index 34cf0a6..f5f5ed7 100644
  		go s.configController.Run(stop)
 diff --git a/pilot/pkg/bootstrap/htnn.go b/pilot/pkg/bootstrap/htnn.go
 new file mode 100644
-index 0000000..ab8642b
+index 0000000..41751b3
 --- /dev/null
 +++ b/pilot/pkg/bootstrap/htnn.go
-@@ -0,0 +1,58 @@
+@@ -0,0 +1,60 @@
 +// Copyright The HTNN Authors.
 +//
 +// Licensed under the Apache License, Version 2.0 (the "License");
@@ -98,29 +98,31 @@ index 0000000..ab8642b
 +	htnnCtrl := s.environment.HTNNController.(*htnn.Controller)
 +	htnnCtrl.Init(s.environment)
 +
-+	if s.statusManager == nil && features.EnableHTNNStatus {
-+		s.initStatusManager(args)
++	if features.EnableHTNNStatus {
++		if s.statusManager == nil {
++			s.initStatusManager(args)
++		}
++		s.addTerminatingStartFunc("htnn status", func(stop <-chan struct{}) error {
++			leaderelection.
++				NewLeaderElection(args.Namespace, args.PodName, leaderelection.HTNNStatusController, args.Revision, s.kubeClient).
++				AddRunFunction(func(leaderStop <-chan struct{}) {
++					log.Infof("Starting htnn status writer")
++					htnnCtrl.SetStatusWrite(true, s.statusManager)
++
++					// Trigger a push so we can recompute status
++					s.XDSServer.ConfigUpdate(&model.PushRequest{
++						Full:   true,
++						Reason: model.NewReasonStats(model.GlobalUpdate),
++					})
++					<-leaderStop
++					log.Infof("Stopping htnn status writer")
++					htnnCtrl.SetStatusWrite(false, nil)
++				}).
++				Run(stop)
++			return nil
++
++		})
 +	}
-+	s.addTerminatingStartFunc("htnn status", func(stop <-chan struct{}) error {
-+		leaderelection.
-+			NewLeaderElection(args.Namespace, args.PodName, leaderelection.HTNNStatusController, args.Revision, s.kubeClient).
-+			AddRunFunction(func(leaderStop <-chan struct{}) {
-+				log.Infof("Starting htnn status writer")
-+				htnnCtrl.SetStatusWrite(true, s.statusManager)
-+
-+				// Trigger a push so we can recompute status
-+				s.XDSServer.ConfigUpdate(&model.PushRequest{
-+					Full:   true,
-+					Reason: model.NewReasonStats(model.GlobalUpdate),
-+				})
-+				<-leaderStop
-+				log.Infof("Stopping htnn status writer")
-+				htnnCtrl.SetStatusWrite(false, nil)
-+			}).
-+			Run(stop)
-+		return nil
-+
-+	})
 +}
 diff --git a/pilot/pkg/config/htnn/component.go b/pilot/pkg/config/htnn/component.go
 new file mode 100644
