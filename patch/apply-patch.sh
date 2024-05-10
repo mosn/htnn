@@ -16,6 +16,12 @@
 
 set -euo pipefail
 
+if [ "$(uname -s)" = "Darwin" ]; then
+    SED_COMMAND="sed -i ''"
+else
+    SED_COMMAND="sed -i"
+fi
+
 TARGET_ISTIO_DIR="$1"
 
 for patch in istio/*.patch; do
@@ -25,5 +31,8 @@ done
 pushd "$TARGET_ISTIO_DIR"
 go mod tidy
 go install golang.org/x/tools/cmd/goimports@latest # required by codegen
+$SED_COMMAND -e 's/.\/site/.\/external\/istio/' ../../go.work
+# go run will fail without adding `./external/istio` to go.work
 go run pkg/config/schema/codegen/tools/collections.main.go
+$SED_COMMAND -e 's/.\/external\/istio/.\/site/' ../../go.work
 popd
