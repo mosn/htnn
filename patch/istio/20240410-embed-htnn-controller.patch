@@ -1,5 +1,5 @@
 diff --git a/pilot/pkg/bootstrap/config_compare.go b/pilot/pkg/bootstrap/config_compare.go
-index f1f4f2b..3c437bf 100644
+index f1f4f2b..8bd6fb5 100644
 --- a/pilot/pkg/bootstrap/config_compare.go
 +++ b/pilot/pkg/bootstrap/config_compare.go
 @@ -31,8 +31,9 @@ func needsPush(prev config.Config, curr config.Config) bool {
@@ -9,7 +9,7 @@ index f1f4f2b..3c437bf 100644
 -	// If the config is not Istio, let us just push.
 -	if !strings.HasSuffix(prev.GroupVersionKind.Group, "istio.io") {
 +	// If the config is not Istio/HTNN, let us just push.
-+	if !strings.HasSuffix(prev.GroupVersionKind.Group, "istio.io") ||
++	if !strings.HasSuffix(prev.GroupVersionKind.Group, "istio.io") &&
 +		!strings.HasSuffix(prev.GroupVersionKind.Group, "htnn.mosn.io") {
  		return true
  	}
@@ -60,10 +60,10 @@ index 34cf0a6..f5f5ed7 100644
  		go s.configController.Run(stop)
 diff --git a/pilot/pkg/bootstrap/htnn.go b/pilot/pkg/bootstrap/htnn.go
 new file mode 100644
-index 0000000..68b1df7
+index 0000000..ab8642b
 --- /dev/null
 +++ b/pilot/pkg/bootstrap/htnn.go
-@@ -0,0 +1,57 @@
+@@ -0,0 +1,58 @@
 +// Copyright The HTNN Authors.
 +//
 +// Licensed under the Apache License, Version 2.0 (the "License");
@@ -82,6 +82,7 @@ index 0000000..68b1df7
 +
 +import (
 +	"istio.io/istio/pilot/pkg/config/htnn"
++	"istio.io/istio/pilot/pkg/features"
 +	"istio.io/istio/pilot/pkg/leaderelection"
 +	"istio.io/istio/pilot/pkg/model"
 +	"istio.io/istio/pkg/log"
@@ -97,8 +98,7 @@ index 0000000..68b1df7
 +	htnnCtrl := s.environment.HTNNController.(*htnn.Controller)
 +	htnnCtrl.Init(s.environment)
 +
-+	// TODO: add feature gate like EnableGatewayAPIStatus
-+	if s.statusManager == nil {
++	if s.statusManager == nil && features.EnableHTNNStatus {
 +		s.initStatusManager(args)
 +	}
 +	s.addTerminatingStartFunc("htnn status", func(stop <-chan struct{}) error {
@@ -119,6 +119,7 @@ index 0000000..68b1df7
 +			}).
 +			Run(stop)
 +		return nil
++
 +	})
 +}
 diff --git a/pilot/pkg/config/htnn/component.go b/pilot/pkg/config/htnn/component.go
@@ -729,10 +730,10 @@ index 0000000..58d032c
 +}
 diff --git a/pilot/pkg/features/htnn.go b/pilot/pkg/features/htnn.go
 new file mode 100644
-index 0000000..cb1214e
+index 0000000..d9e47ff
 --- /dev/null
 +++ b/pilot/pkg/features/htnn.go
-@@ -0,0 +1,24 @@
+@@ -0,0 +1,27 @@
 +// Copyright The HTNN Authors.
 +//
 +// Licensed under the Apache License, Version 2.0 (the "License");
@@ -756,6 +757,9 @@ index 0000000..cb1214e
 +var (
 +	EnableHTNN = env.Register("PILOT_ENABLE_HTNN", false,
 +		"If enabled, Pilot will watch HTNN resources").Get()
++
++	EnableHTNNStatus = env.Register("PILOT_ENABLE_HTNN_STATUS", true,
++		"If this is set to true, HTNN resources will have status written to them").Get()
 +)
 diff --git a/pilot/pkg/leaderelection/htnn.go b/pilot/pkg/leaderelection/htnn.go
 new file mode 100644
@@ -822,7 +826,7 @@ index 0000000..4f84baf
 +	Reconcile(ctx *PushContext, configsUpdated sets.Set[ConfigKey]) (bool, error)
 +}
 diff --git a/pilot/pkg/model/push_context.go b/pilot/pkg/model/push_context.go
-index 7ba2e93..4bf7833 100644
+index 7ba2e93..b8c042d 100644
 --- a/pilot/pkg/model/push_context.go
 +++ b/pilot/pkg/model/push_context.go
 @@ -1282,6 +1282,9 @@ func (ps *PushContext) createNewContext(env *Environment) error {
@@ -853,7 +857,7 @@ index 7ba2e93..4bf7833 100644
  		var efw *EnvoyFilterWrapper
 -		if features.OptimizedConfigRebuild {
 +		var fromHTNN bool
-+		if envoyFilterConfig.Labels != nil {
++		if features.EnableHTNN && envoyFilterConfig.Labels != nil {
 +			_, fromHTNN = envoyFilterConfig.Labels[CreatedByHTNN]
 +		}
 +		if !fromHTNN && features.OptimizedConfigRebuild {
@@ -1136,10 +1140,10 @@ index 252669a..9d4532c 100644
      plural: "customresourcedefinitions"
 diff --git a/pkg/config/validation/htnn.go b/pkg/config/validation/htnn.go
 new file mode 100644
-index 0000000..94445d6
+index 0000000..bdc935b
 --- /dev/null
 +++ b/pkg/config/validation/htnn.go
-@@ -0,0 +1,69 @@
+@@ -0,0 +1,82 @@
 +// Copyright The HTNN Authors.
 +//
 +// Licensed under the Apache License, Version 2.0 (the "License");
@@ -1162,6 +1166,7 @@ index 0000000..94445d6
 +
 +	"istio.io/istio/pkg/config"
 +
++	"mosn.io/htnn/controller/pkg/constant"
 +	mosniov1 "mosn.io/htnn/types/apis/v1"
 +)
 +
@@ -1209,30 +1214,31 @@ index 0000000..94445d6
 +
 +	return nil
 +}
++
++func validateHTTNAnntation(cfg *config.Config) error {
++	if cfg.Annotations == nil {
++		return nil
++	}
++
++	hfp := cfg.Annotations[constant.AnnotationHTTPFilterPolicy]
++	if hfp != "" {
++		return validateEmbededHTTPFilterPolicy(hfp)
++	}
++	return nil
++}
 diff --git a/pkg/config/validation/validation.go b/pkg/config/validation/validation.go
-index db201a3..4fc3c1a 100644
+index db201a3..5216035 100644
 --- a/pkg/config/validation/validation.go
 +++ b/pkg/config/validation/validation.go
-@@ -37,6 +37,7 @@ import (
- 	"google.golang.org/protobuf/types/descriptorpb"
- 	"google.golang.org/protobuf/types/known/anypb"
- 	"google.golang.org/protobuf/types/known/durationpb"
-+	"mosn.io/htnn/controller/pkg/constant"
- 
- 	"istio.io/api/annotation"
- 	extensions "istio.io/api/extensions/v1alpha1"
-@@ -2318,6 +2319,17 @@ var ValidateVirtualService = registerValidateFunc("ValidateVirtualService",
+@@ -2318,6 +2318,14 @@ var ValidateVirtualService = registerValidateFunc("ValidateVirtualService",
  		if !ok {
  			return nil, errors.New("cannot cast to virtual service")
  		}
 +
-+		if cfg.Annotations != nil {
-+			hfp := cfg.Annotations[constant.AnnotationHTTPFilterPolicy]
-+			if hfp != "" {
-+				err := validateEmbededHTTPFilterPolicy(hfp)
-+				if err != nil {
-+					return nil, err
-+				}
++		if features.EnableHTNN {
++			err := validateHTTNAnntation(&cfg)
++			if err != nil {
++				return nil, err
 +			}
 +		}
 +
