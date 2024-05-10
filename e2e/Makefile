@@ -48,7 +48,7 @@ e2e-build-so:
 
 .PHONY: e2e-prepare-data-plane-image
 e2e-prepare-data-plane-image: e2e-build-so kind
-	docker build -t htnn/e2e-dp:0.1.0 .
+	cd .. && docker build -t htnn/e2e-dp:0.1.0 --build-arg GOPROXY=${GOPROXY} -f e2e/Dockerfile .
 	$(KIND) load docker-image htnn/e2e-dp:0.1.0 --name htnn
 
 .PHONY: deploy-istio
@@ -66,7 +66,7 @@ undeploy-controller: kubectl
 
 .PHONY: run-e2e
 run-e2e:
-	PATH=$(LOCALBIN):"$(PATH)" go test -v ./... || ./collect_e2e_logs.sh
+	PATH=$(LOCALBIN):"$(PATH)" go test -v ./... || (bash -x ./collect_e2e_logs.sh; exit -1)
 
 # To update the control plane, run `make e2e-prepare-controller-image deploy-controller`, and the delete
 # the istiod pod to trigger restart.
