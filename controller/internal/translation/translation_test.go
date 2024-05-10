@@ -35,6 +35,7 @@ import (
 	"mosn.io/htnn/api/pkg/plugins"
 	"mosn.io/htnn/controller/internal/config"
 	"mosn.io/htnn/controller/internal/istio"
+	"mosn.io/htnn/controller/internal/log"
 	_ "mosn.io/htnn/controller/plugins"    // register plugins
 	_ "mosn.io/htnn/controller/registries" // register registries
 	"mosn.io/htnn/controller/tests/pkg"
@@ -76,6 +77,7 @@ type testInput struct {
 }
 
 func TestTranslate(t *testing.T) {
+	log.InitLogger("console")
 	inputFiles, err := filepath.Glob(filepath.Join("testdata", "translation", "*.in.yml"))
 	require.NoError(t, err)
 
