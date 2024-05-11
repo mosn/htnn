@@ -30,7 +30,7 @@ import (
 
 func TestValidateHTTPFilterPolicy(t *testing.T) {
 	plugins.RegisterHttpPluginType("animal", &plugins.MockPlugin{})
-	namespace := gwapiv1a2.Namespace("ns")
+	namespace := gwapiv1.Namespace("ns")
 	sectionName := gwapiv1.SectionName("test")
 
 	tests := []struct {
