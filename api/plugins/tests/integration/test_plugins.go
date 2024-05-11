@@ -412,6 +412,33 @@ func (f *initFilter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool)
 	return api.Continue
 }
 
+type benchmarkPlugin struct {
+	plugins.PluginMethodDefaultImpl
+	basePlugin
+}
+
+func (p *benchmarkPlugin) Factory() api.FilterFactory {
+	return benchmarkFactory
+}
+
+func benchmarkFactory(c interface{}, callbacks api.FilterCallbackHandler) api.Filter {
+	return &benchmarkFilter{
+		callbacks: callbacks,
+		config:    c.(*Config),
+	}
+}
+
+type benchmarkFilter struct {
+	api.PassThroughFilter
+
+	callbacks api.FilterCallbackHandler
+	config    *Config
+}
+
+func (f *benchmarkFilter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {
+	return api.Continue
+}
+
 func init() {
 	plugins.RegisterHttpPlugin("stream", &streamPlugin{})
 	plugins.RegisterHttpPlugin("buffer", &bufferPlugin{})
@@ -419,4 +446,6 @@ func init() {
 	plugins.RegisterHttpPlugin("bad", &badPlugin{})
 	plugins.RegisterHttpPlugin("consumer", &consumerPlugin{})
 	plugins.RegisterHttpPlugin("init", &initPlugin{})
+	plugins.RegisterHttpPlugin("benchmark", &benchmarkPlugin{})
+	plugins.RegisterHttpPlugin("benchmark2", &benchmarkPlugin{})
 }
