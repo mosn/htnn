@@ -25,6 +25,9 @@ PROXY_IMAGE     ?= envoyproxy/envoy@sha256:c47136604751274b30fa7a89132314b8e3586
 DEV_TOOLS_IMAGE ?= ghcr.io/mosn/htnn-dev-tools:2024-03-05
 
 PROTOC = protoc
+
+# Define a recursive wildcard function
+rwildcard=$(foreach d,$(wildcard $(addsuffix *,$(1))),$(call rwildcard,$d/,$(2))$(filter $(subst *,%,$(2)),$d))
 PROTO_FILES = $(call rwildcard,./,*.proto)
 GO_TARGETS = $(patsubst %.proto,%.pb.go,$(PROTO_FILES))
 
