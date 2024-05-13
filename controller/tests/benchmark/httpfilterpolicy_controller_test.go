@@ -30,11 +30,12 @@ import (
 	. "github.com/onsi/gomega"
 	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	"k8s.io/apimachinery/pkg/types"
-	"mosn.io/htnn/controller/tests/pkg"
-	mosniov1 "mosn.io/htnn/types/apis/v1"
 	controllerruntime "sigs.k8s.io/controller-runtime"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
+
+	"mosn.io/htnn/controller/tests/pkg"
+	mosniov1 "mosn.io/htnn/types/apis/v1"
 )
 
 func createResource(ctx context.Context, policy *mosniov1.HTTPFilterPolicy, virtualService *istiov1a3.VirtualService, i int) {
