@@ -1,5 +1,6 @@
 header:
   license:
+    spdx-id: Apache-2.0
     content: |
       Copyright The HTNN Authors.
 
@@ -41,3 +42,10 @@ header:
     - 'controller/registries/nacos/config.go'
     - 'external/**'
   comment: on-failure
+
+dependency:
+  files:
+    - go.mod
+  excludes:
+    - name: github.com/dgryski/trifles # the author adds MIT License later
+    - name: github.com/rcrowley/go-metrics # this repo uses BSD-2-Clause-Views, which is not recognized in skywalking-eye 0.6
