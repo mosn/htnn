@@ -1,5 +1,5 @@
 diff --git a/pilot/pkg/bootstrap/config_compare.go b/pilot/pkg/bootstrap/config_compare.go
-index f1f4f2b0ab..3c437bff1a 100644
+index f1f4f2b..3c437bf 100644
 --- a/pilot/pkg/bootstrap/config_compare.go
 +++ b/pilot/pkg/bootstrap/config_compare.go
 @@ -31,8 +31,9 @@ func needsPush(prev config.Config, curr config.Config) bool {
@@ -33,7 +33,7 @@ index f1f4f2b0ab..3c437bff1a 100644
  		}
  	}
 diff --git a/pilot/pkg/bootstrap/configcontroller.go b/pilot/pkg/bootstrap/configcontroller.go
-index 34cf0a690d..a1d970a45b 100644
+index 34cf0a6..a1d970a 100644
 --- a/pilot/pkg/bootstrap/configcontroller.go
 +++ b/pilot/pkg/bootstrap/configcontroller.go
 @@ -24,6 +24,7 @@ import (
@@ -94,7 +94,7 @@ index 34cf0a690d..a1d970a45b 100644
  		go s.configController.Run(stop)
 diff --git a/pilot/pkg/config/htnn/component.go b/pilot/pkg/config/htnn/component.go
 new file mode 100644
-index 0000000000..275fcc02e9
+index 0000000..275fcc0
 --- /dev/null
 +++ b/pilot/pkg/config/htnn/component.go
 @@ -0,0 +1,174 @@
@@ -274,10 +274,10 @@ index 0000000000..275fcc02e9
 +}
 diff --git a/pilot/pkg/config/htnn/controller.go b/pilot/pkg/config/htnn/controller.go
 new file mode 100644
-index 0000000000..307135ab70
+index 0000000..bc3b5ce
 --- /dev/null
 +++ b/pilot/pkg/config/htnn/controller.go
-@@ -0,0 +1,307 @@
+@@ -0,0 +1,346 @@
 +// Copyright The HTNN Authors.
 +//
 +// Licensed under the Apache License, Version 2.0 (the "License");
@@ -434,32 +434,68 @@ index 0000000000..307135ab70
 +
 +// End model.ConfigStoreController
 +
-+type resourceMetaWrapper struct {
++type resourceMetaWrapperForConfig struct {
 +	*config.Config
 +}
 +
-+func (r *resourceMetaWrapper) GetGroup() string {
++func (r *resourceMetaWrapperForConfig) GetGroup() string {
 +	return r.Config.GroupVersionKind.Group
 +}
 +
-+func (r *resourceMetaWrapper) GetKind() string {
++func (r *resourceMetaWrapperForConfig) GetKind() string {
 +	return r.Config.GroupVersionKind.Kind
 +}
 +
-+func (r *resourceMetaWrapper) GetNamespace() string {
++func (r *resourceMetaWrapperForConfig) GetNamespace() string {
 +	return r.Config.Namespace
 +}
 +
-+func (r *resourceMetaWrapper) GetName() string {
++func (r *resourceMetaWrapperForConfig) GetName() string {
 +	return r.Config.Name
 +}
 +
-+func (r *resourceMetaWrapper) GetAnnotations() map[string]string {
++func (r *resourceMetaWrapperForConfig) GetAnnotations() map[string]string {
 +	return r.Config.Annotations
 +}
 +
 +func wrapConfigToResourceMeta(cfg *config.Config) component.ResourceMeta {
-+	return &resourceMetaWrapper{cfg}
++	return &resourceMetaWrapperForConfig{
++		Config: cfg,
++	}
++}
++
++type resourceMetaWrapperForConfigKey struct {
++	namespace string
++	name      string
++	gvk       *config.GroupVersionKind
++}
++
++func (r *resourceMetaWrapperForConfigKey) GetGroup() string {
++	return r.gvk.Group
++}
++
++func (r *resourceMetaWrapperForConfigKey) GetKind() string {
++	return r.gvk.Kind
++}
++
++func (r *resourceMetaWrapperForConfigKey) GetNamespace() string {
++	return r.namespace
++}
++
++func (r *resourceMetaWrapperForConfigKey) GetName() string {
++	return r.name
++}
++
++func (r *resourceMetaWrapperForConfigKey) GetAnnotations() map[string]string {
++	return nil
++}
++
++func wrapConfigKeyToResourceMeta(configKey *model.ConfigKey, gvkValue *config.GroupVersionKind) component.ResourceMeta {
++	return &resourceMetaWrapperForConfigKey{
++		namespace: configKey.Namespace,
++		name:      configKey.Name,
++		gvk:       gvkValue,
++	}
 +}
 +
 +func (c *Controller) Reconcile(pc *model.PushContext, configsUpdated sets.Set[model.ConfigKey]) (bool, error) {
@@ -503,12 +539,15 @@ index 0000000000..307135ab70
 +				case kind.VirtualService, kind.Gateway, kind.HTTPRoute, kind.KubernetesGateway:
 +					gvkValue := kind.MustToGVK(conf.Kind)
 +					cfg := c.cache.Get(gvkValue, conf.Name, conf.Namespace)
++					var r component.ResourceMeta
 +					if cfg != nil {
-+						r := wrapConfigToResourceMeta(cfg)
-+						if c.httpFilterPolicyReconciler.NeedReconcile(ctx, r) {
-+							toReconcile[kind.HTTPFilterPolicy] = struct{}{}
-+							completed = true
-+						}
++						r = wrapConfigToResourceMeta(cfg)
++					} else {
++						r = wrapConfigKeyToResourceMeta(&conf, &gvkValue)
++					}
++					if c.httpFilterPolicyReconciler.NeedReconcile(ctx, r) {
++						toReconcile[kind.HTTPFilterPolicy] = struct{}{}
++						completed = true
 +					}
 +
 +					if !completed {
@@ -587,7 +626,7 @@ index 0000000000..307135ab70
 +}
 diff --git a/pilot/pkg/config/htnn/htnn.go b/pilot/pkg/config/htnn/htnn.go
 new file mode 100644
-index 0000000000..9bd0be3935
+index 0000000..9bd0be3
 --- /dev/null
 +++ b/pilot/pkg/config/htnn/htnn.go
 @@ -0,0 +1,40 @@
@@ -632,7 +671,7 @@ index 0000000000..9bd0be3935
 +	istio.InitMetrics(&MetricProvider{})
 +}
 diff --git a/pilot/pkg/config/kube/crdclient/client.go b/pilot/pkg/config/kube/crdclient/client.go
-index 6e07fea8e6..44583980e4 100644
+index 6e07fea..4458398 100644
 --- a/pilot/pkg/config/kube/crdclient/client.go
 +++ b/pilot/pkg/config/kube/crdclient/client.go
 @@ -38,11 +38,13 @@ import (
@@ -673,7 +712,7 @@ index 6e07fea8e6..44583980e4 100644
  }
  
 diff --git a/pilot/pkg/config/kube/crdclient/types.gen.go b/pilot/pkg/config/kube/crdclient/types.gen.go
-index ef76a6c255..4b1e3787d2 100644
+index ef76a6c..4b1e378 100644
 --- a/pilot/pkg/config/kube/crdclient/types.gen.go
 +++ b/pilot/pkg/config/kube/crdclient/types.gen.go
 @@ -9,6 +9,7 @@ import (
@@ -1270,7 +1309,7 @@ index ef76a6c255..4b1e3787d2 100644
 +}
 diff --git a/pilot/pkg/features/htnn.go b/pilot/pkg/features/htnn.go
 new file mode 100644
-index 0000000000..cb1214e629
+index 0000000..cb1214e
 --- /dev/null
 +++ b/pilot/pkg/features/htnn.go
 @@ -0,0 +1,24 @@
@@ -1299,7 +1338,7 @@ index 0000000000..cb1214e629
 +		"If enabled, Pilot will watch HTNN resources").Get()
 +)
 diff --git a/pilot/pkg/leaderelection/leaderelection.go b/pilot/pkg/leaderelection/leaderelection.go
-index 627860bce7..a0ce6a30f5 100644
+index 627860b..a0ce6a3 100644
 --- a/pilot/pkg/leaderelection/leaderelection.go
 +++ b/pilot/pkg/leaderelection/leaderelection.go
 @@ -45,6 +45,7 @@ const (
@@ -1311,7 +1350,7 @@ index 627860bce7..a0ce6a30f5 100644
  	AnalyzeController       = "istio-analyze-leader"
  	// GatewayDeploymentController controls translating Kubernetes Gateway objects into various derived
 diff --git a/pilot/pkg/model/context.go b/pilot/pkg/model/context.go
-index dbe58a075b..742ee8be2d 100644
+index dbe58a0..742ee8b 100644
 --- a/pilot/pkg/model/context.go
 +++ b/pilot/pkg/model/context.go
 @@ -111,6 +111,7 @@ type Environment struct {
@@ -1334,7 +1373,7 @@ index dbe58a075b..742ee8be2d 100644
  func OutboundListenerClass(t NodeType) istionetworking.ListenerClass {
  	if t == Router {
 diff --git a/pilot/pkg/model/push_context.go b/pilot/pkg/model/push_context.go
-index 7ba2e93a75..3b1d5f2155 100644
+index 7ba2e93..3b1d5f2 100644
 --- a/pilot/pkg/model/push_context.go
 +++ b/pilot/pkg/model/push_context.go
 @@ -1282,6 +1282,7 @@ func (ps *PushContext) createNewContext(env *Environment) error {
@@ -1370,7 +1409,7 @@ index 7ba2e93a75..3b1d5f2155 100644
  				// Reuse the previous EnvoyFilterWrapper if it exists and hasn't changed when optimized config rebuild is enabled
 diff --git a/pilot/pkg/model/push_context_htnn.go b/pilot/pkg/model/push_context_htnn.go
 new file mode 100644
-index 0000000000..20cf0837a2
+index 0000000..20cf083
 --- /dev/null
 +++ b/pilot/pkg/model/push_context_htnn.go
 @@ -0,0 +1,38 @@
@@ -1413,7 +1452,7 @@ index 0000000000..20cf0837a2
 +	return efGenerated
 +}
 diff --git a/pilot/pkg/xds/ecds.go b/pilot/pkg/xds/ecds.go
-index 305d1ebd75..d06d645065 100644
+index 305d1eb..d06d645 100644
 --- a/pilot/pkg/xds/ecds.go
 +++ b/pilot/pkg/xds/ecds.go
 @@ -55,6 +55,8 @@ func ecdsNeedsPush(req *model.PushRequest) bool {
@@ -1426,7 +1465,7 @@ index 305d1ebd75..d06d645065 100644
  	}
  	return false
 diff --git a/pkg/config/schema/codegen/collections.go b/pkg/config/schema/codegen/collections.go
-index b1134806f9..bd13c63eee 100644
+index b113480..bd13c63 100644
 --- a/pkg/config/schema/codegen/collections.go
 +++ b/pkg/config/schema/codegen/collections.go
 @@ -168,6 +168,8 @@ func toGetter(protoPackage string) string {
@@ -1439,7 +1478,7 @@ index b1134806f9..bd13c63eee 100644
  	return "Kube"
  }
 diff --git a/pkg/config/schema/codegen/templates/collections.go.tmpl b/pkg/config/schema/codegen/templates/collections.go.tmpl
-index 8e35e84830..35c609c0ca 100644
+index 8e35e84..35c609c 100644
 --- a/pkg/config/schema/codegen/templates/collections.go.tmpl
 +++ b/pkg/config/schema/codegen/templates/collections.go.tmpl
 @@ -4,6 +4,7 @@
@@ -1497,7 +1536,7 @@ index 8e35e84830..35c609c0ca 100644
 +}
 +{{- end }}
 diff --git a/pkg/config/schema/codegen/templates/crdclient.go.tmpl b/pkg/config/schema/codegen/templates/crdclient.go.tmpl
-index 1da41f51ca..a11e26bc8a 100644
+index 1da41f5..a11e26b 100644
 --- a/pkg/config/schema/codegen/templates/crdclient.go.tmpl
 +++ b/pkg/config/schema/codegen/templates/crdclient.go.tmpl
 @@ -15,6 +15,7 @@ import (
@@ -1541,7 +1580,7 @@ index 1da41f51ca..a11e26bc8a 100644
 +{{- end }}
 +}
 diff --git a/pkg/config/schema/codegen/templates/kind.go.tmpl b/pkg/config/schema/codegen/templates/kind.go.tmpl
-index 6934505e2a..de76f4f1fc 100644
+index 6934505..de76f4f 100644
 --- a/pkg/config/schema/codegen/templates/kind.go.tmpl
 +++ b/pkg/config/schema/codegen/templates/kind.go.tmpl
 @@ -39,4 +39,17 @@ func MustFromGVK(g config.GroupVersionKind) Kind {
@@ -1564,7 +1603,7 @@ index 6934505e2a..de76f4f1fc 100644
  }
 \ No newline at end of file
 diff --git a/pkg/config/schema/codegen/templates/types.go.tmpl b/pkg/config/schema/codegen/templates/types.go.tmpl
-index 05f87324df..53d59dfb03 100644
+index 05f8732..53d59df 100644
 --- a/pkg/config/schema/codegen/templates/types.go.tmpl
 +++ b/pkg/config/schema/codegen/templates/types.go.tmpl
 @@ -24,6 +24,10 @@ func getGvk(obj any) config.GroupVersionKind {
@@ -1579,7 +1618,7 @@ index 05f87324df..53d59dfb03 100644
    default:
      panic(fmt.Sprintf("Unknown type %T", obj))
 diff --git a/pkg/config/schema/collections/collections.gen.go b/pkg/config/schema/collections/collections.gen.go
-index 91f0909c0a..7cc1b90a43 100755
+index 91f0909..7cc1b90 100755
 --- a/pkg/config/schema/collections/collections.gen.go
 +++ b/pkg/config/schema/collections/collections.gen.go
 @@ -16,6 +16,7 @@ import (
@@ -1668,7 +1707,7 @@ index 91f0909c0a..7cc1b90a43 100755
 +	}
 +}
 diff --git a/pkg/config/schema/gvk/resources.gen.go b/pkg/config/schema/gvk/resources.gen.go
-index 4b60b1ff1d..bd93aff45a 100755
+index 4b60b1f..bd93aff 100755
 --- a/pkg/config/schema/gvk/resources.gen.go
 +++ b/pkg/config/schema/gvk/resources.gen.go
 @@ -14,6 +14,7 @@ var (
@@ -1724,7 +1763,7 @@ index 4b60b1ff1d..bd93aff45a 100755
  		return HTTPRoute, true
  	case gvr.Ingress:
 diff --git a/pkg/config/schema/gvr/resources.gen.go b/pkg/config/schema/gvr/resources.gen.go
-index d165cd5dc2..1171a6a3a2 100755
+index d165cd5..1171a6a 100755
 --- a/pkg/config/schema/gvr/resources.gen.go
 +++ b/pkg/config/schema/gvr/resources.gen.go
 @@ -11,6 +11,7 @@ var (
@@ -1762,7 +1801,7 @@ index d165cd5dc2..1171a6a3a2 100755
  		return false
  	case HTTPRoute_v1alpha2:
 diff --git a/pkg/config/schema/kind/resources.gen.go b/pkg/config/schema/kind/resources.gen.go
-index a874fdd75c..06a3f6f0bf 100755
+index a874fdd..06a3f6f 100755
 --- a/pkg/config/schema/kind/resources.gen.go
 +++ b/pkg/config/schema/kind/resources.gen.go
 @@ -12,6 +12,7 @@ const (
@@ -1919,7 +1958,7 @@ index a874fdd75c..06a3f6f0bf 100755
 +	panic("unknown kind: " + k.String())
 +}
 diff --git a/pkg/config/schema/kubeclient/common.go b/pkg/config/schema/kubeclient/common.go
-index 2f82038da6..f13cae0e63 100644
+index 2f82038..f13cae0 100644
 --- a/pkg/config/schema/kubeclient/common.go
 +++ b/pkg/config/schema/kubeclient/common.go
 @@ -27,6 +27,7 @@ import (
@@ -1941,7 +1980,7 @@ index 2f82038da6..f13cae0e63 100644
  	GatewayAPI() gatewayapiclient.Interface
  
 diff --git a/pkg/config/schema/kubeclient/resources.gen.go b/pkg/config/schema/kubeclient/resources.gen.go
-index 6bd27b3c5d..b33e1204e7 100755
+index 6bd27b3..b33e120 100755
 --- a/pkg/config/schema/kubeclient/resources.gen.go
 +++ b/pkg/config/schema/kubeclient/resources.gen.go
 @@ -19,6 +19,7 @@ import (
@@ -2035,7 +2074,7 @@ index 6bd27b3c5d..b33e1204e7 100755
  		l = func(options metav1.ListOptions) (runtime.Object, error) {
  			return c.GatewayAPI().GatewayV1beta1().HTTPRoutes(opts.Namespace).List(context.Background(), options)
 diff --git a/pkg/config/schema/kubetypes/resources.gen.go b/pkg/config/schema/kubetypes/resources.gen.go
-index 5b38cd77df..16f7800a17 100755
+index 5b38cd7..16f7800 100755
 --- a/pkg/config/schema/kubetypes/resources.gen.go
 +++ b/pkg/config/schema/kubetypes/resources.gen.go
 @@ -13,6 +13,7 @@ import (
@@ -2254,7 +2293,7 @@ index 5b38cd77df..16f7800a17 100755
  		panic(fmt.Sprintf("Unknown type %T", obj))
  	}
 diff --git a/pkg/config/schema/metadata.yaml b/pkg/config/schema/metadata.yaml
-index 252669af19..9d4532cdbe 100644
+index 252669a..9d4532c 100644
 --- a/pkg/config/schema/metadata.yaml
 +++ b/pkg/config/schema/metadata.yaml
 @@ -14,6 +14,31 @@
@@ -2290,7 +2329,7 @@ index 252669af19..9d4532cdbe 100644
    - kind: "CustomResourceDefinition"
      plural: "customresourcedefinitions"
 diff --git a/pkg/config/validation/validation.go b/pkg/config/validation/validation.go
-index 56f6971290..fb57f3961b 100644
+index db201a3..67b6315 100644
 --- a/pkg/config/validation/validation.go
 +++ b/pkg/config/validation/validation.go
 @@ -37,6 +37,8 @@ import (
@@ -2302,7 +2341,7 @@ index 56f6971290..fb57f3961b 100644
  
  	"istio.io/api/annotation"
  	extensions "istio.io/api/extensions/v1alpha1"
-@@ -2018,6 +2020,36 @@ func validateOneOfSelectorType(selector *type_beta.WorkloadSelector, targetRef *
+@@ -2019,6 +2021,36 @@ func validateOneOfSelectorType(selector *type_beta.WorkloadSelector, targetRef *
  	return
  }
  
@@ -2339,7 +2378,7 @@ index 56f6971290..fb57f3961b 100644
  // ValidateAuthorizationPolicy checks that AuthorizationPolicy is well-formed.
  var ValidateAuthorizationPolicy = registerValidateFunc("ValidateAuthorizationPolicy",
  	func(cfg config.Config) (Warning, error) {
-@@ -2317,6 +2349,23 @@ var ValidateVirtualService = registerValidateFunc("ValidateVirtualService",
+@@ -2318,6 +2350,23 @@ var ValidateVirtualService = registerValidateFunc("ValidateVirtualService",
  		if !ok {
  			return nil, errors.New("cannot cast to virtual service")
  		}
@@ -2364,7 +2403,7 @@ index 56f6971290..fb57f3961b 100644
  		if len(virtualService.Hosts) == 0 {
  			// This must be delegate - enforce delegate validations.
 diff --git a/pkg/kube/client.go b/pkg/kube/client.go
-index 999c319fdd..ed22c7fb01 100644
+index 999c319..ed22c7f 100644
 --- a/pkg/kube/client.go
 +++ b/pkg/kube/client.go
 @@ -63,6 +63,7 @@ import (
