@@ -12,6 +12,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM istio/proxyv2:1.21.0
-COPY libgolang.so /etc/libgolang.so
+FROM golang:1.21 as builder
+ARG TARGETOS
+ARG TARGETARCH
+ARG GOPROXY
+ENV GOPROXY=$GOPROXY
+
+WORKDIR /workspace
+
+# Copy the source
+
+COPY go.* ./
+RUN sed -i 's/.\/site/.\/external\/istio/' go.work && sed -i '/.\/e2e/d' go.work
+COPY api/ api/
+COPY types/ types/
+COPY plugins/ plugins/
+COPY controller/ controller/
+# Remember to run `make prebuild` before building the image
+COPY external/istio/ external/istio/
+RUN cd ./external/istio && \
+    CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -C pilot/cmd/pilot-agent -a -o /workspace/pilot-agent
+
+FROM istio/proxyv2:1.21.2
+COPY --from=builder /workspace/pilot-agent /usr/local/bin/
+COPY e2e/libgolang.so /etc/libgolang.so
 CMD ["envoy"]
