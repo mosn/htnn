@@ -77,5 +77,6 @@ run-demo:
 	docker run --rm -v ${PROJECT_ROOT}/etc/demo.yaml:/etc/demo.yaml \
 		-v $(PWD)/libgolang.so:/etc/libgolang.so \
 		-p 10000:10000 \
+		-p 9998:9998 \
 		${PROXY_IMAGE} \
 		envoy -c /etc/demo.yaml --log-level info
