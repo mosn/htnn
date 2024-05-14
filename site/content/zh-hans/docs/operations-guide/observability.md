@@ -33,12 +33,25 @@ HTNN 控制面调和时生成的 EnvoyFilter 和 ServiceEntry 都可以通过 is
 
 ```
 {
-    "kind": "EnvoyFilter",
-    "apiVersion": "networking.istio.io/v1alpha3",
-    "metadata": {
-      "name": "htnn-http-filter",
-      "namespace": "istio-system",
-      ...
+  "kind": "EnvoyFilter",
+  "apiVersion": "networking.istio.io/v1alpha3",
+  "metadata": {
+    "name": "htnn-http-filter",
+    "namespace": "istio-system",
+    "resourceVersion": "52795",
+    "creationTimestamp": "2024-05-10T10:38:02Z",
+    "labels": {
+      "htnn.mosn.io/created-by": "HTTPFilterPolicy"
     },
-    ...
+    "annotations": {
+      "htnn.mosn.io/info": "{\"httpfilterpolicies\":[\"nodesentry/policy\"]}"
+    }
+  },
+  ...
+},
+...
 ```
+
+生成的 EnvoyFilter 会打上 "htnn.mosn.io/created-by" 的 label，标记它是由哪种资源生成的。另外还有一个 annotation "htnn.mosn.io/info"，其中包含下面的字段：
+
+* `httpfilterpolicies`: 生成该 EnvoyFilter 的策略，命名方式为 `$namespace/$name`。
