@@ -127,7 +127,7 @@ lint-spell: dev-tools
 		${DEV_TOOLS_IMAGE} \
 		make lint-spell-local
 
-CODESPELL = codespell --skip 'test-envoy,go.mod,go.sum,*.svg,./site/public/**' --check-filenames --check-hidden --ignore-words ./.ignore_words $(shell ls -A | tr '\t' '\n' | grep -vE 'external|.git|.idea|go.work.sum')
+CODESPELL = codespell --skip 'test-envoy,go.mod,go.sum,*.svg,./site/public/**,external,.git,.idea,go.work.sum' --check-filenames --check-hidden --ignore-words ./.ignore_words .
 .PHONY: lint-spell-local
 lint-spell-local:
 	$(CODESPELL)
