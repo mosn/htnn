@@ -600,6 +600,10 @@ func (m *filterManager) localReply(v *api.LocalResponse) {
 		isJSON := false
 		var ok bool
 		var ct string
+		// note that the headers are just Go side cache. There may be Envoy side HTTP filter which
+		// changes the content-type headers. But since most of the localReply happens in the early
+		// DecodeHeaders phase, the chance to change to the content-type is very low. If this happens,
+		// user can specify the content-type in the header by herself.
 		if m.rspHdr != nil {
 			ct, ok = m.rspHdr.Get("content-type")
 		}
