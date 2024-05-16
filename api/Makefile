@@ -42,6 +42,7 @@ build-test-so:
 		${BUILD_IMAGE} \
 		bash -c "git config --global --add safe.directory '*' && make build-test-so-local"
 
+# The data plane image used in the integration test can be controlled via env var HTNN_DATA_PLANE_INTEGRATION_TEST_IMAGE
 .PHONY: integration-test
 integration-test:
 	test -d /tmp/htnn_coverage && rm -rf /tmp/htnn_coverage || true
