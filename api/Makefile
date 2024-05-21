@@ -42,9 +42,15 @@ build-test-so:
 		${BUILD_IMAGE} \
 		bash -c "git config --global --add safe.directory '*' && make build-test-so-local"
 
+# The data plane image used in the integration test can be controlled via env var HTNN_DATA_PLANE_INTEGRATION_TEST_IMAGE
 .PHONY: integration-test
 integration-test:
 	test -d /tmp/htnn_coverage && rm -rf /tmp/htnn_coverage || true
 	$(foreach PKG, $(shell go list ./plugins/tests/integration/...), \
 		go test -v ${PKG} || exit 1; \
 	)
+
+# The benchmark running time can be controlled via env var HTNN_DATA_PLANE_BENCHMARK_DURATION
+.PHONY: benchmark
+benchmark:
+	go test -tags benchmark -v ./plugins/tests/integration/ -run TestBenchmark

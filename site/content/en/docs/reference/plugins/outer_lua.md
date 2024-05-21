@@ -9,11 +9,11 @@ The `outerLua` plugin allows Lua snippets to be run at the beginning and the end
 Because Envoy uses the onion model to proxy requests, the execution order is:
 
 1. request starts
-2. running outerLua and other plugins in `Outer` group
+2. running `outerLua` and other plugins in `Outer` group
 3. running other plugins
 4. proxy to the upstream
 5. running other plugins with the response
-6. running outerLua and other plugins in `Outer` group, with the response
+6. running `outerLua` and other plugins in `Outer` group, with the response
 7. request ends
 
 ## Attribute
@@ -25,7 +25,9 @@ Because Envoy uses the onion model to proxy requests, the execution order is:
 
 ## Configuration
 
-See the corresponding [Envoy documentation](https://www.envoyproxy.io/docs/envoy/v1.29.4/configuration/http/http_filters/lua_filter).
+For specific configuration fields, see the corresponding [Envoy documentation](https://www.envoyproxy.io/docs/envoy/v1.29.4/api-v3/extensions/filters/http/lua/v3/lua.proto#extensions-filters-http-lua-v3-luaperroute).
+
+For the working principles of Lua filter, refer to [Envoy's introduction to Lua filter](https://www.envoyproxy.io/docs/envoy/v1.29.4/configuration/http/http_filters/lua_filter).
 
 ## Usage
 

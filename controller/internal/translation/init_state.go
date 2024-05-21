@@ -271,10 +271,10 @@ func (s *InitState) addPolicyForGateway(policy *mosniov1.HTTPFilterPolicy, gwp *
 	k := ServerPortKey{Namespace: gwp.Gateway.NsName.Namespace, ServerPort: port}
 	prevGw := s.ServerPortToGateway[k]
 	if prevGw != nil {
-		if policy != nil {
+		if prevGw.NsName != gwp.Gateway.NsName && policy != nil {
 			log.Errorf("Gateway %s has the same server port %+v with gateway %s, ignore the policies target it."+
 				" Maybe we can support Gateway level policy via RDS in the future?",
-				gwp.Gateway.NsName, prevGw.NsName, port)
+				gwp.Gateway.NsName, port, prevGw.NsName)
 		}
 		return
 	}

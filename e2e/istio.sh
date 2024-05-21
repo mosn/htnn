@@ -30,7 +30,6 @@ install() {
     # the image name should be in ns/name format, otherwise istio will add ":ver" suffix to it
     $ISTIOCTL manifest apply \
         --set .values.pilot.image="htnn/e2e-cp:0.1.0" \
-        --set .values.pilot.env.ISTIO_DELTA_XDS=true \
         --set .values.pilot.env.PILOT_SCOPE_GATEWAY_TO_NAMESPACE=true \
         --set .values.pilot.env.PILOT_ENABLE_HTNN=true \
         --set .values.pilot.env.PILOT_ENABLE_HTNN_STATUS=true \
@@ -40,6 +39,7 @@ install() {
         --set .values.global.proxy.image="htnn/e2e-dp:0.1.0" \
         --set .values.global.imagePullPolicy=Never \
         --set .values.global.logging.level=default:info,htnn:debug \
+        --set meshConfig.defaultConfig.proxyMetadata.ISTIO_DELTA_XDS=true \
         -y || exitWithAnalysis
 }
 

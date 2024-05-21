@@ -31,6 +31,7 @@ import (
 	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	"k8s.io/apimachinery/pkg/types"
 	controllerruntime "sigs.k8s.io/controller-runtime"
+	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"mosn.io/htnn/controller/tests/pkg"
@@ -45,15 +46,15 @@ func createResource(ctx context.Context, policy *mosniov1.HTTPFilterPolicy, virt
 		PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
 			Group: "networking.istio.io",
 			Kind:  "VirtualService",
-			Name:  gwapiv1a2.ObjectName("vs-" + id),
+			Name:  gwapiv1.ObjectName("vs-" + id),
 		},
 	}
-	name := gwapiv1a2.SectionName("route")
+	name := gwapiv1.SectionName("route")
 	trRoute := gwapiv1a2.PolicyTargetReferenceWithSectionName{
 		PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
 			Group: "networking.istio.io",
 			Kind:  "VirtualService",
-			Name:  gwapiv1a2.ObjectName("vs-" + id),
+			Name:  gwapiv1.ObjectName("vs-" + id),
 		},
 		SectionName: &name,
 	}

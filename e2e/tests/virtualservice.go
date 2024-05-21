@@ -22,8 +22,12 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
+	"k8s.io/apimachinery/pkg/types"
 
+	"mosn.io/htnn/e2e/pkg/k8s"
 	"mosn.io/htnn/e2e/pkg/suite"
+	mosniov1 "mosn.io/htnn/types/apis/v1"
 )
 
 func init() {
@@ -38,6 +42,35 @@ func init() {
 			req, _, err := suite.Capture(rsp)
 			require.NoError(t, err)
 			require.Equal(t, "hello,", req.Headers["Doraemon"][0])
+
+			c := suite.K8sClient()
+			ctx := context.Background()
+			nsName := types.NamespacedName{Name: "policy", Namespace: k8s.IstioRootNamespace}
+			var policy mosniov1.HTTPFilterPolicy
+			err = c.Get(ctx, nsName, &policy)
+			require.NoError(t, err)
+			st := policy.Status
+			cd := st.Conditions[0]
+			gen := policy.Generation
+			require.Equal(t, gen, cd.ObservedGeneration)
+			require.Equal(t, "The policy has been accepted", cd.Message)
+
+			// Ensure the policy is reconciled when the targeted resource is deleted
+			nsName = types.NamespacedName{Name: "vs", Namespace: k8s.IstioRootNamespace}
+			var route istiov1a3.VirtualService
+			err = c.Get(ctx, nsName, &route)
+			require.NoError(t, err)
+			c.Delete(ctx, &route)
+			time.Sleep(time.Second)
+
+			nsName = types.NamespacedName{Name: "policy", Namespace: k8s.IstioRootNamespace}
+			err = c.Get(ctx, nsName, &policy)
+			require.NoError(t, err)
+			st = policy.Status
+			cd = st.Conditions[0]
+			gen = policy.Generation
+			require.Equal(t, gen, cd.ObservedGeneration) // same Generation as the Spec is not changed
+			require.Equal(t, "The policy targets non-existent resource", cd.Message)
 		},
 	})
 }

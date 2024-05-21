@@ -57,6 +57,7 @@ type DataPlane struct {
 
 type Option struct {
 	LogLevel         string
+	Envs             map[string]string
 	NoErrorLogCheck  bool
 	ExpectLogPattern []string
 	Bootstrap        *bootstrap
@@ -145,6 +146,12 @@ func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 	// Use docker inspect --format='{{index .RepoDigests 0}}' envoyproxy/envoy:contrib-v1.29.4
 	// to get the sha256 ID
 	image := "envoyproxy/envoy@sha256:490f58e109735df4326bac2736ed41e062ce541d3851d634ccbf24552e5b4ce5"
+
+	specifiedImage := os.Getenv("HTNN_DATA_PLANE_INTEGRATION_TEST_IMAGE")
+	if specifiedImage != "" {
+		image = specifiedImage
+	}
+
 	b, err := exec.Command("docker", "images", image).Output()
 	if err != nil {
 		return nil, err
@@ -160,6 +167,11 @@ func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 		}
 	}
 
+	envs := []string{}
+	for k, v := range opt.Envs {
+		envs = append(envs, "-e", k+"="+v)
+	}
+
 	pwd, _ := os.Getwd()
 	cmdline := "docker run" +
 		" --name " + containerName +
@@ -170,6 +182,7 @@ func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 		filepath.Join(pwd, "libgolang.so") + ":/etc/libgolang.so" +
 		" -v /tmp:/tmp" +
 		" -e GOCOVERDIR=" + coverDir +
+		" " + strings.Join(envs, " ") +
 		" -p 10000:10000 -p 9998:9998 " + hostAddr + " " +
 		image
 
@@ -371,5 +384,25 @@ func (dp *DataPlane) FlushCoverage() error {
 	if resp.StatusCode != 200 {
 		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
 	}
+	return nil
+}
+
+func (dp *DataPlane) SetLogLevel(loggerName string, level string) error {
+	req, err := http.NewRequest("POST", fmt.Sprintf("http://0.0.0.0:9998/logging?%s=%s", loggerName, level), bytes.NewReader([]byte{}))
+	if err != nil {
+		return err
+	}
+	client := &http.Client{
+		Timeout: 10 * time.Second,
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode != 200 {
+		return fmt.Errorf("unexpected status code: %d", resp.StatusCode)
+	}
+
 	return nil
 }

@@ -1,5 +1,5 @@
 diff --git a/pilot/pkg/bootstrap/config_compare.go b/pilot/pkg/bootstrap/config_compare.go
-index f1f4f2b..8bd6fb5 100644
+index f1f4f2b..3c437bf 100644
 --- a/pilot/pkg/bootstrap/config_compare.go
 +++ b/pilot/pkg/bootstrap/config_compare.go
 @@ -31,8 +31,9 @@ func needsPush(prev config.Config, curr config.Config) bool {
@@ -33,13 +33,13 @@ index f1f4f2b..8bd6fb5 100644
  		}
  	}
 diff --git a/pilot/pkg/bootstrap/configcontroller.go b/pilot/pkg/bootstrap/configcontroller.go
-index 34cf0a6..f5f5ed7 100644
+index 34cf0a6..a1d970a 100644
 --- a/pilot/pkg/bootstrap/configcontroller.go
 +++ b/pilot/pkg/bootstrap/configcontroller.go
 @@ -113,6 +113,10 @@ func (s *Server) initConfigController(args *PilotArgs) error {
  		})
  	}
- 
+
 +	if features.EnableHTNN {
 +		s.addHTNNControllerToConfigStores()
 +	}
@@ -50,7 +50,7 @@ index 34cf0a6..f5f5ed7 100644
 @@ -123,6 +127,10 @@ func (s *Server) initConfigController(args *PilotArgs) error {
  	// Create the config store.
  	s.environment.ConfigStore = aggregateConfigController
- 
+
 +	if features.EnableHTNN {
 +		s.startHTNNController(args)
 +	}
@@ -306,10 +306,10 @@ index 0000000..275fcc0
 +}
 diff --git a/pilot/pkg/config/htnn/controller.go b/pilot/pkg/config/htnn/controller.go
 new file mode 100644
-index 0000000..307135a
+index 0000000..bc3b5ce
 --- /dev/null
 +++ b/pilot/pkg/config/htnn/controller.go
-@@ -0,0 +1,307 @@
+@@ -0,0 +1,346 @@
 +// Copyright The HTNN Authors.
 +//
 +// Licensed under the Apache License, Version 2.0 (the "License");
@@ -466,32 +466,68 @@ index 0000000..307135a
 +
 +// End model.ConfigStoreController
 +
-+type resourceMetaWrapper struct {
++type resourceMetaWrapperForConfig struct {
 +	*config.Config
 +}
 +
-+func (r *resourceMetaWrapper) GetGroup() string {
++func (r *resourceMetaWrapperForConfig) GetGroup() string {
 +	return r.Config.GroupVersionKind.Group
 +}
 +
-+func (r *resourceMetaWrapper) GetKind() string {
++func (r *resourceMetaWrapperForConfig) GetKind() string {
 +	return r.Config.GroupVersionKind.Kind
 +}
 +
-+func (r *resourceMetaWrapper) GetNamespace() string {
++func (r *resourceMetaWrapperForConfig) GetNamespace() string {
 +	return r.Config.Namespace
 +}
 +
-+func (r *resourceMetaWrapper) GetName() string {
++func (r *resourceMetaWrapperForConfig) GetName() string {
 +	return r.Config.Name
 +}
 +
-+func (r *resourceMetaWrapper) GetAnnotations() map[string]string {
++func (r *resourceMetaWrapperForConfig) GetAnnotations() map[string]string {
 +	return r.Config.Annotations
 +}
 +
 +func wrapConfigToResourceMeta(cfg *config.Config) component.ResourceMeta {
-+	return &resourceMetaWrapper{cfg}
++	return &resourceMetaWrapperForConfig{
++		Config: cfg,
++	}
++}
++
++type resourceMetaWrapperForConfigKey struct {
++	namespace string
++	name      string
++	gvk       *config.GroupVersionKind
++}
++
++func (r *resourceMetaWrapperForConfigKey) GetGroup() string {
++	return r.gvk.Group
++}
++
++func (r *resourceMetaWrapperForConfigKey) GetKind() string {
++	return r.gvk.Kind
++}
++
++func (r *resourceMetaWrapperForConfigKey) GetNamespace() string {
++	return r.namespace
++}
++
++func (r *resourceMetaWrapperForConfigKey) GetName() string {
++	return r.name
++}
++
++func (r *resourceMetaWrapperForConfigKey) GetAnnotations() map[string]string {
++	return nil
++}
++
++func wrapConfigKeyToResourceMeta(configKey *model.ConfigKey, gvkValue *config.GroupVersionKind) component.ResourceMeta {
++	return &resourceMetaWrapperForConfigKey{
++		namespace: configKey.Namespace,
++		name:      configKey.Name,
++		gvk:       gvkValue,
++	}
 +}
 +
 +func (c *Controller) Reconcile(pc *model.PushContext, configsUpdated sets.Set[model.ConfigKey]) (bool, error) {
@@ -535,12 +571,15 @@ index 0000000..307135a
 +				case kind.VirtualService, kind.Gateway, kind.HTTPRoute, kind.KubernetesGateway:
 +					gvkValue := kind.MustToGVK(conf.Kind)
 +					cfg := c.cache.Get(gvkValue, conf.Name, conf.Namespace)
++					var r component.ResourceMeta
 +					if cfg != nil {
-+						r := wrapConfigToResourceMeta(cfg)
-+						if c.httpFilterPolicyReconciler.NeedReconcile(ctx, r) {
-+							toReconcile[kind.HTTPFilterPolicy] = struct{}{}
-+							completed = true
-+						}
++						r = wrapConfigToResourceMeta(cfg)
++					} else {
++						r = wrapConfigKeyToResourceMeta(&conf, &gvkValue)
++					}
++					if c.httpFilterPolicyReconciler.NeedReconcile(ctx, r) {
++						toReconcile[kind.HTTPFilterPolicy] = struct{}{}
++						completed = true
 +					}
 +
 +					if !completed {
@@ -664,7 +703,7 @@ index 0000000..9bd0be3
 +	istio.InitMetrics(&MetricProvider{})
 +}
 diff --git a/pilot/pkg/config/kube/crdclient/client.go b/pilot/pkg/config/kube/crdclient/client.go
-index 6e07fea..26e5d66 100644
+index 6e07fea..4458398 100644
 --- a/pilot/pkg/config/kube/crdclient/client.go
 +++ b/pilot/pkg/config/kube/crdclient/client.go
 @@ -43,6 +43,7 @@ import (
@@ -686,7 +725,7 @@ index 6e07fea..26e5d66 100644
 +
  	return c
  }
- 
+
 diff --git a/pilot/pkg/config/kube/crdclient/htnn.go b/pilot/pkg/config/kube/crdclient/htnn.go
 new file mode 100644
 index 0000000..58d032c
@@ -732,7 +771,7 @@ index 0000000..58d032c
 +}
 diff --git a/pilot/pkg/features/htnn.go b/pilot/pkg/features/htnn.go
 new file mode 100644
-index 0000000..19a68b0
+index 0000000..cb1214e
 --- /dev/null
 +++ b/pilot/pkg/features/htnn.go
 @@ -0,0 +1,27 @@
@@ -794,10 +833,10 @@ index dbe58a0..800d200 100644
 +++ b/pilot/pkg/model/context.go
 @@ -111,6 +111,7 @@ type Environment struct {
  	CredentialsController credentials.MulticlusterController
- 
+
  	GatewayAPIController GatewayController
 +	HTNNController       HTNNController
- 
+
  	// EndpointShards for a service. This is a global (per-server) list, built from
  	// incremental updates. This is keyed by service and namespace
 diff --git a/pilot/pkg/model/htnn.go b/pilot/pkg/model/htnn.go
@@ -828,7 +867,7 @@ index 0000000..4f84baf
 +	Reconcile(ctx *PushContext, configsUpdated sets.Set[ConfigKey]) (bool, error)
 +}
 diff --git a/pilot/pkg/model/push_context.go b/pilot/pkg/model/push_context.go
-index 7ba2e93..b8c042d 100644
+index 7ba2e93..3b1d5f2 100644
 --- a/pilot/pkg/model/push_context.go
 +++ b/pilot/pkg/model/push_context.go
 @@ -1282,6 +1282,9 @@ func (ps *PushContext) createNewContext(env *Environment) error {
@@ -844,7 +883,7 @@ index 7ba2e93..b8c042d 100644
 @@ -1396,6 +1399,11 @@ func (ps *PushContext) updateContext(
  		ps.wasmPluginsByNamespace = oldPushContext.wasmPluginsByNamespace
  	}
- 
+
 +	if features.EnableHTNN {
 +		generated := ps.initHTNNResources(env, pushReq.ConfigsUpdated)
 +		envoyFiltersChanged = envoyFiltersChanged || generated
@@ -854,7 +893,7 @@ index 7ba2e93..b8c042d 100644
  		ps.initEnvoyFilters(env, changedEnvoyFilters, oldPushContext.envoyFiltersByNamespace)
  	} else {
 @@ -2116,7 +2124,11 @@ func (ps *PushContext) initEnvoyFilters(env *Environment, changed sets.Set[Confi
- 
+
  	for _, envoyFilterConfig := range envoyFilterConfigs {
  		var efw *EnvoyFilterWrapper
 -		if features.OptimizedConfigRebuild {
@@ -868,7 +907,7 @@ index 7ba2e93..b8c042d 100644
  				// Reuse the previous EnvoyFilterWrapper if it exists and hasn't changed when optimized config rebuild is enabled
 diff --git a/pilot/pkg/model/push_context_htnn.go b/pilot/pkg/model/push_context_htnn.go
 new file mode 100644
-index 0000000..e68586d
+index 0000000..20cf083
 --- /dev/null
 +++ b/pilot/pkg/model/push_context_htnn.go
 @@ -0,0 +1,32 @@
@@ -948,7 +987,7 @@ index 8e35e84..35c609c 100644
 +++ b/pkg/config/schema/codegen/templates/collections.go.tmpl
 @@ -4,6 +4,7 @@
  package {{.PackageName}}
- 
+
  import (
 +	"istio.io/istio/pilot/pkg/features"
  	"istio.io/istio/pkg/config/schema/collection"
@@ -963,11 +1002,11 @@ index 8e35e84..35c609c 100644
 +		{{- end}}
  	{{- end }}
  		Build()
- 
+
 @@ -66,6 +69,17 @@ var (
  	{{- end }}
  		Build()
- 
+
 +    {{- if (contains .FilePrefix "build !agent") }}
 +	// HTNN contains collections used provided by HTNN.
 +	HTNN = collection.NewSchemasBuilder().
@@ -1050,7 +1089,7 @@ index 6934505..de76f4f 100644
 +++ b/pkg/config/schema/codegen/templates/kind.go.tmpl
 @@ -39,4 +39,17 @@ func MustFromGVK(g config.GroupVersionKind) Kind {
  	}
- 
+
  	panic("unknown kind: " + g.String())
 +}
 +
@@ -1092,24 +1131,24 @@ index 2f82038..f13cae0 100644
  	"k8s.io/client-go/tools/cache"
 +	mosnclient "mosn.io/htnn/types/pkg/client/clientset/versioned"
  	gatewayapiclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
- 
+
  	istioclient "istio.io/client-go/pkg/clientset/versioned"
 @@ -53,6 +54,9 @@ type ClientGetter interface {
  	// Istio returns the Istio kube client.
  	Istio() istioclient.Interface
- 
+
 +	// MOSN returns the MOSN kube client.
 +	MOSN() mosnclient.Interface
 +
  	// GatewayAPI returns the gateway-api kube client.
  	GatewayAPI() gatewayapiclient.Interface
- 
+
 diff --git a/pkg/config/schema/metadata.yaml b/pkg/config/schema/metadata.yaml
 index 252669a..9d4532c 100644
 --- a/pkg/config/schema/metadata.yaml
 +++ b/pkg/config/schema/metadata.yaml
 @@ -14,6 +14,31 @@
- 
+
  # Configuration for resource types.
  resources:
 +  # HTNN specific configuration.
@@ -1270,25 +1309,25 @@ index 999c319..fa0870d 100644
 @@ -117,6 +119,9 @@ type Client interface {
  	// Istio returns the Istio kube client.
  	Istio() istioclient.Interface
- 
+
 +	// MOSN returns the MOSN kube client.
 +	MOSN() mosnclient.Interface
 +
  	// GatewayAPI returns the gateway-api kube client.
  	GatewayAPI() gatewayapiclient.Interface
- 
+
 @@ -325,6 +330,7 @@ type client struct {
  	dynamic    dynamic.Interface
  	metadata   metadata.Interface
  	istio      istioclient.Interface
 +	mosn       mosnclient.Interface
  	gatewayapi gatewayapiclient.Interface
- 
+
  	started atomic.Bool
 @@ -397,6 +403,13 @@ func newClientInternal(clientFactory *clientFactory, revision string, cluster cl
  		return nil, err
  	}
- 
+
 +	if features.EnableHTNN {
 +		c.mosn, err = mosnclient.NewForConfig(c.config)
 +		if err != nil {

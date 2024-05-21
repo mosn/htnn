@@ -2,20 +2,32 @@ diff --git a/go.mod b/go.mod
 index e7f308e890..def9507093 100644
 --- a/go.mod
 +++ b/go.mod
-@@ -5,6 +5,18 @@ go 1.21
+@@ -5,6 +5,30 @@ go 1.21
  // Client-go does not handle different versions of mergo due to some breaking changes - use the matching version
  replace github.com/imdario/mergo => github.com/imdario/mergo v0.3.5
- 
+
 +require (
 +	mosn.io/htnn/controller v0.0.0
 +	mosn.io/htnn/types v0.2.1
 +)
 +
 +replace (
-+	github.com/prometheus/common => github.com/prometheus/common v0.45.0
 +	mosn.io/htnn/api => ../../api
 +	mosn.io/htnn/controller => ../../controller
 +	mosn.io/htnn/types => ../../types
++)
++
++// Downgrade some deps to match the one used in istio
++replace (
++	github.com/prometheus/common => github.com/prometheus/common v0.45.0
++   istio.io/api => istio.io/api v1.21.1-0.20240404235206-c5bbf8925ab4
++   istio.io/client-go => istio.io/client-go v1.21.1-0.20240405000214-24e0fc37eb1e
++	k8s.io/api => k8s.io/api v0.29.0
++	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.29.0
++	k8s.io/apimachinery => k8s.io/apimachinery v0.29.0
++	k8s.io/apiserver => k8s.io/apiserver v0.29.0
++	k8s.io/client-go => k8s.io/client-go v0.29.0
++	sigs.k8s.io/controller-runtime => sigs.k8s.io/controller-runtime v0.16.3
 +)
 +
  require (

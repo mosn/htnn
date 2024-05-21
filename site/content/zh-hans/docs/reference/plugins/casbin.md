@@ -80,7 +80,11 @@ spec:
     backendRefs:
     - name: backend
       port: 8080
----
+```
+
+让我们应用下面的配置：
+
+```yaml
 apiVersion: htnn.mosn.io/v1
 kind: HTTPFilterPolicy
 metadata:
@@ -122,3 +126,5 @@ HTTP/1.1 403 Forbidden
 curl -i http://localhost:10000/other -H 'user: alice' -X GET
 HTTP/1.1 200 OK
 ```
+
+HTNN 会每 10 秒检查 Casbin 数据文件的更改，并在检测到更改时重新加载。

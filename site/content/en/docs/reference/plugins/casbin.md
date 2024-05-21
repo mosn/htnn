@@ -82,7 +82,11 @@ spec:
     backendRefs:
     - name: backend
       port: 8080
----
+```
+
+Let's apply the configuration below:
+
+```yaml
 apiVersion: htnn.mosn.io/v1
 kind: HTTPFilterPolicy
 metadata:
@@ -124,3 +128,5 @@ Only users with admin privileges can access the endpoints:
 curl -i http://localhost:10000/other -H 'user: alice' -X GET
 HTTP/1.1 200 OK
 ```
+
+HTNN will check if the casbin data files are changed each 10 seconds, and reload the changed files if detected.

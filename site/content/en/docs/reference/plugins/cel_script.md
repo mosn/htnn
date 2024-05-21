@@ -39,7 +39,11 @@ spec:
     backendRefs:
     - name: backend
       port: 8080
----
+```
+
+Let's apply the configuration below:
+
+```yaml
 apiVersion: htnn.mosn.io/v1
 kind: HTTPFilterPolicy
 metadata:

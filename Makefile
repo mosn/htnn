@@ -92,7 +92,7 @@ fmt-go: install-go-fmtter
 .PHONY: lint-proto
 lint-proto: $(LOCALBIN)
 	test -x $(LOCALBIN)/buf || GOBIN=$(LOCALBIN) go install github.com/bufbuild/buf/cmd/buf@v1.28.1
-	$(LOCALBIN)/buf lint
+	$(LOCALBIN)/buf lint --path ./api --path ./examples --path ./types
 
 .PHONY: fmt-proto
 fmt-proto: dev-tools
@@ -115,7 +115,7 @@ install-license-checker: $(LOCALBIN)
 .PHONY: lint-license
 lint-license: install-license-checker
 	$(LOCALBIN)/license-eye header check
-	$(LOCALBIN)/license-eye dependency check
+	$(LOCALBIN)/license-eye dependency check -w
 
 .PHONY: fix-license
 fix-license: install-license-checker
