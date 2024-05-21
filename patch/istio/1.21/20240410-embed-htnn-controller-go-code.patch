@@ -1,0 +1,1181 @@
+diff --git a/pilot/pkg/bootstrap/config_compare.go b/pilot/pkg/bootstrap/config_compare.go
+index f1f4f2b..3c437bf 100644
+--- a/pilot/pkg/bootstrap/config_compare.go
++++ b/pilot/pkg/bootstrap/config_compare.go
+@@ -31,8 +31,9 @@ func needsPush(prev config.Config, curr config.Config) bool {
+ 		// This should never happen.
+ 		return true
+ 	}
+-	// If the config is not Istio, let us just push.
+-	if !strings.HasSuffix(prev.GroupVersionKind.Group, "istio.io") {
++	// If the config is not Istio/HTNN, let us just push.
++	if !strings.HasSuffix(prev.GroupVersionKind.Group, "istio.io") &&
++		!strings.HasSuffix(prev.GroupVersionKind.Group, "htnn.mosn.io") {
+ 		return true
+ 	}
+ 	// If current/previous metadata has "*istio.io" label/annotation, just push
+@@ -42,7 +43,7 @@ func needsPush(prev config.Config, curr config.Config) bool {
+ 		}
+ 	}
+ 	for annotation := range curr.Meta.Annotations {
+-		if strings.Contains(annotation, "istio.io") {
++		if strings.Contains(annotation, "istio.io") || strings.Contains(annotation, "htnn.mosn.io") {
+ 			return true
+ 		}
+ 	}
+@@ -52,7 +53,7 @@ func needsPush(prev config.Config, curr config.Config) bool {
+ 		}
+ 	}
+ 	for annotation := range prev.Meta.Annotations {
+-		if strings.Contains(annotation, "istio.io") {
++		if strings.Contains(annotation, "istio.io") || strings.Contains(annotation, "htnn.mosn.io") {
+ 			return true
+ 		}
+ 	}
+diff --git a/pilot/pkg/bootstrap/configcontroller.go b/pilot/pkg/bootstrap/configcontroller.go
+index 34cf0a6..a1d970a 100644
+--- a/pilot/pkg/bootstrap/configcontroller.go
++++ b/pilot/pkg/bootstrap/configcontroller.go
+@@ -113,6 +113,10 @@ func (s *Server) initConfigController(args *PilotArgs) error {
+ 		})
+ 	}
+
++	if features.EnableHTNN {
++		s.addHTNNControllerToConfigStores()
++	}
++
+ 	// Wrap the config controller with a cache.
+ 	aggregateConfigController, err := configaggregate.MakeCache(s.ConfigStores)
+ 	if err != nil {
+@@ -123,6 +127,10 @@ func (s *Server) initConfigController(args *PilotArgs) error {
+ 	// Create the config store.
+ 	s.environment.ConfigStore = aggregateConfigController
+
++	if features.EnableHTNN {
++		s.startHTNNController(args)
++	}
++
+ 	// Defer starting the controller until after the service is created.
+ 	s.addStartFunc("config controller", func(stop <-chan struct{}) error {
+ 		go s.configController.Run(stop)
+diff --git a/pilot/pkg/bootstrap/htnn.go b/pilot/pkg/bootstrap/htnn.go
+new file mode 100644
+index 0000000..41751b3
+--- /dev/null
++++ b/pilot/pkg/bootstrap/htnn.go
+@@ -0,0 +1,60 @@
++// Copyright The HTNN Authors.
++//
++// Licensed under the Apache License, Version 2.0 (the "License");
++// you may not use this file except in compliance with the License.
++// You may obtain a copy of the License at
++//
++//     http://www.apache.org/licenses/LICENSE-2.0
++//
++// Unless required by applicable law or agreed to in writing, software
++// distributed under the License is distributed on an "AS IS" BASIS,
++// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++// See the License for the specific language governing permissions and
++// limitations under the License.
++
++package bootstrap
++
++import (
++	"istio.io/istio/pilot/pkg/config/htnn"
++	"istio.io/istio/pilot/pkg/features"
++	"istio.io/istio/pilot/pkg/leaderelection"
++	"istio.io/istio/pilot/pkg/model"
++	"istio.io/istio/pkg/log"
++)
++
++func (s *Server) addHTNNControllerToConfigStores() {
++	htnnCtrl := &htnn.Controller{}
++	s.ConfigStores = append(s.ConfigStores, htnnCtrl)
++	s.environment.HTNNController = htnnCtrl
++}
++
++func (s *Server) startHTNNController(args *PilotArgs) {
++	htnnCtrl := s.environment.HTNNController.(*htnn.Controller)
++	htnnCtrl.Init(s.environment)
++
++	if features.EnableHTNNStatus {
++		if s.statusManager == nil {
++			s.initStatusManager(args)
++		}
++		s.addTerminatingStartFunc("htnn status", func(stop <-chan struct{}) error {
++			leaderelection.
++				NewLeaderElection(args.Namespace, args.PodName, leaderelection.HTNNStatusController, args.Revision, s.kubeClient).
++				AddRunFunction(func(leaderStop <-chan struct{}) {
++					log.Infof("Starting htnn status writer")
++					htnnCtrl.SetStatusWrite(true, s.statusManager)
++
++					// Trigger a push so we can recompute status
++					s.XDSServer.ConfigUpdate(&model.PushRequest{
++						Full:   true,
++						Reason: model.NewReasonStats(model.GlobalUpdate),
++					})
++					<-leaderStop
++					log.Infof("Stopping htnn status writer")
++					htnnCtrl.SetStatusWrite(false, nil)
++				}).
++				Run(stop)
++			return nil
++
++		})
++	}
++}
+diff --git a/pilot/pkg/config/htnn/component.go b/pilot/pkg/config/htnn/component.go
+new file mode 100644
+index 0000000..275fcc0
+--- /dev/null
++++ b/pilot/pkg/config/htnn/component.go
+@@ -0,0 +1,174 @@
++// Copyright The HTNN Authors.
++//
++// Licensed under the Apache License, Version 2.0 (the "License");
++// you may not use this file except in compliance with the License.
++// You may obtain a copy of the License at
++//
++//     http://www.apache.org/licenses/LICENSE-2.0
++//
++// Unless required by applicable law or agreed to in writing, software
++// distributed under the License is distributed on an "AS IS" BASIS,
++// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++// See the License for the specific language governing permissions and
++// limitations under the License.
++
++package htnn
++
++import (
++	"context"
++	"reflect"
++	"strconv"
++	"time"
++
++	istioapi "istio.io/api/networking/v1alpha3"
++	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
++	apierrors "k8s.io/apimachinery/pkg/api/errors"
++	apimeta "k8s.io/apimachinery/pkg/api/meta"
++	"k8s.io/apimachinery/pkg/runtime"
++	"k8s.io/apimachinery/pkg/runtime/schema"
++	"mosn.io/htnn/controller/pkg/component"
++	"sigs.k8s.io/controller-runtime/pkg/client"
++
++	"istio.io/istio/pilot/pkg/config/kube/crdclient"
++	"istio.io/istio/pilot/pkg/model"
++	"istio.io/istio/pilot/pkg/status"
++	"istio.io/istio/pkg/config"
++	"istio.io/istio/pkg/config/schema/gvk"
++	"istio.io/istio/pkg/config/schema/kubetypes"
++)
++
++type ContextCarrier interface {
++	GetContext() *model.PushContext
++}
++
++type StatusWriter interface {
++	WriteStatus(status any, target status.Resource)
++}
++
++type output struct {
++	ctrl *Controller
++}
++
++func NewOutput(ctrl *Controller) component.Output {
++	o := &output{
++		ctrl: ctrl,
++	}
++	return o
++}
++
++func convertEnvoyFilterToConfig(ef *istiov1a3.EnvoyFilter) *config.Config {
++	cfg := &config.Config{
++		Meta: config.Meta{
++			GroupVersionKind:  gvk.EnvoyFilter,
++			CreationTimestamp: time.Now(),
++			// Only copy fields used by istio during generating xDS
++			Name:        ef.Name,
++			Namespace:   ef.Namespace,
++			Labels:      ef.Labels,
++			Annotations: ef.Annotations,
++		},
++		Spec: &ef.Spec,
++	}
++	return cfg
++}
++
++func (o *output) FromHTTPFilterPolicy(_ context.Context, generatedEnvoyFilters map[component.EnvoyFilterKey]*istiov1a3.EnvoyFilter) error {
++	efs := make(map[string][]config.Config, 0)
++
++	log.Infof("write %d generated envoy filters to PushContext", len(generatedEnvoyFilters))
++
++	for key, ef := range generatedEnvoyFilters {
++		log.Debugf("generate envoy filter %+v", ef)
++
++		ns := key.Namespace
++		efs[ns] = append(efs[ns], *convertEnvoyFilterToConfig(ef))
++	}
++	// We don't write the generated filters to the cache here because the cache is read-only
++	o.ctrl.SetHTTPFilterPolicyEnvoyFilters(efs)
++	return nil
++}
++
++func (o *output) FromConsumer(ctx context.Context, ef *istiov1a3.EnvoyFilter) error {
++	log.Debugf("generate envoy filter %+v", ef)
++
++	cfg := convertEnvoyFilterToConfig(ef)
++	o.ctrl.SetConsumerEnvoyFilter(cfg)
++	return nil
++}
++
++func (o *output) FromServiceRegistry(ctx context.Context, serviceEntries map[string]*istioapi.ServiceEntry) {
++	panic("TODO")
++}
++
++type resourceManager struct {
++	cache        model.ConfigStore
++	statusWriter StatusWriter
++}
++
++func newGroupResource(group string, kind string) *schema.GroupResource {
++	return &schema.GroupResource{
++		Group:    group,
++		Resource: kind,
++	}
++}
++
++func newNotFound(obj client.Object, name string) error {
++	gr := newGroupResource(
++		obj.GetObjectKind().GroupVersionKind().Group,
++		// Resource gets set as Kind in the error so this is fine
++		obj.GetObjectKind().GroupVersionKind().Kind,
++	)
++	return apierrors.NewNotFound(*gr, name)
++}
++
++func (r *resourceManager) Get(ctx context.Context, key client.ObjectKey, out client.Object) error {
++	typ := kubetypes.GvkFromObject(out)
++	cfg := r.cache.Get(typ, key.Name, key.Namespace)
++
++	log.Debugf("get config %+v, namespace: %s, name: %s", cfg, key.Namespace, key.Name)
++
++	if cfg == nil {
++		return newNotFound(out, key.Name)
++	}
++	obj := crdclient.ConfigToObjectMap[typ](cfg)
++	outVal := reflect.ValueOf(out)
++	objVal := reflect.ValueOf(obj)
++	reflect.Indirect(outVal).Set(reflect.Indirect(objVal))
++	return nil
++}
++
++func (r *resourceManager) List(ctx context.Context, list client.ObjectList) error {
++	typ := kubetypes.GvkFromObject(list)
++	configs := r.cache.List(typ, "")
++	if log.DebugEnabled() {
++		for i := 0; i < len(configs); i++ {
++			log.Debugf("list the config %d: %+v", i, configs[i])
++		}
++	}
++	runtimeObjs := make([]runtime.Object, len(configs))
++	for i, cfg := range configs {
++		runtimeObjs[i] = crdclient.ConfigToObjectMap[typ](&cfg)
++	}
++	apimeta.SetList(list, runtimeObjs)
++	return nil
++}
++
++func (r *resourceManager) UpdateStatus(ctx context.Context, obj client.Object, st any) error {
++	log.Debugf("write status %+v to %+v", st, obj)
++	typ := kubetypes.GvkFromObject(obj)
++	gvr, _ := gvk.ToGVR(typ)
++	r.statusWriter.WriteStatus(st, status.Resource{
++		GroupVersionResource: gvr,
++		Namespace:            obj.GetNamespace(),
++		Name:                 obj.GetName(),
++		Generation:           strconv.FormatInt(obj.GetGeneration(), 10),
++	})
++	return nil
++}
++
++func NewResourceManager(cache model.ConfigStore, writer StatusWriter) component.ResourceManager {
++	return &resourceManager{
++		cache:        cache,
++		statusWriter: writer,
++	}
++}
+diff --git a/pilot/pkg/config/htnn/controller.go b/pilot/pkg/config/htnn/controller.go
+new file mode 100644
+index 0000000..bc3b5ce
+--- /dev/null
++++ b/pilot/pkg/config/htnn/controller.go
+@@ -0,0 +1,346 @@
++// Copyright The HTNN Authors.
++//
++// Licensed under the Apache License, Version 2.0 (the "License");
++// you may not use this file except in compliance with the License.
++// You may obtain a copy of the License at
++//
++//     http://www.apache.org/licenses/LICENSE-2.0
++//
++// Unless required by applicable law or agreed to in writing, software
++// distributed under the License is distributed on an "AS IS" BASIS,
++// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++// See the License for the specific language governing permissions and
++// limitations under the License.
++
++package htnn
++
++import (
++	"context"
++	"errors"
++	"sync/atomic"
++
++	"k8s.io/apimachinery/pkg/types"
++	k8serrors "k8s.io/apimachinery/pkg/util/errors"
++	"mosn.io/htnn/controller/pkg/component"
++	"mosn.io/htnn/controller/pkg/istio"
++	ctrl "sigs.k8s.io/controller-runtime"
++
++	"istio.io/istio/pilot/pkg/model"
++	"istio.io/istio/pilot/pkg/status"
++	"istio.io/istio/pkg/config"
++	"istio.io/istio/pkg/config/schema/collection"
++	"istio.io/istio/pkg/config/schema/collections"
++	"istio.io/istio/pkg/config/schema/gvk"
++	"istio.io/istio/pkg/config/schema/kind"
++	"istio.io/istio/pkg/util/sets"
++)
++
++var errUnsupportedOp = errors.New("unsupported operation: the controller is read-only")
++
++var schemas = collection.SchemasFor(
++	collections.EnvoyFilter,
++)
++
++type Controller struct {
++	httpFilterPolicyReconciler istio.HTTPFilterPolicyReconciler
++	consumerReconciler         istio.ConsumerReconciler
++
++	currContext            *model.PushContext
++	efFromHTTPFilterPolicy map[string][]config.Config
++	efFromConsumer         *config.Config
++	rootNamespace          string
++	cache                  model.ConfigStore
++
++	statusController *status.Controller
++	statusEnabled    atomic.Bool
++}
++
++func (c *Controller) Init(env *model.Environment) {
++	setupEnv(env)
++
++	c.rootNamespace = env.Mesh().RootNamespace
++	c.cache = env.ConfigStore
++	output := NewOutput(c)
++	manager := NewResourceManager(c.cache, c)
++	c.httpFilterPolicyReconciler = istio.NewHTTPFilterPolicyReconciler(output, manager)
++	c.consumerReconciler = istio.NewConsumerReconciler(output, manager)
++}
++
++// Implement model.ConfigStoreController
++func (c *Controller) RegisterEventHandler(kind config.GroupVersionKind, f model.EventHandler) {
++}
++
++func (c *Controller) Run(stop <-chan struct{}) {
++	// We don't produce EF in the Run method, because it seems that this doesn't guarantee the
++	// generated EF is sent together with the VirtualServices and other networking CR.
++	// (That is why put the htnn controller inside the istiod)
++}
++
++func (c *Controller) HasSynced() bool {
++	return true
++}
++
++func (c *Controller) Schemas() collection.Schemas {
++	return schemas
++}
++
++func (c *Controller) Get(typ config.GroupVersionKind, name, namespace string) *config.Config {
++	if typ != gvk.EnvoyFilter {
++		return nil
++	}
++
++	if c.efFromConsumer != nil {
++		ef := c.efFromConsumer
++		if ef.Name == name && ef.Namespace == namespace {
++			return ef
++		}
++	}
++
++	if efList, ok := c.efFromHTTPFilterPolicy[namespace]; ok {
++		for _, ef := range efList {
++			if name == ef.Name {
++				return &ef
++			}
++		}
++	}
++	return nil
++}
++
++func (c *Controller) List(typ config.GroupVersionKind, namespace string) []config.Config {
++	if typ != gvk.EnvoyFilter {
++		return nil
++	}
++
++	if namespace == "" {
++		efList := []config.Config{}
++		for _, efs := range c.efFromHTTPFilterPolicy {
++			efList = append(efList, efs...)
++		}
++		if c.efFromConsumer != nil {
++			efList = append(efList, *c.efFromConsumer)
++		}
++		return efList
++	}
++
++	// We return the internal structure directly as istio claims that the returned data should be read-only
++	efList := c.efFromHTTPFilterPolicy[namespace]
++	if c.efFromConsumer != nil && namespace == c.rootNamespace {
++		return append(efList, *c.efFromConsumer)
++	}
++	return efList
++}
++
++// This controller should only be used in the aggregateConfigController, which is read-only
++
++func (c *Controller) Create(_ config.Config) (string, error) {
++	return "", errUnsupportedOp
++}
++
++func (c *Controller) Update(_ config.Config) (string, error) {
++	return "", errUnsupportedOp
++}
++
++func (c *Controller) UpdateStatus(config.Config) (string, error) {
++	return "", errUnsupportedOp
++}
++
++func (c *Controller) Patch(_ config.Config, _ config.PatchFunc) (string, error) {
++	return "", errUnsupportedOp
++}
++
++func (c *Controller) Delete(_ config.GroupVersionKind, _, _ string, _ *string) error {
++	return errUnsupportedOp
++}
++
++// End model.ConfigStoreController
++
++type resourceMetaWrapperForConfig struct {
++	*config.Config
++}
++
++func (r *resourceMetaWrapperForConfig) GetGroup() string {
++	return r.Config.GroupVersionKind.Group
++}
++
++func (r *resourceMetaWrapperForConfig) GetKind() string {
++	return r.Config.GroupVersionKind.Kind
++}
++
++func (r *resourceMetaWrapperForConfig) GetNamespace() string {
++	return r.Config.Namespace
++}
++
++func (r *resourceMetaWrapperForConfig) GetName() string {
++	return r.Config.Name
++}
++
++func (r *resourceMetaWrapperForConfig) GetAnnotations() map[string]string {
++	return r.Config.Annotations
++}
++
++func wrapConfigToResourceMeta(cfg *config.Config) component.ResourceMeta {
++	return &resourceMetaWrapperForConfig{
++		Config: cfg,
++	}
++}
++
++type resourceMetaWrapperForConfigKey struct {
++	namespace string
++	name      string
++	gvk       *config.GroupVersionKind
++}
++
++func (r *resourceMetaWrapperForConfigKey) GetGroup() string {
++	return r.gvk.Group
++}
++
++func (r *resourceMetaWrapperForConfigKey) GetKind() string {
++	return r.gvk.Kind
++}
++
++func (r *resourceMetaWrapperForConfigKey) GetNamespace() string {
++	return r.namespace
++}
++
++func (r *resourceMetaWrapperForConfigKey) GetName() string {
++	return r.name
++}
++
++func (r *resourceMetaWrapperForConfigKey) GetAnnotations() map[string]string {
++	return nil
++}
++
++func wrapConfigKeyToResourceMeta(configKey *model.ConfigKey, gvkValue *config.GroupVersionKind) component.ResourceMeta {
++	return &resourceMetaWrapperForConfigKey{
++		namespace: configKey.Namespace,
++		name:      configKey.Name,
++		gvk:       gvkValue,
++	}
++}
++
++func (c *Controller) Reconcile(pc *model.PushContext, configsUpdated sets.Set[model.ConfigKey]) (bool, error) {
++	ctx := context.Background()
++
++	toReconcile := sets.New[kind.Kind]()
++	if configsUpdated == nil {
++		// for the first time
++
++		// As we have embed mode, check if HTTPFilterPolicy exists is not enough to detect whether
++		// reconciling HTTPFilterPolicy is needed. To avoid complex logic, and most of our users
++		// will use HTTPFilterPolicy, here we assume that HTTPFilterPolicy reconciliation is always needed
++		// after startup. Another solution is that if the generated EnvoyFilter is zero, don't generate
++		// the basic htnn-http-filter EnvoyFilter. But this will break the rule that reducing the HTTPFilterPolicy
++		// should not trigger connection close, as when the basic EnvoyFilter is removed, a LDS drain
++		// will be triggered.
++		toReconcile[kind.HTTPFilterPolicy] = struct{}{}
++		// For the other resources, only trigger reconciliation when the resource exists
++		for _, pair := range []struct {
++			gvk  config.GroupVersionKind
++			kind kind.Kind
++		}{
++			{gvk.Consumer, kind.Consumer},
++		} {
++			res := c.cache.List(pair.gvk, "")
++			if len(res) > 0 {
++				toReconcile[pair.kind] = struct{}{}
++			}
++		}
++	} else {
++		// here we provide our own change detection, so adding a new CR won't need to touch istio's own one in PushContext
++		for conf := range configsUpdated {
++			switch conf.Kind {
++			case kind.HTTPFilterPolicy, kind.Consumer:
++				toReconcile[conf.Kind] = struct{}{}
++			}
++		}
++		if _, completed := toReconcile[kind.HTTPFilterPolicy]; !completed {
++			for conf := range configsUpdated {
++				switch conf.Kind {
++				case kind.VirtualService, kind.Gateway, kind.HTTPRoute, kind.KubernetesGateway:
++					gvkValue := kind.MustToGVK(conf.Kind)
++					cfg := c.cache.Get(gvkValue, conf.Name, conf.Namespace)
++					var r component.ResourceMeta
++					if cfg != nil {
++						r = wrapConfigToResourceMeta(cfg)
++					} else {
++						r = wrapConfigKeyToResourceMeta(&conf, &gvkValue)
++					}
++					if c.httpFilterPolicyReconciler.NeedReconcile(ctx, r) {
++						toReconcile[kind.HTTPFilterPolicy] = struct{}{}
++						completed = true
++					}
++
++					if !completed {
++						log.Debugf("ignore config %s/%s/%s which does not need to reconcile",
++							conf.Kind, conf.Namespace, conf.Name)
++					}
++				}
++
++				if completed {
++					// quick exit to avoid unnecessary checks
++					break // for
++				}
++			}
++		}
++	}
++
++	req := ctrl.Request{
++		NamespacedName: types.NamespacedName{
++			Name: "htnn", // just a placeholder for log
++		},
++	}
++	errs := []error{}
++	for k := range toReconcile {
++		var err error
++		switch k {
++		case kind.HTTPFilterPolicy:
++			_, err = c.httpFilterPolicyReconciler.Reconcile(ctx, req)
++		case kind.Consumer:
++			_, err = c.consumerReconciler.Reconcile(ctx, req)
++		}
++		errs = append(errs, err) // err can be nil
++	}
++	return len(toReconcile) > 0, k8serrors.NewAggregate(errs)
++}
++
++func (c *Controller) RootNamespace() string {
++	return c.rootNamespace
++}
++
++func (c *Controller) SetHTTPFilterPolicyEnvoyFilters(efs map[string][]config.Config) {
++	c.efFromHTTPFilterPolicy = efs
++}
++
++func (c *Controller) SetConsumerEnvoyFilter(ef *config.Config) {
++	c.efFromConsumer = ef
++}
++
++func (c *Controller) WriteStatus(status any, target status.Resource) {
++	if c.statusController == nil || !c.statusEnabled.Load() {
++		return
++	}
++	c.statusController.EnqueueStatusUpdateResource(status, target)
++}
++
++type generationAdapter struct {
++	inner any
++}
++
++func (g *generationAdapter) SetObservedGeneration(i int64) {
++	// Do nothing. The generation is set inside htnn controller
++}
++
++func (g *generationAdapter) Unwrap() any {
++	return g.inner
++}
++
++func (c *Controller) SetStatusWrite(enabled bool, statusManager *status.Manager) {
++	c.statusEnabled.Store(enabled)
++	if enabled && statusManager != nil {
++		c.statusController = statusManager.CreateGenericController(func(status any, context any) status.GenerationProvider {
++			return &generationAdapter{context}
++		})
++	} else {
++		c.statusController = nil
++	}
++}
+diff --git a/pilot/pkg/config/htnn/htnn.go b/pilot/pkg/config/htnn/htnn.go
+new file mode 100644
+index 0000000..9bd0be3
+--- /dev/null
++++ b/pilot/pkg/config/htnn/htnn.go
+@@ -0,0 +1,40 @@
++// Copyright The HTNN Authors.
++//
++// Licensed under the Apache License, Version 2.0 (the "License");
++// you may not use this file except in compliance with the License.
++// You may obtain a copy of the License at
++//
++//     http://www.apache.org/licenses/LICENSE-2.0
++//
++// Unless required by applicable law or agreed to in writing, software
++// distributed under the License is distributed on an "AS IS" BASIS,
++// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++// See the License for the specific language governing permissions and
++// limitations under the License.
++
++package htnn
++
++import (
++	"mosn.io/htnn/controller/pkg/component"
++	"mosn.io/htnn/controller/pkg/istio"
++
++	"istio.io/istio/pilot/pkg/features"
++	"istio.io/istio/pilot/pkg/model"
++	istiolog "istio.io/istio/pkg/log"
++	"istio.io/istio/pkg/monitoring"
++)
++
++var log = istiolog.RegisterScope("htnn", "htnn controller")
++
++type MetricProvider struct {
++}
++
++func (p *MetricProvider) NewDistribution(name, description string, bounds []float64) component.Distribution {
++	return monitoring.NewDistribution(name, description, bounds)
++}
++
++func setupEnv(env *model.Environment) {
++	istio.SetLogger(log)
++	istio.InitConfig(features.EnableGatewayAPI, env.Mesh().RootNamespace)
++	istio.InitMetrics(&MetricProvider{})
++}
+diff --git a/pilot/pkg/config/kube/crdclient/client.go b/pilot/pkg/config/kube/crdclient/client.go
+index 6e07fea..4458398 100644
+--- a/pilot/pkg/config/kube/crdclient/client.go
++++ b/pilot/pkg/config/kube/crdclient/client.go
+@@ -43,6 +43,7 @@ import (
+ 	"istio.io/istio/pkg/config"
+ 	"istio.io/istio/pkg/config/schema/collection"
+ 	"istio.io/istio/pkg/config/schema/collections"
++	schemagvk "istio.io/istio/pkg/config/schema/gvk"
+ 	"istio.io/istio/pkg/config/schema/resource"
+ 	"istio.io/istio/pkg/kube"
+ 	"istio.io/istio/pkg/kube/controllers"
+@@ -290,6 +291,11 @@ func TranslateObject(r runtime.Object, gvk config.GroupVersionKind, domainSuffix
+ 	}
+ 	c := translateFunc(r)
+ 	c.Domain = domainSuffix
++
++	if features.EnableHTNN && gvk == schemagvk.VirtualService {
++		fixVirtualService(&c)
++	}
++
+ 	return c
+ }
+
+diff --git a/pilot/pkg/config/kube/crdclient/htnn.go b/pilot/pkg/config/kube/crdclient/htnn.go
+new file mode 100644
+index 0000000..58d032c
+--- /dev/null
++++ b/pilot/pkg/config/kube/crdclient/htnn.go
+@@ -0,0 +1,37 @@
++// Copyright The HTNN Authors.
++//
++// Licensed under the Apache License, Version 2.0 (the "License");
++// you may not use this file except in compliance with the License.
++// You may obtain a copy of the License at
++//
++//     http://www.apache.org/licenses/LICENSE-2.0
++//
++// Unless required by applicable law or agreed to in writing, software
++// distributed under the License is distributed on an "AS IS" BASIS,
++// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++// See the License for the specific language governing permissions and
++// limitations under the License.
++
++package crdclient
++
++import (
++	"fmt"
++
++	networking "istio.io/api/networking/v1alpha3"
++	"istio.io/istio/pkg/config"
++)
++
++func fixVirtualService(c *config.Config) {
++	spec := c.Spec.(*networking.VirtualService)
++	for _, httpRoute := range spec.Http {
++		if httpRoute.Name == "" {
++			// The generated name is designed not to be referred by Policy's SectionName directly.
++			// If you need to refer to it, you need to specify the name by yourself.
++			httpRoute.Name = fmt.Sprintf("%s.%s", c.Namespace, c.Name)
++			// We don't encode the Kind into the generated name, as we think sane user won't create
++			// VirtualService and HTTPRoute with the same name in the same namespace for the same host.
++			// Choosing one is enough.
++		}
++		// If the name is specified by user, the same route name should not be used in different VirtualServices.
++	}
++}
+diff --git a/pilot/pkg/features/htnn.go b/pilot/pkg/features/htnn.go
+new file mode 100644
+index 0000000..cb1214e
+--- /dev/null
++++ b/pilot/pkg/features/htnn.go
+@@ -0,0 +1,27 @@
++// Copyright The HTNN Authors.
++//
++// Licensed under the Apache License, Version 2.0 (the "License");
++// you may not use this file except in compliance with the License.
++// You may obtain a copy of the License at
++//
++//     http://www.apache.org/licenses/LICENSE-2.0
++//
++// Unless required by applicable law or agreed to in writing, software
++// distributed under the License is distributed on an "AS IS" BASIS,
++// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++// See the License for the specific language governing permissions and
++// limitations under the License.
++
++package features
++
++import (
++	"istio.io/istio/pkg/env"
++)
++
++var (
++	EnableHTNN = env.Register("PILOT_ENABLE_HTNN", false,
++		"If enabled, Pilot will watch HTNN resources").Get()
++
++	EnableHTNNStatus = env.Register("PILOT_ENABLE_HTNN_STATUS", false,
++		"If this is set to true, HTNN resources will have status written to them").Get()
++)
+diff --git a/pilot/pkg/leaderelection/htnn.go b/pilot/pkg/leaderelection/htnn.go
+new file mode 100644
+index 0000000..f671bf3
+--- /dev/null
++++ b/pilot/pkg/leaderelection/htnn.go
+@@ -0,0 +1,19 @@
++// Copyright The HTNN Authors.
++//
++// Licensed under the Apache License, Version 2.0 (the "License");
++// you may not use this file except in compliance with the License.
++// You may obtain a copy of the License at
++//
++//     http://www.apache.org/licenses/LICENSE-2.0
++//
++// Unless required by applicable law or agreed to in writing, software
++// distributed under the License is distributed on an "AS IS" BASIS,
++// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++// See the License for the specific language governing permissions and
++// limitations under the License.
++
++package leaderelection
++
++const (
++	HTNNStatusController = "istio-htnn-status-leader"
++)
+diff --git a/pilot/pkg/model/context.go b/pilot/pkg/model/context.go
+index dbe58a0..800d200 100644
+--- a/pilot/pkg/model/context.go
++++ b/pilot/pkg/model/context.go
+@@ -111,6 +111,7 @@ type Environment struct {
+ 	CredentialsController credentials.MulticlusterController
+
+ 	GatewayAPIController GatewayController
++	HTNNController       HTNNController
+
+ 	// EndpointShards for a service. This is a global (per-server) list, built from
+ 	// incremental updates. This is keyed by service and namespace
+diff --git a/pilot/pkg/model/htnn.go b/pilot/pkg/model/htnn.go
+new file mode 100644
+index 0000000..4f84baf
+--- /dev/null
++++ b/pilot/pkg/model/htnn.go
+@@ -0,0 +1,21 @@
++// Copyright The HTNN Authors.
++//
++// Licensed under the Apache License, Version 2.0 (the "License");
++// you may not use this file except in compliance with the License.
++// You may obtain a copy of the License at
++//
++//     http://www.apache.org/licenses/LICENSE-2.0
++//
++// Unless required by applicable law or agreed to in writing, software
++// distributed under the License is distributed on an "AS IS" BASIS,
++// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++// See the License for the specific language governing permissions and
++// limitations under the License.
++
++package model
++
++import "istio.io/istio/pkg/util/sets"
++
++type HTNNController interface {
++	Reconcile(ctx *PushContext, configsUpdated sets.Set[ConfigKey]) (bool, error)
++}
+diff --git a/pilot/pkg/model/push_context.go b/pilot/pkg/model/push_context.go
+index 7ba2e93..3b1d5f2 100644
+--- a/pilot/pkg/model/push_context.go
++++ b/pilot/pkg/model/push_context.go
+@@ -1282,6 +1282,9 @@ func (ps *PushContext) createNewContext(env *Environment) error {
+ 	ps.initTelemetry(env)
+ 	ps.initProxyConfigs(env)
+ 	ps.initWasmPlugins(env)
++	if features.EnableHTNN {
++		ps.initHTNNResources(env, nil)
++	}
+ 	ps.initEnvoyFilters(env, nil, nil)
+ 	ps.initGateways(env)
+ 	ps.initAmbient(env)
+@@ -1396,6 +1399,11 @@ func (ps *PushContext) updateContext(
+ 		ps.wasmPluginsByNamespace = oldPushContext.wasmPluginsByNamespace
+ 	}
+
++	if features.EnableHTNN {
++		generated := ps.initHTNNResources(env, pushReq.ConfigsUpdated)
++		envoyFiltersChanged = envoyFiltersChanged || generated
++	}
++
+ 	if envoyFiltersChanged {
+ 		ps.initEnvoyFilters(env, changedEnvoyFilters, oldPushContext.envoyFiltersByNamespace)
+ 	} else {
+@@ -2116,7 +2124,11 @@ func (ps *PushContext) initEnvoyFilters(env *Environment, changed sets.Set[Confi
+
+ 	for _, envoyFilterConfig := range envoyFilterConfigs {
+ 		var efw *EnvoyFilterWrapper
+-		if features.OptimizedConfigRebuild {
++		var fromHTNN bool
++		if features.EnableHTNN && envoyFilterConfig.Labels != nil {
++			_, fromHTNN = envoyFilterConfig.Labels[CreatedByHTNN]
++		}
++		if !fromHTNN && features.OptimizedConfigRebuild {
+ 			key := ConfigKey{Kind: kind.EnvoyFilter, Namespace: envoyFilterConfig.Namespace, Name: envoyFilterConfig.Name}
+ 			if prev, ok := previous[key]; ok && !changed.Contains(key) {
+ 				// Reuse the previous EnvoyFilterWrapper if it exists and hasn't changed when optimized config rebuild is enabled
+diff --git a/pilot/pkg/model/push_context_htnn.go b/pilot/pkg/model/push_context_htnn.go
+new file mode 100644
+index 0000000..20cf083
+--- /dev/null
++++ b/pilot/pkg/model/push_context_htnn.go
+@@ -0,0 +1,32 @@
++// Copyright The HTNN Authors.
++//
++// Licensed under the Apache License, Version 2.0 (the "License");
++// you may not use this file except in compliance with the License.
++// You may obtain a copy of the License at
++//
++//     http://www.apache.org/licenses/LICENSE-2.0
++//
++// Unless required by applicable law or agreed to in writing, software
++// distributed under the License is distributed on an "AS IS" BASIS,
++// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++// See the License for the specific language governing permissions and
++// limitations under the License.
++
++package model
++
++import (
++	"istio.io/istio/pkg/util/sets"
++)
++
++const (
++	CreatedByHTNN = "htnn.mosn.io/created-by"
++)
++
++func (ps *PushContext) initHTNNResources(env *Environment, configsUpdated sets.Set[ConfigKey]) bool {
++	efGenerated, err := env.HTNNController.Reconcile(ps, configsUpdated)
++	if err != nil {
++		log.Errorf("failed to reconcile HTNN resources: %s", err)
++	}
++
++	return efGenerated
++}
+diff --git a/pilot/pkg/xds/ecds.go b/pilot/pkg/xds/ecds.go
+index 305d1eb..d06d645 100644
+--- a/pilot/pkg/xds/ecds.go
++++ b/pilot/pkg/xds/ecds.go
+@@ -55,6 +55,8 @@ func ecdsNeedsPush(req *model.PushRequest) bool {
+ 			return true
+ 		case kind.Secret:
+ 			return true
++		case kind.HTTPFilterPolicy, kind.Consumer:
++			return true
+ 		}
+ 	}
+ 	return false
+diff --git a/pkg/config/schema/codegen/collections.go b/pkg/config/schema/codegen/collections.go
+index b113480..bd13c63 100644
+--- a/pkg/config/schema/codegen/collections.go
++++ b/pkg/config/schema/codegen/collections.go
+@@ -168,6 +168,8 @@ func toGetter(protoPackage string) string {
+ 		return "GatewayAPI"
+ 	} else if strings.Contains(protoPackage, "k8s.io/apiextensions-apiserver") {
+ 		return "Ext"
++	} else if strings.Contains(protoPackage, "mosn.io") {
++		return "MOSN"
+ 	}
+ 	return "Kube"
+ }
+diff --git a/pkg/config/schema/kubeclient/common.go b/pkg/config/schema/kubeclient/common.go
+index 2f82038..f13cae0 100644
+--- a/pkg/config/schema/kubeclient/common.go
++++ b/pkg/config/schema/kubeclient/common.go
+@@ -27,6 +27,7 @@ import (
+ 	"k8s.io/client-go/kubernetes"
+ 	"k8s.io/client-go/metadata"
+ 	"k8s.io/client-go/tools/cache"
++	mosnclient "mosn.io/htnn/types/pkg/client/clientset/versioned"
+ 	gatewayapiclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
+
+ 	istioclient "istio.io/client-go/pkg/clientset/versioned"
+@@ -53,6 +54,9 @@ type ClientGetter interface {
+ 	// Istio returns the Istio kube client.
+ 	Istio() istioclient.Interface
+
++	// MOSN returns the MOSN kube client.
++	MOSN() mosnclient.Interface
++
+ 	// GatewayAPI returns the gateway-api kube client.
+ 	GatewayAPI() gatewayapiclient.Interface
+
+diff --git a/pkg/config/validation/htnn.go b/pkg/config/validation/htnn.go
+new file mode 100644
+index 0000000..bdc935b
+--- /dev/null
++++ b/pkg/config/validation/htnn.go
+@@ -0,0 +1,82 @@
++// Copyright The HTNN Authors.
++//
++// Licensed under the Apache License, Version 2.0 (the "License");
++// you may not use this file except in compliance with the License.
++// You may obtain a copy of the License at
++//
++//     http://www.apache.org/licenses/LICENSE-2.0
++//
++// Unless required by applicable law or agreed to in writing, software
++// distributed under the License is distributed on an "AS IS" BASIS,
++// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++// See the License for the specific language governing permissions and
++// limitations under the License.
++
++package validation
++
++import (
++	"encoding/json"
++	"fmt"
++
++	"istio.io/istio/pkg/config"
++
++	"mosn.io/htnn/controller/pkg/constant"
++	mosniov1 "mosn.io/htnn/types/apis/v1"
++)
++
++// ValidateHTTPFilterPolicy checks that HTTPFilterPolicy is well-formed.
++var ValidateHTTPFilterPolicy = registerValidateFunc("ValidateHTTPFilterPolicy",
++	func(cfg config.Config) (Warning, error) {
++		in, ok := cfg.Spec.(*mosniov1.HTTPFilterPolicySpec)
++		if !ok {
++			return nil, fmt.Errorf("cannot cast to HTTPFilterPolicySpec")
++		}
++
++		var warnings Warning
++		var policy mosniov1.HTTPFilterPolicy
++		policy.Spec = *in
++		err := mosniov1.ValidateHTTPFilterPolicy(&policy)
++		return warnings, err
++	})
++
++// ValidateConsumer checks that Consumer is well-formed.
++var ValidateConsumer = registerValidateFunc("ValidateConsumer",
++	func(cfg config.Config) (Warning, error) {
++		in, ok := cfg.Spec.(*mosniov1.ConsumerSpec)
++		if !ok {
++			return nil, fmt.Errorf("cannot cast to ConsumerSpec")
++		}
++
++		var warnings Warning
++		var consumer mosniov1.Consumer
++		consumer.Spec = *in
++		err := mosniov1.ValidateConsumer(&consumer)
++		return warnings, err
++	})
++
++func validateEmbededHTTPFilterPolicy(hfp string) error {
++	var policy mosniov1.HTTPFilterPolicy
++	err := json.Unmarshal([]byte(hfp), &policy)
++	if err != nil {
++		return fmt.Errorf("cannot unmarshal HTTPFilterPolicy: %v", err)
++	}
++
++	err = mosniov1.ValidateHTTPFilterPolicyStrictly(&policy)
++	if err != nil {
++		return fmt.Errorf("invalid HTTPFilterPolicy: %v", err)
++	}
++
++	return nil
++}
++
++func validateHTTNAnntation(cfg *config.Config) error {
++	if cfg.Annotations == nil {
++		return nil
++	}
++
++	hfp := cfg.Annotations[constant.AnnotationHTTPFilterPolicy]
++	if hfp != "" {
++		return validateEmbededHTTPFilterPolicy(hfp)
++	}
++	return nil
++}
+diff --git a/pkg/config/validation/validation.go b/pkg/config/validation/validation.go
+index db201a3..5216035 100644
+--- a/pkg/config/validation/validation.go
++++ b/pkg/config/validation/validation.go
+@@ -2318,6 +2318,14 @@ var ValidateVirtualService = registerValidateFunc("ValidateVirtualService",
+ 		if !ok {
+ 			return nil, errors.New("cannot cast to virtual service")
+ 		}
++
++		if features.EnableHTNN {
++			err := validateHTTNAnntation(&cfg)
++			if err != nil {
++				return nil, err
++			}
++		}
++
+ 		errs := Validation{}
+ 		if len(virtualService.Hosts) == 0 {
+ 			// This must be delegate - enforce delegate validations.
+diff --git a/pkg/kube/client.go b/pkg/kube/client.go
+index 999c319..fa0870d 100644
+--- a/pkg/kube/client.go
++++ b/pkg/kube/client.go
+@@ -63,6 +63,7 @@ import (
+ 	"k8s.io/client-go/tools/cache"
+ 	"k8s.io/client-go/tools/clientcmd"
+ 	"k8s.io/client-go/tools/remotecommand"
++	mosnclient "mosn.io/htnn/types/pkg/client/clientset/versioned"
+ 	gatewayapiv1 "sigs.k8s.io/gateway-api/apis/v1"
+ 	gatewayapi "sigs.k8s.io/gateway-api/apis/v1alpha2"
+ 	gatewayapibeta "sigs.k8s.io/gateway-api/apis/v1beta1"
+@@ -78,6 +79,7 @@ import (
+ 	clienttelemetry "istio.io/client-go/pkg/apis/telemetry/v1alpha1"
+ 	istioclient "istio.io/client-go/pkg/clientset/versioned"
+ 	istiofake "istio.io/client-go/pkg/clientset/versioned/fake"
++	"istio.io/istio/pilot/pkg/features"
+ 	"istio.io/istio/pkg/cluster"
+ 	"istio.io/istio/pkg/config/schema/gvk"
+ 	"istio.io/istio/pkg/kube/informerfactory"
+@@ -117,6 +119,9 @@ type Client interface {
+ 	// Istio returns the Istio kube client.
+ 	Istio() istioclient.Interface
+
++	// MOSN returns the MOSN kube client.
++	MOSN() mosnclient.Interface
++
+ 	// GatewayAPI returns the gateway-api kube client.
+ 	GatewayAPI() gatewayapiclient.Interface
+
+@@ -325,6 +330,7 @@ type client struct {
+ 	dynamic    dynamic.Interface
+ 	metadata   metadata.Interface
+ 	istio      istioclient.Interface
++	mosn       mosnclient.Interface
+ 	gatewayapi gatewayapiclient.Interface
+
+ 	started atomic.Bool
+@@ -397,6 +403,13 @@ func newClientInternal(clientFactory *clientFactory, revision string, cluster cl
+ 		return nil, err
+ 	}
+
++	if features.EnableHTNN {
++		c.mosn, err = mosnclient.NewForConfig(c.config)
++		if err != nil {
++			return nil, err
++		}
++	}
++
+ 	c.gatewayapi, err = gatewayapiclient.NewForConfig(c.config)
+ 	if err != nil {
+ 		return nil, err
+diff --git a/pkg/kube/client_htnn.go b/pkg/kube/client_htnn.go
+new file mode 100644
+index 0000000..51adefb
+--- /dev/null
++++ b/pkg/kube/client_htnn.go
+@@ -0,0 +1,23 @@
++// Copyright The HTNN Authors.
++//
++// Licensed under the Apache License, Version 2.0 (the "License");
++// you may not use this file except in compliance with the License.
++// You may obtain a copy of the License at
++//
++//     http://www.apache.org/licenses/LICENSE-2.0
++//
++// Unless required by applicable law or agreed to in writing, software
++// distributed under the License is distributed on an "AS IS" BASIS,
++// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++// See the License for the specific language governing permissions and
++// limitations under the License.
++
++package kube
++
++import (
++	mosnclient "mosn.io/htnn/types/pkg/client/clientset/versioned"
++)
++
++func (c *client) MOSN() mosnclient.Interface {
++	return c.mosn
++}

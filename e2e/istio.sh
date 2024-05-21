@@ -32,6 +32,7 @@ install() {
         --set .values.pilot.image="htnn/e2e-cp:0.1.0" \
         --set .values.pilot.env.PILOT_SCOPE_GATEWAY_TO_NAMESPACE=true \
         --set .values.pilot.env.PILOT_ENABLE_HTNN=true \
+        --set .values.pilot.env.PILOT_ENABLE_HTNN_STATUS=true \
         --set .values.pilot.env.HTNN_ENABLE_LDS_PLUGIN_VIA_ECDS=true \
         --set .values.pilot.env.UNSAFE_PILOT_ENABLE_RUNTIME_ASSERTIONS=true \
         --set .values.pilot.env.UNSAFE_PILOT_ENABLE_DELTA_TEST=true \
