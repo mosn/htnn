@@ -146,6 +146,12 @@ func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 	// Use docker inspect --format='{{index .RepoDigests 0}}' envoyproxy/envoy:contrib-v1.29.4
 	// to get the sha256 ID
 	image := "envoyproxy/envoy@sha256:490f58e109735df4326bac2736ed41e062ce541d3851d634ccbf24552e5b4ce5"
+
+	specifiedImage := os.Getenv("HTNN_DATA_PLANE_INTEGRATION_TEST_IMAGE")
+	if specifiedImage != "" {
+		image = specifiedImage
+	}
+
 	b, err := exec.Command("docker", "images", image).Output()
 	if err != nil {
 		return nil, err

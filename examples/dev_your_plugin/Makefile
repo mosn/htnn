@@ -105,6 +105,7 @@ build-test-so:
 # you can remove the `go.work` and run `make integration-test`, or copy this module to a directory
 # which doesn't have `go.work` in its ancestors.
 .PHONY: integration-test
+# The data plane image used in the integration test can be controlled via env var HTNN_DATA_PLANE_INTEGRATION_TEST_IMAGE
 integration-test: build-test-so
 	test -d /tmp/htnn_coverage && rm -rf /tmp/htnn_coverage || true
 	go test -v ./tests/integration/...
