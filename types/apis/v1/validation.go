@@ -97,6 +97,10 @@ func validateHTTPFilterPolicy(policy *HTTPFilterPolicy, strict bool) error {
 			if len(policy.Spec.SubPolicies) > 0 {
 				return errors.New("targetRef.SectionName and SubPolicies can not be used together")
 			}
+
+			if ref.Kind == "HTTPRoute" {
+				return errors.New("targetRef.SectionName is not supported for HTTPRoute")
+			}
 		}
 
 		validTarget := false
