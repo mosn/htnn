@@ -270,8 +270,9 @@ func (s *InitState) addPolicyForGateway(policy *mosniov1.HTTPFilterPolicy, gwp *
 	// skip the second one.
 	k := ServerPortKey{Namespace: gwp.Gateway.NsName.Namespace, ServerPort: port}
 	prevGw := s.ServerPortToGateway[k]
-	if prevGw != nil {
-		if prevGw.NsName != gwp.Gateway.NsName && policy != nil {
+	// Do we need to support cases that people mix use Istio and K8s Gateway?
+	if prevGw != nil && prevGw.NsName != gwp.Gateway.NsName {
+		if policy != nil {
 			log.Errorf("Gateway %s has the same server port %+v with gateway %s, ignore the policies target it."+
 				" Maybe we can support Gateway level policy via RDS in the future?",
 				gwp.Gateway.NsName, port, prevGw.NsName)
