@@ -80,9 +80,13 @@ fmt-go: install-go-fmtter
 # It will report 'missing directory' error if the 'missing directory' is added in the other module.
 # Even running `go work sync` first doesn't solve the problem, if the 'missing directory' is not released.
 # So we add `-e` to attempt to proceed despite errors encountered while loading packages.
-	$(foreach PKG, $(GO_MODULES), \
+	$(foreach PKG, $(GO_MODULES_EXCLUDE_SITE), \
 		pushd ./${PKG} && \
 			go mod tidy -e || exit 1; \
+		popd; \
+	)
+	$(foreach PKG, $(GO_MODULES), \
+		pushd ./${PKG} && \
 			$(LOCALBIN)/gosimports -w -local ${PROJECT_NAME} . || exit 1; \
 		popd; \
 	)
