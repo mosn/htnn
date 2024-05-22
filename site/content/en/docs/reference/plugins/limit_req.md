@@ -60,7 +60,7 @@ spec:
     kind: HTTPRoute
     name: default
   filters:
-    keyAuth:
+    limitReq:
       config:
         average: 1 # limit request to 1 request per second
 ```
