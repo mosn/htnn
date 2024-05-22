@@ -457,6 +457,10 @@ func (r *HTTPFilterPolicyReconciler) policyToTranslationState(ctx context.Contex
 	for i := range policies.Items {
 		policy := &policies.Items[i]
 		ref := policy.Spec.TargetRef
+		if ref == nil {
+			continue
+		}
+
 		nsName := types.NamespacedName{Name: string(ref.Name), Namespace: policy.Namespace}
 
 		key := getK8sKey(nsName.Namespace, nsName.Name)
@@ -477,6 +481,11 @@ func (r *HTTPFilterPolicyReconciler) policyToTranslationState(ctx context.Contex
 	for i := range policies.Items {
 		policy := &policies.Items[i]
 		ref := policy.Spec.TargetRef
+		if ref == nil {
+			policy.SetAccepted(gwapiv1a2.PolicyReasonInvalid, "targetRef is required when using HTTPFilterPolicy outside embedded mode")
+			continue
+		}
+
 		nsName := types.NamespacedName{Name: string(ref.Name), Namespace: policy.Namespace}
 
 		// defensive code in case the webhook doesn't work

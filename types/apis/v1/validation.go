@@ -126,6 +126,7 @@ func validateHTTPFilterPolicy(policy *HTTPFilterPolicy, strict bool) error {
 
 		targetGateway = ref.Kind == "Gateway"
 	}
+	// HTTPFilterPolicy in embedded mode can have no targetRef
 
 	for name, filter := range policy.Spec.Filters {
 		err := validateFilter(name, filter, strict, targetGateway)

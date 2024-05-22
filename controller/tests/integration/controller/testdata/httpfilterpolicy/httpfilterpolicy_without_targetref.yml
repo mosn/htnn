@@ -1,0 +1,10 @@
+- apiVersion: htnn.mosn.io/v1
+  kind: HTTPFilterPolicy
+  metadata:
+    name: policy
+    namespace: default
+  spec:
+    filters:
+      demo:
+        config:
+          hostName: Jack
