@@ -60,6 +60,27 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 			},
 		},
 		{
+			name: "ok, VirtualService with sectionName",
+			policy: &HTTPFilterPolicy{
+				Spec: HTTPFilterPolicySpec{
+					TargetRef: &gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: "networking.istio.io",
+							Kind:  "VirtualService",
+						},
+						SectionName: &sectionName,
+					},
+					Filters: map[string]HTTPPlugin{
+						"animal": {
+							Config: runtime.RawExtension{
+								Raw: []byte(`{"pet":"cat"}`),
+							},
+						},
+					},
+				},
+			},
+		},
+		{
 			name: "ok, embedded VirtualService",
 			policy: &HTTPFilterPolicy{
 				Spec: HTTPFilterPolicySpec{
@@ -113,6 +134,28 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 					},
 				},
 			},
+		},
+		{
+			name: "unsupported, HTTPRoute with sectionName",
+			policy: &HTTPFilterPolicy{
+				Spec: HTTPFilterPolicySpec{
+					TargetRef: &gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: "gateway.networking.k8s.io",
+							Kind:  "HTTPRoute",
+						},
+						SectionName: &sectionName,
+					},
+					Filters: map[string]HTTPPlugin{
+						"animal": {
+							Config: runtime.RawExtension{
+								Raw: []byte(`{"pet":"cat"}`),
+							},
+						},
+					},
+				},
+			},
+			err: "targetRef.SectionName is not supported for HTTPRoute",
 		},
 		{
 			name: "unknown fields, HTTPRoute",

@@ -97,6 +97,10 @@ func validateHTTPFilterPolicy(policy *HTTPFilterPolicy, strict bool) error {
 			if len(policy.Spec.SubPolicies) > 0 {
 				return errors.New("targetRef.SectionName and SubPolicies can not be used together")
 			}
+
+			if ref.Kind == "HTTPRoute" {
+				return errors.New("targetRef.SectionName is not supported for HTTPRoute")
+			}
 		}
 
 		validTarget := false
@@ -126,6 +130,7 @@ func validateHTTPFilterPolicy(policy *HTTPFilterPolicy, strict bool) error {
 
 		targetGateway = ref.Kind == "Gateway"
 	}
+	// HTTPFilterPolicy in embedded mode can have no targetRef
 
 	for name, filter := range policy.Spec.Filters {
 		err := validateFilter(name, filter, strict, targetGateway)
