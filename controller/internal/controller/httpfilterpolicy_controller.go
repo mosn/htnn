@@ -413,6 +413,22 @@ func (r *HTTPFilterPolicyReconciler) resolveIstioGateway(ctx context.Context,
 		return nil
 	}
 
+	if ref.SectionName != nil {
+		found := false
+		name := string(*ref.SectionName)
+		for _, section := range gateway.Spec.Servers {
+			if section.Name == name {
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			policy.SetAccepted(gwapiv1a2.PolicyReasonTargetNotFound, fmt.Sprintf("There is not Server.Name %s", name))
+			return nil
+		}
+	}
+
 	initState.AddPolicyForIstioGateway(policy, &gateway)
 	policy.SetAccepted(gwapiv1a2.PolicyReasonAccepted)
 	return nil
@@ -432,6 +448,22 @@ func (r *HTTPFilterPolicyReconciler) resolveK8sGateway(ctx context.Context,
 
 		policy.SetAccepted(gwapiv1a2.PolicyReasonTargetNotFound)
 		return nil
+	}
+
+	if ref.SectionName != nil {
+		found := false
+		name := *ref.SectionName
+		for _, section := range gateway.Spec.Listeners {
+			if section.Name == name {
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			policy.SetAccepted(gwapiv1a2.PolicyReasonTargetNotFound, fmt.Sprintf("There is not Listener.Name %s", name))
+			return nil
+		}
 	}
 
 	initState.AddPolicyForK8sGateway(policy, &gateway)

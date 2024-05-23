@@ -15,15 +15,23 @@
 package model
 
 import (
+	"fmt"
+
 	"k8s.io/apimachinery/pkg/types"
 )
 
-type Gateway struct {
-	NsName *types.NamespacedName
+type GatewaySection struct {
+	// Fields here can't be pointer because we use GatewaySection as map key
+	NsName      types.NamespacedName
+	SectionName string
+}
+
+func (g GatewaySection) String() string {
+	return fmt.Sprintf("%s/%s", g.NsName.String(), g.SectionName)
 }
 
 type VirtualHost struct {
-	Gateway          *Gateway
+	GatewaySection   *GatewaySection
 	NsName           *types.NamespacedName
 	Name             string
 	ECDSResourceName string
