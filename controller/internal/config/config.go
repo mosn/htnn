@@ -75,7 +75,8 @@ func EnableGatewayAPI() bool {
 
 var enableEmbeddedMode = true
 
-// Enable embedded mode so that HTNN won't check the annotation of the target resource.
+// Enable embedded mode to configure the HTTPFilterPolicy directly via the target resource's annotation.
+// If you don't use this feature, you can turn off it so that HTNN won't check the annotation of the target resource.
 func EnableEmbeddedMode() bool {
 	configLock.RLock()
 	defer configLock.RUnlock()
@@ -139,13 +140,16 @@ func Init() {
 	// a config item `envoy.go_so_path` can be set with env `HTNN_ENVOY_GO_SO_PATH`
 
 	updateStringIfSet(vp, "envoy.go_so_path", &goSoPath)
-	updateStringIfSet(vp, "istio.root_namespace", &rootNamespace)
 
-	updateBoolIfSet(vp, "enable_gateway_api", &enableGatewayAPI)
 	updateBoolIfSet(vp, "enable_embedded_mode", &enableEmbeddedMode)
 	updateBoolIfSet(vp, "enable_native_plugin", &enableNativePlugin)
 	updateBoolIfSet(vp, "enable_lds_plugin_via_ecds", &enableLDSPluginViaECDS)
 	updateBoolIfSet(vp, "use_wildcard_ipv6_in_lds_name", &useWildcardIPv6InLDSName)
+
+	// The configuration below is set via the Istio directly, not via the environment variables
+	// provided when starting the Istio.
+	updateStringIfSet(vp, "istio.root_namespace", &rootNamespace)
+	updateBoolIfSet(vp, "enable_gateway_api", &enableGatewayAPI)
 
 	postInit()
 }
