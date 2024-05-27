@@ -29,4 +29,4 @@ HTNN 的 Istio 百分之百兼容 Istio 官方版本。所有 Istio 的功能都
 | HTNN_ENVOY_GO_SO_PATH              | String  | /etc/libgolang.so | 数据面镜像中 Go 共享库的路径                                                                                                                                              |
 | HTNN_ENABLE_NATIVE_PLUGIN          | Boolean | true              | 允许通过 HTNN 控制器配置 Native 插件                                                                                                                                    |
 | HTNN_ENABLE_EMBEDDED_MODE           | Boolean | true              | 启用[嵌入模式](../../concept/embedded_mode)                                                                                                                               |
-| HTNN_USE_WILDCARD_IPV6_IN_LDS_NAME | Boolean | false             | 在 LDS 名称中使用通配符 IPv6 地址作为默认前缀。如果你的网关默认监听 IPv6 地址，请开启此项。                                                                              | 
+| HTNN_USE_WILDCARD_IPV6_IN_LDS_NAME | Boolean | false             | 在 LDS 名称中使用通配符 IPv6 地址作为默认前缀。如果你的网关默认监听 IPv6 地址，请开启此项。                                                                              |
