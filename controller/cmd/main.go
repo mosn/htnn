@@ -40,11 +40,6 @@ import (
 	v1 "mosn.io/htnn/types/apis/v1"
 )
 
-// Version is specified by build tag, in VERSION file
-var (
-	Version string = ""
-)
-
 var (
 	scheme   = runtime.NewScheme()
 	setupLog = ctrl.Log.WithName("setup")

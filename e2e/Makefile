@@ -39,39 +39,30 @@ create-cluster: kind kubectl
 delete-cluster: kind
 	$(KIND) delete cluster --name htnn || true
 
-.PHONY: e2e-build-controller-image
-e2e-build-controller-image:
-	cd ../controller/ && IMG=htnn/e2e-cp:0.1.0 CONTROLLER_BASE_IMAGE=docker.io/istio/pilot:$(ISTIO_VERSION) make docker-build
-
-e2e-build-so:
-	cd ../plugins/ && make build-so && mv libgolang.so ../e2e/
+.PHONY: e2e-prepare-controller-image
+e2e-prepare-controller-image: kind
+	cd ../controller && make deploy
+	cd ../manifest/ && CONTROLLER_IMAGE=htnn/controller:e2e make build-controller-image
+	$(KIND) load docker-image -n htnn htnn/controller:e2e
 
 .PHONY: e2e-prepare-data-plane-image
-e2e-prepare-data-plane-image: e2e-build-so kind
-	cd .. && docker build -t htnn/e2e-dp:0.1.0 --build-arg GOPROXY=${GOPROXY} -f e2e/Dockerfile .
-	$(KIND) load docker-image htnn/e2e-dp:0.1.0 --name htnn
+e2e-prepare-data-plane-image: kind
+	cd ../manifest/ && PROXY_IMAGE=htnn/proxy:e2e make build-proxy-image
+	$(KIND) load docker-image htnn/proxy:e2e --name htnn
 
 .PHONY: deploy-istio
 deploy-istio:
 	$(KUBECTL) apply -f ./base/istio_prestart.yaml
 	ISTIO_VERSION=$(ISTIO_VERSION) ./istio.sh install
 
-.PHONY: deploy-controller
-deploy-controller: kind kubectl
-	cd ../controller/ && KIND=$(KIND) KIND_OPTION="-n htnn" KUBECTL=$(KUBECTL) IMG=htnn/e2e-cp:0.1.0 make deploy
-
-.PHONY: undeploy-controller
-undeploy-controller: kubectl
-	cd ../controller/ && KUBECTL=$(KUBECTL) make undeploy
-
 .PHONY: run-e2e
 run-e2e:
 	PATH=$(LOCALBIN):"$(PATH)" go test -v ./... || (bash -x ./collect_e2e_logs.sh; exit -1)
 
-# To update the control plane, run `make e2e-prepare-controller-image deploy-controller`, and the delete
+# To update the control plane, run `make e2e-prepare-controller-image`, and then delete
 # the istiod pod to trigger restart.
 # To update the data plane, run `make e2e-prepare-data-plane-image` to update the image and then delete
 # the data plane pod to trigger restart.
 .PHONY: e2e-ci
 e2e-ci: delete-cluster create-cluster e2e-prepare-data-plane-image \
-	e2e-build-controller-image deploy-controller deploy-istio run-e2e
+	e2e-prepare-controller-image deploy-istio run-e2e

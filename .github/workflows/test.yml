@@ -293,13 +293,12 @@ jobs:
     - name: Prepare code
       run: |
         pushd ..
-        touch go.work.sum # work around the requirement of sum file
         make prebuild
         popd
 
     - name: Prepare controller
       run: |
-        make e2e-build-controller-image deploy-controller
+        make e2e-prepare-controller-image
 
     - name: Prepare data plane
       run: |

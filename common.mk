@@ -29,10 +29,8 @@ PROXY_IMAGE     ?= envoyproxy/envoy@sha256:490f58e109735df4326bac2736ed41e062ce5
 # We may need to use timestamp if we need to update the image in one PR
 DEV_TOOLS_IMAGE ?= ghcr.io/mosn/htnn-dev-tools:2024-03-05
 
-VERSION   = $(shell cat VERSION)
-GIT_VERSION     = $(shell git log -1 --pretty=format:%h)
-
 ISTIO_VERSION = 1.21.2
+GATEWAY_API_VERSION = 1.0.0
 MIN_K8S_VERSION = 1.26.0
 
 GO_PROD_MODULES = api types controller plugins # To make life simper, we only run linter on 'prod modules'

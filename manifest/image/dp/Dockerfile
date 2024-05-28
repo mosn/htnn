@@ -12,6 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# Dockerfile has specific requirement to put this ARG at the beginning:
+# https://docs.docker.com/engine/reference/builder/#understand-how-arg-and-from-interact
+ARG PROXY_BASE_IMAGE
 FROM golang:1.21 as builder
 ARG TARGETOS
 ARG TARGETARCH
@@ -33,7 +36,14 @@ COPY external/istio/ external/istio/
 RUN cd ./external/istio && \
     CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -C pilot/cmd/pilot-agent -a -o /workspace/pilot-agent
 
-FROM istio/proxyv2:1.21.2
+FROM ${PROXY_BASE_IMAGE}
+
+# Labels below are consumed by GitHub Container Registry
+# See https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry#labelling-container-images
+LABEL org.opencontainers.image.source=https://github.com/mosn/htnn
+LABEL org.opencontainers.image.description="This is image used in the HTNN data plane."
+LABEL org.opencontainers.image.licenses="Apache-2.0"
+
 COPY --from=builder /workspace/pilot-agent /usr/local/bin/
-COPY e2e/libgolang.so /etc/libgolang.so
+COPY plugins/libgolang.so /etc/libgolang.so
 CMD ["envoy"]

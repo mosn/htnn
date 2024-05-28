@@ -1,0 +1,59 @@
+name: create and publish dev Docker image
+on:
+  push:
+    branches:
+    # this workflow create dev-only image for every push to the main branch
+    - main
+
+# unlike other workflow, we don't cancel in progress jobs of this workflow if multiple push events happen
+
+env:
+  REGISTRY: ghcr.io
+  PROXY_IMAGE_NAME: ghcr.io/mosn/htnn-proxy
+  CONTROLLER_IMAGE_NAME: ghcr.io/mosn/htnn-controller
+
+jobs:
+  build-and-push-image:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Log in to the Container registry
+        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # for the go commands in `make prebuild`
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.21'
+          cache-dependency-path: "**/*.sum"
+
+      - name: Build and push Docker image
+        run: |
+          make prebuild
+          cd ./manifest
+          # push image with the dev tag
+          export PROXY_IMAGE=${{ env.PROXY_IMAGE_NAME }}:dev
+          export CONTROLLER_IMAGE=${{ env.CONTROLLER_IMAGE_NAME }}:dev
+          make build-proxy-image
+          make build-controller-image
+          make push-image
+          # push image with unique tag
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          TIMESTAMP=$(date -u +"%Y-%m-%dT%H%M%S") # ':' is not allowed in the tagmw
+          UNIQUE_TAG=${SHORT_SHA}_${TIMESTAMP}
+          docker tag ${{ env.PROXY_IMAGE_NAME }}:dev ${{ env.PROXY_IMAGE_NAME }}:$UNIQUE_TAG
+          docker tag ${{ env.CONTROLLER_IMAGE_NAME }}:dev ${{ env.CONTROLLER_IMAGE_NAME }}:$UNIQUE_TAG
+          export PROXY_IMAGE=${{ env.PROXY_IMAGE_NAME }}:$UNIQUE_TAG
+          export CONTROLLER_IMAGE=${{ env.CONTROLLER_IMAGE_NAME }}:$UNIQUE_TAG
+          make push-image

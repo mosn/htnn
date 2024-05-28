@@ -27,7 +27,7 @@ unit-test:
 .PHONY: build-test-so-local
 build-test-so-local:
 	CGO_ENABLED=1 go build -tags so \
-		-ldflags "-B 0x$(shell head -c20 /dev/urandom|od -An -tx1|tr -d ' \n') -X main.Version=${VERSION}(${GIT_VERSION})" \
+		-ldflags "-B 0x$(shell head -c20 /dev/urandom|od -An -tx1|tr -d ' \n')" \
 		--buildmode=c-shared \
 		-cover -covermode=atomic -coverpkg=${PROJECT_NAME}/... \
 		-v -o tests/integration/${TARGET_SO} \
@@ -61,7 +61,7 @@ integration-test:
 .PHONY: build-so-local
 build-so-local:
 	CGO_ENABLED=1 go build -tags so \
-		-ldflags "-B 0x$(shell head -c20 /dev/urandom|od -An -tx1|tr -d ' \n') -X main.Version=${VERSION}(${GIT_VERSION})" \
+		-ldflags "-B 0x$(shell head -c20 /dev/urandom|od -An -tx1|tr -d ' \n')" \
 		--buildmode=c-shared \
 		-v -o ${TARGET_SO} \
 		${PROJECT_NAME}/plugins/cmd/libgolang

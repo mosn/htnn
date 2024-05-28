@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Dockerfile has specific requirement: https://docs.docker.com/engine/reference/builder/#understand-how-arg-and-from-interact
+# Dockerfile has specific requirement to put this ARG at the beginning:
+# https://docs.docker.com/engine/reference/builder/#understand-how-arg-and-from-interact
 ARG CONTROLLER_BASE_IMAGE
-# Build the manager binary
 FROM golang:1.21 as builder
 ARG TARGETOS
 ARG TARGETARCH
@@ -38,4 +38,11 @@ RUN cd ./external/istio && \
     CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -C pilot/cmd/pilot-discovery -a -o /workspace/pilot-discovery
 
 FROM ${CONTROLLER_BASE_IMAGE}
+
+# Labels below are consumed by GitHub Container Registry
+# See https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry#labelling-container-images
+LABEL org.opencontainers.image.source=https://github.com/mosn/htnn
+LABEL org.opencontainers.image.description="This is image used in the HTNN control plane."
+LABEL org.opencontainers.image.licenses="Apache-2.0"
+
 COPY --from=builder /workspace/pilot-discovery /usr/local/bin/
