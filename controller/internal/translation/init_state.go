@@ -17,9 +17,11 @@ package translation
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	"k8s.io/apimachinery/pkg/types"
+	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"mosn.io/htnn/controller/internal/log"
@@ -46,9 +48,8 @@ type ServerPort struct {
 }
 
 type GatewayPolicies struct {
-	Gateway      *model.Gateway
-	Ports        map[ServerPort]struct{}
-	PortPolicies map[ServerPort][]*HTTPFilterPolicyWrapper
+	Port     *ServerPort
+	Policies []*HTTPFilterPolicyWrapper
 }
 
 type ServerPortKey struct {
@@ -61,8 +62,9 @@ type InitState struct {
 	VirtualServicePolicies map[types.NamespacedName]*VirtualServicePolicies
 	HTTPRoutePolicies      map[types.NamespacedName]*HTTPRoutePolicies
 
-	GatewayPolicies     map[types.NamespacedName]*GatewayPolicies
-	ServerPortToGateway map[ServerPortKey]*model.Gateway
+	GatewayPolicies            map[model.GatewaySection]*GatewayPolicies
+	GatewayWithoutPolicies     map[model.GatewaySection]*ServerPort
+	ServerPortToGatewaySection map[ServerPortKey]*model.GatewaySection
 }
 
 func NewInitState() *InitState {
@@ -70,8 +72,9 @@ func NewInitState() *InitState {
 		VirtualServicePolicies: make(map[types.NamespacedName]*VirtualServicePolicies),
 		HTTPRoutePolicies:      make(map[types.NamespacedName]*HTTPRoutePolicies),
 
-		GatewayPolicies:     make(map[types.NamespacedName]*GatewayPolicies),
-		ServerPortToGateway: make(map[ServerPortKey]*model.Gateway),
+		GatewayPolicies:            make(map[model.GatewaySection]*GatewayPolicies),
+		GatewayWithoutPolicies:     make(map[model.GatewaySection]*ServerPort),
+		ServerPortToGatewaySection: make(map[ServerPortKey]*model.GatewaySection),
 	}
 }
 
@@ -190,24 +193,9 @@ func (s *InitState) AddIstioGateway(gw *istiov1a3.Gateway) {
 }
 
 func (s *InitState) AddPolicyForIstioGateway(policy *mosniov1.HTTPFilterPolicy, gw *istiov1a3.Gateway) {
-	nn := types.NamespacedName{
-		Namespace: gw.Namespace,
-		Name:      gw.Name,
-	}
-
-	gwp, ok := s.GatewayPolicies[nn]
-	if !ok {
-		gwp = &GatewayPolicies{
-			Gateway: &model.Gateway{
-				NsName: &types.NamespacedName{
-					Namespace: gw.Namespace,
-					Name:      gw.Name,
-				},
-			},
-			Ports:        map[ServerPort]struct{}{},
-			PortPolicies: map[ServerPort][]*HTTPFilterPolicyWrapper{},
-		}
-		s.GatewayPolicies[nn] = gwp
+	var targetRef *gwapiv1a2.PolicyTargetReferenceWithSectionName
+	if policy != nil {
+		targetRef = policy.Spec.TargetRef
 	}
 
 	for _, svr := range gw.Spec.Servers {
@@ -216,13 +204,37 @@ func (s *InitState) AddPolicyForIstioGateway(policy *mosniov1.HTTPFilterPolicy, 
 			continue
 		}
 
+		scope := PolicyScopeGateway
+		if targetRef != nil && targetRef.SectionName != nil {
+			if svr.Name != string(*targetRef.SectionName) {
+				continue
+			}
+
+			scope = PolicyScopePort
+		}
+
 		port := ServerPort{
 			Bind:     svr.Bind,
 			Number:   svr.Port.Number,
 			Protocol: proto,
 		}
 
-		s.addPolicyForGateway(policy, gwp, port)
+		nn := types.NamespacedName{
+			Namespace: gw.Namespace,
+			Name:      gw.Name,
+		}
+
+		name := svr.Name
+		if name == "" {
+			// Server.Name in istio gateway is optional, failback to use port
+			name = strconv.Itoa(int(svr.Port.Number))
+		}
+		gs := model.GatewaySection{
+			NsName:      nn,
+			SectionName: name,
+		}
+
+		s.addPolicyForGateway(policy, gs, port, scope)
 	}
 }
 
@@ -231,24 +243,9 @@ func (s *InitState) AddK8sGateway(gw *gwapiv1b1.Gateway) {
 }
 
 func (s *InitState) AddPolicyForK8sGateway(policy *mosniov1.HTTPFilterPolicy, gw *gwapiv1b1.Gateway) {
-	nn := types.NamespacedName{
-		Namespace: gw.Namespace,
-		Name:      gw.Name,
-	}
-
-	gwp, ok := s.GatewayPolicies[nn]
-	if !ok {
-		gwp = &GatewayPolicies{
-			Gateway: &model.Gateway{
-				NsName: &types.NamespacedName{
-					Namespace: gw.Namespace,
-					Name:      gw.Name,
-				},
-			},
-			Ports:        map[ServerPort]struct{}{},
-			PortPolicies: map[ServerPort][]*HTTPFilterPolicyWrapper{},
-		}
-		s.GatewayPolicies[nn] = gwp
+	var targetRef *gwapiv1a2.PolicyTargetReferenceWithSectionName
+	if policy != nil {
+		targetRef = policy.Spec.TargetRef
 	}
 
 	for _, ls := range gw.Spec.Listeners {
@@ -257,39 +254,71 @@ func (s *InitState) AddPolicyForK8sGateway(policy *mosniov1.HTTPFilterPolicy, gw
 			continue
 		}
 
+		scope := PolicyScopeGateway
+		if targetRef != nil && targetRef.SectionName != nil {
+			if ls.Name != *targetRef.SectionName {
+				continue
+			}
+
+			scope = PolicyScopePort
+		}
+
 		port := ServerPort{
 			Number:   uint32(ls.Port),
 			Protocol: proto,
 		}
-		s.addPolicyForGateway(policy, gwp, port)
+
+		nn := types.NamespacedName{
+			Namespace: gw.Namespace,
+			Name:      gw.Name,
+		}
+
+		gs := model.GatewaySection{
+			NsName:      nn,
+			SectionName: string(ls.Name),
+		}
+
+		s.addPolicyForGateway(policy, gs, port, scope)
 	}
 }
 
-func (s *InitState) addPolicyForGateway(policy *mosniov1.HTTPFilterPolicy, gwp *GatewayPolicies, port ServerPort) {
+func (s *InitState) addPolicyForGateway(policy *mosniov1.HTTPFilterPolicy, gs model.GatewaySection, port ServerPort, scope PolicyScope) {
 	// If two Gateways have the same port + protocol, like TLS with different hostnames,
 	// skip the second one.
-	k := ServerPortKey{Namespace: gwp.Gateway.NsName.Namespace, ServerPort: port}
-	prevGw := s.ServerPortToGateway[k]
+	k := ServerPortKey{Namespace: gs.NsName.Namespace, ServerPort: port}
+	prevGw := s.ServerPortToGatewaySection[k]
 	// Do we need to support cases that people mix use Istio and K8s Gateway?
-	if prevGw != nil && prevGw.NsName != gwp.Gateway.NsName {
+	if prevGw != nil && (prevGw.NsName != gs.NsName || prevGw.SectionName != gs.SectionName) {
 		if policy != nil {
-			log.Errorf("Gateway %s has the same server port %+v with gateway %s, ignore the policies target it."+
+			log.Errorf("Gateway section %s has the same server port %+v with gateway section %s, ignore the policies target it."+
 				" Maybe we can support Gateway level policy via RDS in the future?",
-				gwp.Gateway.NsName, port, prevGw.NsName)
+				gs, port, prevGw)
 		}
 		return
 	}
 
-	s.ServerPortToGateway[k] = gwp.Gateway
+	s.ServerPortToGatewaySection[k] = &gs
 
-	gwp.Ports[port] = struct{}{}
 	if policy == nil {
+		_, ok := s.GatewayWithoutPolicies[gs]
+		if !ok {
+			s.GatewayWithoutPolicies[gs] = &port
+		}
 		return
 	}
 
-	gwp.PortPolicies[port] = append(gwp.PortPolicies[port], &HTTPFilterPolicyWrapper{
+	gwp, ok := s.GatewayPolicies[gs]
+	if !ok {
+		gwp = &GatewayPolicies{
+			Policies: []*HTTPFilterPolicyWrapper{},
+			Port:     &port,
+		}
+		s.GatewayPolicies[gs] = gwp
+	}
+
+	gwp.Policies = append(gwp.Policies, &HTTPFilterPolicyWrapper{
 		HTTPFilterPolicy: policy,
-		scope:            PolicyScopeGateway,
+		scope:            scope,
 	})
 }
 

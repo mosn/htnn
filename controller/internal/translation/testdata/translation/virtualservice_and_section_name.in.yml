@@ -65,7 +65,8 @@ httpFilterPolicy:
   - apiVersion: htnn.mosn.io/v1
     kind: HTTPFilterPolicy
     metadata:
-      # If these two policies are in the same level, policy-host is prior to policy-route
+      # Policy targets to sectionName is prior to the one without sectionName.
+      # For example, policy-route is prior to policy-host
       name: policy-host
       namespace: default
     spec:

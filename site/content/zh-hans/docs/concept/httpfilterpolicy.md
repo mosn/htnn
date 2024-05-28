@@ -52,7 +52,12 @@ status:
 | gateway.networking.k8s.io | HTTPRoute      |                                                                |
 | gateway.networking.k8s.io | Gateway        | 需要控制面启用 `HTNN_ENABLE_LDS_PLUGIN_VIA_ECDS`。详情见下文。 |
 
-`sectionName` 是可选的，仅在 `kind` 为 VirtualService 时才生效。它可用于指定针对 VirtualService 下面的哪条路由生效。
+`sectionName` 是可选的，仅在 `kind` 为 VirtualService 或 Gateway 时才生效。
+
+* 当它作用于 VirtualService 时，可用于指定针对 VirtualService 下面的哪条路由生效。此时，`sectionName` 需要和 VirtualService 下面的某个路由的 `name` 字段匹配。
+* 当它作用于 Gateway 时，可用于指定针对 Gateway 下面的哪个 Server 或者 Listener 生效。此时，`sectionName` 需要和 istio Gateway 下面的某个 Server 的 `name` 字段抑或 k8s Gateway 下面的某个 Listener 的 `name` 字段匹配。注意因为目前 Gateway 级策略的粒度最细到端口级别，所以实际上针对匹配到的 Server 或 Listener 所在的端口生效。
+
+使用 `sectionName` 的具体示例见下文。
 
 目前 HTTPFilterPolicy 只能作用于同 namespace 的路由资源，而且目标资源所在的 Gateway 需要和该资源位于同一个 namespace。
 
@@ -213,13 +218,14 @@ status:
     - hosts:
       - '*'
       port:
-        name: http
+        name: port-http
         number: 80
         protocol: HTTP
     - hosts:
       - '*'
+      name: https
       port:
-        name: https
+        name: port-https
         number: 443
         protocol: HTTPS
 - apiVersion: htnn.mosn.io/v1
@@ -240,6 +246,88 @@ status:
 
 当我们下发一个指向 Gateway 的 HTTPFilterPolicy，由该 Gateway 生成的 LDS（这里指 80 和 443 两个端口）下的所有路由都会配置有插件 `animal`。
 
+我们也可以通过 `sectionName` 来指定下发配置到 443 端口：
+
+```yaml
+- apiVersion: htnn.mosn.io/v1
+  kind: HTTPFilterPolicy
+  metadata:
+    name: policy
+    namespace: default
+  spec:
+    targetRef:
+      group: networking.istio.io
+      kind: Gateway
+      name: httpbin-gateway
+      sectionName: https
+    filters:
+      animal:
+        config:
+          pet: cat
+```
+
+注意由于目前我们只支持端口级别的 Gateway 配置，所以针对多个同端口的 section 配置的策略，其行为是未定义的。将来我们可能会支持更细粒度的配置。
+
+以下面的配置为例：
+
+```yaml
+- apiVersion: networking.istio.io/v1beta1
+  kind: Gateway
+  metadata:
+    name: httpbin-gateway
+    namespace: default
+  spec:
+    selector:
+      istio: ingressgateway
+    servers:
+    - hosts:
+      - '*.test.com'
+      name: test
+      port:
+        name: port-https
+        number: 443
+        protocol: HTTPS
+    - hosts:
+      - '*.example.com'
+      name: example
+      port:
+        name: port-https
+        number: 443
+        protocol: HTTPS
+- apiVersion: htnn.mosn.io/v1
+  kind: HTTPFilterPolicy
+  metadata:
+    name: policy
+    namespace: default
+  spec:
+    targetRef:
+      group: networking.istio.io
+      kind: Gateway
+      name: httpbin-gateway
+      sectionName: test
+    filters:
+      animal:
+        config:
+          pet: goldfish
+- apiVersion: htnn.mosn.io/v1
+  kind: HTTPFilterPolicy
+  metadata:
+    name: policy
+    namespace: default
+  spec:
+    targetRef:
+      group: networking.istio.io
+      kind: Gateway
+      name: httpbin-gateway
+      sectionName: example
+    filters:
+      animal:
+        config:
+          pet: cat
+```
+
+最终结果里，443 端口上的 `pet` 既有可能是 goldfish，也有可能是 cat。目前我们不保证这种情况下的行为。
+
 默认情况下，`HTNN_ENABLE_LDS_PLUGIN_VIA_ECDS` 是禁用的，因为该功能会给每个 LDS 生成对应的 ECDS。
 1. 在 LDS 数量众多的情况下，大量的 ECDS 可能会带来高开销。
 2. 我们无法通过 ECDS 禁用一个 LDS 级别上的 HTTP filter。所以该 LDS 下的每条路由都会产生切换到 Go 上下文的开销。
@@ -250,6 +338,40 @@ status:
 3. 你需要 LDS 级别的插件。
 
 虽然我们在上述示例中使用的都是 Istio 的 CRD，但使用 Gateway API 也能完成同样的配置，只需更改 `targetRef` 的内容即可。
+
+比如想要给 Gateway API 的 Gateway 资源的某个 Listener 下发策略，可以这样配置：
+
+```yaml
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    name: gw
+    namespace: default
+  spec:
+    gatewayClassName: istio
+    listeners:
+    - name: http
+      port: 80
+      protocol: HTTP
+    - name: http2
+      port: 8080
+      protocol: HTTP
+- apiVersion: htnn.mosn.io/v1
+  kind: HTTPFilterPolicy
+  metadata:
+    name: policy
+    namespace: default
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gw
+      sectionName: http
+    filters:
+      limitReq:
+        config:
+          average: 1
+```
 
 生效范围重叠的不同的 HTTPFilterPolicy 配置的插件会合并，然后按注册插件时指定的顺序执行插件。
 如果不同级别的 HTTPFilterPolicy 配置了同一个插件，那么范围更小的 HTTPFilterPolicy 上的配置会覆盖掉范围更大的配置，即 `SectionName` > `VirtualService/HTTPRoute` > `Gateway`。

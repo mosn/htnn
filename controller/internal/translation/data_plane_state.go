@@ -89,11 +89,12 @@ func buildVirtualHostsWithIstioGw(host string, nsName *types.NamespacedName, gws
 				if hostMatch(h, host) {
 					name := net.JoinHostPort(host, fmt.Sprintf("%d", port))
 					vhs = append(vhs, &model.VirtualHost{
-						Gateway: &model.Gateway{
-							NsName: &types.NamespacedName{
+						GatewaySection: &model.GatewaySection{
+							NsName: types.NamespacedName{
 								Namespace: gw.Namespace,
 								Name:      gw.Name,
 							},
+							SectionName: svr.Name,
 						},
 						ECDSResourceName: getECDSResourceName(gw.Namespace, getLDSName(svr.Bind, port)),
 						NsName:           nsName,
@@ -117,8 +118,9 @@ func buildVirtualHostsWithK8sGw(host string, ls *gwapiv1.Listener, nsName, gwNsN
 		}
 		name := net.JoinHostPort(host, fmt.Sprintf("%d", ls.Port))
 		vhs = append(vhs, &model.VirtualHost{
-			Gateway: &model.Gateway{
-				NsName: gwNsName,
+			GatewaySection: &model.GatewaySection{
+				NsName:      *gwNsName,
+				SectionName: string(ls.Name),
 			},
 			// When Istio converts k8s gateway to istio gateway, the bind field is empty
 			ECDSResourceName: getECDSResourceName(gwNsName.Namespace, getLDSName("", uint32(ls.Port))),
@@ -179,7 +181,7 @@ var (
 
 func addVirtualHostToProxy(vh *model.VirtualHost, proxies map[Proxy]*proxyConfig, routes map[string]*routePolicy) {
 	p := Proxy{
-		Namespace: vh.Gateway.NsName.Namespace,
+		Namespace: vh.GatewaySection.NsName.Namespace,
 	}
 
 	proxy, ok := proxies[p]
@@ -222,10 +224,10 @@ func getLDSName(bind string, port uint32) string {
 	return fmt.Sprintf("%s_%d", bind, port)
 }
 
-func addServerPortToProxy(gw *model.Gateway, serverPort ServerPort, proxies map[Proxy]*proxyConfig, policies []*HTTPFilterPolicyWrapper) {
+func addServerPortToProxy(gs *model.GatewaySection, serverPort ServerPort, proxies map[Proxy]*proxyConfig, policies []*HTTPFilterPolicyWrapper) {
 	name := getLDSName(serverPort.Bind, serverPort.Number)
 	p := Proxy{
-		Namespace: gw.NsName.Namespace,
+		Namespace: gs.NsName.Namespace,
 	}
 	proxy, ok := proxies[p]
 	if !ok {
@@ -245,7 +247,7 @@ func addServerPortToProxy(gw *model.Gateway, serverPort ServerPort, proxies map[
 	}
 
 	gwPolicy := &gatewayPolicy{
-		NsName: gw.NsName,
+		NsName: &gs.NsName,
 	}
 	if len(policies) > 0 {
 		gwPolicy.Policies = policies
@@ -346,14 +348,13 @@ func toDataPlaneState(ctx *Ctx, state *InitState) (*FinalState, error) {
 		}
 	}
 
-	for _, gwp := range state.GatewayPolicies {
-		for serverPort, policies := range gwp.PortPolicies {
-			addServerPortToProxy(gwp.Gateway, serverPort, s.Proxies, policies)
-		}
+	for gs, gwp := range state.GatewayPolicies {
 		// Port with Policies should be added first
-		for serverPort := range gwp.Ports {
-			addServerPortToProxy(gwp.Gateway, serverPort, s.Proxies, nil)
-		}
+		addServerPortToProxy(&gs, *gwp.Port, s.Proxies, gwp.Policies)
+	}
+
+	for gs, port := range state.GatewayWithoutPolicies {
+		addServerPortToProxy(&gs, *port, s.Proxies, nil)
 	}
 
 	return toMergedState(ctx, s)
