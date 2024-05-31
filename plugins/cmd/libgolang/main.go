@@ -24,11 +24,6 @@ import (
 	_ "mosn.io/htnn/plugins"
 )
 
-// Version is specified by build tag, in VERSION file
-var (
-	Version string = ""
-)
-
 func init() {
 	http.RegisterHttpFilterConfigFactoryAndParser("fm", filtermanager.FilterManagerFactory, &filtermanager.FilterManagerConfigParser{})
 	http.RegisterHttpFilterConfigFactoryAndParser("cm", consumer.ConsumerManagerFactory, &consumer.ConsumerManagerConfigParser{})
