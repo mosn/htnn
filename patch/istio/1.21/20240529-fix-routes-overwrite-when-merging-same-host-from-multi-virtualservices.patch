@@ -1,0 +1,171 @@
+diff --git a/pilot/pkg/networking/core/v1alpha3/gateway.go b/pilot/pkg/networking/core/v1alpha3/gateway.go
+index 68b7cfa9a8..dc6129ab4f 100644
+--- a/pilot/pkg/networking/core/v1alpha3/gateway.go
++++ b/pilot/pkg/networking/core/v1alpha3/gateway.go
+@@ -50,6 +50,7 @@ import (
+ 	"istio.io/istio/pkg/config/security"
+ 	"istio.io/istio/pkg/log"
+ 	"istio.io/istio/pkg/proto"
++	"istio.io/istio/pkg/slices"
+ 	"istio.io/istio/pkg/util/hash"
+ 	"istio.io/istio/pkg/util/istiomultierror"
+ 	"istio.io/istio/pkg/util/sets"
+@@ -480,9 +481,10 @@ func (configgen *ConfigGeneratorImpl) buildGatewayHTTPRouteConfig(node *model.Pr
+ 						}
+ 					}
+ 					newVHost := &route.VirtualHost{
+-						Name:                       util.DomainName(string(hostname), port),
+-						Domains:                    []string{hostname.String()},
+-						Routes:                     routes,
++						Name:    util.DomainName(string(hostname), port),
++						Domains: []string{hostname.String()},
++						// Route will be appended to during deduplication, so make sure we are operating on a copy
++						Routes:                     slices.Clone(routes),
+ 						TypedPerFilterConfig:       perRouteFilters,
+ 						IncludeRequestAttemptCount: ph.IncludeRequestAttemptCount,
+ 					}
+diff --git a/pilot/pkg/networking/core/v1alpha3/gateway_simulation_test.go b/pilot/pkg/networking/core/v1alpha3/gateway_simulation_test.go
+index 00ae7915f0..bf1373a8be 100644
+--- a/pilot/pkg/networking/core/v1alpha3/gateway_simulation_test.go
++++ b/pilot/pkg/networking/core/v1alpha3/gateway_simulation_test.go
+@@ -859,6 +859,140 @@ spec:
+ 				},
+ 			},
+ 		},
++		simulationTest{
++			name: "multiple virtual services that should become separate vhosts",
++			config: `
++apiVersion: networking.istio.io/v1beta1
++kind: Gateway
++metadata:
++  name: public-gw
++  namespace: istio-system
++spec:
++  selector:
++    istio: ingressgateway
++  servers:
++    - port:
++        number: 80
++        name: http
++        protocol: HTTP
++      hosts:
++        - foo.example.com
++        - bar.example.com
++---
++apiVersion: networking.istio.io/v1alpha3
++kind: VirtualService
++metadata:
++  name: foobar-vs
++  namespace: default
++  creationTimestamp: 2010-01-01T00:00:00Z
++spec:
++  hosts:
++    - foo.example.com
++    - bar.example.com
++  gateways:
++    - istio-system/public-gw
++  http:
++    - name: foobar
++      match:
++        - uri:
++            prefix: /1
++        - uri:
++            prefix: /2
++        - uri:
++            prefix: /3
++      route:
++        - destination:
++            host: echo-foobar
++---
++apiVersion: networking.istio.io/v1beta1
++kind: VirtualService
++metadata:
++  name: foo-vs
++  namespace: default
++  creationTimestamp: 2015-01-01T00:00:00Z
++spec:
++  gateways:
++    - istio-system/public-gw
++  hosts:
++    - foo.example.com
++  http:
++    - name: foo
++      match:
++        - uri:
++            prefix: /foo
++      route:
++        - destination:
++            host: echo-foo
++            port:
++              number: 80
++---
++apiVersion: networking.istio.io/v1beta1
++kind: VirtualService
++metadata:
++  name: bar-vs
++  namespace: default
++  creationTimestamp: 2020-01-01T00:00:00Z
++spec:
++  gateways:
++    - istio-system/public-gw
++  hosts:
++    - bar.example.com
++  http:
++    - name: bar
++      match:
++        - uri:
++            prefix: /bar
++      route:
++        - destination:
++            host: echo-bar
++            port:
++              number: 80
++`,
++			calls: []simulation.Expect{
++				{
++					Name: "foobar",
++					Call: simulation.Call{
++						Port:       80,
++						HostHeader: "foo.example.com",
++						Protocol:   simulation.HTTP,
++						Path:       "/1",
++					},
++					Result: simulation.Result{
++						ListenerMatched:    "0.0.0.0_80",
++						RouteConfigMatched: "http.80",
++						ClusterMatched:     "outbound|80||echo-foobar.default",
++					},
++				},
++				{
++					Name: "foo",
++					Call: simulation.Call{
++						Port:       80,
++						HostHeader: "foo.example.com",
++						Protocol:   simulation.HTTP,
++						Path:       "/foo",
++					},
++					Result: simulation.Result{
++						ListenerMatched:    "0.0.0.0_80",
++						RouteConfigMatched: "http.80",
++						ClusterMatched:     "outbound|80||echo-foo.default",
++					},
++				},
++				{
++					Name: "bar",
++					Call: simulation.Call{
++						Port:       80,
++						HostHeader: "bar.example.com",
++						Protocol:   simulation.HTTP,
++						Path:       "/bar",
++					},
++					Result: simulation.Result{
++						ListenerMatched:    "0.0.0.0_80",
++						RouteConfigMatched: "http.80",
++						ClusterMatched:     "outbound|80||echo-bar.default",
++					},
++				},
++			},
++		},
+ 	)
+ }
+ 
