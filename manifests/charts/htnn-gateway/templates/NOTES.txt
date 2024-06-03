@@ -1,0 +1,3 @@
+To learn more about the release, try:
+  $ helm status {{ .Release.Name }} -n istio-system # Or any namespace you passed in the `helm install --namespace ...` command
+  $ helm get all {{ .Release.Name }} -n istio-system # Or any namespace you passed in the `helm install --namespace ...` command

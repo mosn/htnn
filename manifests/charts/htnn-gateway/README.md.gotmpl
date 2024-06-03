@@ -1,0 +1,33 @@
+{{ template "chart.header" . }}
+{{ template "chart.deprecationWarning" . }}
+
+{{ template "chart.badgesSection" . }}
+
+{{ template "chart.description" . }}
+
+## Install
+
+To install the chart with the release `htnn-gateway`:
+
+```shell
+helm repo add mosn xxx # TODO: given the real one
+helm repo update
+
+helm install htnn-gateway mosn/htnn-gateway --namespace istio-system --create-namespace --wait --debug
+```
+
+## Uninstall
+
+To uninstall the Helm release `htnn-gateway`:
+
+```shell
+helm uninstall htnn-gateway -n istio-system
+```
+
+{{ template "chart.maintainersSection" . }}
+
+{{ template "chart.requirementsSection" . }}
+
+{{ template "chart.valuesSection" . }}
+
+{{ template "helm-docs.versionFooter" . }}

@@ -17,30 +17,33 @@
 set -eo pipefail
 set -x
 
-ISTIOCTL=./bin/istioctl
+HELM="$(pwd)/bin/helm"
 
 install() {
-    if ! $ISTIOCTL version 2>/dev/null | grep -q "$ISTIO_VERSION"; then
-        echo "matched istioctl not found, installing..."
-        curl -sL https://istio.io/downloadIstioctl | sh -
-        mv "$HOME"/.istioctl/bin/istioctl ./bin
-    fi
-    $ISTIOCTL install --set profile=default -y
-    $ISTIOCTL version
-    # the image name should be in ns/name format, otherwise istio will add ":ver" suffix to it
-    $ISTIOCTL manifest apply \
-        --set .values.pilot.image="htnn/controller:e2e" \
-        --set .values.pilot.env.PILOT_SCOPE_GATEWAY_TO_NAMESPACE=true \
-        --set .values.pilot.env.PILOT_ENABLE_HTNN=true \
-        --set .values.pilot.env.PILOT_ENABLE_HTNN_STATUS=true \
-        --set .values.pilot.env.HTNN_ENABLE_LDS_PLUGIN_VIA_ECDS=true \
-        --set .values.pilot.env.UNSAFE_PILOT_ENABLE_RUNTIME_ASSERTIONS=true \
-        --set .values.pilot.env.UNSAFE_PILOT_ENABLE_DELTA_TEST=true \
-        --set .values.global.proxy.image="htnn/proxy:e2e" \
-        --set .values.global.imagePullPolicy=Never \
-        --set .values.global.logging.level=default:info,htnn:debug \
-        --set meshConfig.defaultConfig.proxyMetadata.ISTIO_DELTA_XDS=true \
-        -y || exitWithAnalysis
+    pushd ../manifests/charts
+
+    $HELM dependency update htnn-controller
+    $HELM dependency update htnn-gateway
+    $HELM package htnn-controller htnn-controller
+    $HELM package htnn-gateway htnn-gateway
+
+    $HELM install htnn-controller htnn-controller --namespace istio-system --create-namespace --wait \
+        --set istiod.pilot.image="htnn/controller:e2e" \
+        --set istiod.global.proxy.image="htnn/gateway:e2e" \
+        --set istiod.global.imagePullPolicy=IfNotPresent \
+        --set istiod.pilot.env.HTNN_ENABLE_LDS_PLUGIN_VIA_ECDS=true \
+        --set istiod.pilot.env.UNSAFE_PILOT_ENABLE_RUNTIME_ASSERTIONS=true \
+        --set istiod.pilot.env.UNSAFE_PILOT_ENABLE_DELTA_TEST=true \
+        --set .values.global.logging.level=htnn:debug \
+        || exitWithAnalysis
+
+    $HELM install htnn-gateway htnn-gateway --namespace istio-system --create-namespace \
+        --set gateway.imagePullPolicy=IfNotPresent \
+        && \
+        (kubectl wait --timeout=5m -n istio-system deployment/istio-ingressgateway --for=condition=Available \
+        || exitWithAnalysis)
+
+    popd
 }
 
 exitWithAnalysis() {
@@ -57,7 +60,7 @@ exitWithAnalysis() {
 }
 
 uninstall() {
-    $ISTIOCTL uninstall --purge -y
+    $HELM uninstall htnn-controller -n istio-system && $HELM uninstall htnn-gateway -n istio-system && kubectl delete ns istio-system
 }
 
 opt=$1

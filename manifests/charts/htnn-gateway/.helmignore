@@ -12,25 +12,26 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# binaries
-libgolang.so
-bin/
-# test generated files
-*.out
-*.test
-test-envoy/
-# website
-site/public/
-site/resources/
-site/.hugo_build.lock
-site/tmp
-# dev files
-controller/**/cache
-controller/**/log
-!controller/internal/log
-controller/tests/testdata/crd/
-go.work.sum
-external/*
-e2e/log
-# helm charts
-manifests/charts/**/*.tgz
+# Patterns to ignore when building packages.
+# This supports shell glob matching, relative path matching, and
+# negation (prefixed with !). Only one pattern per line.
+.DS_Store
+# Common VCS dirs
+.git/
+.gitignore
+.bzr/
+.bzrignore
+.hg/
+.hgignore
+.svn/
+# Common backup files
+*.swp
+*.bak
+*.tmp
+*.orig
+*~
+# Various IDEs
+.project
+.idea/
+*.tmproj
+.vscode/

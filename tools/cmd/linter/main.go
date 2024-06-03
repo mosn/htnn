@@ -102,12 +102,12 @@ func lintSite() error {
 	// don't treat this as an error
 	for doc := range enDocs {
 		if _, ok := zhHansDocs[doc]; !ok {
-			fmt.Printf("file %s is missing in Simplified Chinese documentation", doc)
+			fmt.Printf("file %s is missing in Simplified Chinese documentation\n", doc)
 		}
 	}
 	for doc := range zhHansDocs {
 		if _, ok := enDocs[doc]; !ok {
-			fmt.Printf("file %s is missing in English documentation", doc)
+			fmt.Printf("file %s is missing in English documentation\n", doc)
 		}
 	}
 	// TODO: Check if the attribute tables are consistent
@@ -133,6 +133,7 @@ func lintFilename() error {
 		".github",
 		"site",
 		"external",
+		"manifests",
 	}
 	files, err := os.ReadDir(".")
 	if err != nil {

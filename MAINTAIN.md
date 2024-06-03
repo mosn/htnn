@@ -20,4 +20,5 @@ To upgrade Istio, please follow the steps below:
 2. Update the base image used in the integration / e2e tests.
 3. Update the ISTIO_VERSION we define in the Makefile and the submodule under `./external`.
 4. Update the versions of istio, envoy and go-control-plane package in the `go.mod` and `go.sum`.
-5. Update the link `/envoy/v1.xx.y/configuration/` in the doc to the new Envoy version.
+5. Update the link `/envoy/v1.xx.y/configuration/` in the doc to the new Envoy version. And `istio/istio/xxx` to the new Istio version.
+6. Update the charts' versions used in the `manifests/charts/htnn/Chart.yaml`.

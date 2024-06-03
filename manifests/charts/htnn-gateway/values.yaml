@@ -1,0 +1,5 @@
+gateway:
+  # the name is similar to the default ingress gateway installed by istioctl
+  name: istio-ingressgateway
+  env:
+    ISTIO_DELTA_XDS: "true"

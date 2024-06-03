@@ -45,7 +45,6 @@ type ServiceRegistryReconciler struct {
 //+kubebuilder:rbac:groups=htnn.mosn.io,resources=serviceregistries,verbs=get;list;watch;create;update;patch;delete
 //+kubebuilder:rbac:groups=htnn.mosn.io,resources=serviceregistries/status,verbs=get;update;patch
 //+kubebuilder:rbac:groups=htnn.mosn.io,resources=serviceregistries/finalizers,verbs=update
-//+kubebuilder:rbac:groups=networking.istio.io,resources=serviceentries,verbs=get;list;watch;update;patch;delete
 
 func (r *ServiceRegistryReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	reconcilationStart := time.Now()

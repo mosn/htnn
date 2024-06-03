@@ -1,0 +1,29 @@
+apiVersion: v2
+name: htnn-controller
+description: A Helm chart for HTNN controller
+sources:
+  - https://github.com/mosn/htnn
+maintainers:
+  - name: spacewander
+
+type: application
+
+# This is the chart version. This version number should be incremented each time you make changes
+# to the chart and its templates, including the app version.
+# Versions are expected to follow Semantic Versioning (https://semver.org/)
+version: 0.1.0
+
+# This is the version number of the application being deployed. This version number should be
+# incremented each time you make changes to the application. Versions are not expected to
+# follow Semantic Versioning. They should reflect the version the application is using.
+# It is recommended to use it with quotes.
+appVersion: "0.2.1"
+
+dependencies:
+  - name: base
+    version: "1.21.2"
+    repository: "https://istio-release.storage.googleapis.com/charts"
+    alias: istio-base
+  - name: istiod
+    version: "1.21.2"
+    repository: "https://istio-release.storage.googleapis.com/charts"

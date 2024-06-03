@@ -20,6 +20,7 @@ $(LOCALBIN):
 
 KUBECTL ?= $(LOCALBIN)/kubectl
 KIND ?= $(LOCALBIN)/kind
+HELM ?= $(LOCALBIN)/helm
 
 .PHONY: kubectl
 kubectl: $(LOCALBIN)
@@ -29,6 +30,11 @@ kubectl: $(LOCALBIN)
 .PHONY: kind
 kind: $(LOCALBIN)
 	@test -x $(KIND) || GOBIN=$(LOCALBIN) go install sigs.k8s.io/kind@v0.20.0
+
+# we can't install it via `go install` because a limitation: https://github.com/golang/go/issues/44840
+.PHONY: helm
+helm: $(LOCALBIN)
+	@test -x $(HELM) || curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | USE_SUDO=false HELM_INSTALL_DIR=$(LOCALBIN) bash
 
 .PHONY: create-cluster
 create-cluster: kind kubectl
@@ -41,18 +47,16 @@ delete-cluster: kind
 
 .PHONY: e2e-prepare-controller-image
 e2e-prepare-controller-image: kind
-	cd ../controller && make deploy
-	cd ../manifest/ && CONTROLLER_IMAGE=htnn/controller:e2e make build-controller-image
+	cd ../manifests/ && CONTROLLER_IMAGE=htnn/controller:e2e make build-controller-image
 	$(KIND) load docker-image -n htnn htnn/controller:e2e
 
 .PHONY: e2e-prepare-data-plane-image
 e2e-prepare-data-plane-image: kind
-	cd ../manifest/ && PROXY_IMAGE=htnn/proxy:e2e make build-proxy-image
-	$(KIND) load docker-image htnn/proxy:e2e --name htnn
+	cd ../manifests/ && PROXY_IMAGE=htnn/gateway:e2e make build-proxy-image
+	$(KIND) load docker-image htnn/gateway:e2e --name htnn
 
 .PHONY: deploy-istio
-deploy-istio:
-	$(KUBECTL) apply -f ./base/istio_prestart.yaml
+deploy-istio: helm
 	ISTIO_VERSION=$(ISTIO_VERSION) ./istio.sh install
 
 .PHONY: run-e2e
