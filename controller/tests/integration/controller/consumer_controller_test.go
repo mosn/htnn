@@ -166,10 +166,16 @@ var _ = Describe("Consumer controller", func() {
 				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
 					return false
 				}
-				return len(envoyfilters.Items) == 1
+				for _, item := range envoyfilters.Items {
+					if item.Name == "htnn-consumer" {
+						ef = item
+						return true
+					}
+				}
+				return false
 			}, timeout, interval).Should(BeTrue())
 
-			value = envoyfilters.Items[0].Spec.ConfigPatches[0].Patch.Value.AsMap()
+			value = ef.Spec.ConfigPatches[0].Patch.Value.AsMap()
 			typedCfg = value["typed_config"].(map[string]interface{})
 			pluginCfg = typedCfg["plugin_config"].(map[string]interface{})
 
