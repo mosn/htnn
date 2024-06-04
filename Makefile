@@ -44,6 +44,11 @@ gen-crd-code: $(LOCALBIN) install-go-fmtter
 	LOCALBIN=$(LOCALBIN) tools/gen-crd-code.sh
 	$(LOCALBIN)/gosimports -w -local ${PROJECT_NAME} ./types/pkg/client
 
+.PHONY: gen-helm-docs
+gen-helm-docs: $(LOCALBIN)
+	test -x $(LOCALBIN)/helm-docs || GOBIN=$(LOCALBIN) go install github.com/norwoodj/helm-docs/cmd/helm-docs@v1.13.1
+	$(LOCALBIN)/helm-docs --chart-search-root=./manifests/charts
+
 .PHONY: dev-tools
 dev-tools:
 	@if ! docker images ${DEV_TOOLS_IMAGE} | grep dev-tools > /dev/null; then \
@@ -150,7 +155,6 @@ fix-spell-local:
 lint-editorconfig: $(LOCALBIN)
 	test -x $(LOCALBIN)/editorconfig-checker || GOBIN=$(LOCALBIN) go install github.com/editorconfig-checker/editorconfig-checker/cmd/editorconfig-checker@2.7.2
 	$(LOCALBIN)/editorconfig-checker
-
 
 .PHONY: lint-remain
 lint-remain:

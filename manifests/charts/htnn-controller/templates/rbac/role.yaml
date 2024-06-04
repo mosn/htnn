@@ -1,0 +1,84 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: htnn-role
+rules:
+- apiGroups:
+  - htnn.mosn.io
+  resources:
+  - consumers
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - htnn.mosn.io
+  resources:
+  - consumers/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - htnn.mosn.io
+  resources:
+  - consumers/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - htnn.mosn.io
+  resources:
+  - httpfilterpolicies
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - htnn.mosn.io
+  resources:
+  - httpfilterpolicies/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - htnn.mosn.io
+  resources:
+  - httpfilterpolicies/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - htnn.mosn.io
+  resources:
+  - serviceregistries
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - htnn.mosn.io
+  resources:
+  - serviceregistries/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - htnn.mosn.io
+  resources:
+  - serviceregistries/status
+  verbs:
+  - get
+  - patch
+  - update

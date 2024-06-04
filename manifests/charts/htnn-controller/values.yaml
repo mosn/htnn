@@ -1,0 +1,14 @@
+istiod:
+  revision: ""
+  pilot:
+    # FIXME: use the released image once we have a release
+    image: ghcr.io/mosn/htnn-controller:dev
+    env:
+      PILOT_SCOPE_GATEWAY_TO_NAMESPACE: "true"
+      PILOT_ENABLE_HTNN: "true"
+      PILOT_ENABLE_HTNN_STATUS: "true"
+      HTNN_ENABLE_LDS_PLUGIN_VIA_ECDS: "false"
+  global:
+    proxy:
+      image: ghcr.io/mosn/htnn-proxy:dev
+    istioNamespace: istio-system
