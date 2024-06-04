@@ -32,8 +32,6 @@ type HTTPFilterPolicySpec struct {
 	// This Policy and the TargetRef MUST be in the same namespace.
 	//
 	// +optional
-	// +kubebuilder:validation:XValidation:rule="self.group in ['', 'networking.istio.io', 'gateway.networking.k8s.io']", message="unsupported targetRef.group"
-	// +kubebuilder:validation:XValidation:rule="self.kind in ['Namespace', 'VirtualService', 'Gateway', 'HTTPRoute', 'GRPCRoute']", message="unsupported targetRef.kind"
 	TargetRef *gwapiv1a2.PolicyTargetReferenceWithSectionName `json:"targetRef"`
 
 	// Filters is a map of filter names to filter configurations.
