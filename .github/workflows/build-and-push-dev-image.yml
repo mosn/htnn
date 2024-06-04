@@ -1,4 +1,4 @@
-name: create and publish dev Docker image
+name: build and publish dev image
 on:
   push:
     branches:
@@ -38,10 +38,13 @@ jobs:
           go-version: '1.21'
           cache-dependency-path: "**/*.sum"
 
+      # The built image can be found in:
+      # https://github.com/mosn/htnn/pkgs/container/htnn-controller
+      # https://github.com/mosn/htnn/pkgs/container/htnn-proxy
       - name: Build and push Docker image
         run: |
           make prebuild
-          cd ./manifest
+          cd ./manifests
           # push image with the dev tag
           export PROXY_IMAGE=${{ env.PROXY_IMAGE_NAME }}:dev
           export CONTROLLER_IMAGE=${{ env.CONTROLLER_IMAGE_NAME }}:dev
@@ -51,7 +54,11 @@ jobs:
           # push image with unique tag
           SHORT_SHA=$(git rev-parse --short HEAD)
           TIMESTAMP=$(date -u +"%Y-%m-%dT%H%M%S") # ':' is not allowed in the tagmw
-          UNIQUE_TAG=${SHORT_SHA}_${TIMESTAMP}
+          # As GitHub doesn't have search in its pkgs page, it's hard to find the
+          # image with the timestamp as part of the tag. So we use the short sha only
+          # until GitHub has provided a better way to discover the images.
+          #UNIQUE_TAG=${SHORT_SHA}_${TIMESTAMP}
+          UNIQUE_TAG=${SHORT_SHA}
           docker tag ${{ env.PROXY_IMAGE_NAME }}:dev ${{ env.PROXY_IMAGE_NAME }}:$UNIQUE_TAG
           docker tag ${{ env.CONTROLLER_IMAGE_NAME }}:dev ${{ env.CONTROLLER_IMAGE_NAME }}:$UNIQUE_TAG
           export PROXY_IMAGE=${{ env.PROXY_IMAGE_NAME }}:$UNIQUE_TAG
