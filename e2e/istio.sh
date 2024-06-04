@@ -18,6 +18,7 @@ set -eo pipefail
 set -x
 
 HELM="$(pwd)/bin/helm"
+E2E_DIR="$(pwd)"
 
 install() {
     pushd ../manifests/charts
@@ -27,10 +28,10 @@ install() {
     $HELM package htnn-controller htnn-controller
     $HELM package htnn-gateway htnn-gateway
 
-    $HELM install htnn-controller htnn-controller --namespace istio-system --create-namespace --wait -f htnn_controller_values.yaml \
+    $HELM install htnn-controller htnn-controller --namespace istio-system --create-namespace --wait -f "$E2E_DIR/htnn_controller_values.yaml" \
         || exitWithAnalysis
 
-    $HELM install htnn-gateway htnn-gateway --namespace istio-system --create-namespace -f htnn_gateway_values.yaml \
+    $HELM install htnn-gateway htnn-gateway --namespace istio-system --create-namespace -f "$E2E_DIR/htnn_gateway_values.yaml" \
         && \
         (kubectl wait --timeout=5m -n istio-system deployment/istio-ingressgateway --for=condition=Available \
         || exitWithAnalysis)
