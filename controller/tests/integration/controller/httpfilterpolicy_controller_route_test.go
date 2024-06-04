@@ -38,7 +38,7 @@ import (
 	mosniov1 "mosn.io/htnn/types/apis/v1"
 )
 
-var _ = Describe("HTTPFilterPolicy controller", func() {
+var _ = Describe("HTTPFilterPolicy controller, for route", func() {
 
 	const (
 		timeout  = time.Second * 10

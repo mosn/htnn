@@ -41,7 +41,7 @@ func mustReadHTTPFilterPolicy(fn string, out *[]map[string]interface{}) {
 	helper.MustReadInput(fn, out)
 }
 
-var _ = Describe("HTTPFilterPolicy controller", func() {
+var _ = Describe("HTTPFilterPolicy controller, for policy", func() {
 
 	const (
 		timeout  = time.Second * 10
@@ -184,6 +184,9 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 
 	Context("When disabling native plugins", func() {
 		BeforeEach(func() {
+			// config.Init is designed to be called only during startup. As it is only called
+			// on the fly by tests, we simply add sleep to avoid race.
+			time.Sleep(200 * time.Millisecond)
 			// use env to set the conf
 			os.Setenv("HTNN_ENABLE_NATIVE_PLUGIN", "false")
 			config.Init()
@@ -212,6 +215,7 @@ var _ = Describe("HTTPFilterPolicy controller", func() {
 				}
 			}
 
+			time.Sleep(200 * time.Millisecond)
 			os.Setenv("HTNN_ENABLE_NATIVE_PLUGIN", "true")
 			config.Init()
 		})

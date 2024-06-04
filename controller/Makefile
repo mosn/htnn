@@ -29,6 +29,7 @@ GOBIN=$(shell go env GOBIN)
 endif
 
 CONTROLLER_OPTIONS ?=
+GINKGO_OPTIONS ?=
 
 .PHONY: all
 all: build
@@ -71,13 +72,16 @@ install-crd-deps:
 			temp.out && mv temp.out tests/testdata/crd/istio-$(ISTIO_VERSION).yaml)
 
 .PHONY: test
-test: manifests generate envtest install-crd-deps ## Run tests.
-	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test -gcflags="all=-N -l" -race \
-		./... -coverprofile cover.out -covermode=atomic -coverpkg=${PROJECT_NAME}/...
+test: manifests generate envtest install-crd-deps
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test ${TEST_OPTION} ./...
 
 .PHONY: benchmark
-benchmark: manifests generate envtest install-crd-deps  ## Run benchmarks
+benchmark: manifests generate envtest install-crd-deps
 	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test -tags benchmark -timeout=1200s -v ./tests/benchmark/...
+
+.PHONY: integration-test
+integration-test: manifests generate envtest install-crd-deps
+	KUBEBUILDER_ASSETS="$(shell $(ENVTEST) use $(ENVTEST_K8S_VERSION) --bin-dir $(LOCALBIN) -p path)" go test -count 1 -v ${TEST_OPTION} ./tests/integration/... ${GINKGO_OPTIONS}
 
 ##@ Build
 
