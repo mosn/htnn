@@ -1,6 +1,7 @@
 apiVersion: v2
 name: htnn-controller
 description: A Helm chart for HTNN controller
+icon: https://avatars.githubusercontent.com/u/58020396
 sources:
   - https://github.com/mosn/htnn
 maintainers:
