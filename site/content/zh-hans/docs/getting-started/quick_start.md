@@ -9,7 +9,7 @@ title: 快速上手
 * 配置 helm 仓库地址。执行以下命令添加仓库：
 
 ```shell
-helm repo add mosn xxxx # TODO: setup such a repo
+helm repo add htnn https://mosn.github.io/htnn
 helm repo update
 ```
 
@@ -18,7 +18,7 @@ helm repo update
 1. 安装控制面组件：
 
 ```shell
-$ helm install htnn-controller mosn/htnn-controller --namespace istio-system --create-namespace --wait
+$ helm install htnn-controller htnn/htnn-controller --namespace istio-system --create-namespace --wait
 
 NAME: htnn-controller
 LAST DEPLOYED: Wed May 29 18:42:18 2024
@@ -31,7 +31,7 @@ TEST SUITE: None
 2. 安装数据面组件：
 
 ```shell
-$ helm install htnn-gateway mosn/htnn-gateway --namespace istio-system --create-namespace && \
+$ helm install htnn-gateway htnn/htnn-gateway --namespace istio-system --create-namespace && \
     kubectl wait --timeout=5m -n istio-system deployment/istio-ingressgateway --for=condition=Available
 
 NAME: htnn-gateway

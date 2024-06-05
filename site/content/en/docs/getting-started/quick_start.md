@@ -9,7 +9,7 @@ title: Quick Start
 * Configure helm repository address. Execute the following commands to add the repository:
 
 ```shell
-helm repo add mosn xxxx # TODO: setup such a repo
+helm repo add htnn https://mosn.github.io/htnn
 helm repo update
 ```
 
@@ -18,7 +18,7 @@ helm repo update
 1. Install the control plane component:
 
 ```shell
-$ helm install htnn-controller mosn/htnn-controller --namespace istio-system --create-namespace --wait
+$ helm install htnn-controller htnn/htnn-controller --namespace istio-system --create-namespace --wait
 NAME: htnn-controller
 LAST DEPLOYED: Wed May 29 18:42:18 2024
 NAMESPACE: istio-system
@@ -30,7 +30,7 @@ TEST SUITE: None
 2. Install the data plane component:
 
 ```shell
-$ helm install htnn-gateway mosn/htnn-gateway --namespace istio-system --create-namespace && \
+$ helm install htnn-gateway htnn/htnn-gateway --namespace istio-system --create-namespace && \
     kubectl wait --timeout=5m -n istio-system deployment/istio-ingressgateway --for=condition=Available
 NAME: htnn-gateway
 LAST DEPLOYED: Wed May 29 19:59:22 2024

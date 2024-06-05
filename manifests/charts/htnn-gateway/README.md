@@ -9,10 +9,10 @@ A Helm chart for HTNN data plane running as gateway
 To install the chart with the release `htnn-gateway`:
 
 ```shell
-helm repo add mosn xxx # TODO: given the real one
+helm repo add htnn https://mosn.github.io/htnn
 helm repo update
 
-helm install htnn-gateway mosn/htnn-gateway --namespace istio-system --create-namespace --wait --debug
+helm install htnn-gateway htnn/htnn-gateway --namespace istio-system --create-namespace --wait --debug
 ```
 
 ## Uninstall
