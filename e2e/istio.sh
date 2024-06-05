@@ -18,6 +18,7 @@ set -eo pipefail
 set -x
 
 HELM="$(pwd)/bin/helm"
+E2E_DIR="$(pwd)"
 
 install() {
     pushd ../manifests/charts
@@ -27,18 +28,10 @@ install() {
     $HELM package htnn-controller htnn-controller
     $HELM package htnn-gateway htnn-gateway
 
-    $HELM install htnn-controller htnn-controller --namespace istio-system --create-namespace --wait \
-        --set istiod.pilot.image="htnn/controller:e2e" \
-        --set istiod.global.proxy.image="htnn/gateway:e2e" \
-        --set istiod.global.imagePullPolicy=IfNotPresent \
-        --set istiod.pilot.env.HTNN_ENABLE_LDS_PLUGIN_VIA_ECDS=true \
-        --set istiod.pilot.env.UNSAFE_PILOT_ENABLE_RUNTIME_ASSERTIONS=true \
-        --set istiod.pilot.env.UNSAFE_PILOT_ENABLE_DELTA_TEST=true \
-        --set .values.global.logging.level=htnn:debug \
+    $HELM install htnn-controller htnn-controller --namespace istio-system --create-namespace --wait -f "$E2E_DIR/htnn_controller_values.yaml" \
         || exitWithAnalysis
 
-    $HELM install htnn-gateway htnn-gateway --namespace istio-system --create-namespace \
-        --set gateway.imagePullPolicy=IfNotPresent \
+    $HELM install htnn-gateway htnn-gateway --namespace istio-system --create-namespace -f "$E2E_DIR/htnn_gateway_values.yaml" \
         && \
         (kubectl wait --timeout=5m -n istio-system deployment/istio-ingressgateway --for=condition=Available \
         || exitWithAnalysis)
