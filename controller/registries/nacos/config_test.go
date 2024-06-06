@@ -26,6 +26,7 @@ import (
 	istioapi "istio.io/api/networking/v1alpha3"
 
 	"mosn.io/htnn/controller/pkg/registry"
+	"mosn.io/htnn/controller/pkg/registry/log"
 	"mosn.io/htnn/types/registries/nacos"
 )
 
@@ -76,6 +77,9 @@ func TestGenerateServiceEntry(t *testing.T) {
 func TestUnsubscribeInReload(t *testing.T) {
 	prevClient := &nacosClient{}
 	reg := &Nacos{
+		logger: log.NewLogger(&log.RegistryLoggerOptions{
+			Name: "test",
+		}),
 		store:  registry.FakeServiceEntryStore(),
 		client: prevClient,
 		watchingServices: map[nacosService]bool{

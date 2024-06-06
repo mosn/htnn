@@ -40,6 +40,15 @@ import (
 // ServiceRegistryReconciler reconciles a ServiceRegistry object
 type ServiceRegistryReconciler struct {
 	component.ResourceManager
+
+	prevServiceRegistries map[types.NamespacedName]*mosniov1.ServiceRegistry
+}
+
+func NewServiceRegistryReconciler(manager component.ResourceManager) *ServiceRegistryReconciler {
+	return &ServiceRegistryReconciler{
+		ResourceManager:       manager,
+		prevServiceRegistries: map[types.NamespacedName]*mosniov1.ServiceRegistry{},
+	}
 }
 
 //+kubebuilder:rbac:groups=htnn.mosn.io,resources=serviceregistries,verbs=get;list;watch;create;update;patch;delete
@@ -53,12 +62,45 @@ func (r *ServiceRegistryReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 		metrics.ServiceRegistryReconcileDurationDistribution.Record(reconcilationDuration)
 	}()
 
+	for nsName, prevServiceRegistry := range r.prevServiceRegistries {
+		// del or update
+		err := r.reconcileServiceRegistry(ctx, nsName, prevServiceRegistry)
+		if err != nil {
+			// retry later
+			return ctrl.Result{}, err
+		}
+	}
+
+	var serviceRegistries mosniov1.ServiceRegistryList
+	err := r.List(ctx, &serviceRegistries)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to list ServiceRegistry: %w", err)
+	}
+
+	for _, serviceRegistry := range serviceRegistries.Items {
+		nsName := types.NamespacedName{
+			Namespace: serviceRegistry.Namespace,
+			Name:      serviceRegistry.Name,
+		}
+		if _, ok := r.prevServiceRegistries[nsName]; !ok {
+			// add
+			err := r.reconcileServiceRegistry(ctx, nsName, nil)
+			if err != nil {
+				// retry later
+				return ctrl.Result{}, err
+			}
+		}
+	}
+
+	return ctrl.Result{}, nil
+}
+
+func (r *ServiceRegistryReconciler) reconcileServiceRegistry(ctx context.Context, nsName types.NamespacedName, prevServiceRegistry *mosniov1.ServiceRegistry) error {
 	var serviceRegistry mosniov1.ServiceRegistry
-	nsName := types.NamespacedName{Name: req.Name, Namespace: req.Namespace}
 	err := r.Get(ctx, nsName, &serviceRegistry)
 	if err != nil {
 		if !apierrors.IsNotFound(err) {
-			return ctrl.Result{}, fmt.Errorf("failed to get ServiceRegistry: %w, namespacedName: %v", err, nsName)
+			return fmt.Errorf("failed to get ServiceRegistry: %w, namespacedName: %v", err, nsName)
 		}
 
 		log.Infof("delete ServiceRegistry %v", nsName)
@@ -68,25 +110,37 @@ func (r *ServiceRegistryReconciler) Reconcile(ctx context.Context, req ctrl.Requ
 			// don't retry if the err is caused by registry as the resource is already deleted
 		}
 
-		return ctrl.Result{}, nil
+		delete(r.prevServiceRegistries, nsName)
+		return nil
 	}
 
-	log.Infof("update ServiceRegistry %v", nsName)
-	err = registry.UpdateRegistry(&serviceRegistry)
+	err = registry.UpdateRegistry(&serviceRegistry, prevServiceRegistry)
 	if err != nil {
 		log.Errorf("failed to update ServiceRegistry %v: %v", nsName, err)
 		serviceRegistry.SetAccepted(mosniov1.ReasonInvalid, err.Error())
-		// don't retry if the err is caused by registry
+		// don't retry if the err is caused by registry.
+		// TODO: maybe we can add a returned flag to disitinguish the retryable error and non-retryable error
+		// returns from the registry? For example, the failure from the registry can be:
+		// 1. the URL is incorrect
+		// 2. the registry is not available for a moment and timed out
+		// For now, we require the implementation of registry to retry by itself if case 2 happens.
 	} else {
 		serviceRegistry.SetAccepted(mosniov1.ReasonAccepted)
 	}
 
+	r.prevServiceRegistries[nsName] = &serviceRegistry
+
+	if !serviceRegistry.Status.IsChanged() {
+		return nil
+	}
+	serviceRegistry.Status.Reset()
+
 	if err := r.UpdateStatus(ctx, &serviceRegistry, &serviceRegistry.Status); err != nil {
-		return ctrl.Result{}, fmt.Errorf("failed to update ServiceRegistry status: %w, namespacedName: %v",
+		return fmt.Errorf("failed to update ServiceRegistry status: %w, namespacedName: %v",
 			err, nsName)
 	}
 
-	return ctrl.Result{}, nil
+	return nil
 }
 
 // SetupWithManager sets up the controller with the Manager.

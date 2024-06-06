@@ -56,15 +56,7 @@ type ConsumerStatus struct {
 	// +listMapKey=type
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 
-	changed bool
-}
-
-func (s *ConsumerStatus) IsChanged() bool {
-	return s.changed
-}
-
-func (s *ConsumerStatus) Reset() {
-	s.changed = false
+	ChangeDetector `json:",inline"`
 }
 
 //+genclient
@@ -124,7 +116,7 @@ func (consumer *Consumer) SetAccepted(reason ConditionReason, msg ...string) {
 	consumer.Status.Conditions = conds
 
 	if changed {
-		consumer.Status.changed = true
+		consumer.Status.MarkAsChanged()
 	}
 }
 

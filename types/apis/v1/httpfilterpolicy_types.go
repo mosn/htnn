@@ -69,15 +69,7 @@ type HTTPFilterPolicyStatus struct {
 	// +listMapKey=type
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 
-	changed bool
-}
-
-func (s *HTTPFilterPolicyStatus) IsChanged() bool {
-	return s.changed
-}
-
-func (s *HTTPFilterPolicyStatus) Reset() {
-	s.changed = false
+	ChangeDetector `json:",inline"`
 }
 
 //+genclient
@@ -137,7 +129,7 @@ func (p *HTTPFilterPolicy) SetAccepted(reason gwapiv1a2.PolicyConditionReason, m
 	p.Status.Conditions = conds
 
 	if changed {
-		p.Status.changed = true
+		p.Status.MarkAsChanged()
 	}
 }
 

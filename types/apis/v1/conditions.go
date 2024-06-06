@@ -86,3 +86,19 @@ func addOrUpdateAcceptedCondition(conditions []metav1.Condition,
 	}
 	return addOrUpdateCondition(conditions, c)
 }
+
+type ChangeDetector struct {
+	changed bool
+}
+
+func (s *ChangeDetector) IsChanged() bool {
+	return s.changed
+}
+
+func (s *ChangeDetector) MarkAsChanged() {
+	s.changed = true
+}
+
+func (s *ChangeDetector) Reset() {
+	s.changed = false
+}

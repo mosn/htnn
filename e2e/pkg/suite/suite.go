@@ -80,6 +80,8 @@ func New(opt Options) *Suite {
 
 func (suite *Suite) Run(t *testing.T) {
 	k8s.Prepare(t, suite.Opt.Client, "base/default.yml")
+	k8s.Prepare(t, suite.Opt.Client, "base/nacos.yml")
+	suite.waitNacos(t)
 	suite.startPortForward(t)
 	defer suite.stopPortForward(t)
 	for _, test := range tests {
@@ -107,9 +109,17 @@ func (suite *Suite) Run(t *testing.T) {
 	}
 }
 
+func (suite *Suite) waitNacos(t *testing.T) {
+	cmdline := "kubectl wait --timeout=5m -n e2e deployment/nacos --for=condition=Available"
+	cmd := strings.Fields(cmdline)
+	wait := exec.Command(cmd[0], cmd[1:]...)
+	err := wait.Run()
+	require.NoError(t, err)
+}
+
 // We use port-forward so that both Linux and Mac can expose port in the same way
 func (suite *Suite) startPortForward(t *testing.T) {
-	// TODO: rewrite it with Go code
+	// TODO: rewrite 'kubectl wait' with Go code
 	for _, cond := range []struct {
 		name string
 		ns   string

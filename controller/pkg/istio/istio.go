@@ -26,6 +26,7 @@ import (
 	"mosn.io/htnn/controller/internal/controller"
 	"mosn.io/htnn/controller/internal/log"
 	"mosn.io/htnn/controller/internal/metrics"
+	"mosn.io/htnn/controller/internal/registry"
 	"mosn.io/htnn/controller/pkg/component"
 )
 
@@ -39,10 +40,6 @@ type HTTPFilterPolicyReconciler interface {
 	NeedReconcile(ctx context.Context, meta component.ResourceMeta) bool
 }
 
-type ConsumerReconciler interface {
-	Reconciler
-}
-
 func NewHTTPFilterPolicyReconciler(output component.Output, manager component.ResourceManager) HTTPFilterPolicyReconciler {
 	return controller.NewHTTPFilterPolicyReconciler(
 		output,
@@ -50,11 +47,28 @@ func NewHTTPFilterPolicyReconciler(output component.Output, manager component.Re
 	)
 }
 
+type ConsumerReconciler interface {
+	Reconciler
+}
+
 func NewConsumerReconciler(output component.Output, manager component.ResourceManager) ConsumerReconciler {
 	return &controller.ConsumerReconciler{
 		Output:          output,
 		ResourceManager: manager,
 	}
+}
+
+type ServiceRegistryReconciler interface {
+	Reconciler
+}
+
+func NewServiceRegistryReconciler(output component.Output, manager component.ResourceManager) ConsumerReconciler {
+	registry.InitRegistryManager(&registry.RegistryManagerOption{
+		Output: output,
+	})
+	return controller.NewServiceRegistryReconciler(
+		manager,
+	)
 }
 
 func SetLogger(logger component.CtrlLogger) {

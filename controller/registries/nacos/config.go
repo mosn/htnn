@@ -35,8 +35,8 @@ import (
 	istioapi "istio.io/api/networking/v1alpha3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"mosn.io/htnn/controller/internal/log"
 	"mosn.io/htnn/controller/pkg/registry"
+	"mosn.io/htnn/controller/pkg/registry/log"
 	registrytype "mosn.io/htnn/types/pkg/registry"
 	"mosn.io/htnn/types/registries/nacos"
 )
@@ -44,6 +44,9 @@ import (
 func init() {
 	registry.AddRegistryFactory("nacos", func(store registry.ServiceEntryStore, om metav1.ObjectMeta) (registry.Registry, error) {
 		reg := &Nacos{
+			logger: log.NewLogger(&log.RegistryLoggerOptions{
+				Name: om.Name,
+			}),
 			store:               store,
 			name:                om.Name,
 			softDeletedServices: map[nacosService]bool{},
@@ -59,8 +62,9 @@ const (
 	defaultTimeoutMs     = 5 * 1000
 	defaultLogLevel      = "warn"
 	defaultNotLoadCache  = true
-	defaultLogMaxDays    = 3
-	defaultLogMaxSizeMB  = 100
+	defaultLogMaxDays    = 1
+	defaultLogMaxBackups = 10
+	defaultLogMaxSizeMB  = 1
 
 	RegistryType = "nacos"
 )
@@ -79,6 +83,7 @@ type nacosClient struct {
 
 type Nacos struct {
 	nacos.RegistryType
+	logger log.RegistryLogger
 
 	store  registry.ServiceEntryStore
 	name   string
@@ -132,7 +137,7 @@ func (reg *Nacos) fetchAllServices(client *nacosClient) (map[nacosService]bool, 
 }
 
 func (reg *Nacos) subscribe(groupName string, serviceName string) error {
-	log.Infof("subscribe serviceName: %s, groupName: %s", serviceName, groupName)
+	reg.logger.Infof("subscribe serviceName: %s, groupName: %s", serviceName, groupName)
 
 	err := reg.client.namingClient.Subscribe(&vo.SubscribeParam{
 		ServiceName:       serviceName,
@@ -148,7 +153,7 @@ func (reg *Nacos) subscribe(groupName string, serviceName string) error {
 }
 
 func (reg *Nacos) unsubscribe(groupName string, serviceName string) error {
-	log.Infof("unsubscribe serviceName: %s, groupName: %s", serviceName, groupName)
+	reg.logger.Infof("unsubscribe serviceName: %s, groupName: %s", serviceName, groupName)
 
 	err := reg.client.namingClient.Unsubscribe(&vo.SubscribeParam{
 		ServiceName:       serviceName,
@@ -175,9 +180,9 @@ func (reg *Nacos) getSubscribeCallback(groupName string, serviceName string) fun
 	return func(services []model.SubscribeService, err error) {
 		if err != nil {
 			if !strings.Contains(err.Error(), "hosts is empty") {
-				log.Errorf("callback failed, err: %v, host: %s", err, host)
+				reg.logger.Errorf("callback failed, err: %v, host: %s", err, host)
 			} else {
-				log.Infof("delete service entry because there are no hosts, service: %s", host)
+				reg.logger.Infof("delete service entry because there are no hosts, service: %s", host)
 				reg.store.Delete(host)
 				// When the last instance is deleted, Nacos v1 has a protect mechanism that
 				// skips the callback. See:
@@ -259,8 +264,9 @@ func (reg *Nacos) newClient(config *nacos.Config) (*nacosClient, error) {
 		constant.WithLogLevel(defaultLogLevel),
 		constant.WithNotLoadCacheAtStart(defaultNotLoadCache),
 		constant.WithLogRollingConfig(&lumberjack.Logger{
-			MaxSize: defaultLogMaxSizeMB,
-			MaxAge:  defaultLogMaxDays,
+			MaxSize:    defaultLogMaxSizeMB,
+			MaxAge:     defaultLogMaxDays,
+			MaxBackups: defaultLogMaxBackups,
 		}),
 		// To simplify the permissions, use the path under current work dir to store log & cache
 	)
@@ -309,7 +315,7 @@ func (reg *Nacos) Start(c registrytype.RegistryConfig) error {
 	for key := range fetchedServices {
 		err = reg.subscribe(key.GroupName, key.ServiceName)
 		if err != nil {
-			log.Errorf("failed to subscribe service, err: %v, service: %v", err, key)
+			reg.logger.Errorf("failed to subscribe service, err: %v, service: %v", err, key)
 			// the service will be resubscribed after refresh interval
 			delete(fetchedServices, key)
 		}
@@ -323,7 +329,7 @@ func (reg *Nacos) Start(c registrytype.RegistryConfig) error {
 		dur = refreshInteval.AsDuration()
 	}
 	go func() {
-		log.Infof("start refreshing services, registry: %s", reg.name)
+		reg.logger.Infof("start refreshing services")
 		ticker := time.NewTicker(dur)
 		defer ticker.Stop()
 		for {
@@ -331,10 +337,10 @@ func (reg *Nacos) Start(c registrytype.RegistryConfig) error {
 			case <-ticker.C:
 				err := reg.refresh()
 				if err != nil {
-					log.Errorf("failed to refresh services, err: %v, registry: %s", err, reg.name)
+					reg.logger.Errorf("failed to refresh services, err: %v", err)
 				}
 			case <-reg.done:
-				log.Infof("stop refreshing services, registry: %s", reg.name)
+				reg.logger.Infof("stop refreshing services")
 				return
 			}
 		}
@@ -346,7 +352,7 @@ func (reg *Nacos) Start(c registrytype.RegistryConfig) error {
 func (reg *Nacos) removeService(key nacosService) {
 	err := reg.unsubscribe(key.GroupName, key.ServiceName)
 	if err != nil {
-		log.Errorf("failed to unsubscribe service, err: %v, service: %v", err, key)
+		reg.logger.Errorf("failed to unsubscribe service, err: %v, service: %v", err, key)
 		// the upcoming event will be thrown away
 	}
 	reg.store.Delete(reg.getServiceEntryKey(key.GroupName, key.ServiceName))
@@ -365,7 +371,7 @@ func (reg *Nacos) refresh() error {
 		if _, ok := reg.watchingServices[key]; !ok {
 			err = reg.subscribe(key.GroupName, key.ServiceName)
 			if err != nil {
-				log.Errorf("failed to subscribe service, err: %v, service: %v", err, key)
+				reg.logger.Errorf("failed to subscribe service, err: %v, service: %v", err, key)
 			}
 		}
 	}
@@ -376,7 +382,7 @@ func (reg *Nacos) refresh() error {
 		if _, ok := fetchedServices[key]; !ok {
 			err := reg.unsubscribe(key.GroupName, key.ServiceName)
 			if err != nil {
-				log.Errorf("failed to unsubscribe service, err: %v, service: %v", err, key)
+				reg.logger.Errorf("failed to unsubscribe service, err: %v, service: %v", err, key)
 				// the upcoming event will be thrown away
 			}
 			reg.softDeletedServices[key] = true
@@ -434,7 +440,7 @@ func (reg *Nacos) Reload(c registrytype.RegistryConfig) error {
 		} else {
 			err = reg.unsubscribe(key.GroupName, key.ServiceName)
 			if err != nil {
-				log.Errorf("failed to unsubscribe service, err: %v, service: %v", err, key)
+				reg.logger.Errorf("failed to unsubscribe service, err: %v, service: %v", err, key)
 			}
 		}
 	}
@@ -444,7 +450,7 @@ func (reg *Nacos) Reload(c registrytype.RegistryConfig) error {
 	for key := range fetchedServices {
 		err = reg.subscribe(key.GroupName, key.ServiceName)
 		if err != nil {
-			log.Errorf("failed to subscribe service, err: %v, service: %v", err, key)
+			reg.logger.Errorf("failed to subscribe service, err: %v, service: %v", err, key)
 		}
 	}
 	reg.watchingServices = fetchedServices

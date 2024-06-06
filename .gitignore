@@ -28,6 +28,7 @@ site/tmp
 controller/**/cache
 controller/**/log
 !controller/internal/log
+!controller/pkg/registry/log
 controller/tests/testdata/crd/
 go.work.sum
 external/*

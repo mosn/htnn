@@ -5,6 +5,20 @@ istiod:
       HTNN_ENABLE_LDS_PLUGIN_VIA_ECDS: true
       UNSAFE_PILOT_ENABLE_RUNTIME_ASSERTIONS: true
       UNSAFE_PILOT_ENABLE_DELTA_TEST: true
+    volumes:
+    - emptyDir:
+        medium: Memory
+        sizeLimit: 1Mi
+      name: nacos-log
+    - emptyDir:
+        medium: Memory
+        sizeLimit: 1Mi
+      name: nacos-cache
+    volumeMounts:
+    - name: nacos-log
+      mountPath: /log
+    - name: nacos-cache
+      mountPath: /cache
   global:
     proxy:
       image: "htnn/gateway:e2e"
