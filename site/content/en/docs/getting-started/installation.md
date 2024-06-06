@@ -27,7 +27,7 @@ Where `$package_name` can be:
 * `htnn-controller`: control plane component
 * `htnn-gateway`: data plane component
 
-Note that the pod spec of `htnn-gateway` will be automatically populated at runtime, using the same mechanism as [Sidecar Injection](istio.io/latest/docs/setup/additional-setup/sidecar-injection).
+Note that the pod spec of `htnn-gateway` will be automatically populated at runtime, using the same mechanism as [Sidecar Injection](https://istio.io/latest/docs/setup/additional-setup/sidecar-injection).
 
 This does mean two things:
 

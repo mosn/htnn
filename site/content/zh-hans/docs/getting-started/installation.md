@@ -31,7 +31,7 @@ helm install htnn-controller htnn/htnn-controller \
 helm install htnn-gateway htnn/htnn-gateway --namespace istio-system --create-namespace --debug --wait
 ```
 
-请注意，`htnn-gateway` 的 pod spec 将在运行时自动填充，使用与 [Sidecar 注入](istio.io/latest/docs/setup/additional-setup/sidecar-injection) 相同的机制。
+请注意，`htnn-gateway` 的 pod spec 将在运行时自动填充，使用与 [Sidecar 注入](https://istio.io/latest/docs/setup/additional-setup/sidecar-injection) 相同的机制。
 
 这意味着两件事：
 
