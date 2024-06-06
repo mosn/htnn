@@ -18,6 +18,7 @@ import (
 	"context"
 	"sync"
 
+	"google.golang.org/protobuf/proto"
 	istioapi "istio.io/api/networking/v1alpha3"
 
 	"mosn.io/htnn/controller/internal/log"
@@ -45,8 +46,18 @@ func (store *serviceEntryStore) Update(service string, se *pkgRegistry.ServiceEn
 	store.lock.Lock()
 	defer store.lock.Unlock()
 
-	log.Infof("service entry stores update service: %s, entry: %v", service, &se.ServiceEntry)
+	log.Infof("service entry store updates service: %s, entry: %v", service, &se.ServiceEntry)
 	ctx := context.Background()
+
+	if prev, ok := store.entries[service]; ok {
+		// Some registry SDKs may send the same service entry multiple times. For example, at least in
+		// nacos-sdk-go 1.1.4, when the service is first subscribed, the SDK will run the callback
+		// twice. Here we decide to deduplicate in the store.
+		if proto.Equal(&se.ServiceEntry, prev) {
+			log.Infof("service %s not changed in service entry store, ignored", service)
+			return
+		}
+	}
 	store.entries[service] = &se.ServiceEntry
 
 	store.output.FromServiceRegistry(ctx, store.entries)
@@ -60,7 +71,7 @@ func (store *serviceEntryStore) Delete(service string) {
 		return
 	}
 
-	log.Infof("service entry stores delete service: %s", service)
+	log.Infof("service entry store deletes service: %s", service)
 	delete(store.entries, service)
 	store.output.FromServiceRegistry(context.Background(), store.entries)
 }
