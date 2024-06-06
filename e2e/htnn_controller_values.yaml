@@ -8,7 +8,7 @@ istiod:
     volumes:
     - emptyDir:
         medium: Memory
-        sizeLimit: 1Mi
+        sizeLimit: 20Mi
       name: nacos-log
     - emptyDir:
         medium: Memory
