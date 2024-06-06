@@ -1,6 +1,6 @@
 # htnn-controller
 
-![Version: 0.1.2](https://img.shields.io/badge/Version-0.1.2-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.2.1](https://img.shields.io/badge/AppVersion-0.2.1-informational?style=flat-square)
+![Version: 0.1.3](https://img.shields.io/badge/Version-0.1.3-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.2.1](https://img.shields.io/badge/AppVersion-0.2.1-informational?style=flat-square)
 
 A Helm chart for HTNN controller
 
@@ -12,8 +12,10 @@ To install the chart with the release `htnn-controller`:
 helm repo add htnn https://mosn.github.io/htnn
 helm repo update
 
-helm install htnn-controller htnn/htnn-controller --namespace istio-system --create-namespace --wait --debug
+helm install htnn-controller htnn/htnn-controller --namespace istio-system --create-namespace
 ```
+
+For more information like how to configure and troubleshoot, please refer to the [Installation Guide](https://github.com/mosn/htnn/blob/main/site/content/en/docs/getting-started/installation.md).
 
 ## Uninstall
 

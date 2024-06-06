@@ -18,7 +18,7 @@ helm repo update
 1. Install the control plane component:
 
 ```shell
-$ helm install htnn-controller htnn/htnn-controller --namespace istio-system --create-namespace --wait
+$ helm install htnn-controller htnn/htnn-controller --namespace istio-system --create-namespace --debug --wait
 NAME: htnn-controller
 LAST DEPLOYED: Wed May 29 18:42:18 2024
 NAMESPACE: istio-system
@@ -40,7 +40,7 @@ REVISION: 1
 TEST SUITE: None
 ```
 
-Here we have not used the `--wait` parameter, instead, we used the `kubectl wait` command to wait for the `istio-ingressgateway` deployment to complete. Because kind does not support LoadBalancer type of Service by default, the ExternalIP for Service `istio-ingressgateway` will remain in `Pending` status. This does not affect our hands-on experience. If you're interested in this, refer to the [kind official documentation](https://kind.sigs.k8s.io/docs/user/loadbalancer/) and consider installing metallb.
+Here we have not used the `--wait` parameter, instead, we used the `kubectl wait` command to wait for the `istio-ingressgateway` deployment to complete. Because `kind` does not support LoadBalancer type of Service by default, the ExternalIP for Service `istio-ingressgateway` will remain in `Pending` status. This does not affect our hands-on experience. If you're interested in this, refer to the [kind official documentation](https://kind.sigs.k8s.io/docs/user/loadbalancer/) and consider installing metallb.
 
 ## Configuring Routes
 

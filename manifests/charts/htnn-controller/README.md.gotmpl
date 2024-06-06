@@ -13,8 +13,10 @@ To install the chart with the release `htnn-controller`:
 helm repo add htnn https://mosn.github.io/htnn
 helm repo update
 
-helm install htnn-controller htnn/htnn-controller --namespace istio-system --create-namespace --wait --debug
+helm install htnn-controller htnn/htnn-controller --namespace istio-system --create-namespace
 ```
+
+For more information like how to configure and troubleshoot, please refer to the [Installation Guide](https://github.com/mosn/htnn/blob/main/site/content/en/docs/getting-started/installation.md).
 
 ## Uninstall
 

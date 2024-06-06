@@ -9,6 +9,9 @@ To release a new version, please follow the steps below:
 * Do the same things with `types`, `controller` and `plugins`.
 * Remove the `go.work` file.
 * Update the version in the `manifests/charts/*/Chart.yaml`.
+* Change the version in the documentation, including:
+    * quick_start.md
+    * installation.md
 (TBD)
 
 ## Upgrade components

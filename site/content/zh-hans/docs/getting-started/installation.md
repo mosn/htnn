@@ -16,16 +16,29 @@ helm repo update
 
 ### 安装
 
-安装命令：
+控制面安装命令：
 
 ```shell
-$ helm install $package_name htnn/$package_name --namespace istio-system --create-namespace --wait
+helm install htnn-controller htnn/htnn-controller \
+    --set istiod.pilot.hub=m.daocloud.io/ghcr.io/mosn \
+    --set istiod.global.proxy.image=m.daocloud.io/ghcr.io/mosn/htnn-proxy:dev \
+    --namespace istio-system --create-namespace --debug --wait
 ```
 
-其中 `$package_name` 可以是：
+数据面安装命令：
 
-* `htnn-controller`：控制面组件
-* `htnn-gateway`：数据面组件
+```shell
+helm install htnn-gateway htnn/htnn-gateway --namespace istio-system --create-namespace --debug --wait
+```
+
+请注意，`htnn-gateway` 的 pod spec 将在运行时自动填充，使用与 [Sidecar 注入](istio.io/latest/docs/setup/additional-setup/sidecar-injection) 相同的机制。
+
+这意味着两件事：
+
+1. 部署 `htnn-gateway` 的命名空间不能有 `istio-injection=disabled` 标签。有关更多信息，请参见 [控制注入策略](https://istio.io/latest/docs/setup/additional-setup/sidecar-injection/#controlling-the-injection-policy)。
+2. 必须在安装 `htnn-controller` 之后安装 `htnn-gateway`，以便可以注入 pod spec。
+
+如果使用 `kind` 设置 k8s 环境，`helm install ... htnn/htnn-gateway --wait` 会失败，因为 `kind` 默认不支持 LoadBalancer service。可以使用 `kubectl wait --timeout=5m -n istio-system deployment/istio-ingressgateway --for=condition=Available` 来指示安装是否完成。
 
 ### 配置
 
