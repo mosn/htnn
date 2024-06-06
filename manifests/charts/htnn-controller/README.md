@@ -48,6 +48,8 @@ helm uninstall htnn-controller -n istio-system
 | istiod.pilot.env.PILOT_ENABLE_HTNN | string | `"true"` |  |
 | istiod.pilot.env.PILOT_ENABLE_HTNN_STATUS | string | `"true"` |  |
 | istiod.pilot.env.PILOT_SCOPE_GATEWAY_TO_NAMESPACE | string | `"true"` |  |
-| istiod.pilot.image | string | `"ghcr.io/mosn/htnn-controller:dev"` |  |
+| istiod.pilot.hub | string | `"ghcr.io/mosn"` |  |
+| istiod.pilot.image | string | `"htnn-controller"` |  |
+| istiod.pilot.tag | string | `"dev"` |  |
 | istiod.revision | string | `""` |  |
 
