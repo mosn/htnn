@@ -52,13 +52,8 @@ jobs:
           make build-controller-image
           make push-image
           # push image with unique tag
-          SHORT_SHA=$(git rev-parse --short HEAD)
-          TIMESTAMP=$(date -u +"%Y-%m-%dT%H%M%S") # ':' is not allowed in the tagmw
-          # As GitHub doesn't have search in its pkgs page, it's hard to find the
-          # image with the timestamp as part of the tag. So we use the short sha only
-          # until GitHub has provided a better way to discover the images.
-          #UNIQUE_TAG=${SHORT_SHA}_${TIMESTAMP}
-          UNIQUE_TAG=${SHORT_SHA}
+          SHA=$(git rev-parse HEAD)
+          UNIQUE_TAG=dev-${SHA}
           docker tag ${{ env.PROXY_IMAGE_NAME }}:dev ${{ env.PROXY_IMAGE_NAME }}:$UNIQUE_TAG
           docker tag ${{ env.CONTROLLER_IMAGE_NAME }}:dev ${{ env.CONTROLLER_IMAGE_NAME }}:$UNIQUE_TAG
           export PROXY_IMAGE=${{ env.PROXY_IMAGE_NAME }}:$UNIQUE_TAG
