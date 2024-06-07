@@ -2,7 +2,9 @@ istiod:
   revision: ""
   pilot:
     # FIXME: use the released image once we have a release
-    image: ghcr.io/mosn/htnn-controller:dev
+    hub: ghcr.io/mosn
+    image: htnn-controller
+    tag: dev
     env:
       PILOT_SCOPE_GATEWAY_TO_NAMESPACE: "true"
       PILOT_ENABLE_HTNN: "true"

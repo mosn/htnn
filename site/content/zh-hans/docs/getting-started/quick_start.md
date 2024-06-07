@@ -9,7 +9,7 @@ title: 快速上手
 * 配置 helm 仓库地址。执行以下命令添加仓库：
 
 ```shell
-helm repo add mosn xxxx # TODO: setup such a repo
+helm repo add htnn https://mosn.github.io/htnn
 helm repo update
 ```
 
@@ -18,7 +18,10 @@ helm repo update
 1. 安装控制面组件：
 
 ```shell
-$ helm install htnn-controller mosn/htnn-controller --namespace istio-system --create-namespace --wait
+$ helm install htnn-controller htnn/htnn-controller \
+    --set istiod.pilot.hub=m.daocloud.io/ghcr.io/mosn \
+    --set istiod.global.proxy.image=m.daocloud.io/ghcr.io/mosn/htnn-proxy:dev \
+    --namespace istio-system --create-namespace --debug --wait
 
 NAME: htnn-controller
 LAST DEPLOYED: Wed May 29 18:42:18 2024
@@ -31,7 +34,7 @@ TEST SUITE: None
 2. 安装数据面组件：
 
 ```shell
-$ helm install htnn-gateway mosn/htnn-gateway --namespace istio-system --create-namespace && \
+$ helm install htnn-gateway htnn/htnn-gateway --namespace istio-system --create-namespace && \
     kubectl wait --timeout=5m -n istio-system deployment/istio-ingressgateway --for=condition=Available
 
 NAME: htnn-gateway
@@ -42,7 +45,7 @@ REVISION: 1
 TEST SUITE: None
 ```
 
-这里我们没有使用 `--wait` 参数，而是使用 `kubectl wait` 命令等待 `istio-ingressgateway` 部署完成。因为 kind 默认不支持 LoadBalancer 类型的 Service，所以 Service `istio-ingressgateway` 的 ExternalIP 会一直处于 `Pending` 状态。这不影响我们的上手体验。如果你对此感兴趣，可以参考 [kind 官方文档](https://kind.sigs.k8s.io/docs/user/loadbalancer/) 以及安装 metallb。
+这里我们没有使用 `--wait` 参数，而是使用 `kubectl wait` 命令等待 `istio-ingressgateway` 部署完成。因为 `kind` 默认不支持 LoadBalancer 类型的 Service，所以 Service `istio-ingressgateway` 的 ExternalIP 会一直处于 `Pending` 状态。这不影响我们的上手体验。如果你对此感兴趣，可以参考 [kind 官方文档](https://kind.sigs.k8s.io/docs/user/loadbalancer/) 以及安装 metallb。
 
 ## 配置路由
 
