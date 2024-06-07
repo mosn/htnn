@@ -20,8 +20,7 @@ helm repo update
 
 ```shell
 helm install htnn-controller htnn/htnn-controller \
-    --set istiod.pilot.hub=m.daocloud.io/ghcr.io/mosn \
-    --set istiod.global.proxy.image=m.daocloud.io/ghcr.io/mosn/htnn-proxy:dev \
+    --set global.hub=m.daocloud.io/ghcr.io/mosn \
     --namespace istio-system --create-namespace --debug --wait
 ```
 
@@ -48,10 +47,10 @@ helm install htnn-gateway htnn/htnn-gateway --namespace istio-system --create-na
 helm install htnn-controller htnn/htnn-controller ... --set istiod.pilot.env.HTNN_ENABLE_LDS_PLUGIN_VIA_ECDS=true
 ```
 
-控制面相关的配置项以 `istiod` 开头，具体配置项请参考 [控制面配置](https://github.com/istio/istio/blob/1.21.2/manifests/charts/istio-control/istio-discovery/values.yaml)。
+htnn-controller 具体配置项请参考 [htnn-controller 配置](https://artifacthub.io/packages/helm/htnn/htnn-controller#values)。
 
 ```shell
 helm install htnn-gateway htnn/htnn-gateway ... --set gateway.podAnnotations.test=ok
 ```
 
-数据面相关的配置项以 `gateway` 开头，具体配置项请参考 [数据面配置](https://github.com/istio/istio/blob/1.21.2/manifests/charts/gateway/values.yaml)。
+htnn-gateway 相关的配置项以 `gateway` 开头，具体配置项请参考 [数据面配置](https://github.com/istio/istio/blob/1.21.2/manifests/charts/gateway/values.yaml)。
