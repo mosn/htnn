@@ -74,6 +74,12 @@ func (f *filter) check(headers api.RequestHeaderMap, data api.BufferInstance) ap
 		} else {
 			api.LogWarnf("failed to call ext authz server: %s", rsp.Status)
 		}
+		if f.config.GetFailureModeAllow() {
+			if f.config.GetFailureModeAllowHeaderAdd() {
+				headers.Set("x-envoy-auth-failure-mode-allowed", "true")
+			}
+			return api.Continue
+		}
 		code := int(hs.GetStatusOnError())
 		if code == 0 {
 			code = 403

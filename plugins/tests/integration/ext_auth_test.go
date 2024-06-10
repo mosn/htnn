@@ -80,6 +80,20 @@ func TestExtAuth(t *testing.T) {
 			},
 		},
 		{
+			name: "allow failure mode",
+			config: control_plane.NewSinglePluinConfig("extAuth", map[string]interface{}{
+				"httpService": map[string]interface{}{
+					"url":           "http://127.0.0.1:2023/ext_auth",
+					"statusOnError": 403,
+				},
+				"failure_mode_allow": true,
+			}),
+			run: func(t *testing.T) {
+				resp, _ := dp.Post("/echo", nil, strings.NewReader("any"))
+				assert.Equal(t, 200, resp.StatusCode)
+			},
+		},
+		{
 			name: "with body",
 			config: control_plane.NewSinglePluinConfig("extAuth", map[string]interface{}{
 				"httpService": map[string]interface{}{
