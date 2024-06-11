@@ -132,12 +132,6 @@ spec:
                 - kind
                 - name
                 type: object
-                x-kubernetes-validations:
-                - message: unsupported targetRef.group
-                  rule: self.group in ['', 'networking.istio.io', 'gateway.networking.k8s.io']
-                - message: unsupported targetRef.kind
-                  rule: self.kind in ['Namespace', 'VirtualService', 'Gateway', 'HTTPRoute',
-                    'GRPCRoute']
             type: object
           status:
             description: HTTPFilterPolicyStatus defines the observed state of HTTPFilterPolicy
