@@ -50,7 +50,7 @@ start-service:
 stop-service:
 	cd ./tests/integration/testdata/services && docker-compose down
 
-# The data plane image used in the integration test can be controlled via env var HTNN_DATA_PLANE_INTEGRATION_TEST_IMAGE
+# The data plane image used in the integration test can be controlled via env var PROXY_IMAGE
 .PHONY: integration-test
 integration-test:
 	test -d /tmp/htnn_coverage && rm -rf /tmp/htnn_coverage || true
