@@ -19,6 +19,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/md5"
+	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -173,13 +174,29 @@ func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 	}
 
 	pwd, _ := os.Getwd()
+	soPath := filepath.Join(pwd, "libgolang.so")
+	st, err := os.Stat(soPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			logger.Error(err, "Shared library not found. Please build the shared library before running integration test, for example calling `make build-test-so`",
+				"shared library path", soPath)
+		}
+		return nil, err
+	}
+	if st.IsDir() {
+		err := errors.New("bad shared library detected")
+		logger.Error(err, "Please remove the bad file and build the shared library before running integration test, for example calling `make build-test-so`",
+			"shared library path", soPath)
+		return nil, err
+	}
+
 	cmdline := "docker run" +
 		" --name " + containerName +
 		" --network " + networkName +
 		" --user " + currentUser.Uid +
 		" --rm -t -v " +
 		cfgFile.Name() + ":/etc/envoy.yaml -v " +
-		filepath.Join(pwd, "libgolang.so") + ":/etc/libgolang.so" +
+		soPath + ":/etc/libgolang.so" +
 		" -v /tmp:/tmp" +
 		" -e GOCOVERDIR=" + coverDir +
 		" " + strings.Join(envs, " ") +
