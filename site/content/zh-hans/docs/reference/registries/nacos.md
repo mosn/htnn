@@ -34,24 +34,23 @@ helm install htnn-controller htnn/htnn-controller ... -f custom-values.yaml
 其中 `custom-values.yaml` 包含如下内容：
 
 ```yaml
-istiod:
-  pilot:
-    volumes:
-    - emptyDir:
-        medium: Memory
-        # log 被配置成保留 10 个 1M 的日志文件，所以 20M 的空间足够了
-        sizeLimit: 20Mi
-      name: nacos-log
-    - emptyDir:
-        medium: Memory
-        # 取决于服务发现的数据量
-        sizeLimit: 20Mi
-      name: nacos-cache
-    volumeMounts:
-    - name: nacos-log
-      mountPath: /log
-    - name: nacos-cache
-      mountPath: /cache
+pilot:
+  volumes:
+  - emptyDir:
+      medium: Memory
+      # log 被配置成保留 10 个 1M 的日志文件，所以 20M 的空间足够了
+      sizeLimit: 20Mi
+    name: nacos-log
+  - emptyDir:
+      medium: Memory
+      # 取决于服务发现的数据量
+      sizeLimit: 20Mi
+    name: nacos-cache
+  volumeMounts:
+  - name: nacos-log
+    mountPath: /log
+  - name: nacos-cache
+    mountPath: /cache
 ```
 
 更理想的解决方法是从源头上就不要让 nacos-sdk-go 往本地文件系统里写日志和缓存。毕竟在云原生场景下，将日志和缓存落到本地盘的意义不大。如果你找到让 nacos-sdk-go 不写入文件系统的方法，欢迎更新本文档。

@@ -25,3 +25,7 @@ indent_style = tab
 
 [*.{yml,yaml}]
 indent_size = 2
+
+# YAML files in the manifests directory are Helm charts, not plaintext YAML
+[manifests/charts/**/*.yaml]
+indent_size = unset

@@ -9,7 +9,7 @@ title: Quick Start
 * Configure helm repository address. Execute the following commands to add the repository:
 
 ```shell
-helm repo add mosn xxxx # TODO: setup such a repo
+helm repo add htnn https://mosn.github.io/htnn
 helm repo update
 ```
 
@@ -18,7 +18,7 @@ helm repo update
 1. Install the control plane component:
 
 ```shell
-$ helm install htnn-controller mosn/htnn-controller --namespace istio-system --create-namespace --wait
+$ helm install htnn-controller htnn/htnn-controller --namespace istio-system --create-namespace --debug --wait
 NAME: htnn-controller
 LAST DEPLOYED: Wed May 29 18:42:18 2024
 NAMESPACE: istio-system
@@ -30,7 +30,7 @@ TEST SUITE: None
 2. Install the data plane component:
 
 ```shell
-$ helm install htnn-gateway mosn/htnn-gateway --namespace istio-system --create-namespace && \
+$ helm install htnn-gateway htnn/htnn-gateway --namespace istio-system --create-namespace && \
     kubectl wait --timeout=5m -n istio-system deployment/istio-ingressgateway --for=condition=Available
 NAME: htnn-gateway
 LAST DEPLOYED: Wed May 29 19:59:22 2024
@@ -40,7 +40,7 @@ REVISION: 1
 TEST SUITE: None
 ```
 
-Here we have not used the `--wait` parameter, instead, we used the `kubectl wait` command to wait for the `istio-ingressgateway` deployment to complete. Because kind does not support LoadBalancer type of Service by default, the ExternalIP for Service `istio-ingressgateway` will remain in `Pending` status. This does not affect our hands-on experience. If you're interested in this, refer to the [kind official documentation](https://kind.sigs.k8s.io/docs/user/loadbalancer/) and consider installing metallb.
+Here we have not used the `--wait` parameter, instead, we used the `kubectl wait` command to wait for the `istio-ingressgateway` deployment to complete. Because `kind` does not support LoadBalancer type of Service by default, the ExternalIP for Service `istio-ingressgateway` will remain in `Pending` status. This does not affect our hands-on experience. If you're interested in this, refer to the [kind official documentation](https://kind.sigs.k8s.io/docs/user/loadbalancer/) and consider installing metallb.
 
 ## Configuring Routes
 

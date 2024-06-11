@@ -18,9 +18,10 @@ set -eo pipefail
 
 collect() {
     ns=$1
-    kubectl get pods -n "$ns" -o yaml > "$ns".log
+    kubectl get pods -n "$ns" -o yaml > pods-"$ns".log
+    kubectl get deployments -n "$ns" -o yaml > deployments-"$ns".log
     for pod in $(kubectl get pods -n "$ns" | awk '{print $1}' | grep -v "NAME"); do
-        kubectl -n "$ns" logs "$pod" > "$pod"."$ns".log
+        kubectl -n "$ns" logs "$pod" > "$pod"."$ns".log || true
     done
 }
 

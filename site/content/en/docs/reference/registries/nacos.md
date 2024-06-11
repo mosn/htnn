@@ -34,24 +34,23 @@ helm install htnn-controller htnn/htnn-controller ... -f custom-values.yaml
 Where `custom-values.yaml` contains the following contents:
 
 ```yaml
-istiod:
-  pilot:
-    volumes:
-    - emptyDir:
-        medium: Memory
-        # It is configured to retain 10 log files of 1M each, so 20M of space is enough
-        sizeLimit: 20Mi
-      name: nacos-log
-    - emptyDir:
-        medium: Memory
-        # Depends on the volume of service discovery data
-        sizeLimit: 20Mi
-      name: nacos-cache
-    volumeMounts:
-    - name: nacos-log
-      mountPath: /log
-    - name: nacos-cache
-      mountPath: /cache
+pilot:
+  volumes:
+  - emptyDir:
+      medium: Memory
+      # It is configured to retain 10 log files of 1M each, so 20M of space is enough
+      sizeLimit: 20Mi
+    name: nacos-log
+  - emptyDir:
+      medium: Memory
+      # Depends on the volume of service discovery data
+      sizeLimit: 20Mi
+    name: nacos-cache
+  volumeMounts:
+  - name: nacos-log
+    mountPath: /log
+  - name: nacos-cache
+    mountPath: /cache
 ```
 
 A more ideal solution is to prevent nacos-sdk-go from writing logs and caches to the local file system from the start. After all, in a cloud-native scenario, there is little significance in persisting logs and caches to the local disk. If you find a way to prevent nacos-sdk-go from writing to the file system, you are welcome to update this document.
