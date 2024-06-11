@@ -1,13 +1,12 @@
-istiod:
-  pilot:
-    image: "htnn/controller:e2e"
-    env:
-      HTNN_ENABLE_LDS_PLUGIN_VIA_ECDS: true
-      UNSAFE_PILOT_ENABLE_RUNTIME_ASSERTIONS: true
-      UNSAFE_PILOT_ENABLE_DELTA_TEST: true
-  global:
-    proxy:
-      image: "htnn/gateway:e2e"
-    imagePullPolicy: IfNotPresent
-    logging:
-      level: "htnn:debug"
+pilot:
+  image: "htnn/controller:e2e"
+  env:
+    HTNN_ENABLE_LDS_PLUGIN_VIA_ECDS: true
+    UNSAFE_PILOT_ENABLE_RUNTIME_ASSERTIONS: true
+    UNSAFE_PILOT_ENABLE_DELTA_TEST: true
+global:
+  proxy:
+    image: "htnn/gateway:e2e"
+  imagePullPolicy: IfNotPresent
+  logging:
+    level: "htnn:debug"

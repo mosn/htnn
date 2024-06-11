@@ -123,7 +123,7 @@ func (suite *Suite) startPortForward(t *testing.T) {
 		cmd := strings.Fields(cmdline)
 		wait := exec.Command(cmd[0], cmd[1:]...)
 		err := wait.Run()
-		require.NoError(t, err)
+		require.NoError(t, err, "wait for deployment %s in namespace %s", cond.name, cond.ns)
 	}
 
 	cmdline := "./port-forward.sh"

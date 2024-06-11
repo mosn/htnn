@@ -19,8 +19,7 @@ helm repo update
 
 ```shell
 $ helm install htnn-controller htnn/htnn-controller \
-    --set istiod.pilot.hub=m.daocloud.io/ghcr.io/mosn \
-    --set istiod.global.proxy.image=m.daocloud.io/ghcr.io/mosn/htnn-proxy:dev \
+    --set global.hub=m.daocloud.io/ghcr.io/mosn \
     --namespace istio-system --create-namespace --debug --wait
 
 NAME: htnn-controller

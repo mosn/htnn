@@ -9,9 +9,6 @@ To release a new version, please follow the steps below:
 * Do the same things with `types`, `controller` and `plugins`.
 * Remove the `go.work` file.
 * Update the version in the `manifests/charts/*/Chart.yaml`.
-* Change the version in the documentation, including:
-    * quick_start.md
-    * installation.md
 (TBD)
 
 ## Upgrade components
@@ -26,3 +23,7 @@ To upgrade Istio, please follow the steps below:
 * Update the versions of istio, envoy and go-control-plane package in the `go.mod` and `go.sum`.
 * Update the link `/envoy/v1.xx.y/configuration/` in the doc to the new Envoy version. And `istio/istio/xxx` to the new Istio version.
 * Update the charts' dependency versions used in the `manifests/charts/*/Chart.yaml`.
+
+If this is a minor version upgrade, please follow the additional steps below:
+
+* Sync the `manifests/charts/htnn-controller/*` to the latest istio's istiod chart.

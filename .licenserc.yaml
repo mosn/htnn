@@ -35,6 +35,7 @@ header:
     - '**/*.txt'
     - '**/*.patch'
     - '**/*.gotmpl'
+    - '**/*.tpl'
     - '.ignore_words'
     # files from other projects
     - 'site/assets/**'
