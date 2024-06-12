@@ -37,7 +37,12 @@ func InitRegistryManager(opt *RegistryManagerOption) {
 	store = newServiceEntryStore(opt.Output)
 }
 
-func UpdateRegistry(registry *mosniov1.ServiceRegistry) error {
+func UpdateRegistry(registry *mosniov1.ServiceRegistry, prevServiceRegistry *mosniov1.ServiceRegistry) error {
+	if prevServiceRegistry != nil && prevServiceRegistry.Generation == registry.Generation {
+		// no change
+		return nil
+	}
+
 	key := types.NamespacedName{Namespace: registry.Namespace, Name: registry.Name}
 	if reg, ok := registries[key]; !ok {
 		reg, err := pkgRegistry.CreateRegistry(registry.Spec.Type, store, registry.ObjectMeta)

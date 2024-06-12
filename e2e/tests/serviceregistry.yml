@@ -1,0 +1,61 @@
+apiVersion: htnn.mosn.io/v1
+kind: ServiceRegistry
+metadata:
+  name: default
+spec:
+  type: nacos
+  config:
+    serverUrl: "http://nacos-service.e2e.svc.cluster.local:8848"
+    serviceRefreshInterval: 1s
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: nacos
+spec:
+  parentRefs:
+  - name: default
+    namespace: e2e
+  hostnames: ["localhost"]
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /nacos/
+    backendRefs:
+    - name: nacos-service
+      port: 8848
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: test
+spec:
+  parentRefs:
+  - name: default
+    namespace: e2e
+  hostnames: ["localhost"]
+  rules:
+  - matches:
+    - path:
+        type: Exact
+        value: /echo
+    backendRefs:
+    - name: backend.default-group.public.default.nacos
+      port: 8080
+      group: networking.istio.io
+      kind: Hostname
+---
+apiVersion: htnn.mosn.io/v1
+kind: HTTPFilterPolicy
+metadata:
+  name: policy
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: test
+  filters:
+    demo:
+      config:
+        hostName: doraemon

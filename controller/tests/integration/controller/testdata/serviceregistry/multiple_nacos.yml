@@ -1,0 +1,20 @@
+- apiVersion: htnn.mosn.io/v1
+  kind: ServiceRegistry
+  metadata:
+    name: earth
+    namespace: default
+  spec:
+    type: nacos
+    config:
+      serverUrl: http://0.0.0.0:8848
+      serviceRefreshInterval: 1s
+- apiVersion: htnn.mosn.io/v1
+  kind: ServiceRegistry
+  metadata:
+    name: moon
+    namespace: default
+  spec:
+    type: nacos
+    config:
+      serverUrl: http://0.0.0.0:8848
+      serviceRefreshInterval: 1s

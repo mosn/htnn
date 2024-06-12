@@ -1,0 +1,246 @@
+diff --git a/pilot/pkg/config/htnn/component.go b/pilot/pkg/config/htnn/component.go
+index 275fcc0..7275cf2 100644
+--- a/pilot/pkg/config/htnn/component.go
++++ b/pilot/pkg/config/htnn/component.go
+@@ -27,6 +27,7 @@ import (
+ 	"k8s.io/apimachinery/pkg/runtime"
+ 	"k8s.io/apimachinery/pkg/runtime/schema"
+ 	"mosn.io/htnn/controller/pkg/component"
++	"mosn.io/htnn/controller/pkg/constant"
+ 	"sigs.k8s.io/controller-runtime/pkg/client"
+ 
+ 	"istio.io/istio/pilot/pkg/config/kube/crdclient"
+@@ -72,6 +73,22 @@ func convertEnvoyFilterToConfig(ef *istiov1a3.EnvoyFilter) *config.Config {
+ 	return cfg
+ }
+ 
++func convertServiceEntryToConfig(namespace string, name string, se *istioapi.ServiceEntry) *config.Config {
++	cfg := &config.Config{
++		Meta: config.Meta{
++			GroupVersionKind:  gvk.ServiceEntry,
++			CreationTimestamp: time.Now(),
++			Name:              name,
++			Namespace:         namespace,
++			Labels: map[string]string{
++				constant.LabelCreatedBy: "ServiceRegistry",
++			},
++		},
++		Spec: se,
++	}
++	return cfg
++}
++
+ func (o *output) FromHTTPFilterPolicy(_ context.Context, generatedEnvoyFilters map[component.EnvoyFilterKey]*istiov1a3.EnvoyFilter) error {
+ 	efs := make(map[string][]config.Config, 0)
+ 
+@@ -97,7 +114,15 @@ func (o *output) FromConsumer(ctx context.Context, ef *istiov1a3.EnvoyFilter) er
+ }
+ 
+ func (o *output) FromServiceRegistry(ctx context.Context, serviceEntries map[string]*istioapi.ServiceEntry) {
+-	panic("TODO")
++	log.Infof("receive %d generated service entries", len(serviceEntries))
++
++	entries := make(map[string]*config.Config, len(serviceEntries))
++	for name, se := range serviceEntries {
++		cfg := convertServiceEntryToConfig(o.ctrl.RootNamespace(), name, se)
++		entries[name] = cfg
++	}
++
++	o.ctrl.SetServiceEntries(entries)
+ }
+ 
+ type resourceManager struct {
+diff --git a/pilot/pkg/config/htnn/controller.go b/pilot/pkg/config/htnn/controller.go
+index bc3b5ce..acd42d3 100644
+--- a/pilot/pkg/config/htnn/controller.go
++++ b/pilot/pkg/config/htnn/controller.go
+@@ -39,15 +39,20 @@ var errUnsupportedOp = errors.New("unsupported operation: the controller is read
+ 
+ var schemas = collection.SchemasFor(
+ 	collections.EnvoyFilter,
++	collections.ServiceEntry,
+ )
+ 
+ type Controller struct {
+ 	httpFilterPolicyReconciler istio.HTTPFilterPolicyReconciler
+ 	consumerReconciler         istio.ConsumerReconciler
++	serviceRegistryReconciler  istio.ServiceRegistryReconciler
+ 
+ 	currContext            *model.PushContext
+ 	efFromHTTPFilterPolicy map[string][]config.Config
+ 	efFromConsumer         *config.Config
++	serviceEntries         map[string]*config.Config
++	prevServiceEntries     map[string]*config.Config
++	serviceEntryHandlers   []model.EventHandler
+ 	rootNamespace          string
+ 	cache                  model.ConfigStore
+ 
+@@ -64,10 +69,15 @@ func (c *Controller) Init(env *model.Environment) {
+ 	manager := NewResourceManager(c.cache, c)
+ 	c.httpFilterPolicyReconciler = istio.NewHTTPFilterPolicyReconciler(output, manager)
+ 	c.consumerReconciler = istio.NewConsumerReconciler(output, manager)
++	c.serviceRegistryReconciler = istio.NewServiceRegistryReconciler(output, manager)
+ }
+ 
+ // Implement model.ConfigStoreController
+ func (c *Controller) RegisterEventHandler(kind config.GroupVersionKind, f model.EventHandler) {
++	switch kind {
++	case gvk.ServiceEntry:
++		c.serviceEntryHandlers = append(c.serviceEntryHandlers, f)
++	}
+ }
+ 
+ func (c *Controller) Run(stop <-chan struct{}) {
+@@ -86,6 +96,9 @@ func (c *Controller) Schemas() collection.Schemas {
+ 
+ func (c *Controller) Get(typ config.GroupVersionKind, name, namespace string) *config.Config {
+ 	if typ != gvk.EnvoyFilter {
++		if typ == gvk.ServiceEntry {
++			return c.GetServiceEntry(name, namespace)
++		}
+ 		return nil
+ 	}
+ 
+@@ -108,6 +121,9 @@ func (c *Controller) Get(typ config.GroupVersionKind, name, namespace string) *c
+ 
+ func (c *Controller) List(typ config.GroupVersionKind, namespace string) []config.Config {
+ 	if typ != gvk.EnvoyFilter {
++		if typ == gvk.ServiceEntry {
++			return c.ListServiceEntry(namespace)
++		}
+ 		return nil
+ 	}
+ 
+@@ -239,6 +255,7 @@ func (c *Controller) Reconcile(pc *model.PushContext, configsUpdated sets.Set[mo
+ 			kind kind.Kind
+ 		}{
+ 			{gvk.Consumer, kind.Consumer},
++			{gvk.ServiceRegistry, kind.ServiceRegistry},
+ 		} {
+ 			res := c.cache.List(pair.gvk, "")
+ 			if len(res) > 0 {
+@@ -249,7 +266,7 @@ func (c *Controller) Reconcile(pc *model.PushContext, configsUpdated sets.Set[mo
+ 		// here we provide our own change detection, so adding a new CR won't need to touch istio's own one in PushContext
+ 		for conf := range configsUpdated {
+ 			switch conf.Kind {
+-			case kind.HTTPFilterPolicy, kind.Consumer:
++			case kind.HTTPFilterPolicy, kind.Consumer, kind.ServiceRegistry:
+ 				toReconcile[conf.Kind] = struct{}{}
+ 			}
+ 		}
+@@ -297,6 +314,8 @@ func (c *Controller) Reconcile(pc *model.PushContext, configsUpdated sets.Set[mo
+ 			_, err = c.httpFilterPolicyReconciler.Reconcile(ctx, req)
+ 		case kind.Consumer:
+ 			_, err = c.consumerReconciler.Reconcile(ctx, req)
++		case kind.ServiceRegistry:
++			_, err = c.serviceRegistryReconciler.Reconcile(ctx, req)
+ 		}
+ 		errs = append(errs, err) // err can be nil
+ 	}
+@@ -344,3 +363,57 @@ func (c *Controller) SetStatusWrite(enabled bool, statusManager *status.Manager)
+ 		c.statusController = nil
+ 	}
+ }
++
++func (c *Controller) notifySeviceEntryChange(prev, curr config.Config, event model.Event) {
++	log.Debugf("notify ServiceEntry change event %s, name: %s, namespace: %s",
++		event, curr.Name, curr.Namespace)
++
++	for _, f := range c.serviceEntryHandlers {
++		f(prev, curr, event)
++	}
++}
++
++func (c *Controller) SetServiceEntries(entries map[string]*config.Config) {
++	c.prevServiceEntries = c.serviceEntries
++	c.serviceEntries = entries
++
++	for name, entry := range c.prevServiceEntries {
++		if curr, ok := c.serviceEntries[name]; !ok {
++			// Deleted ServiceEntry should be passed as the 'curr' ServiceEntry
++			c.notifySeviceEntryChange(config.Config{}, *entry, model.EventDelete)
++		} else {
++			// Let the serviceEntryHandler to diff them
++			c.notifySeviceEntryChange(*entry, *curr, model.EventUpdate)
++		}
++	}
++
++	for name, entry := range c.serviceEntries {
++		if _, ok := c.prevServiceEntries[name]; !ok {
++			c.notifySeviceEntryChange(config.Config{}, *entry, model.EventAdd)
++		}
++	}
++}
++
++func (c *Controller) GetServiceEntry(name, namespace string) *config.Config {
++	if namespace != "" && namespace != c.rootNamespace {
++		return nil
++	}
++	for _, se := range c.serviceEntries {
++		if se.Name == name {
++			return se
++		}
++	}
++	return nil
++}
++
++func (c *Controller) ListServiceEntry(namespace string) []config.Config {
++	if namespace != "" && namespace != c.rootNamespace {
++		return nil
++	}
++	ses := make([]config.Config, 0, len(c.serviceEntries))
++	for _, entry := range c.serviceEntries {
++		ses = append(ses, *entry)
++	}
++
++	return ses
++}
+diff --git a/pkg/config/schema/metadata.yaml b/pkg/config/schema/metadata.yaml
+index 9d4532c..35ad496 100644
+--- a/pkg/config/schema/metadata.yaml
++++ b/pkg/config/schema/metadata.yaml
+@@ -39,6 +39,18 @@ resources:
+     statusProto: "htnn.mosn.io.v1.ConsumerStatus"
+     statusProtoPackage: "mosn.io/htnn/types/apis/v1"
+ 
++  - kind: "ServiceRegistry"
++    plural: "serviceregistries"
++    group: "htnn.mosn.io"
++    version: "v1"
++    clusterScoped: false
++    builtin: false
++    proto: "htnn.mosn.io.v1.ServiceRegistrySpec"
++    protoPackage: "mosn.io/htnn/types/apis/v1"
++    validate: "ValidateServiceRegistry"
++    statusProto: "htnn.mosn.io.v1.ServiceRegistryStatus"
++    statusProtoPackage: "mosn.io/htnn/types/apis/v1"
++
+   # Kubernetes specific configuration.
+   - kind: "CustomResourceDefinition"
+     plural: "customresourcedefinitions"
+diff --git a/pkg/config/validation/htnn.go b/pkg/config/validation/htnn.go
+index bdc935b..17124c5 100644
+--- a/pkg/config/validation/htnn.go
++++ b/pkg/config/validation/htnn.go
+@@ -54,6 +54,21 @@ var ValidateConsumer = registerValidateFunc("ValidateConsumer",
+ 		return warnings, err
+ 	})
+ 
++// ValidateServiceRegistry checks that ServiceRegistry is well-formed.
++var ValidateServiceRegistry = registerValidateFunc("ValidateServiceRegistry",
++	func(cfg config.Config) (Warning, error) {
++		in, ok := cfg.Spec.(*mosniov1.ServiceRegistrySpec)
++		if !ok {
++			return nil, fmt.Errorf("cannot cast to ServiceRegistrySpec")
++		}
++
++		var warnings Warning
++		var serviceRegistry mosniov1.ServiceRegistry
++		serviceRegistry.Spec = *in
++		err := mosniov1.ValidateServiceRegistry(&serviceRegistry)
++		return warnings, err
++	})
++
+ func validateEmbededHTTPFilterPolicy(hfp string) error {
+ 	var policy mosniov1.HTTPFilterPolicy
+ 	err := json.Unmarshal([]byte(hfp), &policy)

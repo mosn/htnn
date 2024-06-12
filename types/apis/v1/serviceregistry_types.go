@@ -40,6 +40,8 @@ type ServiceRegistryStatus struct {
 	// +listType=map
 	// +listMapKey=type
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
+
+	ChangeDetector `json:""`
 }
 
 //+genclient
@@ -56,8 +58,12 @@ type ServiceRegistry struct {
 }
 
 func (r *ServiceRegistry) SetAccepted(reason ConditionReason, msg ...string) {
-	conds, _ := addOrUpdateAcceptedCondition(r.Status.Conditions, r.Generation, reason, msg...)
+	conds, changed := addOrUpdateAcceptedCondition(r.Status.Conditions, r.Generation, reason, msg...)
 	r.Status.Conditions = conds
+
+	if changed {
+		r.Status.MarkAsChanged()
+	}
 }
 
 //+kubebuilder:object:root=true

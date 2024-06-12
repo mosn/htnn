@@ -11,16 +11,49 @@ The `nacos` registry interfaces with [Nacos](https://nacos.io/) service discover
 > https://nacos.io/en/docs/v2/guide/user/open-api/
 
 ## Configuration
+
 | Name                     | Type                            | Required | Validation        | Description                                            |
 |--------------------------|---------------------------------|----------|-------------------|--------------------------------------------------------|
 | serverUrl                | string                          | True     | must be valid URI | Nacos URL                                              |
 | namespace                | string                          | False    |                   | Nacos namespace. Default is "public".                  |
 | groups                   | string[]                        | False    | min_len = 1       | List of Nacos groups. Default is ["DEFAULT_GROUP"].    |
-| service_refresh_interval | [Duration](../../type#duration) | False    | gte: 1s           | Interval for polling the service list. Default is 30s. |
+| serviceRefreshInterval   | [Duration](../../type#duration) | False    | gte: 1s           | Interval for polling the service list. Default is 30s. |
 
 Nacos 1.x does not provide an API to subscribe to the current service list, so polling is the only way to retrieve the service list. Configuring a smaller value can allow for quicker detection of service deletions, but will place more pressure on Nacos.
 
+If a domain name is used inside `serverUrl`, it must be an FQDN, such as `svc.cluster.local`, rather than `svc`.
+
 Note: Due to heartbeat intervals, network latencies, and other factors, it may take several seconds for changes in services to affect the `ServiceEntry`. In particular, because of https://github.com/nacos-group/nacos-sdk-go/issues/139, the removal of the last instance in a service will not lead to a change in `ServiceEntry`. Additionally, to prevent `ServiceEntry` from being mistakenly deleted due to polling failures or temporary unavailability of Nacos, the generated `ServiceEntry` will only be cleared when there are changes to the registry configuration.
+
+Note: Since the [nacos-sdk-go](https://github.com/nacos-group/nacos-sdk-go/) writes logs and caches to the file system, and by default, the control plane of HTNN is mounted in read-only mode, it will cause an inability to work with Nacos. The solution is to mount writable directories to `/log` and `/cache` when deploying HTNN. For example, when installing HTNN via helm, you can mount writable directories as follows:
+
+```shell
+helm install htnn-controller htnn/htnn-controller ... -f custom-values.yaml
+```
+
+Where `custom-values.yaml` contains the following contents:
+
+```yaml
+pilot:
+  volumes:
+  - emptyDir:
+      medium: Memory
+      # It is configured to retain 10 log files of 1M each, so 20M of space is enough
+      sizeLimit: 20Mi
+    name: nacos-log
+  - emptyDir:
+      medium: Memory
+      # Depends on the volume of service discovery data
+      sizeLimit: 20Mi
+    name: nacos-cache
+  volumeMounts:
+  - name: nacos-log
+    mountPath: /log
+  - name: nacos-cache
+    mountPath: /cache
+```
+
+A more ideal solution is to prevent nacos-sdk-go from writing logs and caches to the local file system from the start. After all, in a cloud-native scenario, there is little significance in persisting logs and caches to the local disk. If you find a way to prevent nacos-sdk-go from writing to the file system, you are welcome to update this document.
 
 ## Usage
 

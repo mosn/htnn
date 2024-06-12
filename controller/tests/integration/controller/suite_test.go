@@ -148,9 +148,9 @@ var _ = BeforeSuite(func() {
 	registry.InitRegistryManager(&registry.RegistryManagerOption{
 		Output: output,
 	})
-	err = (&controller.ServiceRegistryReconciler{
-		ResourceManager: rm,
-	}).SetupWithManager(k8sManager)
+	err = controller.NewServiceRegistryReconciler(
+		rm,
+	).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
 	go func() {
