@@ -543,7 +543,7 @@ func TestValidateConsumer(t *testing.T) {
 					},
 				},
 			},
-			err: "http filter should not in authn/pre/post position: keyAuth",
+			err: "this http filter can not be added by the consumer: keyAuth",
 		},
 	}
 

@@ -229,7 +229,7 @@ func ValidateConsumer(c *Consumer) error {
 
 		pos := p.Order().Position
 		if pos <= plugins.OrderPositionAuthn || pos >= plugins.OrderPositionInner {
-			return errors.New("http filter should not in authn/pre/post position: " + name)
+			return errors.New("this http filter can not be added by the consumer: " + name)
 		}
 
 		data := filter.Config.Raw
