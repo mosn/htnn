@@ -147,7 +147,7 @@ func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 	// to get the sha256 ID
 	image := "envoyproxy/envoy@sha256:490f58e109735df4326bac2736ed41e062ce541d3851d634ccbf24552e5b4ce5"
 
-	specifiedImage := os.Getenv("HTNN_DATA_PLANE_INTEGRATION_TEST_IMAGE")
+	specifiedImage := os.Getenv("PROXY_IMAGE")
 	if specifiedImage != "" {
 		image = specifiedImage
 	}
@@ -156,7 +156,7 @@ func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 	if err != nil {
 		return nil, err
 	}
-	if !strings.Contains(string(b), "envoyproxy/envoy") {
+	if len(strings.Split(string(b), "\n")) < 3 {
 		cmd := exec.Command("docker", "pull", image)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr

@@ -14,6 +14,8 @@ title: 插件集成测试框架
 
 一些测试需要第三方服务。您可以通过在 `./tests/integration/testdata/services` 下运行 `docker-compose up $service` 来启动它们。
 
+默认情况下，测试框架通过镜像 `envoyproxy/envoy` 启动 Envoy。你可以通过设置环境变量 `PROXY_IMAGE` 来指定其他镜像。例如，`PROXY_IMAGE=envoyproxy/envoy:contrib-v1.29.4 go test -v ./tests/integration/ -run TestLimitCountRedis` 将使用 `envoyproxy/envoy:contrib-v1.29.4` 镜像。
+
 ## 端口使用
 
 测试框架将使用：
