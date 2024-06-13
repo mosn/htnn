@@ -39,7 +39,7 @@ helm: $(LOCALBIN)
 .PHONY: create-cluster
 create-cluster: kind kubectl
 	$(KIND) create cluster --name htnn --image kindest/node:v$(MIN_K8S_VERSION)
-	$(KUBECTL) kustomize "github.com/kubernetes-sigs/gateway-api/config/crd?ref=v1.0.0" | $(KUBECTL) apply -f -
+	$(KUBECTL) kustomize "github.com/kubernetes-sigs/gateway-api/config/crd?ref=v$(GATEWAY_API_VERSION)" | $(KUBECTL) apply -f -
 
 .PHONY: delete-cluster
 delete-cluster: kind

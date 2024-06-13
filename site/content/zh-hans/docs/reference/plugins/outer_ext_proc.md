@@ -27,7 +27,7 @@ title: Outer Ext Proc
 
 具体的配置字段参见对应的 [Envoy 文档](https://www.envoyproxy.io/docs/envoy/v1.29.4/api-v3/extensions/filters/http/ext_proc/v3/ext_proc.proto#envoy-v3-api-msg-extensions-filters-http-ext-proc-v3-extprocoverrides)。
 
-External Processing 的工作原理参见 [Envoy 的 External Processing 机制介绍](https://www.envoyproxy.io/docs/envoy/v1.29.4/configuration/http/http_filters/ext_proc_filter.html)。
+External Processing 的工作原理参见 [Envoy 的 External Processing 机制介绍](https://www.envoyproxy.io/docs/envoy/v1.29.5/configuration/http/http_filters/ext_proc_filter.html)。
 
 ## 用法
 

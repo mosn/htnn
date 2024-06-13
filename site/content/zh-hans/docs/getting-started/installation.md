@@ -53,4 +53,4 @@ htnn-controller 具体配置项请参考 [htnn-controller 配置](https://artifa
 helm install htnn-gateway htnn/htnn-gateway ... --set gateway.podAnnotations.test=ok
 ```
 
-htnn-gateway 相关的配置项以 `gateway` 开头，具体配置项请参考 [数据面配置](https://github.com/istio/istio/blob/1.21.2/manifests/charts/gateway/values.yaml)。
+htnn-gateway 相关的配置项以 `gateway` 开头，具体配置项请参考 [数据面配置](https://github.com/istio/istio/blob/1.21.3/manifests/charts/gateway/values.yaml)。

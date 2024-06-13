@@ -18,9 +18,8 @@ To release a new version, please follow the steps below:
 To upgrade Istio, please follow the steps below:
 
 * Discuss the impact of the upgrade. For example, is there any break change, do we need to upgrade K8S, etc.
-* Update the base image used in the integration / e2e tests.
-* Update the ISTIO_VERSION we define in the Makefile.
-* Update the versions of istio, envoy and go-control-plane package in the `go.mod` and `go.sum`.
+* Update the base image used in the integration tests.
+* Update the ISTIO_VERSION we define in the `common.mk`.
 * Update the link `/envoy/v1.xx.y/configuration/` in the doc to the new Envoy version. And `istio/istio/xxx` to the new Istio version.
 * Update the charts' dependency versions used in the `manifests/charts/*/Chart.yaml`.
 

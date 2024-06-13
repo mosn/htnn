@@ -27,7 +27,7 @@ As Envoy uses an onion model to proxy requests, the execution order is:
 
 For specific configuration fields, see the corresponding [Envoy documentation](https://www.envoyproxy.io/docs/envoy/v1.29.4/api-v3/extensions/filters/http/ext_proc/v3/ext_proc.proto#envoy-v3-api-msg-extensions-filters-http-ext-proc-v3-extprocoverrides).
 
-For the working principles of External Processing, refer to [Envoy's introduction to External Processing](https://www.envoyproxy.io/docs/envoy/v1.29.4/configuration/http/http_filters/ext_proc_filter.html).
+For the working principles of External Processing, refer to [Envoy's introduction to External Processing](https://www.envoyproxy.io/docs/envoy/v1.29.5/configuration/http/http_filters/ext_proc_filter.html).
 
 ## Usage
 
