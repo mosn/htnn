@@ -147,13 +147,14 @@ func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api
 		return api.Continue
 	}
 
-	c, ok := f.callbacks.LookupConsumer(Name, accessKey)
+	name := hmac_auth.Name
+	c, ok := f.callbacks.LookupConsumer(name, accessKey)
 	if !ok {
 		api.LogInfof("can not find consumer with access key %s in %s", accessKey, akh)
 		return &api.LocalResponse{Code: 401, Msg: "invalid access key"}
 	}
 
-	f.consumer = c.PluginConfig(Name).(*hmac_auth.ConsumerConfig)
+	f.consumer = c.PluginConfig(name).(*hmac_auth.ConsumerConfig)
 	signature, _ := headers.Get(sh)
 	signContent := f.getSignContent(headers, accessKey)
 	generatedSign := f.sign([]byte(signContent))

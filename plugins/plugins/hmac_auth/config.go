@@ -20,12 +20,8 @@ import (
 	"mosn.io/htnn/types/plugins/hmac_auth"
 )
 
-const (
-	Name = "hmacAuth"
-)
-
 func init() {
-	plugins.RegisterHttpPlugin(Name, &plugin{})
+	plugins.RegisterHttpPlugin(hmac_auth.Name, &plugin{})
 }
 
 type plugin struct {

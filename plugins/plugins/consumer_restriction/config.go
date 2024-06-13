@@ -20,12 +20,8 @@ import (
 	"mosn.io/htnn/types/plugins/consumer_restriction"
 )
 
-const (
-	Name = "consumerRestriction"
-)
-
 func init() {
-	plugins.RegisterHttpPlugin(Name, &plugin{})
+	plugins.RegisterHttpPlugin(consumer_restriction.Name, &plugin{})
 }
 
 type plugin struct {

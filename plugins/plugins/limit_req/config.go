@@ -28,12 +28,8 @@ import (
 	"mosn.io/htnn/types/plugins/limit_req"
 )
 
-const (
-	Name = "limitReq"
-)
-
 func init() {
-	plugins.RegisterHttpPlugin(Name, &plugin{})
+	plugins.RegisterHttpPlugin(limit_req.Name, &plugin{})
 }
 
 type plugin struct {
