@@ -247,8 +247,8 @@ func (p *FilterManagerConfigParser) Merge(parent interface{}, child interface{})
 }
 
 type filterManager struct {
-	filters         []*model.FilterWrapper
-	consumerFilters []*model.FilterWrapper
+	filters                 []*model.FilterWrapper
+	filtersNotAfterConsumer []*model.FilterWrapper
 
 	decodeRequestNeeded bool
 	decodeIdx           int
@@ -274,7 +274,7 @@ type filterManager struct {
 
 func (m *filterManager) Reset() {
 	m.filters = nil
-	m.consumerFilters = nil
+	m.filtersNotAfterConsumer = nil
 
 	m.decodeRequestNeeded = false
 	m.decodeIdx = -1
@@ -539,8 +539,8 @@ func FilterManagerFactory(c interface{}) capi.StreamFilterFactory {
 
 		if conf.consumerFiltersEndAt != 0 {
 			consumerFiltersEndAt := conf.consumerFiltersEndAt
-			consumerFilters := filters[:consumerFiltersEndAt]
-			fm.consumerFilters = consumerFilters
+			filtersNotAfterConsumer := filters[:consumerFiltersEndAt]
+			fm.filtersNotAfterConsumer = filtersNotAfterConsumer
 			fm.filters = filters[consumerFiltersEndAt:]
 		}
 
@@ -645,9 +645,9 @@ func (m *filterManager) DecodeHeaders(headers capi.RequestHeaderMap, endStream b
 			RequestHeaderMap: headers,
 		}
 		m.reqHdr = headers
-		if len(m.consumerFilters) > 0 {
-			for _, f := range m.consumerFilters {
-				// Consumer plugins only use DecodeHeaders for now
+		if len(m.filtersNotAfterConsumer) > 0 {
+			for _, f := range m.filtersNotAfterConsumer {
+				// these filters only use DecodeHeaders for now
 				res = f.DecodeHeaders(headers, endStream)
 				if m.handleAction(res, phaseDecodeHeaders) {
 					return

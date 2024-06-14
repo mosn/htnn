@@ -64,7 +64,6 @@ const (
 	errInvalidGoPluginOrder       = "invalid plugin order position: Go plugin should not use OrderPositionOuter or OrderPositionInner"
 	errInvalidNativePluginOrder   = "invalid plugin order position: Native plugin should use OrderPositionOuter or OrderPositionInner"
 	errInvalidConsumerPluginOrder = "invalid plugin order position: Consumer plugin should use OrderPositionAuthn"
-	errAuthnPluginOrder           = "Authn plugin should run in the DecodeHeaders phase"
 	errDecodeRequestUnsatified    = "DecodeRequest is run only after DecodeHeaders returns WaitAllData. So DecodeHeaders should be defined in this plugin."
 	errEncodeResponseUnsatified   = "EncodeResponse is run only after EncodeHeaders returns WaitAllData. So EncodeHeaders should be defined in this plugin."
 )

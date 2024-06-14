@@ -186,11 +186,7 @@ var _ = Describe("HTTPFilterPolicy controller, for gateway", func() {
 					if len(policy.Status.Conditions) == 0 {
 						return false
 					}
-					if policy.Name == "policy" {
-						if policy.Status.Conditions[0].Reason != string(gwapiv1a2.PolicyReasonAccepted) {
-							return false
-						}
-					} else {
+					if policy.Name != "policy" {
 						if policy.Status.Conditions[0].Reason != string(gwapiv1a2.PolicyReasonTargetNotFound) {
 							return false
 						}
@@ -261,10 +257,6 @@ var _ = Describe("HTTPFilterPolicy controller, for gateway", func() {
 					}
 					if policy.Name == "not-found" {
 						if policy.Status.Conditions[0].Reason != string(gwapiv1a2.PolicyReasonTargetNotFound) {
-							return false
-						}
-					} else {
-						if policy.Status.Conditions[0].Reason != string(gwapiv1a2.PolicyReasonAccepted) {
 							return false
 						}
 					}
@@ -391,11 +383,7 @@ var _ = Describe("HTTPFilterPolicy controller, for gateway", func() {
 					if len(policy.Status.Conditions) == 0 {
 						return false
 					}
-					if policy.Name == "policy" {
-						if policy.Status.Conditions[0].Reason != string(gwapiv1a2.PolicyReasonAccepted) {
-							return false
-						}
-					} else {
+					if policy.Name != "policy" {
 						if policy.Status.Conditions[0].Reason != string(gwapiv1a2.PolicyReasonTargetNotFound) {
 							return false
 						}
@@ -467,10 +455,6 @@ var _ = Describe("HTTPFilterPolicy controller, for gateway", func() {
 					}
 					if policy.Name == "not-found" {
 						if policy.Status.Conditions[0].Reason != string(gwapiv1a2.PolicyReasonTargetNotFound) {
-							return false
-						}
-					} else {
-						if policy.Status.Conditions[0].Reason != string(gwapiv1a2.PolicyReasonAccepted) {
 							return false
 						}
 					}
