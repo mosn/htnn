@@ -131,6 +131,8 @@ filter manager 实现了以下特性：
 
 注意：`EncodeResponse` 仅在 `EncodeHeaders` 返回 `WaitAllData` 时才被执行。所以如果定义了 `EncodeResponse`，一定要定义 `EncodeHeaders`。
 
+目前顺序为 `Access` 或 `Authn` 的插件不支持 `DecodeRequest` 方法。
+
 ## 消费者插件
 
 消费者插件是一种特殊的 Go 插件。它根据请求头中的内容查找并设置[消费者](../../concept/consumer)。
