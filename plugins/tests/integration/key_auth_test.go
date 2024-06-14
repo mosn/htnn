@@ -61,6 +61,7 @@ func TestKeyAuth(t *testing.T) {
 			run: func(t *testing.T) {
 				resp, _ := dp.Get("/echo", http.Header{"Authorization": []string{"rick"}})
 				assert.Equal(t, 200, resp.StatusCode)
+				assert.Equal(t, 0, len(resp.Header.Values("Echo-Authorization")))
 				resp, _ = dp.Get("/echo", http.Header{"Authorization": []string{"morty"}})
 				assert.Equal(t, 401, resp.StatusCode)
 				resp, _ = dp.Get("/echo", nil)
@@ -84,8 +85,9 @@ func TestKeyAuth(t *testing.T) {
 				},
 			}),
 			run: func(t *testing.T) {
-				resp, _ := dp.Get("/echo?ak=rick", nil)
+				resp, _ := dp.Get("/echo?ak=rick&other=Key", nil)
 				assert.Equal(t, 200, resp.StatusCode)
+				assert.Equal(t, "/echo?other=Key", resp.Header.Get("Echo-Path"))
 				resp, _ = dp.Get("/echo?ak=morty", nil)
 				assert.Equal(t, 401, resp.StatusCode)
 				resp, _ = dp.Get("/echo", nil)

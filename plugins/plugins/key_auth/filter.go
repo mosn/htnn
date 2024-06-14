@@ -47,12 +47,14 @@ func (f *filter) verify(value string) api.ResultAction {
 
 func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {
 	config := f.config
+	var u *url.URL
 	var query url.Values
 	for _, key := range config.Keys {
 		var vals []string
 		if key.Source == key_auth.Source_QUERY {
 			if query == nil {
-				query = headers.Url().Query()
+				u = headers.Url()
+				query = u.Query()
 			}
 			vals = query[key.Name]
 		} else {
@@ -61,6 +63,14 @@ func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api
 
 		n := len(vals)
 		if n == 1 {
+			// hide credential by default
+			if key.Source == key_auth.Source_QUERY {
+				query.Del(key.Name)
+				u.RawQuery = query.Encode()
+				headers.Set(":path", u.String())
+			} else {
+				headers.Del(key.Name)
+			}
 			return f.verify(vals[0])
 		}
 		if n > 1 {
