@@ -39,12 +39,7 @@ message Config {
   //  the authorization service has failed, or if the authorization service has returned a HTTP 5xx
   //  error.
   //
-  //  2. When set to false, ext-authz will ``reject`` client requests and return a ``Forbidden``
-  //  response if the communication with the authorization service has failed, or if the
-  //  authorization service has returned a HTTP 5xx error.
-  //
-  // Note that errors can be ``always`` tracked in the :ref:`stats
-  // <config_http_filters_ext_authz_stats>`.
+  //  2. When set to false, ext-auth will ``reject`` client requests and return a ``Forbidden``
   bool failure_mode_allow = 2;
 
   // When ``failure_mode_allow`` and ``failure_mode_allow_header_add`` are both set to true,
@@ -81,7 +76,7 @@ message AuthorizationRequest {
   // Sets a list of headers that will be included to the request to authorization service. Note that
   // client request of the same key will be overridden.
   repeated api.v1.HeaderValue headers_to_add = 1
-  [(validate.rules).repeated = {ignore_empty: true, min_items: 1}];
+      [(validate.rules).repeated = {ignore_empty: true, min_items: 1}];
 }
 
 message AuthorizationResponse {
@@ -89,10 +84,10 @@ message AuthorizationResponse {
   // to the original client request.
   // Note that coexistent headers will be overridden.
   repeated api.v1.StringMatcher allowed_upstream_headers = 1
-  [(validate.rules).repeated = {ignore_empty: true, min_items: 1}];
+      [(validate.rules).repeated = {ignore_empty: true, min_items: 1}];
 
   // When this is set, authorization response headers that have a correspondent match will be added
   // to the client's response when the request is rejected.
   repeated api.v1.StringMatcher allowed_client_headers = 2
-  [(validate.rules).repeated = {ignore_empty: true, min_items: 1}];
+      [(validate.rules).repeated = {ignore_empty: true, min_items: 1}];
 }

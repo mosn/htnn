@@ -50,18 +50,13 @@ type Config struct {
 	//
 	//	*Config_HttpService
 	Services isConfig_Services `protobuf_oneof:"services"`
-	//	Changes filter's behaviour on errors:
+	// Changes filter's behaviour on errors:
 	//
-	//	1. When set to true, the filter will ``accept`` client request even if the communication with
-	//	the authorization service has failed, or if the authorization service has returned a HTTP 5xx
-	//	error.
+	// 1. When set to true, the filter will “accept“ client request even if the communication with
+	// the authorization service has failed, or if the authorization service has returned a HTTP 5xx
+	// error.
 	//
-	//	2. When set to false, ext-authz will ``reject`` client requests and return a ``Forbidden``
-	//	response if the communication with the authorization service has failed, or if the
-	//	authorization service has returned a HTTP 5xx error.
-	//
-	// Note that errors can be “always“ tracked in the :ref:`stats
-	// <config_http_filters_ext_authz_stats>`.
+	// 2. When set to false, ext-auth will “reject“ client requests and return a “Forbidden“
 	FailureModeAllow bool `protobuf:"varint,2,opt,name=failure_mode_allow,json=failureModeAllow,proto3" json:"failure_mode_allow,omitempty"`
 	// When “failure_mode_allow“ and “failure_mode_allow_header_add“ are both set to true,
 	// “x-envoy-auth-failure-mode-allowed: true“ will be added to request headers if the communication
