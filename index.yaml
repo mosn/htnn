@@ -1,0 +1,44 @@
+apiVersion: v1
+entries:
+  htnn-controller:
+  - apiVersion: v2
+    appVersion: 0.2.1
+    created: "2024-06-15T14:42:30.41204303Z"
+    dependencies:
+    - alias: istio-base
+      name: base
+      repository: https://istio-release.storage.googleapis.com/charts
+      version: 1.21.2
+    description: A Helm chart for HTNN controller
+    digest: 0b6c5d5918c6715c6974fcc3cdda397121b0f4699e760e4cd62e7580fca14ec4
+    icon: https://avatars.githubusercontent.com/u/58020396
+    maintainers:
+    - name: spacewander
+    name: htnn-controller
+    sources:
+    - https://github.com/mosn/htnn
+    type: application
+    urls:
+    - https://github.com/mosn/htnn/releases/download/htnn-controller-0.1.4/htnn-controller-0.1.4.tgz
+    version: 0.1.4
+  htnn-gateway:
+  - apiVersion: v2
+    appVersion: 0.2.1
+    created: "2024-06-15T14:42:30.59472621Z"
+    dependencies:
+    - name: gateway
+      repository: https://istio-release.storage.googleapis.com/charts
+      version: 1.21.2
+    description: A Helm chart for HTNN data plane running as gateway
+    digest: 5100d0d4c2f40cd325dcc8b05b9980b0ebe59cc8392f15073c43c971b463e6fc
+    icon: https://avatars.githubusercontent.com/u/58020396
+    maintainers:
+    - name: spacewander
+    name: htnn-gateway
+    sources:
+    - https://github.com/mosn/htnn
+    type: application
+    urls:
+    - https://github.com/mosn/htnn/releases/download/htnn-gateway-0.1.3/htnn-gateway-0.1.3.tgz
+    version: 0.1.3
+generated: "2024-06-15T14:42:30.594736269Z"
