@@ -58,6 +58,11 @@ type FilterManagerConfig struct {
 type filterManagerConfig struct {
 	consumerFiltersEndAt int
 
+	initOnce             sync.Once
+	initFailed           bool
+	initFailure          error
+	initFailedPluginName string
+
 	parsed []*model.ParsedFilterConfig
 	pool   *sync.Pool
 
@@ -146,18 +151,20 @@ func (conf *filterManagerConfig) Merge(another *filterManagerConfig) *filterMana
 }
 
 func (conf *filterManagerConfig) InitOnce() {
-	for _, fc := range conf.parsed {
-		config := fc.ParsedConfig
-		if initer, ok := config.(pkgPlugins.Initer); ok {
-			fc.InitOnce.Do(func() {
+	conf.initOnce.Do(func() {
+		for _, fc := range conf.parsed {
+			config := fc.ParsedConfig
+			if initer, ok := config.(pkgPlugins.Initer); ok {
 				// For now, we have nothing to provide as config callbacks
 				err := initer.Init(nil)
 				if err != nil {
-					fc.Factory = NewInternalErrorFactory(fc.Name, err)
+					conf.initFailure = err
+					conf.initFailedPluginName = fc.Name
+					conf.initFailed = true
 				}
-			})
+			}
 		}
-	}
+	})
 }
 
 func (p *FilterManagerConfigParser) Parse(any *anypb.Any, callbacks capi.ConfigCallbackHandler) (interface{}, error) {
@@ -259,7 +266,6 @@ type filterManager struct {
 	rspHdr               api.ResponseHeaderMap
 
 	// use a group of bools instead of map to avoid lookup
-	canSkipDecodeHeaders bool
 	canSkipDecodeData    bool
 	canSkipEncodeHeaders bool
 	canSkipEncodeData    bool
@@ -284,7 +290,6 @@ func (m *filterManager) Reset() {
 	m.encodeIdx = -1
 	m.rspHdr = nil
 
-	m.canSkipDecodeHeaders = false
 	m.canSkipDecodeData = false
 	m.canSkipEncodeHeaders = false
 	m.canSkipEncodeData = false
@@ -477,15 +482,11 @@ func FilterManagerFactory(c interface{}) capi.StreamFilterFactory {
 			}
 		}()
 
-		conf.InitOnce()
-
 		fm := conf.pool.Get().(*filterManager)
 		fm.callbacks.FilterCallbackHandler = cb
 
 		canSkipMethod := fm.canSkipMethod
 		if canSkipMethod == nil {
-			// the `canSkipMethod` can't be initialized in InitOnce,
-			// as it depends on the filter which is created per request.
 			canSkipMethod = newSkipMethodsMap()
 		}
 
@@ -546,7 +547,6 @@ func FilterManagerFactory(c interface{}) capi.StreamFilterFactory {
 
 		// The skip check is based on the compiled code. So if the DecodeRequest is defined,
 		// even it is not called, DecodeData will not be skipped. Same as EncodeResponse.
-		fm.canSkipDecodeHeaders = fm.canSkipMethod["DecodeHeaders"]
 		fm.canSkipDecodeData = fm.canSkipMethod["DecodeData"] && fm.canSkipMethod["DecodeRequest"]
 		fm.canSkipEncodeHeaders = fm.canSkipMethod["EncodeHeaders"]
 		fm.canSkipEncodeData = fm.canSkipMethod["EncodeData"] && fm.canSkipMethod["EncodeResponse"]
@@ -633,13 +633,18 @@ func (m *filterManager) localReply(v *api.LocalResponse) {
 }
 
 func (m *filterManager) DecodeHeaders(headers capi.RequestHeaderMap, endStream bool) capi.StatusType {
-	if m.canSkipDecodeHeaders {
-		return capi.Continue
-	}
-
 	go func() {
 		defer m.callbacks.RecoverPanic()
 		var res api.ResultAction
+
+		m.config.InitOnce()
+		if m.config.initFailed {
+			api.LogErrorf("error in plugin %s: %s", m.config.initFailedPluginName, m.config.initFailure)
+			m.localReply(&api.LocalResponse{
+				Code: 500,
+			})
+			return
+		}
 
 		headers := &filterManagerRequestHeaderMap{
 			RequestHeaderMap: headers,

@@ -18,8 +18,6 @@ package model
 // It's not a part of the API, so it's not recommended to use it in plugin code.
 
 import (
-	"sync"
-
 	"mosn.io/htnn/api/pkg/filtermanager/api"
 )
 
@@ -31,7 +29,6 @@ type FilterConfig struct {
 type ParsedFilterConfig struct {
 	Name         string
 	ParsedConfig interface{}
-	InitOnce     sync.Once
 	Factory      api.FilterFactory
 }
 
