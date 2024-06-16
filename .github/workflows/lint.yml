@@ -95,7 +95,6 @@ jobs:
         reporter: github-pr-review
         path: "."
         pattern: "*.sh"
-        exclude: "./.git/*"
 
     - name: lint remain
       run: |
