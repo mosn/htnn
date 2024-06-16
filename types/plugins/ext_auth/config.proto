@@ -32,6 +32,21 @@ message Config {
     // HTTP service configuration (default timeout: 200ms).
     HttpService http_service = 1;
   }
+
+  //  Changes filter's behaviour on errors:
+  //
+  //  1. When set to true, the filter will ``accept`` client request even if the communication with
+  //  the authorization service has failed, or if the authorization service has returned a HTTP 5xx
+  //  error.
+  //
+  //  2. When set to false, ext-auth will ``reject`` client requests and return a ``Forbidden``
+  bool failure_mode_allow = 2;
+
+  // When ``failure_mode_allow`` and ``failure_mode_allow_header_add`` are both set to true,
+  // ``x-envoy-auth-failure-mode-allowed: true`` will be added to request headers if the communication
+  // with the authorization service has failed, or if the authorization service has returned a
+  // HTTP 5xx error.
+  bool failure_mode_allow_header_add = 3;
 }
 
 message HttpService {
