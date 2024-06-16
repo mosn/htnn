@@ -18,9 +18,8 @@ The `extAuth` plugin sends an authorization request to an authorization service 
 | Name                          | Type        | Required | Validation | Description                                                  |
 | ----------------------------- | ----------- | -------- | ---------- | ------------------------------------------------------------ |
 | httpService                   | HttpService | True     |            |                                                              |
-| failure_mode_allow            | bool        | False    |            | Default is "false".When set to true, the filter will “accept“ client request even if the communication with the authorization service has failed, or if the authorization service has returned a HTTP 5xx |
-| failure_mode_allow_header_add | bool        | False    |            | Default is "false".When “failure_mode_allow“ and “failure_mode_allow_header_add“ are both set to true, “x-envoy-auth-failure-mode-allowed: true“ will be added to request headers if the communication with the authorization service has failed, or if the authorization service has returned a HTTP 5xx error |
-
+| failure_mode_allow            | bool        | False    |            | Default is `false`. When set to true, the filter will "accept" client request even if the communication with the authorization service has failed, or if the authorization service has returned an HTTP 5xx |
+| failure_mode_allow_header_add | bool        | False    |            | Default is `false`. When `failure_mode_allow` and `failure_mode_allow_header_add` are both set to true, "x-envoy-auth-failure-mode-allowed: true" will be added to request headers if the communication with the authorization service has failed, or if the authorization service has returned an HTTP 5xx error |
 ### HttpService
 
 | Name                  | Type                                | Required | Validation        | Description                                                                                                                                               |

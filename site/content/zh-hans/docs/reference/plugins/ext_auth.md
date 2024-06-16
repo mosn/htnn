@@ -18,8 +18,8 @@ title: Ext Auth
 | 名称          | 类型          | 必选 | 校验规则 | 说明 |
 |--------------|---------------|------|----------|------|
 | httpService | HttpService   | 是   |          |      |
-| failure_mode_allow | bool | 否 | | 默认值false。当设置为true时，即使与授权服务的通信失败，或者授权服务返回了HTTP 5xx错误，过滤器仍会接受客户端请求 |
-| failure_mode_allow_header_add | bool | 否 | | 默认值false。当`failure_mode_allow`和`failure_mode_allow_header_add`都设置为true时，若与授权服务的通信失败，或授权服务返回了HTTP 5xx错误，那么请求头中将会添加`x-envoy-auth-failure-mode-allowed: true` |
+| failure_mode_allow | bool | 否 | | 默认为 false。当设置为 true 时，即使与授权服务的通信失败，或者授权服务返回了 HTTP 5xx 错误，过滤器仍会接受客户端请求 |
+| failure_mode_allow_header_add | bool | 否 | | 默认为 false。当 `failure_mode_allow` 和 `failure_mode_allow_header_add` 都设置为 true 时，若与授权服务的通信失败，或授权服务返回了 HTTP 5xx 错误，那么请求头中将会添加 `x-envoy-auth-failure-mode-allowed: true` |
 
 ### HttpService
 
