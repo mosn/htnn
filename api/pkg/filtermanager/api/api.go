@@ -223,6 +223,8 @@ type FilterCallbackHandler interface {
 	PluginState() PluginState
 }
 
+// FilterFactory returns a per-request Filter which has configuration bound to it.
+// This function should be a pure builder and should not have any side effect.
 type FilterFactory func(config interface{}, callbacks FilterCallbackHandler) Filter
 
 // DynamicMetadata operates the Envoy's dynamic metadata

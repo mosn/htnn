@@ -22,6 +22,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"mosn.io/htnn/api/pkg/filtermanager"
+	"mosn.io/htnn/api/pkg/filtermanager/model"
 	"mosn.io/htnn/api/plugins/tests/integration/control_plane"
 	"mosn.io/htnn/api/plugins/tests/integration/data_plane"
 )
@@ -165,6 +166,54 @@ func TestConsumerWithFilterAndMergeFromHTTPFilter(t *testing.T) {
 				resp, _ = dp.Get("/echo", http.Header{"Authorization": []string{"marvin"}})
 				assert.Equal(t, 206, resp.StatusCode)
 				assert.Equal(t, []string{"no buffer"}, resp.Header.Values("Run"))
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			controlPlane.UseGoPluginConfig(t, tt.config, dp)
+			tt.run(t)
+		})
+	}
+}
+
+func TestConsumerFilterNotAfterConsumerRunInLaterPhase(t *testing.T) {
+	dp, err := data_plane.StartDataPlane(t, &data_plane.Option{
+		Bootstrap: data_plane.Bootstrap().AddConsumer("marvin", map[string]interface{}{
+			"auth": map[string]interface{}{
+				"consumer": `{"name":"marvin"}`,
+			},
+		}),
+	})
+	if err != nil {
+		t.Fatalf("failed to start data plane: %v", err)
+		return
+	}
+	defer dp.Stop()
+
+	tests := []struct {
+		name   string
+		config *filtermanager.FilterManagerConfig
+		run    func(t *testing.T)
+	}{
+		{
+			name: "authn & exec",
+			config: control_plane.NewPluinConfig([]*model.FilterConfig{
+				{
+					Name:   "beforeConsumerAndHasOtherMethod",
+					Config: map[string]interface{}{},
+				},
+				{
+					Name:   "consumer",
+					Config: map[string]interface{}{},
+				},
+			}),
+			run: func(t *testing.T) {
+				resp, _ := dp.Get("/echo", http.Header{"Authorization": []string{"marvin"}})
+				assert.Equal(t, 200, resp.StatusCode)
+				assert.Equal(t, "beforeConsumerAndHasOtherMethod", resp.Header.Get("Echo-Run"))
+				assert.Equal(t, "beforeConsumerAndHasOtherMethod", resp.Header.Get("Run"))
 			},
 		},
 	}
