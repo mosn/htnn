@@ -58,7 +58,7 @@ type FilterManagerConfig struct {
 type filterManagerConfig struct {
 	consumerFiltersEndAt int
 
-	initOnce             sync.Once
+	initOnce             *sync.Once
 	initFailed           bool
 	initFailure          error
 	initFailedPluginName string
@@ -103,6 +103,11 @@ func (conf *filterManagerConfig) Merge(another *filterManagerConfig) *filterMana
 	// data structure accidentally. We don't use deep copy all the fields, which may copy unexpected computed data.
 	// Let's copy fields manually.
 	cp := initFilterManagerConfig(ns)
+
+	if conf.initOnce != nil || another.initOnce != nil {
+		cp.initOnce = &sync.Once{}
+	}
+
 	cp.parsed = make([]*model.ParsedFilterConfig, 0, len(conf.parsed)+len(another.parsed))
 	// For now, we don't deepcopy the config. The config may contain connection to the external
 	// service, for example, a Redis cluster. Not sure if it is safe to deepcopy them. So far,
@@ -151,6 +156,10 @@ func (conf *filterManagerConfig) Merge(another *filterManagerConfig) *filterMana
 }
 
 func (conf *filterManagerConfig) InitOnce() {
+	if conf.initOnce == nil {
+		return
+	}
+
 	conf.initOnce.Do(func() {
 		for _, fc := range conf.parsed {
 			config := fc.ParsedConfig
@@ -205,6 +214,7 @@ func (p *FilterManagerConfigParser) Parse(any *anypb.Any, callbacks capi.ConfigC
 
 	consumerFiltersEndAt := 0
 	i := 0
+	needInit := false
 
 	for _, proto := range plugins {
 		name := proto.Name
@@ -233,6 +243,10 @@ func (p *FilterManagerConfigParser) Parse(any *anypb.Any, callbacks capi.ConfigC
 				if ok {
 					consumerFiltersEndAt = i + 1
 				}
+
+				if _, ok := config.(pkgPlugins.Initer); ok {
+					needInit = true
+				}
 			}
 			i++
 
@@ -241,6 +255,10 @@ func (p *FilterManagerConfigParser) Parse(any *anypb.Any, callbacks capi.ConfigC
 		}
 	}
 	conf.consumerFiltersEndAt = consumerFiltersEndAt
+
+	if needInit {
+		conf.initOnce = &sync.Once{}
+	}
 
 	return conf, nil
 }
@@ -268,6 +286,7 @@ type filterManager struct {
 	rspHdr               api.ResponseHeaderMap
 
 	// use a group of bools instead of map to avoid lookup
+	canSkipDecodeHeaders bool
 	canSkipDecodeData    bool
 	canSkipEncodeHeaders bool
 	canSkipEncodeData    bool
@@ -292,6 +311,7 @@ func (m *filterManager) Reset() {
 	m.encodeIdx = -1
 	m.rspHdr = nil
 
+	m.canSkipDecodeHeaders = false
 	m.canSkipDecodeData = false
 	m.canSkipEncodeHeaders = false
 	m.canSkipEncodeData = false
@@ -549,6 +569,7 @@ func FilterManagerFactory(c interface{}) capi.StreamFilterFactory {
 
 		// The skip check is based on the compiled code. So if the DecodeRequest is defined,
 		// even it is not called, DecodeData will not be skipped. Same as EncodeResponse.
+		fm.canSkipDecodeHeaders = fm.canSkipMethod["DecodeHeaders"] && fm.canSkipMethod["DecodeRequest"] && fm.config.initOnce == nil
 		fm.canSkipDecodeData = fm.canSkipMethod["DecodeData"] && fm.canSkipMethod["DecodeRequest"]
 		fm.canSkipEncodeHeaders = fm.canSkipMethod["EncodeHeaders"]
 		fm.canSkipEncodeData = fm.canSkipMethod["EncodeData"] && fm.canSkipMethod["EncodeResponse"]
@@ -635,6 +656,10 @@ func (m *filterManager) localReply(v *api.LocalResponse) {
 }
 
 func (m *filterManager) DecodeHeaders(headers capi.RequestHeaderMap, endStream bool) capi.StatusType {
+	if m.canSkipDecodeHeaders {
+		return capi.Continue
+	}
+
 	go func() {
 		defer m.callbacks.RecoverPanic()
 		var res api.ResultAction

@@ -325,6 +325,7 @@ func (c *initConfig) Init(cb api.ConfigCallbackHandler) error {
 
 func TestInitFailed(t *testing.T) {
 	config := initFilterManagerConfig("ns")
+	config.initOnce = &sync.Once{}
 	ok := &initConfig{}
 	bad := &initConfig{
 		err: errors.New("ouch"),
@@ -366,17 +367,14 @@ func TestInitFailed(t *testing.T) {
 	assert.Equal(t, 1, ok.count)
 	assert.Equal(t, 1, bad.count)
 
-	config = initFilterManagerConfig("from_lds")
+	config2 := initFilterManagerConfig("from_lds")
 	// simulate config inherited from LDS
-	config.parsed = []*model.ParsedFilterConfig{
-		okParsed,
-		badParsed,
-	}
+	config2 = config2.Merge(config)
 	wg.Add(n)
 	for i := 0; i < n; i++ {
 		go func(i int) {
 			cb := envoy.NewCAPIFilterCallbackHandler()
-			m := FilterManagerFactory(config)(cb).(*filterManager)
+			m := FilterManagerFactory(config2)(cb).(*filterManager)
 			h := http.Header{}
 			hdr := envoy.NewRequestHeaderMap(h)
 			m.DecodeHeaders(hdr, true)
@@ -445,6 +443,7 @@ func TestSkipMethodWhenThereAreMultiFilters(t *testing.T) {
 	for i := 0; i < 2; i++ {
 		m := FilterManagerFactory(config)(cb).(*filterManager)
 		assert.Equal(t, false, m.canSkipOnLog)
+		assert.Equal(t, false, m.canSkipDecodeHeaders)
 		assert.Equal(t, true, m.canSkipDecodeData)
 	}
 }
