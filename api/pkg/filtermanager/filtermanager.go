@@ -155,10 +155,12 @@ func (conf *filterManagerConfig) InitOnce() {
 		for _, fc := range conf.parsed {
 			config := fc.ParsedConfig
 			if initer, ok := config.(pkgPlugins.Initer); ok {
-				// For now, we have nothing to provide as config callbacks
-				err := initer.Init(nil)
-				if err != nil {
-					conf.initFailure = err
+				fc.InitOnce.Do(func() {
+					// For now, we have nothing to provide as config callbacks
+					fc.InitFailure = initer.Init(nil)
+				})
+				if fc.InitFailure != nil {
+					conf.initFailure = fc.InitFailure
 					conf.initFailedPluginName = fc.Name
 					conf.initFailed = true
 				}
