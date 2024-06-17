@@ -26,12 +26,8 @@ import (
 	casbintype "mosn.io/htnn/types/plugins/casbin"
 )
 
-const (
-	Name = "casbin"
-)
-
 func init() {
-	plugins.RegisterHttpPlugin(Name, &plugin{})
+	plugins.RegisterHttpPlugin(casbintype.Name, &plugin{})
 }
 
 type plugin struct {

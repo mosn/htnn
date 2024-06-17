@@ -36,7 +36,7 @@ type filter struct {
 }
 
 func (f *filter) verify(value string) api.ResultAction {
-	c, ok := f.callbacks.LookupConsumer(Name, value)
+	c, ok := f.callbacks.LookupConsumer(key_auth.Name, value)
 	if !ok {
 		return &api.LocalResponse{Code: 401, Msg: "invalid key"}
 	}

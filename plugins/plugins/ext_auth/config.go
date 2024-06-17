@@ -24,12 +24,8 @@ import (
 	"mosn.io/htnn/types/plugins/ext_auth"
 )
 
-const (
-	Name = "extAuth"
-)
-
 func init() {
-	plugins.RegisterHttpPlugin(Name, &plugin{})
+	plugins.RegisterHttpPlugin(ext_auth.Name, &plugin{})
 }
 
 type plugin struct {

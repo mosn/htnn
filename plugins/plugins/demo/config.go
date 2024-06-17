@@ -22,13 +22,9 @@ import (
 	"mosn.io/htnn/types/plugins/demo"
 )
 
-const (
-	Name = "demo"
-)
-
 func init() {
 	// Register the plugin with the given name
-	plugins.RegisterHttpPlugin(Name, &plugin{})
+	plugins.RegisterHttpPlugin(demo.Name, &plugin{})
 }
 
 type plugin struct {

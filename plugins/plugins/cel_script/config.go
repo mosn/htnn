@@ -23,12 +23,8 @@ import (
 	"mosn.io/htnn/types/plugins/cel_script"
 )
 
-const (
-	Name = "celScript"
-)
-
 func init() {
-	plugins.RegisterHttpPlugin(Name, &plugin{})
+	plugins.RegisterHttpPlugin(cel_script.Name, &plugin{})
 }
 
 type plugin struct {
