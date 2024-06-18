@@ -62,6 +62,8 @@ type filterManagerConfig struct {
 	pool   *sync.Pool
 
 	namespace string
+
+	enableDebugMode bool
 }
 
 func initFilterManagerConfig(namespace string) *filterManagerConfig {
@@ -98,6 +100,12 @@ func (conf *filterManagerConfig) Merge(another *filterManagerConfig) *filterMana
 	// data structure accidentally. We don't use deep copy all the fields, which may copy unexpected computed data.
 	// Let's copy fields manually.
 	cp := initFilterManagerConfig(ns)
+
+	cp.enableDebugMode = conf.enableDebugMode
+	if another.enableDebugMode {
+		cp.enableDebugMode = true
+	}
+
 	cp.parsed = make([]*model.ParsedFilterConfig, 0, len(conf.parsed)+len(another.parsed))
 	// For now, we don't deepcopy the config. The config may contain connection to the external
 	// service, for example, a Redis cluster. Not sure if it is safe to deepcopy them. So far,
@@ -224,6 +232,12 @@ func (p *FilterManagerConfigParser) Parse(any *anypb.Any, callbacks capi.ConfigC
 				if ok {
 					consumerFiltersEndAt = i + 1
 				}
+
+				if name == "debugMode" {
+					// we handle this plugin differently, so we can have debug behavior before
+					// executing this plugin.
+					conf.enableDebugMode = true
+				}
 			}
 			i++
 
@@ -289,6 +303,10 @@ func (m *filterManager) Reset() {
 	m.canSkipOnLog = false
 
 	m.callbacks.Reset()
+}
+
+func (m *filterManager) DebugModeEnabled() bool {
+	return m.config.enableDebugMode
 }
 
 type filterManagerRequestHeaderMap struct {
@@ -532,6 +550,10 @@ func FilterManagerFactory(c interface{}) capi.StreamFilterFactory {
 			} else {
 				filters[i] = model.NewFilterWrapper(fc.Name, f)
 			}
+
+			if fm.DebugModeEnabled() {
+				filters[i] = model.NewFilterWrapper(fc.Name, NewDebugFilter(fc.Name, filters[i].Filter, fm.callbacks))
+			}
 		}
 
 		if fm.canSkipMethod == nil {
@@ -630,6 +652,16 @@ func (m *filterManager) localReply(v *api.LocalResponse) {
 }
 
 func (m *filterManager) DecodeHeaders(headers capi.RequestHeaderMap, endStream bool) capi.StatusType {
+	// Ensure the headers are cached on the Go side.
+	// FIXME: remove this once we support OnLog phase headers in Envoy Go.
+	if m.DebugModeEnabled() {
+		headers.Get("test")
+		headers := &filterManagerRequestHeaderMap{
+			RequestHeaderMap: headers,
+		}
+		m.reqHdr = headers
+	}
+
 	if m.canSkipDecodeHeaders {
 		return capi.Continue
 	}
@@ -717,6 +749,13 @@ func (m *filterManager) DecodeHeaders(headers capi.RequestHeaderMap, endStream b
 					}
 				}
 
+				if m.DebugModeEnabled() {
+					for _, fw := range filterWrappers {
+						f := fw.Filter
+						fw.Filter = NewDebugFilter(fw.Name, f, m.callbacks)
+					}
+				}
+
 				canSkipMethod := c.CanSkipMethod
 				m.canSkipDecodeData = m.canSkipDecodeData && canSkipMethod["DecodeData"] && canSkipMethod["DecodeRequest"]
 				m.canSkipEncodeHeaders = m.canSkipEncodeData && canSkipMethod["EncodeHeaders"]
@@ -778,6 +817,7 @@ func (m *filterManager) DecodeHeaders(headers capi.RequestHeaderMap, endStream b
 				}
 			}
 		}
+
 		m.callbacks.Continue(capi.Continue)
 	}()
 
@@ -879,6 +919,13 @@ func (m *filterManager) DecodeData(buf capi.BufferInstance, endStream bool) capi
 }
 
 func (m *filterManager) EncodeHeaders(headers capi.ResponseHeaderMap, endStream bool) capi.StatusType {
+	// Ensure the headers are cached on the Go side.
+	// FIXME: remove this once we support OnLog phase headers in Envoy Go.
+	if m.DebugModeEnabled() {
+		headers.Get("test")
+		m.rspHdr = headers
+	}
+
 	if m.canSkipEncodeHeaders {
 		return capi.Continue
 	}
@@ -911,6 +958,7 @@ func (m *filterManager) EncodeHeaders(headers capi.ResponseHeaderMap, endStream 
 				}
 			}
 		}
+
 		m.callbacks.Continue(capi.Continue)
 	}()
 
@@ -1006,7 +1054,9 @@ func (m *filterManager) OnLog() {
 	// they need to copy the used data from the request to the Go side before kicking off
 	// the goroutine.
 	for _, f := range m.filters {
-		f.OnLog()
+		// TODO: the cached headers passed here is not precise. We need to get the real one via
+		// Envoy Go API. But it is not supported yet.
+		f.OnLog(m.reqHdr, nil, m.rspHdr, nil)
 	}
 
 	m.Reset()
