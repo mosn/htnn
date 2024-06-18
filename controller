@@ -1,0 +1,6 @@
+<html>
+  <head>
+    <meta name="go-import" content="mosn.io/htnn git https://github.com/mosn/htnn">
+    <meta name="go-source" content="mosn.io/htnn https://github.com/mosn/htnn https://github.com/mosn/htnn/tree/main{/dir} https://github.com/mosn/htnn/blob/main{/dir}/{file}#L{line}">
+  </head>
+</html>

@@ -1,9 +1,0 @@
-- apiVersion: htnn.mosn.io/v1
-  kind: ServiceRegistry
-  metadata:
-    name: invalid
-    namespace: default
-  spec:
-    type: nacos
-    config:
-      serverUrl: earth.online

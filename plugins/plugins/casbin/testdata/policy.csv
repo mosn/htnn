@@ -1,4 +1,0 @@
-# Note that the act (GET here) should be uppercase
-p, *, /, GET
-p, admin, *, *
-g, alice, admin
