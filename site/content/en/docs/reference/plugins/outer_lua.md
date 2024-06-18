@@ -27,7 +27,7 @@ Because Envoy uses the onion model to proxy requests, the execution order is:
 
 For specific configuration fields, see the corresponding [Envoy documentation](https://www.envoyproxy.io/docs/envoy/v1.29.4/api-v3/extensions/filters/http/lua/v3/lua.proto#extensions-filters-http-lua-v3-luaperroute).
 
-For the working principles of Lua filter, refer to [Envoy's introduction to Lua filter](https://www.envoyproxy.io/docs/envoy/v1.29.4/configuration/http/http_filters/lua_filter).
+For the working principles of Lua filter, refer to [Envoy's introduction to Lua filter](https://www.envoyproxy.io/docs/envoy/v1.29.5/configuration/http/http_filters/lua_filter).
 
 ## Usage
 

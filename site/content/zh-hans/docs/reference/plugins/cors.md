@@ -15,7 +15,7 @@ title: CORS
 
 ## 配置
 
-请参阅相应的 [Envoy 文档](https://www.envoyproxy.io/docs/envoy/v1.29.4/configuration/http/http_filters/cors_filter)。
+请参阅相应的 [Envoy 文档](https://www.envoyproxy.io/docs/envoy/v1.29.5/configuration/http/http_filters/cors_filter)。
 
 ## 用法
 

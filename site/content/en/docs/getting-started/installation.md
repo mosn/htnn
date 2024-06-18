@@ -44,10 +44,11 @@ We can use Helm's [Value files](https://helm.sh/docs/chart_template_guide/values
 ```shell
 helm install htnn-controller htnn/htnn-controller ... --set pilot.env.HTNN_ENABLE_LDS_PLUGIN_VIA_ECDS=true
 ```
+
 For specific configuration items of htnn-controller, please refer to the [htnn-controller configuration](https://artifacthub.io/packages/helm/htnn/htnn-controller#values).
 
 ```shell
 helm install htnn-gateway htnn/htnn-gateway ... --set gateway.podAnnotations.test=ok
 ```
 
-Configurations related to the htnn-gateway start with `gateway`, for specific configuration items please refer to the [data plane configuration](https://github.com/istio/istio/blob/1.21.2/manifests/charts/gateway/values.yaml).
+Configurations related to the htnn-gateway start with `gateway`, for specific configuration items please refer to the [data plane configuration](https://github.com/istio/istio/blob/1.21.3/manifests/charts/gateway/values.yaml).
