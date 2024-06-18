@@ -71,7 +71,8 @@ func (f *regularFilter) DecodeHeaders(headers api.RequestHeaderMap, endStream bo
 	return api.Continue
 }
 
-func (f *regularFilter) OnLog() {
+func (f *regularFilter) OnLog(reqHeaders api.RequestHeaderMap, reqTrailers api.RequestTrailerMap,
+	respHeaders api.ResponseHeaderMap, respTrailers api.ResponseTrailerMap) {
 }
 
 func BenchmarkFilterManagerRegular(b *testing.B) {

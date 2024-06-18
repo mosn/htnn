@@ -21,6 +21,7 @@ import (
 	_ "mosn.io/htnn/types/plugins/cel_script"
 	_ "mosn.io/htnn/types/plugins/consumer_restriction"
 	_ "mosn.io/htnn/types/plugins/cors"
+	_ "mosn.io/htnn/types/plugins/debug_mode"
 	_ "mosn.io/htnn/types/plugins/demo"
 	_ "mosn.io/htnn/types/plugins/ext_auth"
 	_ "mosn.io/htnn/types/plugins/ext_proc"

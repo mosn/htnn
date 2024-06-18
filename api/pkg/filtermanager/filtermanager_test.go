@@ -316,7 +316,8 @@ type onLogFilter struct {
 	api.PassThroughFilter
 }
 
-func (f *onLogFilter) OnLog() {
+func (f *onLogFilter) OnLog(reqHeaders api.RequestHeaderMap, reqTrailers api.RequestTrailerMap,
+	respHeaders api.ResponseHeaderMap, respTrailers api.ResponseTrailerMap) {
 }
 
 type addReqConf struct {
@@ -496,4 +497,18 @@ func TestPluginState(t *testing.T) {
 	cb.WaitContinued()
 	v, _ := hdr.Get("x-htnn-v")
 	assert.Equal(t, "value", v)
+}
+
+func TestMergeDebugFlag(t *testing.T) {
+	parent := initFilterManagerConfig("")
+	child := initFilterManagerConfig("")
+	child.enableDebugMode = true
+	merged := parent.Merge(child)
+	assert.Equal(t, true, merged.enableDebugMode)
+
+	parent = initFilterManagerConfig("")
+	child = initFilterManagerConfig("")
+	parent.enableDebugMode = true
+	merged = parent.Merge(child)
+	assert.Equal(t, true, merged.enableDebugMode)
 }
