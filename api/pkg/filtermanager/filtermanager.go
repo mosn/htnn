@@ -58,6 +58,11 @@ type FilterManagerConfig struct {
 type filterManagerConfig struct {
 	consumerFiltersEndAt int
 
+	initOnce             *sync.Once
+	initFailed           bool
+	initFailure          error
+	initFailedPluginName string
+
 	parsed []*model.ParsedFilterConfig
 	pool   *sync.Pool
 
@@ -100,6 +105,10 @@ func (conf *filterManagerConfig) Merge(another *filterManagerConfig) *filterMana
 	// data structure accidentally. We don't use deep copy all the fields, which may copy unexpected computed data.
 	// Let's copy fields manually.
 	cp := initFilterManagerConfig(ns)
+
+	if conf.initOnce != nil || another.initOnce != nil {
+		cp.initOnce = &sync.Once{}
+	}
 
 	cp.enableDebugMode = conf.enableDebugMode
 	if another.enableDebugMode {
@@ -154,18 +163,26 @@ func (conf *filterManagerConfig) Merge(another *filterManagerConfig) *filterMana
 }
 
 func (conf *filterManagerConfig) InitOnce() {
-	for _, fc := range conf.parsed {
-		config := fc.ParsedConfig
-		if initer, ok := config.(pkgPlugins.Initer); ok {
-			fc.InitOnce.Do(func() {
-				// For now, we have nothing to provide as config callbacks
-				err := initer.Init(nil)
-				if err != nil {
-					fc.Factory = NewInternalErrorFactory(fc.Name, err)
-				}
-			})
-		}
+	if conf.initOnce == nil {
+		return
 	}
+
+	conf.initOnce.Do(func() {
+		for _, fc := range conf.parsed {
+			config := fc.ParsedConfig
+			if initer, ok := config.(pkgPlugins.Initer); ok {
+				fc.InitOnce.Do(func() {
+					// For now, we have nothing to provide as config callbacks
+					fc.InitFailure = initer.Init(nil)
+				})
+				if fc.InitFailure != nil {
+					conf.initFailure = fc.InitFailure
+					conf.initFailedPluginName = fc.Name
+					conf.initFailed = true
+				}
+			}
+		}
+	})
 }
 
 func (p *FilterManagerConfigParser) Parse(any *anypb.Any, callbacks capi.ConfigCallbackHandler) (interface{}, error) {
@@ -204,6 +221,7 @@ func (p *FilterManagerConfigParser) Parse(any *anypb.Any, callbacks capi.ConfigC
 
 	consumerFiltersEndAt := 0
 	i := 0
+	needInit := false
 
 	for _, proto := range plugins {
 		name := proto.Name
@@ -233,6 +251,10 @@ func (p *FilterManagerConfigParser) Parse(any *anypb.Any, callbacks capi.ConfigC
 					consumerFiltersEndAt = i + 1
 				}
 
+				if _, ok := config.(pkgPlugins.Initer); ok {
+					needInit = true
+				}
+
 				if name == "debugMode" {
 					// we handle this plugin differently, so we can have debug behavior before
 					// executing this plugin.
@@ -246,6 +268,10 @@ func (p *FilterManagerConfigParser) Parse(any *anypb.Any, callbacks capi.ConfigC
 		}
 	}
 	conf.consumerFiltersEndAt = consumerFiltersEndAt
+
+	if needInit {
+		conf.initOnce = &sync.Once{}
+	}
 
 	return conf, nil
 }
@@ -493,15 +519,11 @@ func FilterManagerFactory(c interface{}) capi.StreamFilterFactory {
 			}
 		}()
 
-		conf.InitOnce()
-
 		fm := conf.pool.Get().(*filterManager)
 		fm.callbacks.FilterCallbackHandler = cb
 
 		canSkipMethod := fm.canSkipMethod
 		if canSkipMethod == nil {
-			// the `canSkipMethod` can't be initialized in InitOnce,
-			// as it depends on the filter which is created per request.
 			canSkipMethod = newSkipMethodsMap()
 		}
 
@@ -565,7 +587,7 @@ func FilterManagerFactory(c interface{}) capi.StreamFilterFactory {
 
 		// The skip check is based on the compiled code. So if the DecodeRequest is defined,
 		// even it is not called, DecodeData will not be skipped. Same as EncodeResponse.
-		fm.canSkipDecodeHeaders = fm.canSkipMethod["DecodeHeaders"]
+		fm.canSkipDecodeHeaders = fm.canSkipMethod["DecodeHeaders"] && fm.canSkipMethod["DecodeRequest"] && fm.config.initOnce == nil
 		fm.canSkipDecodeData = fm.canSkipMethod["DecodeData"] && fm.canSkipMethod["DecodeRequest"]
 		fm.canSkipEncodeHeaders = fm.canSkipMethod["EncodeHeaders"]
 		fm.canSkipEncodeData = fm.canSkipMethod["EncodeData"] && fm.canSkipMethod["EncodeResponse"]
@@ -669,6 +691,15 @@ func (m *filterManager) DecodeHeaders(headers capi.RequestHeaderMap, endStream b
 	go func() {
 		defer m.callbacks.RecoverPanic()
 		var res api.ResultAction
+
+		m.config.InitOnce()
+		if m.config.initFailed {
+			api.LogErrorf("error in plugin %s: %s", m.config.initFailedPluginName, m.config.initFailure)
+			m.localReply(&api.LocalResponse{
+				Code: 500,
+			})
+			return
+		}
 
 		headers := &filterManagerRequestHeaderMap{
 			RequestHeaderMap: headers,

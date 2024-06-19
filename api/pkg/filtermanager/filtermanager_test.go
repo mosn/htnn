@@ -15,6 +15,7 @@
 package filtermanager
 
 import (
+	"errors"
 	"fmt"
 	"net/http"
 	"strconv"
@@ -306,6 +307,88 @@ func (f *setConsumerFilter) DecodeHeaders(headers api.RequestHeaderMap, endStrea
 	c := f.conf.Consumers[key]
 	f.callbacks.SetConsumer(c)
 	return api.Continue
+}
+
+func initFactory(c interface{}, callbacks api.FilterCallbackHandler) api.Filter {
+	return &api.PassThroughFilter{}
+}
+
+type initConfig struct {
+	count int
+	err   error
+}
+
+func (c *initConfig) Init(cb api.ConfigCallbackHandler) error {
+	c.count++
+	return c.err
+}
+
+func TestInitFailed(t *testing.T) {
+	config := initFilterManagerConfig("ns")
+	config.initOnce = &sync.Once{}
+	ok := &initConfig{}
+	bad := &initConfig{
+		err: errors.New("ouch"),
+	}
+	okParsed := &model.ParsedFilterConfig{
+		Name:         "init",
+		Factory:      initFactory,
+		ParsedConfig: ok,
+	}
+	badParsed := &model.ParsedFilterConfig{
+		Name:         "initFailed",
+		Factory:      initFactory,
+		ParsedConfig: bad,
+	}
+
+	config.parsed = []*model.ParsedFilterConfig{
+		okParsed,
+		badParsed,
+	}
+	n := 10
+	var wg sync.WaitGroup
+	wg.Add(n)
+	for i := 0; i < n; i++ {
+		go func(i int) {
+			cb := envoy.NewCAPIFilterCallbackHandler()
+			m := FilterManagerFactory(config)(cb).(*filterManager)
+			h := http.Header{}
+			hdr := envoy.NewRequestHeaderMap(h)
+			m.DecodeHeaders(hdr, true)
+			cb.WaitContinued()
+			r := cb.LocalResponse()
+			assert.Equal(t, 500, r.Code)
+
+			wg.Done()
+		}(i)
+	}
+	wg.Wait()
+
+	assert.Equal(t, 1, ok.count)
+	assert.Equal(t, 1, bad.count)
+
+	config2 := initFilterManagerConfig("from_lds")
+	// simulate config inherited from LDS
+	config2 = config2.Merge(config)
+	wg.Add(n)
+	for i := 0; i < n; i++ {
+		go func(i int) {
+			cb := envoy.NewCAPIFilterCallbackHandler()
+			m := FilterManagerFactory(config2)(cb).(*filterManager)
+			h := http.Header{}
+			hdr := envoy.NewRequestHeaderMap(h)
+			m.DecodeHeaders(hdr, true)
+			cb.WaitContinued()
+			r := cb.LocalResponse()
+			assert.Equal(t, 500, r.Code)
+
+			wg.Done()
+		}(i)
+	}
+	wg.Wait()
+
+	assert.Equal(t, 1, ok.count)
+	assert.Equal(t, 1, bad.count)
 }
 
 func onLogFactory(c interface{}, callbacks api.FilterCallbackHandler) api.Filter {
