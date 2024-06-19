@@ -57,11 +57,13 @@ type DataPlane struct {
 }
 
 type Option struct {
-	LogLevel         string
-	Envs             map[string]string
-	NoErrorLogCheck  bool
-	ExpectLogPattern []string
-	Bootstrap        *bootstrap
+	LogLevel  string
+	Envs      map[string]string
+	Bootstrap *bootstrap
+
+	NoErrorLogCheck    bool
+	ExpectLogPattern   []string
+	ExpectNoLogPattern []string
 }
 
 func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
@@ -336,6 +338,13 @@ func (dp *DataPlane) Stop() {
 			assert.Falsef(dp.t, true, "log pattern %q not found", pattern)
 		}
 	}
+
+	for _, pattern := range dp.opt.ExpectNoLogPattern {
+		re := regexp.MustCompile(pattern)
+		if re.Match(text) {
+			assert.Falsef(dp.t, true, "log pattern %q found", pattern)
+		}
+	}
 }
 
 func (dp *DataPlane) Head(path string, header http.Header) (*http.Response, error) {
@@ -360,6 +369,29 @@ func (dp *DataPlane) Put(path string, header http.Header, body io.Reader) (*http
 
 func (dp *DataPlane) Patch(path string, header http.Header, body io.Reader) (*http.Response, error) {
 	return dp.do("PATCH", path, header, body)
+}
+
+func (dp *DataPlane) SendAndCancelRequest(path string, after time.Duration) error {
+	conn, err := net.DialTimeout("tcp", ":10000", 1*time.Second)
+	if err != nil {
+		return err
+	}
+
+	defer conn.Close()
+	for _, s := range []string{
+		fmt.Sprintf("POST %s HTTP/1.1\r\n", path),
+		"Host: localhost\r\n",
+		"Content-Length: 10000\r\n",
+		"\r\n",
+	} {
+		_, err = conn.Write([]byte(s))
+		if err != nil {
+			return err
+		}
+	}
+	time.Sleep(after)
+
+	return nil
 }
 
 func (dp *DataPlane) do(method string, path string, header http.Header, body io.Reader) (*http.Response, error) {
