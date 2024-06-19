@@ -28,12 +28,8 @@ import (
 	"mosn.io/htnn/types/plugins/opa"
 )
 
-const (
-	Name = "opa"
-)
-
 func init() {
-	plugins.RegisterHttpPlugin(Name, &plugin{})
+	plugins.RegisterHttpPlugin(opa.Name, &plugin{})
 }
 
 type plugin struct {

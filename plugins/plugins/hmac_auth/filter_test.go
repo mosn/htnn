@@ -30,6 +30,7 @@ import (
 )
 
 func TestHmacAuth(t *testing.T) {
+	name := hmac_auth.Name
 	tests := []struct {
 		name     string
 		conf     string
@@ -45,7 +46,7 @@ func TestHmacAuth(t *testing.T) {
 				"extra":         {"2", "1"},
 			},
 			consumer: consumer.NewConsumer(map[string]api.PluginConsumerConfig{
-				Name: &hmac_auth.ConsumerConfig{
+				name: &hmac_auth.ConsumerConfig{
 					AccessKey: "ak",
 					SecretKey: "sk",
 					SignedHeaders: []string{
@@ -65,7 +66,7 @@ func TestHmacAuth(t *testing.T) {
 				DateHeader:      {"Fri Jan  5 16:10:54 CST 2024"},
 			},
 			consumer: consumer.NewConsumer(map[string]api.PluginConsumerConfig{
-				Name: &hmac_auth.ConsumerConfig{
+				name: &hmac_auth.ConsumerConfig{
 					AccessKey: "ak",
 					SecretKey: "sk",
 					Algorithm: hmac_auth.Algorithm_HMAC_SHA384,
@@ -79,7 +80,7 @@ func TestHmacAuth(t *testing.T) {
 				DateHeader:      {"Fri Jan  5 16:10:54 CST 2024"},
 			},
 			consumer: consumer.NewConsumer(map[string]api.PluginConsumerConfig{
-				Name: &hmac_auth.ConsumerConfig{
+				name: &hmac_auth.ConsumerConfig{
 					AccessKey: "ak",
 					SecretKey: "sk",
 					Algorithm: hmac_auth.Algorithm_HMAC_SHA512,

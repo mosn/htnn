@@ -19,6 +19,7 @@ package model
 
 import (
 	"sync"
+	"time"
 
 	"mosn.io/htnn/api/pkg/filtermanager/api"
 )
@@ -46,4 +47,9 @@ func NewFilterWrapper(name string, f api.Filter) *FilterWrapper {
 		Filter: f,
 		Name:   name,
 	}
+}
+
+type ExecutionRecord struct {
+	PluginName string
+	Record     map[string]time.Duration
 }

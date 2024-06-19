@@ -12,22 +12,36 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package hmac_auth
+package debug_mode
 
 import (
 	"mosn.io/htnn/api/pkg/filtermanager/api"
 	"mosn.io/htnn/api/pkg/plugins"
-	"mosn.io/htnn/types/plugins/hmac_auth"
+)
+
+const (
+	Name = "debugMode"
 )
 
 func init() {
-	plugins.RegisterHttpPlugin(hmac_auth.Name, &plugin{})
+	plugins.RegisterHttpPluginType(Name, &Plugin{})
 }
 
-type plugin struct {
-	hmac_auth.Plugin
+type Plugin struct {
+	plugins.PluginMethodDefaultImpl
 }
 
-func (p *plugin) Factory() api.FilterFactory {
-	return factory
+func (p *Plugin) Type() plugins.PluginType {
+	return plugins.TypeGeneral
+}
+
+func (p *Plugin) Order() plugins.PluginOrder {
+	return plugins.PluginOrder{
+		Position:  plugins.OrderPositionAccess,
+		Operation: plugins.OrderOperationInsertFirst,
+	}
+}
+
+func (p *Plugin) Config() api.PluginConfig {
+	return &Config{}
 }

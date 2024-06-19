@@ -60,6 +60,10 @@ func (m *Config) validate(all bool) error {
 
 	var errors []error
 
+	// no validation rules for FailureModeAllow
+
+	// no validation rules for FailureModeAllowHeaderAdd
+
 	oneofServicesPresent := false
 	switch v := m.Services.(type) {
 	case *Config_HttpService:

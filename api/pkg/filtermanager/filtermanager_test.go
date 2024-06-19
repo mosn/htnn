@@ -399,7 +399,8 @@ type onLogFilter struct {
 	api.PassThroughFilter
 }
 
-func (f *onLogFilter) OnLog() {
+func (f *onLogFilter) OnLog(reqHeaders api.RequestHeaderMap, reqTrailers api.RequestTrailerMap,
+	respHeaders api.ResponseHeaderMap, respTrailers api.ResponseTrailerMap) {
 }
 
 type addReqConf struct {
@@ -453,11 +454,12 @@ func TestFiltersFromConsumer(t *testing.T) {
 	config.consumerFiltersEndAt = 1
 
 	consumers := map[string]*internalConsumer.Consumer{}
-	for i := 0; i < 10; i++ {
+	n := 10
+	for i := 0; i < n; i++ {
 		c := internalConsumer.Consumer{
 			FilterConfigs: map[string]*model.ParsedFilterConfig{
-				"add_req": {
-					Name:    "add_req",
+				"2_add_req": {
+					Name:    "2_add_req",
 					Factory: addReqFactory,
 					ParsedConfig: addReqConf{
 						hdrName: fmt.Sprintf("x-htnn-consumer-%d", i),
@@ -466,23 +468,25 @@ func TestFiltersFromConsumer(t *testing.T) {
 			},
 		}
 		if i%2 == 0 {
-			c.FilterConfigs["on_log"] = &model.ParsedFilterConfig{
-				Name:    "on_log",
+			c.FilterConfigs["3_on_log"] = &model.ParsedFilterConfig{
+				Name:    "3_on_log",
 				Factory: onLogFactory,
 			}
 		}
 		consumers[strconv.Itoa(i)] = &c
 	}
 	config.parsed = []*model.ParsedFilterConfig{
+		// HTNN will sort the plugins when merging the plugins from the consumer.
+		// Here we add number as the prefix to ensure the order.
 		{
-			Name:    "set_consumer",
+			Name:    "1_set_consumer",
 			Factory: setConsumerFactory,
 			ParsedConfig: setConsumerConf{
 				Consumers: consumers,
 			},
 		},
 		{
-			Name:    "add_req",
+			Name:    "2_add_req",
 			Factory: addReqFactory,
 			ParsedConfig: addReqConf{
 				hdrName: "x-htnn-route",
@@ -491,25 +495,25 @@ func TestFiltersFromConsumer(t *testing.T) {
 	}
 
 	var wg sync.WaitGroup
-	wg.Add(20)
-	for i := 0; i < 20; i++ {
+	wg.Add(2 * n)
+	for i := 0; i < 2*n; i++ {
 		go func(i int) {
 			cb := envoy.NewCAPIFilterCallbackHandler()
 			m := FilterManagerFactory(config)(cb).(*filterManager)
 			assert.Equal(t, true, m.canSkipOnLog)
-			assert.Equal(t, 1, len(m.filters))
+			assert.Equal(t, 2, len(m.filters))
 			h := http.Header{}
-			idx := i % 10
+			idx := i % n
 			h.Add("consumer", strconv.Itoa(idx))
 			hdr := envoy.NewRequestHeaderMap(h)
 			m.DecodeHeaders(hdr, true)
 			cb.WaitContinued()
 			if idx%2 == 0 {
 				assert.Equal(t, false, m.canSkipOnLog)
-				assert.Equal(t, 2, len(m.filters))
+				assert.Equal(t, 3, len(m.filters))
 			} else {
 				assert.Equal(t, true, m.canSkipOnLog)
-				assert.Equal(t, 1, len(m.filters))
+				assert.Equal(t, 2, len(m.filters))
 			}
 
 			_, ok := hdr.Get("x-htnn-route")
@@ -576,4 +580,18 @@ func TestPluginState(t *testing.T) {
 	cb.WaitContinued()
 	v, _ := hdr.Get("x-htnn-v")
 	assert.Equal(t, "value", v)
+}
+
+func TestMergeDebugFlag(t *testing.T) {
+	parent := initFilterManagerConfig("")
+	child := initFilterManagerConfig("")
+	child.enableDebugMode = true
+	merged := parent.Merge(child)
+	assert.Equal(t, true, merged.enableDebugMode)
+
+	parent = initFilterManagerConfig("")
+	child = initFilterManagerConfig("")
+	parent.enableDebugMode = true
+	merged = parent.Merge(child)
+	assert.Equal(t, true, merged.enableDebugMode)
 }

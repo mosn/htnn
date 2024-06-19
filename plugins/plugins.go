@@ -18,6 +18,7 @@ import (
 	_ "mosn.io/htnn/plugins/plugins/casbin"
 	_ "mosn.io/htnn/plugins/plugins/cel_script"
 	_ "mosn.io/htnn/plugins/plugins/consumer_restriction"
+	_ "mosn.io/htnn/plugins/plugins/debug_mode"
 	_ "mosn.io/htnn/plugins/plugins/demo"
 	_ "mosn.io/htnn/plugins/plugins/ext_auth"
 	_ "mosn.io/htnn/plugins/plugins/hmac_auth"

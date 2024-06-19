@@ -88,6 +88,14 @@ jobs:
         # See https://editorconfig.org/ to know how to support editorconfig in your editor
         make lint-editorconfig
 
+    - name: lint shell
+      uses: reviewdog/action-shellcheck@v1
+      with:
+        github_token: ${{ secrets.github_token }}
+        reporter: github-pr-review
+        path: "."
+        pattern: "*.sh"
+
     - name: lint remain
       run: |
         make lint-remain

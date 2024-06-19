@@ -439,6 +439,48 @@ func (f *benchmarkFilter) DecodeHeaders(headers api.RequestHeaderMap, endStream 
 	return api.Continue
 }
 
+type beforeConsumerAndHasOtherMethodPlugin struct {
+	plugins.PluginMethodDefaultImpl
+}
+
+func (p *beforeConsumerAndHasOtherMethodPlugin) Order() plugins.PluginOrder {
+	return plugins.PluginOrder{
+		Position: plugins.OrderPositionAccess,
+	}
+}
+
+func (p *beforeConsumerAndHasOtherMethodPlugin) Config() api.PluginConfig {
+	return &Config{}
+}
+
+func (p *beforeConsumerAndHasOtherMethodPlugin) Factory() api.FilterFactory {
+	return beforeConsumerAndHasOtherMethodFactory
+}
+
+func beforeConsumerAndHasOtherMethodFactory(c interface{}, callbacks api.FilterCallbackHandler) api.Filter {
+	return &beforeConsumerAndHasOtherMethodFilter{
+		callbacks: callbacks,
+		config:    c.(*Config),
+	}
+}
+
+type beforeConsumerAndHasOtherMethodFilter struct {
+	api.PassThroughFilter
+
+	callbacks api.FilterCallbackHandler
+	config    *Config
+}
+
+func (f *beforeConsumerAndHasOtherMethodFilter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {
+	headers.Add("run", "beforeConsumerAndHasOtherMethod")
+	return api.Continue
+}
+
+func (f *beforeConsumerAndHasOtherMethodFilter) EncodeHeaders(headers api.ResponseHeaderMap, endStream bool) api.ResultAction {
+	headers.Add("run", "beforeConsumerAndHasOtherMethod")
+	return api.Continue
+}
+
 func init() {
 	plugins.RegisterHttpPlugin("stream", &streamPlugin{})
 	plugins.RegisterHttpPlugin("buffer", &bufferPlugin{})
@@ -448,4 +490,5 @@ func init() {
 	plugins.RegisterHttpPlugin("init", &initPlugin{})
 	plugins.RegisterHttpPlugin("benchmark", &benchmarkPlugin{})
 	plugins.RegisterHttpPlugin("benchmark2", &benchmarkPlugin{})
+	plugins.RegisterHttpPlugin("beforeConsumerAndHasOtherMethod", &beforeConsumerAndHasOtherMethodPlugin{})
 }

@@ -29,12 +29,8 @@ import (
 	"mosn.io/htnn/types/plugins/limit_count_redis"
 )
 
-const (
-	Name = "limitCountRedis"
-)
-
 func init() {
-	plugins.RegisterHttpPlugin(Name, &plugin{})
+	plugins.RegisterHttpPlugin(limit_count_redis.Name, &plugin{})
 }
 
 type plugin struct {

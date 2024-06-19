@@ -132,6 +132,39 @@ func TestExtAuth(t *testing.T) {
 			res: &api.LocalResponse{Code: 401},
 		},
 		{
+			name: "auth error, but allow mode failure and add header",
+			input: `{
+                        "httpService": {
+                            "url": "http://127.0.0.1:10001/ext_auth"
+                        },
+                        "failure_mode_allow": true,
+                        "failure_mode_allow_header_add": true
+                    }`,
+			server: func(r *http.Request) (*http.Response, error) {
+				return nil, errors.New("ouch")
+			},
+			upHdr: map[string][]string{
+				"x-envoy-auth-failure-mode-allowed": {"true"},
+			},
+		},
+		{
+			name: "auth error because of 5xx, but allow mode failure and add header",
+			input: `{
+                        "httpService": {
+                            "url": "http://127.0.0.1:10001/ext_auth"
+                        },
+                        "failure_mode_allow": true,
+                        "failure_mode_allow_header_add": true
+                    }`,
+			server: func(r *http.Request) (*http.Response, error) {
+				resp := response(503)
+				return resp, nil
+			},
+			upHdr: map[string][]string{
+				"x-envoy-auth-failure-mode-allowed": {"true"},
+			},
+		},
+		{
 			name: "add matched headers",
 			input: `{"httpService":{
 				"url": "http://127.0.0.1:10001/ext_auth",

@@ -12,22 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package hmac_auth
+syntax = "proto3";
 
-import (
-	"mosn.io/htnn/api/pkg/filtermanager/api"
-	"mosn.io/htnn/api/pkg/plugins"
-	"mosn.io/htnn/types/plugins/hmac_auth"
-)
+package types.plugins.debug_mode;
 
-func init() {
-	plugins.RegisterHttpPlugin(hmac_auth.Name, &plugin{})
+import "google/protobuf/duration.proto";
+import "validate/validate.proto";
+
+option go_package = "mosn.io/htnn/types/plugins/debug_mode";
+
+message Config {
+  SlowLog slow_log = 1;
 }
 
-type plugin struct {
-	hmac_auth.Plugin
-}
-
-func (p *plugin) Factory() api.FilterFactory {
-	return factory
+message SlowLog {
+  google.protobuf.Duration threshold = 1 [(validate.rules).duration = {
+    gt: {},
+    required: true,
+  }];
 }

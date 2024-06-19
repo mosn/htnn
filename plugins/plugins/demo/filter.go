@@ -20,8 +20,8 @@ import (
 	"mosn.io/htnn/api/pkg/filtermanager/api"
 )
 
-// factory returns a factory that produces per-request Filter.
-// You can use it to bind the configuration and do per-request initialization.
+// factory returns a per-request Filter which has configuration bound to it.
+// This function should be a pure builder and should not have any side effect.
 func factory(c interface{}, callbacks api.FilterCallbackHandler) api.Filter {
 	return &filter{
 		callbacks: callbacks,

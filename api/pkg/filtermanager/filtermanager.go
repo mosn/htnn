@@ -67,6 +67,8 @@ type filterManagerConfig struct {
 	pool   *sync.Pool
 
 	namespace string
+
+	enableDebugMode bool
 }
 
 func initFilterManagerConfig(namespace string) *filterManagerConfig {
@@ -106,6 +108,11 @@ func (conf *filterManagerConfig) Merge(another *filterManagerConfig) *filterMana
 
 	if conf.initOnce != nil || another.initOnce != nil {
 		cp.initOnce = &sync.Once{}
+	}
+
+	cp.enableDebugMode = conf.enableDebugMode
+	if another.enableDebugMode {
+		cp.enableDebugMode = true
 	}
 
 	cp.parsed = make([]*model.ParsedFilterConfig, 0, len(conf.parsed)+len(another.parsed))
@@ -247,6 +254,12 @@ func (p *FilterManagerConfigParser) Parse(any *anypb.Any, callbacks capi.ConfigC
 				if _, ok := config.(pkgPlugins.Initer); ok {
 					needInit = true
 				}
+
+				if name == "debugMode" {
+					// we handle this plugin differently, so we can have debug behavior before
+					// executing this plugin.
+					conf.enableDebugMode = true
+				}
 			}
 			i++
 
@@ -274,8 +287,7 @@ func (p *FilterManagerConfigParser) Merge(parent interface{}, child interface{})
 }
 
 type filterManager struct {
-	filters                 []*model.FilterWrapper
-	filtersNotAfterConsumer []*model.FilterWrapper
+	filters []*model.FilterWrapper
 
 	decodeRequestNeeded bool
 	decodeIdx           int
@@ -301,7 +313,6 @@ type filterManager struct {
 
 func (m *filterManager) Reset() {
 	m.filters = nil
-	m.filtersNotAfterConsumer = nil
 
 	m.decodeRequestNeeded = false
 	m.decodeIdx = -1
@@ -318,6 +329,10 @@ func (m *filterManager) Reset() {
 	m.canSkipOnLog = false
 
 	m.callbacks.Reset()
+}
+
+func (m *filterManager) DebugModeEnabled() bool {
+	return m.config.enableDebugMode
 }
 
 type filterManagerRequestHeaderMap struct {
@@ -534,22 +549,32 @@ func FilterManagerFactory(c interface{}) capi.StreamFilterFactory {
 					definedMethod[meth] = overridden
 				}
 
-				if definedMethod["DecodeRequest"] && !definedMethod["DecodeHeaders"] {
-					api.LogErrorf("plugin %s has DecodeRequest but not DecodeHeaders. To run DecodeRequest, we need to return api.WaitAllData from DecodeHeaders", fc.Name)
+				if definedMethod["DecodeRequest"] {
+					if !definedMethod["DecodeHeaders"] {
+						api.LogErrorf("plugin %s has DecodeRequest but not DecodeHeaders. To run DecodeRequest, we need to return api.WaitAllData from DecodeHeaders", fc.Name)
+					}
+
+					p := pkgPlugins.LoadHttpPluginType(fc.Name)
+					if p != nil {
+						order := p.Order()
+						if order.Position <= pkgPlugins.OrderPositionAuthn {
+							api.LogErrorf("plugin %s has DecodeRequest which is not supported because the order of plugin", fc.Name)
+						}
+					}
 				}
 				if definedMethod["EncodeResponse"] && !definedMethod["EncodeHeaders"] {
 					api.LogErrorf("plugin %s has EncodeResponse but not EncodeHeaders. To run EncodeResponse, we need to return api.WaitAllData from EncodeHeaders", fc.Name)
 				}
-
-				// Do we need to check if the correct method is defined? For example, the DecodeRequest
-				// requires DecodeHeaders defined. Currently, we just documentate it. Per request check
-				// is expensive and not necessary in most of time.
 			}
 
 			if logExecution {
 				filters[i] = model.NewFilterWrapper(fc.Name, NewLogExecutionFilter(fc.Name, f, fm.callbacks))
 			} else {
 				filters[i] = model.NewFilterWrapper(fc.Name, f)
+			}
+
+			if fm.DebugModeEnabled() {
+				filters[i] = model.NewFilterWrapper(fc.Name, NewDebugFilter(fc.Name, filters[i].Filter, fm.callbacks))
 			}
 		}
 
@@ -559,13 +584,6 @@ func FilterManagerFactory(c interface{}) capi.StreamFilterFactory {
 
 		// We can't cache the slice of filters as it may be changed by consumer
 		fm.filters = filters
-
-		if conf.consumerFiltersEndAt != 0 {
-			consumerFiltersEndAt := conf.consumerFiltersEndAt
-			filtersNotAfterConsumer := filters[:consumerFiltersEndAt]
-			fm.filtersNotAfterConsumer = filtersNotAfterConsumer
-			fm.filters = filters[consumerFiltersEndAt:]
-		}
 
 		// The skip check is based on the compiled code. So if the DecodeRequest is defined,
 		// even it is not called, DecodeData will not be skipped. Same as EncodeResponse.
@@ -656,6 +674,16 @@ func (m *filterManager) localReply(v *api.LocalResponse) {
 }
 
 func (m *filterManager) DecodeHeaders(headers capi.RequestHeaderMap, endStream bool) capi.StatusType {
+	// Ensure the headers are cached on the Go side.
+	// FIXME: remove this once we support OnLog phase headers in Envoy Go.
+	if m.DebugModeEnabled() {
+		headers.Get("test")
+		headers := &filterManagerRequestHeaderMap{
+			RequestHeaderMap: headers,
+		}
+		m.reqHdr = headers
+	}
+
 	if m.canSkipDecodeHeaders {
 		return capi.Continue
 	}
@@ -677,9 +705,10 @@ func (m *filterManager) DecodeHeaders(headers capi.RequestHeaderMap, endStream b
 			RequestHeaderMap: headers,
 		}
 		m.reqHdr = headers
-		if len(m.filtersNotAfterConsumer) > 0 {
-			for _, f := range m.filtersNotAfterConsumer {
-				// these filters only use DecodeHeaders for now
+		if m.config.consumerFiltersEndAt != 0 {
+			for i := 0; i < m.config.consumerFiltersEndAt; i++ {
+				f := m.filters[i]
+				// We don't support DecodeRequest for now
 				res = f.DecodeHeaders(headers, endStream)
 				if m.handleAction(res, phaseDecodeHeaders) {
 					return
@@ -751,6 +780,13 @@ func (m *filterManager) DecodeHeaders(headers capi.RequestHeaderMap, endStream b
 					}
 				}
 
+				if m.DebugModeEnabled() {
+					for _, fw := range filterWrappers {
+						f := fw.Filter
+						fw.Filter = NewDebugFilter(fw.Name, f, m.callbacks)
+					}
+				}
+
 				canSkipMethod := c.CanSkipMethod
 				m.canSkipDecodeData = m.canSkipDecodeData && canSkipMethod["DecodeData"] && canSkipMethod["DecodeRequest"]
 				m.canSkipEncodeHeaders = m.canSkipEncodeData && canSkipMethod["EncodeHeaders"]
@@ -788,7 +824,8 @@ func (m *filterManager) DecodeHeaders(headers capi.RequestHeaderMap, endStream b
 			}
 		}
 
-		for i, f := range m.filters {
+		for i := m.config.consumerFiltersEndAt; i < len(m.filters); i++ {
+			f := m.filters[i]
 			res = f.DecodeHeaders(headers, endStream)
 			if m.handleAction(res, phaseDecodeHeaders) {
 				return
@@ -811,6 +848,7 @@ func (m *filterManager) DecodeHeaders(headers capi.RequestHeaderMap, endStream b
 				}
 			}
 		}
+
 		m.callbacks.Continue(capi.Continue)
 	}()
 
@@ -912,6 +950,13 @@ func (m *filterManager) DecodeData(buf capi.BufferInstance, endStream bool) capi
 }
 
 func (m *filterManager) EncodeHeaders(headers capi.ResponseHeaderMap, endStream bool) capi.StatusType {
+	// Ensure the headers are cached on the Go side.
+	// FIXME: remove this once we support OnLog phase headers in Envoy Go.
+	if m.DebugModeEnabled() {
+		headers.Get("test")
+		m.rspHdr = headers
+	}
+
 	if m.canSkipEncodeHeaders {
 		return capi.Continue
 	}
@@ -944,6 +989,7 @@ func (m *filterManager) EncodeHeaders(headers capi.ResponseHeaderMap, endStream 
 				}
 			}
 		}
+
 		m.callbacks.Continue(capi.Continue)
 	}()
 
@@ -1039,7 +1085,9 @@ func (m *filterManager) OnLog() {
 	// they need to copy the used data from the request to the Go side before kicking off
 	// the goroutine.
 	for _, f := range m.filters {
-		f.OnLog()
+		// TODO: the cached headers passed here is not precise. We need to get the real one via
+		// Envoy Go API. But it is not supported yet.
+		f.OnLog(m.reqHdr, nil, m.rspHdr, nil)
 	}
 
 	m.Reset()

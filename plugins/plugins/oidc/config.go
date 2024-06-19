@@ -30,12 +30,8 @@ import (
 	oidctype "mosn.io/htnn/types/plugins/oidc"
 )
 
-const (
-	Name = "oidc"
-)
-
 func init() {
-	plugins.RegisterHttpPlugin(Name, &plugin{})
+	plugins.RegisterHttpPlugin(oidctype.Name, &plugin{})
 }
 
 type plugin struct {

@@ -20,12 +20,8 @@ import (
 	"mosn.io/htnn/types/plugins/key_auth"
 )
 
-const (
-	Name = "keyAuth"
-)
-
 func init() {
-	plugins.RegisterHttpPlugin(Name, &plugin{})
+	plugins.RegisterHttpPlugin(key_auth.Name, &plugin{})
 }
 
 type plugin struct {
