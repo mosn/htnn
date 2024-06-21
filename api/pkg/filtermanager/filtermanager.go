@@ -21,6 +21,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"reflect"
 	"runtime/debug"
 	"sort"
 	"strconv"
@@ -277,8 +278,14 @@ func (p *FilterManagerConfigParser) Parse(any *anypb.Any, callbacks capi.ConfigC
 }
 
 func (p *FilterManagerConfigParser) Merge(parent interface{}, child interface{}) interface{} {
-	httpFilterCfg := parent.(*filterManagerConfig)
-	routeCfg := child.(*filterManagerConfig)
+	httpFilterCfg, ok := parent.(*filterManagerConfig)
+	if !ok {
+		panic(fmt.Sprintf("wrong config type: %s", reflect.TypeOf(httpFilterCfg)))
+	}
+	routeCfg, ok := child.(*filterManagerConfig)
+	if !ok {
+		panic(fmt.Sprintf("wrong config type: %s", reflect.TypeOf(routeCfg)))
+	}
 	if httpFilterCfg == nil || len(httpFilterCfg.parsed) == 0 {
 		return routeCfg
 	}
@@ -507,7 +514,11 @@ func needLogExecution() bool {
 }
 
 func FilterManagerFactory(c interface{}) capi.StreamFilterFactory {
-	conf := c.(*filterManagerConfig)
+	conf, ok := c.(*filterManagerConfig)
+	if !ok {
+		panic(fmt.Sprintf("wrong config type: %s", reflect.TypeOf(c)))
+	}
+
 	parsedConfig := conf.parsed
 
 	return func(cb capi.FilterCallbackHandler) (streamFilter capi.StreamFilter) {
@@ -519,7 +530,12 @@ func FilterManagerFactory(c interface{}) capi.StreamFilterFactory {
 			}
 		}()
 
-		fm := conf.pool.Get().(*filterManager)
+		data := conf.pool.Get()
+		fm, ok := data.(*filterManager)
+		if !ok {
+			panic(fmt.Sprintf("unexpected type: %s", reflect.TypeOf(data)))
+		}
+
 		fm.callbacks.FilterCallbackHandler = cb
 
 		canSkipMethod := fm.canSkipMethod

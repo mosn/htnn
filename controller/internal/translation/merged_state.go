@@ -17,6 +17,7 @@ package translation
 import (
 	"encoding/json"
 	"fmt"
+	"reflect"
 	"slices"
 	"sort"
 
@@ -137,7 +138,11 @@ func translateFilterManagerConfigToPolicyInRDS(fmc *filtermanager.FilterManagerC
 
 		var cfg interface{}
 		// we validated the filter at the beginning, so theorily err should not happen
-		_ = json.Unmarshal(plugin.Config.([]byte), &cfg)
+		b, ok := plugin.Config.([]byte)
+		if !ok {
+			panic(fmt.Sprintf("unexpected type: %s", reflect.TypeOf(plugin.Config)))
+		}
+		_ = json.Unmarshal(b, &cfg)
 
 		nativePlugin, ok := p.(plugins.NativePlugin)
 		if !ok {
@@ -148,7 +153,10 @@ func translateFilterManagerConfigToPolicyInRDS(fmc *filtermanager.FilterManagerC
 			conf := p.Config()
 			desc := conf.ProtoReflect().Descriptor()
 			fieldDescs := desc.Fields()
-			m := cfg.(map[string]interface{})
+			m, ok := cfg.(map[string]interface{})
+			if !ok {
+				panic(fmt.Sprintf("unexpected type: %s", reflect.TypeOf(cfg)))
+			}
 			// TODO: unify the name style of fields. Currently, the field names can be in snake_case or camelCase.
 			// Each style is fine because the protobuf support both of them. However, if people want to
 			// rewrite the configuration, we should take care of this.
@@ -236,11 +244,15 @@ func translateFilterManagerConfigToPolicyInECDS(fmc *filtermanager.FilterManager
 
 		var cfg interface{}
 		// we validated the filter at the beginning, so theorily err should not happen
-		_ = json.Unmarshal(plugin.Config.([]byte), &cfg)
+		b, ok := plugin.Config.([]byte)
+		if !ok {
+			panic(fmt.Sprintf("unexpected type: %s", reflect.TypeOf(plugin.Config)))
+		}
+		_ = json.Unmarshal(b, &cfg)
 
 		plugin.Config = cfg
 		goFilterManager.Plugins = append(goFilterManager.Plugins, plugin)
-		_, ok := p.(plugins.ConsumerPlugin)
+		_, ok = p.(plugins.ConsumerPlugin)
 		if ok {
 			consumerNeeded = true
 		}

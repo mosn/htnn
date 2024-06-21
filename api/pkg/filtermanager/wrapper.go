@@ -15,6 +15,8 @@
 package filtermanager
 
 import (
+	"fmt"
+	"reflect"
 	"time"
 
 	"mosn.io/htnn/api/pkg/filtermanager/api"
@@ -135,7 +137,10 @@ func (f *debugFilter) recordExecution(start time.Time, method string) {
 		f.callbacks.PluginState().Set("debugMode", "executionRecords", executionRecords)
 	}
 
-	records := executionRecords.([]model.ExecutionRecord)
+	records, ok := executionRecords.([]model.ExecutionRecord)
+	if !ok {
+		panic(fmt.Sprintf("unexpected type: %s", reflect.TypeOf(executionRecords)))
+	}
 	for _, record := range records {
 		if record.PluginName == f.name {
 			record.Record[method] += duration
