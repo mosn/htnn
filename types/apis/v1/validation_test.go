@@ -264,6 +264,25 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 			err: "targetRef.SectionName and SubPolicies can not be used together",
 		},
 		{
+			name: "targetRef to Gateway and also use SubPolicies",
+			policy: &HTTPFilterPolicy{
+				Spec: HTTPFilterPolicySpec{
+					TargetRef: &gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: "networking.istio.io",
+							Kind:  "Gateway",
+						},
+					},
+					SubPolicies: []HTTPFilterSubPolicy{
+						{
+							SectionName: sectionName,
+						},
+					},
+				},
+			},
+			err: "subPolicies can not be used with this referred target",
+		},
+		{
 			name: "bad configuration",
 			policy: &HTTPFilterPolicy{
 				Spec: HTTPFilterPolicySpec{
