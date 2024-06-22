@@ -30,9 +30,10 @@ title: Consumer Restriction
 
 ## Rule
 
-| 名称 | 类型   | 必选 | 校验规则   | 说明          |
-|------|--------|------|------------|---------------|
-| name | string | 是   | min_len: 1 | Consumer 名称 |
+| 名称      | 类型       | 必选  | 校验规则   | 说明                        |
+|---------|----------|-----|------------|---------------------------|
+| name    | string   | 是   | min_len: 1 | Consumer 名称               |
+| methods | string[] | 否   |  | Consumer 允许/禁止的 HTTP 方法列表 |
 
 ## 用法
 
@@ -69,15 +70,15 @@ metadata:
   name: default
 spec:
   parentRefs:
-  - name: default
+    - name: default
   rules:
-  - matches:
-    - path:
-        type: Exact
-        value: /time_travel
-    backendRefs:
-    - name: backend
-      port: 8080
+    - matches:
+        - path:
+            type: Exact
+            value: /time_travel
+      backendRefs:
+        - name: backend
+          port: 8080
 ---
 apiVersion: htnn.mosn.io/v1
 kind: HTTPFilterPolicy
@@ -92,12 +93,12 @@ spec:
     keyAuth:
       config:
         keys:
-        - name: Authorization
+          - name: Authorization
     consumerRestriction:
       config:
         allow:
           rules:
-          - name: doraemon
+            - name: doraemon
 ```
 
 `doraemon` 可以访问 `/time_travel`，除此以外的消费者都无法访问该路由。
@@ -127,10 +128,10 @@ spec:
     keyAuth:
       config:
         keys:
-        - name: Authorization
+          - name: Authorization
     consumerRestriction:
       config:
         deny:
           rules:
-          - name: rick
+            - name: rick
 ```

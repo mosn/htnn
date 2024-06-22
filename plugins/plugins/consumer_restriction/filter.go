@@ -43,10 +43,18 @@ func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api
 		return f.reject("consumer not found")
 	}
 
-	_, ok := f.config.consumers[consumer.Name()]
-	if ok != f.config.allow {
-		api.LogInfof("consumerRestriction: consumer %s not allowed", consumer.Name())
-		// don't leak consumer name to the caller
+	consumerName := consumer.Name()
+	rule, consumerExists := f.config.consumers[consumerName]
+	reqMethod := headers.Method()
+	methodAllowed := rule != nil && (len(rule.Methods) == 0 || rule.Methods[reqMethod])
+
+	if f.config.allow {
+		if !consumerExists || !methodAllowed {
+			api.LogInfof("consumerRestriction: consumer %s not allowed", consumerName)
+			return f.reject("consumer not allowed")
+		}
+	} else if methodAllowed {
+		api.LogInfof("consumerRestriction: consumer %s not allowed", consumerName)
 		return f.reject("consumer not allowed")
 	}
 

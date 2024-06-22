@@ -40,7 +40,12 @@ type config struct {
 	consumer_restriction.Config
 
 	allow     bool
-	consumers map[string]struct{}
+	consumers map[string]*Rule
+}
+
+type Rule struct {
+	Name    string
+	Methods map[string]bool
 }
 
 func (conf *config) Init(cb api.ConfigCallbackHandler) error {
@@ -50,9 +55,16 @@ func (conf *config) Init(cb api.ConfigCallbackHandler) error {
 		conf.allow = true
 	}
 
-	conf.consumers = make(map[string]struct{}, len(rules.Rules))
+	conf.consumers = make(map[string]*Rule, len(rules.Rules))
 	for _, r := range rules.Rules {
-		conf.consumers[r.Name] = struct{}{}
+		methods := make(map[string]bool)
+		for _, method := range r.GetMethods() {
+			methods[method] = true
+		}
+		conf.consumers[r.Name] = &Rule{
+			Name:    r.Name,
+			Methods: methods,
+		}
 	}
 	return nil
 }
