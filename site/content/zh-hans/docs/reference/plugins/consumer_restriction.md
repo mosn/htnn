@@ -33,7 +33,7 @@ title: Consumer Restriction
 | 名称      | 类型       | 必选  | 校验规则   | 说明                        |
 |---------|----------|-----|------------|---------------------------|
 | name    | string   | 是   | min_len: 1 | Consumer 名称               |
-| methods | string[] | 否   |  | Consumer 允许/禁止的 HTTP 方法列表 |
+| methods | string[] | 否   | must be uppercase | Consumer 允许/禁止的 HTTP 方法列表 |
 
 ## 用法
 

@@ -33,7 +33,7 @@ Only one of `allow` or `deny` can be configured.
 | Name | Type   | Required | Validation   | Description          |
 |------|--------|----------|--------------|----------------------|
 | name | string | True     | min_len: 1   | Name of the Consumer |
-| methods | string[] | False   |  | List of HTTP methods allowed/prohibited for Consumer |
+| methods | string[] | False   | must be uppercase | List of HTTP methods allowed/prohibited for Consumer |
 
 ## Usage
 
