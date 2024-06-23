@@ -44,8 +44,8 @@ func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api
 	}
 
 	consumerName := consumer.Name()
-	rule, _ := f.config.consumers[consumerName]
-	methodMatched := rule != nil && (len(rule.Methods) == 0 || rule.Methods[headers.Method()])
+	rule, ok := f.config.consumers[consumerName]
+	methodMatched := ok && (len(rule.Methods) == 0 || rule.Methods[headers.Method()])
 
 	if methodMatched != f.config.allow {
 		api.LogInfof("consumerRestriction: consumer %s not allowed", consumerName)
