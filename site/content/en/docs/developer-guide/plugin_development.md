@@ -15,7 +15,7 @@ Assume you are at the root of this project.
 5. Create a directory under `./plugins/plugins/`, with the same name created in step one. Finish the plugin. Don't forget to write tests. If your plugin is simple, you can write integration test only. You can take `./plugins/plugins/demo` as an example. The doc of the API used in the plugin is in their comments.
 6. Add the doc of the plugin in the `site/content/$your_language/docs/reference/plugins/$your_plugin.md`. You can choose to write doc under Simpilified Chinese or English, depends on which is your prime language. We have [tool](https://github.com/mosn/htnn/tree/main/site#cmdtranslator) to translate it to other languages.
 7. Add your plugin's package into `./plugins/plugins.go`. Go to `./plugins`, then run `make build-so`. Now the plugin is compiled into `libgolang.so` under the current directory.
-8. Add integration test in the `./plugins/tests/integration/`. For how to run the integration test, please read [Plugin Integration Test Framework](./plugin_integration_test_framework).
+8. Add integration test in the `./plugins/tests/integration/`. For how to run the integration test, please read [Plugin Integration Test Framework](../plugin_integration_test_framework).
 
 You can also write the plugin outside HTNN project, please see https://github.com/mosn/htnn/tree/main/examples/dev_your_plugin.
 
