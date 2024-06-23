@@ -41,4 +41,5 @@ publish:
 .PHONY: lint-website
 lint-website: $(LOCALBIN)
 	test -x $(LOCALBIN)/htmltest || GOBIN=$(LOCALBIN) go install github.com/wjdp/htmltest@v0.17.0
-	$(LOCALBIN)/htmltest --conf ./.htmltest.yml ./public | grep 'target does not exist' && exit 1 || true
+	$(LOCALBIN)/htmltest --conf ./.htmltest.yml ./public | grep  -E '(target does not exist|Non-OK status: 404)' \
+		&& exit 1 || true
