@@ -22,7 +22,7 @@ option go_package = "mosn.io/htnn/types/plugins/consumer_restriction";
 
 message Rule {
   string name = 1 [(validate.rules).string = {min_len: 1}];
-  repeated string methods = 2 [(validate.rules).repeated.items.string.pattern = "^[A-Z]+$"];
+  repeated string methods = 2 [(validate.rules).repeated .items.string.pattern = "^[A-Z]+$"];
 }
 
 // This message is used to wrap a list of rules because protobuf doesn't support oneof repeated.
