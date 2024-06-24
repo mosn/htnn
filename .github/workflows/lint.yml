@@ -57,6 +57,11 @@ jobs:
           echo "Generated files are not up-to-date. Please run 'make gen-crd-code' and commit changes."
           exit 1
         fi
+        make gen-helm-schema
+        if ! git diff --exit-code; then
+          echo "Generated files are not up-to-date. Please run 'make gen-helm-schema' and commit changes."
+          exit 1
+        fi
         make gen-helm-docs
         if ! git diff --exit-code; then
           echo "Generated files are not up-to-date. Please run 'make gen-helm-docs' and commit changes."
