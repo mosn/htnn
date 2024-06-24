@@ -42,7 +42,7 @@ import (
 )
 
 func init() {
-	registry.AddRegistryFactory("nacos", func(store registry.ServiceEntryStore, om metav1.ObjectMeta) (registry.Registry, error) {
+	registry.AddRegistryFactory(nacos.Name, func(store registry.ServiceEntryStore, om metav1.ObjectMeta) (registry.Registry, error) {
 		reg := &Nacos{
 			logger: log.NewLogger(&log.RegistryLoggerOptions{
 				Name: om.Name,

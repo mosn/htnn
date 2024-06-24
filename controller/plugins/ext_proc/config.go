@@ -20,8 +20,8 @@ import (
 )
 
 func init() {
-	plugins.RegisterHttpPlugin("outerExtProc", &outerPlugin{})
-	plugins.RegisterHttpPlugin("innerExtProc", &innerPlugin{})
+	plugins.RegisterHttpPlugin(ext_proc.OuterName, &outerPlugin{})
+	plugins.RegisterHttpPlugin(ext_proc.InnerName, &innerPlugin{})
 }
 
 type plugin struct {
