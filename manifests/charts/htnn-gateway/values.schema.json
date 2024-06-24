@@ -1,0 +1,44 @@
+{
+  "properties": {
+    "gateway": {
+      "properties": {
+        "env": {
+          "properties": {
+            "ISTIO_DELTA_XDS": {
+              "default": "true",
+              "title": "ISTIO_DELTA_XDS",
+              "type": "string"
+            }
+          },
+          "title": "env",
+          "type": "object",
+          "required": [
+            "ISTIO_DELTA_XDS"
+          ]
+        },
+        "name": {
+          "default": "istio-ingressgateway",
+          "description": "the name is similar to the default ingress gateway installed by istioctl",
+          "title": "name",
+          "type": "string"
+        }
+      },
+      "title": "gateway",
+      "type": "object",
+      "required": [
+        "name",
+        "env"
+      ]
+    },
+    "global": {
+      "description": "Global values are values that can be accessed from any chart or subchart by exactly the same name.",
+      "title": "global",
+      "type": "object"
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "required": [
+    "gateway"
+  ]
+}
