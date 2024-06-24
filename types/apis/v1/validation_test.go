@@ -26,6 +26,8 @@ import (
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"mosn.io/htnn/api/pkg/plugins"
+	_ "mosn.io/htnn/types/plugins"    // register plugin types
+	_ "mosn.io/htnn/types/registries" // register registry types
 )
 
 func TestValidateHTTPFilterPolicy(t *testing.T) {
