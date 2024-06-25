@@ -280,6 +280,9 @@ func (c *badPluginConfig) Init(cb api.ConfigCallbackHandler) error {
 	if c.ErrorInInit {
 		return errors.New("ouch")
 	}
+	if c.PanicInInit {
+		panic("panic in init")
+	}
 	return nil
 }
 

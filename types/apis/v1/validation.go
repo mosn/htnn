@@ -25,8 +25,6 @@ import (
 	"mosn.io/htnn/api/pkg/plugins"
 	"mosn.io/htnn/types/pkg/proto"
 	"mosn.io/htnn/types/pkg/registry"
-	_ "mosn.io/htnn/types/plugins"    // register plugin types
-	_ "mosn.io/htnn/types/registries" // register registry types
 )
 
 // ValidateHTTPFilterPolicy validates HTTPFilterPolicy.

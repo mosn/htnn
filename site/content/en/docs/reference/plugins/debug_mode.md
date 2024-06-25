@@ -107,9 +107,9 @@ Which contains information such as:
             ]
         }
     },
-    "response": { // response (if any)
+    "response": {
         "headers": {
-            // response headers
+            // response headers (if any)
             ":status": [
                 "200"
             ],
@@ -137,6 +137,8 @@ Which contains information such as:
         // List of executed plugins (if any), ordered by their execution sequence.
         // Note that since the time spent in the OnLog phase is not counted into the request duration,
         // plugins executed during OnLog are not included here.
+        // Also, if the client terminates the request early, some plugins may not be executed,
+        // or executed without reporting statistical data.
         {
             "name": "debugMode",
             // Per-phase duration

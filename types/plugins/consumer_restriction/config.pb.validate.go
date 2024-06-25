@@ -67,6 +67,22 @@ func (m *Rule) validate(all bool) error {
 		errors = append(errors, err)
 	}
 
+	for idx, item := range m.GetMethods() {
+		_, _ = idx, item
+
+		if !_Rule_Methods_Pattern.MatchString(item) {
+			err := RuleValidationError{
+				field:  fmt.Sprintf("Methods[%v]", idx),
+				reason: "value does not match regex pattern \"^[A-Z]+$\"",
+			}
+			if !all {
+				return err
+			}
+			errors = append(errors, err)
+		}
+
+	}
+
 	if len(errors) > 0 {
 		return RuleMultiError(errors)
 	}
@@ -143,6 +159,8 @@ var _ interface {
 	Cause() error
 	ErrorName() string
 } = RuleValidationError{}
+
+var _Rule_Methods_Pattern = regexp.MustCompile("^[A-Z]+$")
 
 // Validate checks the field values on Rules with the rules defined in the
 // proto definition for this message. If any rules are violated, the first

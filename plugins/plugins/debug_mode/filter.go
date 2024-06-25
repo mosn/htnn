@@ -49,8 +49,8 @@ type SlowLogReport struct {
 		Headers map[string][]string `json:"headers"`
 	} `json:"request"`
 	Response struct {
-		Headers map[string][]string `json:"headers"`
-	} `json:"response,omitempty"`
+		Headers map[string][]string `json:"headers,omitempty"`
+	} `json:"response"`
 	StreamInfo struct {
 		DownstreamRemoteAddress string `json:"downstream_remote_address"`
 		UpstreamRemoteAddress   string `json:"upstream_remote_address,omitempty"`
