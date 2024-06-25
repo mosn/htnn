@@ -17,7 +17,9 @@
 set -eo pipefail
 set -x
 
-HELM="$(pwd)/bin/helm"
+PARENT_DIR="$(cd .. && pwd)"
+
+HELM="${PARENT_DIR}/bin/helm"
 E2E_DIR="$(pwd)"
 
 install() {

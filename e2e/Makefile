@@ -14,7 +14,7 @@
 
 include ../common.mk
 
-LOCALBIN ?= $(shell pwd)/bin
+LOCALBIN ?= $(shell cd .. && pwd)/bin
 $(LOCALBIN):
 	@mkdir -p $(LOCALBIN)
 
