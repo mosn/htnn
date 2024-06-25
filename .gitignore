@@ -35,3 +35,4 @@ external/*
 e2e/log
 # helm charts
 manifests/charts/**/*.tgz
+.idea
