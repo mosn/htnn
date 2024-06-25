@@ -59,5 +59,5 @@ func TestDebugFilter(t *testing.T) {
 	// Should be the sum of multiple calls
 	delta := 10 * time.Millisecond
 	rec := records[1].Record["DecodeData"]
-	assert.True(t, 200*time.Millisecond-delta < rec && rec < 200*time.Millisecond+delta)
+	assert.True(t, 200*time.Millisecond-delta < rec && rec < 200*time.Millisecond+delta, rec)
 }

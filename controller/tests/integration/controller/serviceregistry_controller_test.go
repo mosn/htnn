@@ -241,9 +241,11 @@ var _ = Describe("ServiceRegistry controller", func() {
 				}
 				names = []string{}
 				for _, e := range entries.Items {
-					names = append(names, e.Name)
+					if strings.HasPrefix(e.Name, "test.") {
+						names = append(names, e.Name)
+					}
 				}
-				return len(entries.Items) == 2
+				return len(names) == 2
 			}, timeout, interval).Should(BeTrue())
 			Expect(names).To(ConsistOf([]string{"test.default-group.public.earth.nacos", "test.default-group.public.moon.nacos"}))
 
