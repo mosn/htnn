@@ -42,6 +42,7 @@ type Test struct {
 	Name      string
 	Manifests []string
 	Run       func(*testing.T, *Suite)
+	CleanUp   func(*testing.T, *Suite)
 }
 
 var (
@@ -92,7 +93,13 @@ func (suite *Suite) Run(t *testing.T) {
 					t.Fail()
 				}
 			}()
+
+			// We run CleanUp before test so we can keep the resources generated in the test
+			// when the test failed.
 			t.Logf("CleanUp test %q at %v", test.Name, time.Now())
+			if test.CleanUp != nil {
+				test.CleanUp(t, suite)
+			}
 			suite.cleanup(t)
 			for _, manifest := range test.Manifests {
 				k8s.Prepare(t, suite.Opt.Client, manifest)

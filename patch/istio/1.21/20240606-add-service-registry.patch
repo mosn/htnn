@@ -219,10 +219,10 @@ index 9d4532c..35ad496 100644
    - kind: "CustomResourceDefinition"
      plural: "customresourcedefinitions"
 diff --git a/pkg/config/validation/htnn.go b/pkg/config/validation/htnn.go
-index bdc935b..17124c5 100644
+index 4254676..42013cb 100644
 --- a/pkg/config/validation/htnn.go
 +++ b/pkg/config/validation/htnn.go
-@@ -54,6 +54,21 @@ var ValidateConsumer = registerValidateFunc("ValidateConsumer",
+@@ -40,6 +40,21 @@ var ValidateHTTPFilterPolicy = registerValidateFunc("ValidateHTTPFilterPolicy",
  		return warnings, err
  	})
  
@@ -241,6 +241,6 @@ index bdc935b..17124c5 100644
 +		return warnings, err
 +	})
 +
- func validateEmbededHTTPFilterPolicy(hfp string) error {
- 	var policy mosniov1.HTTPFilterPolicy
- 	err := json.Unmarshal([]byte(hfp), &policy)
+ // ValidateConsumer checks that Consumer is well-formed.
+ var ValidateConsumer = registerValidateFunc("ValidateConsumer",
+ 	func(cfg config.Config) (Warning, error) {

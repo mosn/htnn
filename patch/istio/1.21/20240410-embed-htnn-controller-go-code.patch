@@ -1,5 +1,5 @@
 diff --git a/pilot/pkg/bootstrap/config_compare.go b/pilot/pkg/bootstrap/config_compare.go
-index f1f4f2b..3c437bf 100644
+index f1f4f2b..8bd6fb5 100644
 --- a/pilot/pkg/bootstrap/config_compare.go
 +++ b/pilot/pkg/bootstrap/config_compare.go
 @@ -31,8 +31,9 @@ func needsPush(prev config.Config, curr config.Config) bool {
@@ -33,7 +33,7 @@ index f1f4f2b..3c437bf 100644
  		}
  	}
 diff --git a/pilot/pkg/bootstrap/configcontroller.go b/pilot/pkg/bootstrap/configcontroller.go
-index 34cf0a6..a1d970a 100644
+index 34cf0a6..f5f5ed7 100644
 --- a/pilot/pkg/bootstrap/configcontroller.go
 +++ b/pilot/pkg/bootstrap/configcontroller.go
 @@ -113,6 +113,10 @@ func (s *Server) initConfigController(args *PilotArgs) error {
@@ -703,7 +703,7 @@ index 0000000..9bd0be3
 +	istio.InitMetrics(&MetricProvider{})
 +}
 diff --git a/pilot/pkg/config/kube/crdclient/client.go b/pilot/pkg/config/kube/crdclient/client.go
-index 6e07fea..4458398 100644
+index 6e07fea..26e5d66 100644
 --- a/pilot/pkg/config/kube/crdclient/client.go
 +++ b/pilot/pkg/config/kube/crdclient/client.go
 @@ -43,6 +43,7 @@ import (
@@ -771,7 +771,7 @@ index 0000000..58d032c
 +}
 diff --git a/pilot/pkg/features/htnn.go b/pilot/pkg/features/htnn.go
 new file mode 100644
-index 0000000..cb1214e
+index 0000000..19a68b0
 --- /dev/null
 +++ b/pilot/pkg/features/htnn.go
 @@ -0,0 +1,27 @@
@@ -867,7 +867,7 @@ index 0000000..4f84baf
 +	Reconcile(ctx *PushContext, configsUpdated sets.Set[ConfigKey]) (bool, error)
 +}
 diff --git a/pilot/pkg/model/push_context.go b/pilot/pkg/model/push_context.go
-index 7ba2e93..3b1d5f2 100644
+index 7ba2e93..b8c042d 100644
 --- a/pilot/pkg/model/push_context.go
 +++ b/pilot/pkg/model/push_context.go
 @@ -1282,6 +1282,9 @@ func (ps *PushContext) createNewContext(env *Environment) error {
@@ -907,7 +907,7 @@ index 7ba2e93..3b1d5f2 100644
  				// Reuse the previous EnvoyFilterWrapper if it exists and hasn't changed when optimized config rebuild is enabled
 diff --git a/pilot/pkg/model/push_context_htnn.go b/pilot/pkg/model/push_context_htnn.go
 new file mode 100644
-index 0000000..20cf083
+index 0000000..e68586d
 --- /dev/null
 +++ b/pilot/pkg/model/push_context_htnn.go
 @@ -0,0 +1,32 @@
@@ -944,14 +944,14 @@ index 0000000..20cf083
 +	return efGenerated
 +}
 diff --git a/pilot/pkg/xds/ecds.go b/pilot/pkg/xds/ecds.go
-index 305d1eb..d06d645 100644
+index 305d1eb..278573c 100644
 --- a/pilot/pkg/xds/ecds.go
 +++ b/pilot/pkg/xds/ecds.go
 @@ -55,6 +55,8 @@ func ecdsNeedsPush(req *model.PushRequest) bool {
  			return true
  		case kind.Secret:
  			return true
-+		case kind.HTTPFilterPolicy, kind.Consumer:
++		case kind.HTTPFilterPolicy, kind.Consumer, kind.Gateway:
 +			return true
  		}
  	}
@@ -993,10 +993,10 @@ index 2f82038..f13cae0 100644
 
 diff --git a/pkg/config/validation/htnn.go b/pkg/config/validation/htnn.go
 new file mode 100644
-index 0000000..bdc935b
+index 0000000..4254676
 --- /dev/null
 +++ b/pkg/config/validation/htnn.go
-@@ -0,0 +1,82 @@
+@@ -0,0 +1,80 @@
 +// Copyright The HTNN Authors.
 +//
 +// Licensed under the Apache License, Version 2.0 (the "License");
@@ -1018,6 +1018,7 @@ index 0000000..bdc935b
 +	"fmt"
 +
 +	"istio.io/istio/pkg/config"
++	"k8s.io/apimachinery/pkg/runtime/schema"
 +
 +	"mosn.io/htnn/controller/pkg/constant"
 +	mosniov1 "mosn.io/htnn/types/apis/v1"
@@ -1053,43 +1054,62 @@ index 0000000..bdc935b
 +		return warnings, err
 +	})
 +
-+func validateEmbededHTTPFilterPolicy(hfp string) error {
++func validateHTTNAnntation(cfg *config.Config, gk schema.GroupKind) error {
++	if cfg.Annotations == nil {
++		return nil
++	}
++
++	hfp := cfg.Annotations[constant.AnnotationHTTPFilterPolicy]
++	if hfp == "" {
++		return nil
++	}
++
 +	var policy mosniov1.HTTPFilterPolicy
 +	err := json.Unmarshal([]byte(hfp), &policy)
 +	if err != nil {
 +		return fmt.Errorf("cannot unmarshal HTTPFilterPolicy: %v", err)
 +	}
 +
-+	err = mosniov1.ValidateHTTPFilterPolicyStrictly(&policy)
++	err = mosniov1.ValidateEmbeddedHTTPFilterPolicyStrictly(&policy, gk)
 +	if err != nil {
 +		return fmt.Errorf("invalid HTTPFilterPolicy: %v", err)
 +	}
 +
 +	return nil
 +}
-+
-+func validateHTTNAnntation(cfg *config.Config) error {
-+	if cfg.Annotations == nil {
-+		return nil
-+	}
-+
-+	hfp := cfg.Annotations[constant.AnnotationHTTPFilterPolicy]
-+	if hfp != "" {
-+		return validateEmbededHTTPFilterPolicy(hfp)
-+	}
-+	return nil
-+}
 diff --git a/pkg/config/validation/validation.go b/pkg/config/validation/validation.go
-index db201a3..5216035 100644
+index db201a3..c976633 100644
 --- a/pkg/config/validation/validation.go
 +++ b/pkg/config/validation/validation.go
-@@ -2318,6 +2318,14 @@ var ValidateVirtualService = registerValidateFunc("ValidateVirtualService",
+@@ -37,6 +37,7 @@ import (
+ 	"google.golang.org/protobuf/types/descriptorpb"
+ 	"google.golang.org/protobuf/types/known/anypb"
+ 	"google.golang.org/protobuf/types/known/durationpb"
++	"k8s.io/apimachinery/pkg/runtime/schema"
+
+ 	"istio.io/api/annotation"
+ 	extensions "istio.io/api/extensions/v1alpha1"
+@@ -462,6 +463,13 @@ var ValidateGateway = registerValidateFunc("ValidateGateway",
+ 	func(cfg config.Config) (Warning, error) {
+ 		name := cfg.Name
+
++		if features.EnableHTNN {
++			err := validateHTTNAnntation(&cfg, schema.GroupKind{Group: "networking.istio.io", Kind: "Gateway"})
++			if err != nil {
++				return nil, err
++			}
++		}
++
+ 		// Check if this was converted from a k8s gateway-api resource
+ 		gatewaySemantics := cfg.Annotations[constants.InternalGatewaySemantics] == constants.GatewaySemanticsGateway
+
+@@ -2318,6 +2326,14 @@ var ValidateVirtualService = registerValidateFunc("ValidateVirtualService",
  		if !ok {
  			return nil, errors.New("cannot cast to virtual service")
  		}
 +
 +		if features.EnableHTNN {
-+			err := validateHTTNAnntation(&cfg)
++			err := validateHTTNAnntation(&cfg, schema.GroupKind{Group: "networking.istio.io", Kind: "VirtualService"})
 +			if err != nil {
 +				return nil, err
 +			}

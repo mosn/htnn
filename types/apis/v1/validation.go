@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"mosn.io/htnn/api/pkg/plugins"
@@ -34,11 +35,25 @@ func ValidateHTTPFilterPolicy(policy *HTTPFilterPolicy) error {
 	return validateHTTPFilterPolicy(policy, false)
 }
 
+// ValidateEmbeddedHTTPFilterPolicy is similar to ValidateHTTPFilterPolicy, but it's used for embedded HTTPFilterPolicy.
+// This function requires an extra parameter to specify the GroupKind of the object that contains the embedded HTTPFilterPolicy,
+// for example, `ValidateEmbeddedHTTPFilterPolicy(policy, schema.GroupKind{Group: "networking.istio.io", Kind: "VirtualService"})`.
+func ValidateEmbeddedHTTPFilterPolicy(policy *HTTPFilterPolicy, _ schema.GroupKind) error {
+	return validateHTTPFilterPolicy(policy, false)
+}
+
 // ValidateHTTPFilterPolicyStrictly validates HTTPFilterPolicy strictly.
 // Unknown plugins or fields will be rejected.
 // It's recommended to use this function before writing the configuration to persistent storage,
 // for example, in the dashboard or webhook.
 func ValidateHTTPFilterPolicyStrictly(policy *HTTPFilterPolicy) error {
+	return validateHTTPFilterPolicy(policy, true)
+}
+
+// ValidateEmbeddedHTTPFilterPolicyStrictly is similar to ValidateHTTPFilterPolicyStrictly, but it's used for embedded HTTPFilterPolicy.
+// This function requires an extra parameter to specify the GroupKind of the object that contains the embedded HTTPFilterPolicy,
+// for example, `ValidateEmbeddedHTTPFilterPolicy(policy, schema.GroupKind{Group: "networking.istio.io", Kind: "VirtualService"})`.
+func ValidateEmbeddedHTTPFilterPolicyStrictly(policy *HTTPFilterPolicy, _ schema.GroupKind) error {
 	return validateHTTPFilterPolicy(policy, true)
 }
 
