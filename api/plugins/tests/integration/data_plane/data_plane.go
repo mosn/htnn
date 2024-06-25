@@ -145,10 +145,7 @@ func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 		// Since we only care about the coverage in CI, it is fine so far.
 	}
 
-	// This is the envoyproxy/envoy:contrib-v1.29.5
-	// Use docker inspect --format='{{index .RepoDigests 0}}' envoyproxy/envoy:contrib-v1.29.5
-	// to get the sha256 ID
-	image := "envoyproxy/envoy@sha256:a2221a81a7836f368e6d1e2d55d86099e1b6c5718cfa82317fedc7394928d1a5"
+	image := "m.daocloud.io/docker.io/envoyproxy/envoy:contrib-v1.29.5"
 
 	specifiedImage := os.Getenv("PROXY_IMAGE")
 	if specifiedImage != "" {
