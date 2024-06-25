@@ -17,6 +17,8 @@ package filtermanager
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
+	"reflect"
 	"sort"
 	"sync"
 
@@ -266,8 +268,15 @@ func (p *FilterManagerConfigParser) Parse(any *anypb.Any, callbacks capi.ConfigC
 }
 
 func (p *FilterManagerConfigParser) Merge(parent interface{}, child interface{}) interface{} {
-	httpFilterCfg := parent.(*filterManagerConfig)
-	routeCfg := child.(*filterManagerConfig)
+	httpFilterCfg, ok := parent.(*filterManagerConfig)
+	if !ok {
+		panic(fmt.Sprintf("wrong config type: %s", reflect.TypeOf(httpFilterCfg)))
+	}
+	routeCfg, ok := child.(*filterManagerConfig)
+	if !ok {
+		panic(fmt.Sprintf("wrong config type: %s", reflect.TypeOf(routeCfg)))
+	}
+
 	if httpFilterCfg == nil || len(httpFilterCfg.parsed) == 0 {
 		return routeCfg
 	}

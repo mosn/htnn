@@ -16,6 +16,8 @@ package filtermanager
 
 import (
 	"encoding/json"
+	"fmt"
+	"reflect"
 	"runtime/debug"
 	"sort"
 	"sync"
@@ -120,7 +122,11 @@ func needLogExecution() bool {
 }
 
 func FilterManagerFactory(c interface{}) capi.StreamFilterFactory {
-	conf := c.(*filterManagerConfig)
+	conf, ok := c.(*filterManagerConfig)
+	if !ok {
+		panic(fmt.Sprintf("wrong config type: %s", reflect.TypeOf(c)))
+	}
+
 	parsedConfig := conf.parsed
 
 	return func(cb capi.FilterCallbackHandler) (streamFilter capi.StreamFilter) {
@@ -132,7 +138,12 @@ func FilterManagerFactory(c interface{}) capi.StreamFilterFactory {
 			}
 		}()
 
-		fm := conf.pool.Get().(*filterManager)
+		data := conf.pool.Get()
+		fm, ok := data.(*filterManager)
+		if !ok {
+			panic(fmt.Sprintf("unexpected type: %s", reflect.TypeOf(data)))
+		}
+
 		fm.callbacks.FilterCallbackHandler = cb
 
 		canSkipMethod := fm.canSkipMethod

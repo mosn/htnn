@@ -73,3 +73,9 @@ func TestParse(t *testing.T) {
 		})
 	}
 }
+
+func TestConsumerManagerFactory(t *testing.T) {
+	assert.PanicsWithValuef(t, "wrong config type: *struct {}", func() {
+		ConsumerManagerFactory(&struct{}{})
+	}, "check if the panic message contains the wrong type")
+}
