@@ -58,7 +58,13 @@ var (
 func (conf *config) Init(cb api.ConfigCallbackHandler) error {
 	remote := conf.GetRemote()
 	if remote != nil {
-		conf.client = &http.Client{Timeout: 200 * time.Millisecond}
+		var timeout time.Duration
+		if remote.Timeout != nil {
+			timeout = remote.Timeout.AsDuration()
+		} else {
+			timeout = 200 * time.Millisecond
+		}
+		conf.client = &http.Client{Timeout: timeout}
 		return nil
 	}
 
