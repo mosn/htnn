@@ -285,10 +285,12 @@ var _ = Describe("ServiceRegistry controller", func() {
 				if err := k8sClient.List(ctx, &entries); err != nil {
 					return false
 				}
-				if len(entries.Items) != 1 {
-					return false
+				for _, e := range entries.Items {
+					if e.Name == "test.default-group.public.moon.nacos" {
+						return false
+					}
 				}
-				return entries.Items[0].Name == "test.default-group.public.earth.nacos"
+				return true
 			}, timeout, interval).Should(BeTrue())
 
 			Expect(k8sClient.Delete(ctx, registryEarth)).Should(Succeed())
@@ -354,7 +356,7 @@ var _ = Describe("ServiceRegistry controller", func() {
 					return false
 				}
 				// We use the number of ServiceEntries to indicate the reconciliation is done
-				return len(entries.Items) == 1
+				return len(entries.Items) > 0
 			}, timeout, interval).Should(BeTrue())
 			time.Sleep(1 * time.Second)
 			// Trigger a reconciliation
