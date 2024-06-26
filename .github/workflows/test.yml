@@ -178,7 +178,7 @@ jobs:
     - name: binary cache
       uses: actions/cache@v4
       with:
-        path: ./controller/bin
+        path: ./bin
         key: ${{ runner.os }}-${{ hashFiles('./controller/Makefile') }}
 
     - name: Set up services
@@ -261,13 +261,13 @@ jobs:
     - name: binary cache
       uses: actions/cache@v4
       with:
-        path: ./e2e/bin
+        path: ./bin
         key: ${{ runner.os }}-${{ hashFiles('./Makefile') }}
 
     - name: binary cache (for controller)
       uses: actions/cache@v4
       with:
-        path: ./controller/bin
+        path: ./bin
         key: ${{ runner.os }}-${{ hashFiles('./controller/Makefile') }}
 
     - name: Prepare cluster
