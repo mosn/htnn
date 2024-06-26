@@ -142,6 +142,12 @@ func validateHTTPFilterPolicy(policy *HTTPFilterPolicy, strict bool) error {
 		}
 
 		targetGateway = ref.Kind == "Gateway"
+
+		if len(policy.Spec.SubPolicies) > 0 {
+			if ref.Kind != "VirtualService" {
+				return errors.New("subPolicies can not be used with this referred target")
+			}
+		}
 	}
 	// HTTPFilterPolicy in embedded mode can have no targetRef
 
