@@ -108,6 +108,9 @@ static_resources:
                                     local headers = handle:headers()
                                     local resp_headers = {[":status"] = "200"}
                                     for key, value in pairs(headers) do
+                                      if key:find(":") ~= nil then
+                                        key = key:sub(2)
+                                      end
                                       local k = "echo-" .. key
                                       local v = resp_headers[k]
                                       if v ~= nil then

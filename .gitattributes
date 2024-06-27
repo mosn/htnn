@@ -12,27 +12,4 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# binaries
-libgolang.so
-bin/
-# test generated files
-*.out
-*.test
-test-envoy/
-# website
-site/public/
-site/resources/
-site/.hugo_build.lock
-site/tmp
-# dev files
-controller/**/cache
-controller/**/log
-!controller/internal/log
-!controller/pkg/registry/log
-controller/tests/testdata/crd/
-go.work.sum
-external/*
-e2e/log
-.idea
-# helm charts
-manifests/charts/**/*.tgz
+**/*.tpl -linguist-detectable

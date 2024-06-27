@@ -22,10 +22,13 @@ import (
 	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
 	"mosn.io/htnn/api/pkg/plugins"
+	_ "mosn.io/htnn/types/plugins"    // register plugin types
+	_ "mosn.io/htnn/types/registries" // register registry types
 )
 
 func TestValidateHTTPFilterPolicy(t *testing.T) {
@@ -39,6 +42,21 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 		err       string
 		strictErr string
 	}{
+		{
+			name: "no TargetRef",
+			policy: &HTTPFilterPolicy{
+				Spec: HTTPFilterPolicySpec{
+					Filters: map[string]HTTPPlugin{
+						"animal": {
+							Config: runtime.RawExtension{
+								Raw: []byte(`{"pet":"cat"}`),
+							},
+						},
+					},
+				},
+			},
+			err: "targetRef is required",
+		},
 		{
 			name: "ok, VirtualService",
 			policy: &HTTPFilterPolicy{
@@ -70,20 +88,6 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 						},
 						SectionName: &sectionName,
 					},
-					Filters: map[string]HTTPPlugin{
-						"animal": {
-							Config: runtime.RawExtension{
-								Raw: []byte(`{"pet":"cat"}`),
-							},
-						},
-					},
-				},
-			},
-		},
-		{
-			name: "ok, embedded VirtualService",
-			policy: &HTTPFilterPolicy{
-				Spec: HTTPFilterPolicySpec{
 					Filters: map[string]HTTPPlugin{
 						"animal": {
 							Config: runtime.RawExtension{
@@ -264,6 +268,25 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 			err: "targetRef.SectionName and SubPolicies can not be used together",
 		},
 		{
+			name: "targetRef to Gateway and also use SubPolicies",
+			policy: &HTTPFilterPolicy{
+				Spec: HTTPFilterPolicySpec{
+					TargetRef: &gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: "networking.istio.io",
+							Kind:  "Gateway",
+						},
+					},
+					SubPolicies: []HTTPFilterSubPolicy{
+						{
+							SectionName: sectionName,
+						},
+					},
+				},
+			},
+			err: "subPolicies can not be used with this referred target",
+		},
+		{
 			name: "bad configuration",
 			policy: &HTTPFilterPolicy{
 				Spec: HTTPFilterPolicySpec{
@@ -378,6 +401,135 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 			}
 
 			err = ValidateHTTPFilterPolicyStrictly(tt.policy)
+			if tt.strictErr == "" && tt.err == "" {
+				assert.Nil(t, err)
+			} else {
+				exp := tt.strictErr
+				if exp == "" {
+					exp = tt.err
+				}
+				assert.ErrorContains(t, err, exp)
+			}
+		})
+	}
+}
+
+func TestValidateEmbeddedHTTPFilterPolicy(t *testing.T) {
+	plugins.RegisterHttpPluginType("animal", &plugins.MockPlugin{})
+
+	tests := []struct {
+		name      string
+		policy    *HTTPFilterPolicy
+		gk        schema.GroupKind
+		err       string
+		strictErr string
+	}{
+		{
+			name: "ok, embedded VirtualService",
+			policy: &HTTPFilterPolicy{
+				Spec: HTTPFilterPolicySpec{
+					Filters: map[string]HTTPPlugin{
+						"animal": {
+							Config: runtime.RawExtension{
+								Raw: []byte(`{"pet":"cat"}`),
+							},
+						},
+					},
+				},
+			},
+			gk: schema.GroupKind{Group: "networking.istio.io", Kind: "VirtualService"},
+		},
+		{
+			name: "unknown fields, VirtualService",
+			policy: &HTTPFilterPolicy{
+				Spec: HTTPFilterPolicySpec{
+					Filters: map[string]HTTPPlugin{
+						"animal": {
+							Config: runtime.RawExtension{
+								Raw: []byte(`{"pet":"cat", "unknown_fields":"should be ignored"}`),
+							},
+						},
+					},
+				},
+			},
+			gk:        schema.GroupKind{Group: "networking.istio.io", Kind: "VirtualService"},
+			strictErr: "unknown field \"unknown_fields\"",
+		},
+		{
+			name: "bad configuration",
+			policy: &HTTPFilterPolicy{
+				Spec: HTTPFilterPolicySpec{
+					Filters: map[string]HTTPPlugin{
+						"localRatelimit": {
+							Config: runtime.RawExtension{
+								Raw: []byte(`{}`),
+							},
+						},
+					},
+				},
+			},
+			gk:  schema.GroupKind{Group: "networking.istio.io", Kind: "VirtualService"},
+			err: "invalid LocalRateLimit.StatPrefix: value length must be at least 1 runes",
+		},
+		{
+			name: "ok, Istio Gateway",
+			policy: &HTTPFilterPolicy{
+				Spec: HTTPFilterPolicySpec{
+					Filters: map[string]HTTPPlugin{
+						"animal": {
+							Config: runtime.RawExtension{
+								Raw: []byte(`{"pet":"cat"}`),
+							},
+						},
+					},
+				},
+			},
+			gk: schema.GroupKind{Group: "networking.istio.io", Kind: "Gateway"},
+		},
+		{
+			name: "not implemented, Istio Gateway with Native Plugin",
+			policy: &HTTPFilterPolicy{
+				Spec: HTTPFilterPolicySpec{
+					Filters: map[string]HTTPPlugin{
+						"localRatelimit": {
+							Config: runtime.RawExtension{
+								Raw: []byte(`{}`),
+							},
+						},
+					},
+				},
+			},
+			gk:  schema.GroupKind{Group: "networking.istio.io", Kind: "Gateway"},
+			err: "configure native plugins to the Gateway is not implemented",
+		},
+		{
+			name: "not implemented",
+			policy: &HTTPFilterPolicy{
+				Spec: HTTPFilterPolicySpec{
+					Filters: map[string]HTTPPlugin{
+						"animal": {
+							Config: runtime.RawExtension{
+								Raw: []byte(`{"pet":"cat"}`),
+							},
+						},
+					},
+				},
+			},
+			gk:  schema.GroupKind{Group: "gateways.gateway.networking.k8s.io", Kind: "Gateway"},
+			err: "embed policy to the gateways.gateway.networking.k8s.io/Gateway is not implemented",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateEmbeddedHTTPFilterPolicy(tt.policy, tt.gk)
+			if tt.err == "" {
+				assert.Nil(t, err)
+			} else {
+				assert.ErrorContains(t, err, tt.err)
+			}
+
+			err = ValidateEmbeddedHTTPFilterPolicyStrictly(tt.policy, tt.gk)
 			if tt.strictErr == "" && tt.err == "" {
 				assert.Nil(t, err)
 			} else {

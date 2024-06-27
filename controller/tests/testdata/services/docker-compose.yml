@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   nacos:
     image: nacos/nacos-server:v1.4.6-slim

@@ -94,11 +94,21 @@ var varsPool = sync.Pool{
 }
 
 func (s *CelScript) EvalWithRequest(cb api.FilterCallbackHandler, headers api.RequestHeaderMap) (any, error) {
-	vars := varsPool.Get().(map[string]any)
-	r := vars["request"].(*request)
+	data := varsPool.Get()
+	vars, ok := data.(map[string]any)
+	if !ok {
+		return nil, fmt.Errorf("unexpected type: %s", reflect.TypeOf(data))
+	}
+	r, ok := vars["request"].(*request)
+	if !ok {
+		return nil, fmt.Errorf("unexpected request type: %s", reflect.TypeOf(vars["request"]))
+	}
 	r.headers = headers
 	r.callback = cb
-	so := vars["source"].(*source)
+	so, ok := vars["source"].(*source)
+	if !ok {
+		return nil, fmt.Errorf("unexpected source type: %s", reflect.TypeOf(vars["source"]))
+	}
 	so.callback = cb
 
 	res, _, err := s.program.Eval(vars)
@@ -212,12 +222,19 @@ func (r *request) Receive(function string, overload string, args []ref.Val) ref.
 	case "method":
 		return types.String(r.headers.Method())
 	case "header":
-		name := args[0].Value().(string)
+		name, ok := args[0].Value().(string)
+		if !ok {
+			// We have type check in the cel definition. This branch is only to satisfy the lint.
+			return types.NewErr("unexpected type: %s", reflect.TypeOf(args[0].Value()))
+		}
 		return types.String(r.Header(name))
 	case "query_path":
 		return types.String(r.headers.Url().RawQuery)
 	case "query":
-		name := args[0].Value().(string)
+		name, ok := args[0].Value().(string)
+		if !ok {
+			return types.NewErr("unexpected type: %s", reflect.TypeOf(args[0].Value()))
+		}
 		return types.String(r.Query(name))
 	case "id":
 		return fromProperty(r.callback, "request.id")

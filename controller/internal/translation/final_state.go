@@ -182,7 +182,9 @@ func toFinalState(_ *Ctx, state *mergedState) (*FinalState, error) {
 			bName := b.Patch.Value.AsMap()["name"]
 			if aName != nil && bName != nil {
 				// EnvoyFilter for ECDS
-				return aName.(string) < bName.(string)
+				as, _ := aName.(string)
+				bs, _ := bName.(string)
+				return as < bs
 			} else if aName != nil {
 				return true
 			} else if bName != nil {

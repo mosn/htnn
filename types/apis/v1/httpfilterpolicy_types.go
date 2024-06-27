@@ -30,6 +30,7 @@ import (
 type HTTPFilterPolicySpec struct {
 	// TargetRef is the name of the resource this policy is being attached to.
 	// This Policy and the TargetRef MUST be in the same namespace.
+	// HTTPFilterPolicy in embedded mode can have no targetRef.
 	//
 	// +optional
 	TargetRef *gwapiv1a2.PolicyTargetReferenceWithSectionName `json:"targetRef"`

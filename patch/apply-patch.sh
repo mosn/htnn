@@ -19,6 +19,7 @@ set -euo pipefail
 TARGET_ISTIO_DIR="$1"
 
 for patch in istio/1.21/*.patch; do
+    echo "Applying patch $patch"
     patch -d "$TARGET_ISTIO_DIR" -p1 < "$patch"
 done
 

@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   # names in alphabetical order
   hydra:
