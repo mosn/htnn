@@ -29,7 +29,7 @@ title: OPA
 |--------|--------|------|------------------|-------------------------------------------|
 | url    | string | 是   | must be valid URI | 指向 OPA 服务的 url，如 `http://127.0.0.1:8181/` |
 | policy | string | 是   | min_len: 1       | OPA 策略的名称                                 |
-| timeout | [Duration](../../type#duration) | False    | -           | http 客户端超时时间                              |
+| timeout | [Duration](../../type#duration) | 否    |            | http 客户端超时时间                              |
 
 ### Local
 
