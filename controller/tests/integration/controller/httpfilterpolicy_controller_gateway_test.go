@@ -16,6 +16,7 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"os"
 	"time"
 
@@ -27,6 +28,7 @@ import (
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"mosn.io/htnn/controller/internal/config"
+	"mosn.io/htnn/controller/internal/translation"
 	"mosn.io/htnn/controller/tests/pkg"
 	mosniov1 "mosn.io/htnn/types/apis/v1"
 )
@@ -265,6 +267,79 @@ var _ = Describe("HTTPFilterPolicy controller, for gateway", func() {
 			}, timeout, interval).Should(BeTrue())
 		})
 
+		It("deal with embedded HTTPFilterPolicy", func() {
+			ctx := context.Background()
+			input := []map[string]interface{}{}
+			mustReadHTTPFilterPolicy("istio_gateway_embedded_hfp", &input)
+
+			for _, in := range input {
+				obj := pkg.MapToObj(in)
+				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
+			}
+
+			var ef *istiov1a3.EnvoyFilter
+			Eventually(func() bool {
+				var envoyfilters istiov1a3.EnvoyFilterList
+				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
+					return false
+				}
+				for _, e := range envoyfilters.Items {
+					if e.Name == "htnn-h-default" {
+						ef = e
+						return true
+					}
+				}
+				return false
+			}, timeout, interval).Should(BeTrue())
+
+			Expect(len(ef.Spec.ConfigPatches)).To(Equal(2))
+			for _, cp := range ef.Spec.ConfigPatches {
+				if cp.ApplyTo != istioapi.EnvoyFilter_EXTENSION_CONFIG {
+					continue
+				}
+
+				b, _ := cp.Patch.Value.MarshalJSON()
+				Expect(string(b)).To(ContainSubstring(`"hostName":"peter"`))
+
+				var info translation.Info
+				ann := ef.Annotations["htnn.mosn.io/info"]
+				json.Unmarshal([]byte(ann), &info)
+				Expect(info.HTTPFilterPolicies).To(ConsistOf([]string{"default/embedded-gateway-default-embedded"}))
+			}
+		})
+
+		It("deal with embedded HTTPFilterPolicy, ignore invalid embedded HTTPFilterPolicy", func() {
+			ctx := context.Background()
+			input := []map[string]interface{}{}
+			mustReadHTTPFilterPolicy("istio_gateway_embedded_invalid_hfp", &input)
+
+			for _, in := range input {
+				obj := pkg.MapToObj(in)
+				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
+			}
+
+			var envoyfilters istiov1a3.EnvoyFilterList
+			Eventually(func() bool {
+				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
+					return false
+				}
+				for _, ef := range envoyfilters.Items {
+					if ef.Name == "htnn-h-default" {
+						for _, cp := range ef.Spec.ConfigPatches {
+							v := cp.Patch.Value.AsMap()
+							name := v["name"].(string)
+							if name == "htnn-default-0.0.0.0_8889-golang-filter" && cp.ApplyTo == istioapi.EnvoyFilter_EXTENSION_CONFIG {
+								pv := v["typed_config"].(map[string]interface{})["plugin_config"].(map[string]interface{})["value"].(map[string]interface{})
+								if len(pv) == 0 {
+									return true
+								}
+							}
+						}
+					}
+				}
+				return false
+			}, timeout, interval).Should(BeTrue())
+		})
 	})
 
 	Context("When generating LDS plugin configuration via ECDS (k8s Gateway)", func() {
