@@ -37,19 +37,6 @@ type File struct {
 	mtime time.Time
 }
 
-func (f *File) Mtime() time.Time {
-	f.lock.RLock()
-	defer f.lock.RUnlock()
-	// the returned time.Time should be readonly
-	return f.mtime
-}
-
-func (f *File) SetMtime(t time.Time) {
-	f.lock.Lock()
-	f.mtime = t
-	f.lock.Unlock()
-}
-
 type Fsnotify struct {
 	Watcher *fsnotify.Watcher
 }
@@ -78,14 +65,11 @@ func Update(onChange func(), files ...*File) (err error) {
 func WatchFiles(onChange func(), files ...*File) (err error) {
 	if len(files) < 1 {
 		err = errors.New("must specify at least one file to watch")
-		logger.Error(err, "")
 		return
 	}
 
 	watcher := newFsnotify().Watcher
 	if err != nil {
-
-		logger.Error(err, "failed to create watcher")
 		return
 	}
 
@@ -99,6 +83,7 @@ func WatchFiles(onChange func(), files ...*File) (err error) {
 
 func (f *Fsnotify) watchFiles(onChange func(), w *fsnotify.Watcher, files *File) {
 	defer func(w *fsnotify.Watcher) {
+		logger.Info("stop watch files" + files.Name)
 		err := w.Close()
 		if err != nil {
 			logger.Error(err, "failed to close fsnotify watcher")
@@ -108,6 +93,7 @@ func (f *Fsnotify) watchFiles(onChange func(), w *fsnotify.Watcher, files *File)
 	if err != nil {
 		logger.Error(err, "add file to watcher failed")
 	}
+	logger.Info("start watch files" + files.Name)
 	for {
 		select {
 		case event, ok := <-w.Events:

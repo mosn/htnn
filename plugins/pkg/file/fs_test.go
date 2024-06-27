@@ -57,4 +57,46 @@ func TestFileIsChanged(t *testing.T) {
 	mu.Lock()
 	assert.Equal(t, 2, i)
 	mu.Unlock()
+
+	_ = Update(func() {
+		mu.Lock()
+		i = 1
+		mu.Unlock()
+	}, file)
+
+	time.Sleep(1 * time.Millisecond)
+	tmpfile.Sync()
+	mu.Lock()
+	assert.Equal(t, 2, i)
+
+	err := WatchFiles(func() {})
+	assert.Error(t, err, "must specify at least one file to watch")
+}
+
+func TestStat(t *testing.T) {
+	tmpfile, err := os.CreateTemp("", "example")
+	if err != nil {
+		t.Fatalf("Failed to create temp file: %v", err)
+	}
+	defer os.Remove(tmpfile.Name())
+
+	if _, err := tmpfile.Write([]byte("hello world")); err != nil {
+		t.Fatalf("Failed to write to temp file: %v", err)
+	}
+
+	if err := tmpfile.Close(); err != nil {
+		t.Fatalf("Failed to close temp file: %v", err)
+	}
+
+	statFile, err := Stat(tmpfile.Name())
+	assert.NoError(t, err, "Stat() should not return error")
+
+	assert.Equal(t, tmpfile.Name(), statFile.Name, "Stat() Name should match")
+	assert.False(t, statFile.mtime.IsZero(), "Stat() mtime should be non-zero")
+
+	nonExistentFilePath := "./nonexistentfile.txt"
+	_, err = Stat(nonExistentFilePath)
+
+	assert.Error(t, err, "Stat should return error for non-existent file")
+	assert.True(t, os.IsNotExist(err), "Error should indicate non-existent file")
 }
