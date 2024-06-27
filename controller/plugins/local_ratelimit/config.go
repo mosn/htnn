@@ -24,7 +24,7 @@ const (
 )
 
 func init() {
-	plugins.RegisterHttpPlugin(Name, &plugin{})
+	plugins.RegisterPlugin(Name, &plugin{})
 }
 
 type plugin struct {
@@ -33,8 +33,8 @@ type plugin struct {
 
 // Each Native plugin need to implement the methods below
 
-// RouteConfigTypeURL returns the type url of per-route config
-func (p *plugin) RouteConfigTypeURL() string {
+// ConfigTypeURL returns the type url of per-route config
+func (p *plugin) ConfigTypeURL() string {
 	return "type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit"
 }
 
@@ -42,7 +42,7 @@ func (p *plugin) RouteConfigTypeURL() string {
 func (p *plugin) HTTPFilterConfigPlaceholder() map[string]interface{} {
 	return map[string]interface{}{
 		"typed_config": map[string]interface{}{
-			"@type":      p.RouteConfigTypeURL(),
+			"@type":      p.ConfigTypeURL(),
 			"statPrefix": "http_local_rate_limiter",
 		},
 	}

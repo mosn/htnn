@@ -31,7 +31,7 @@ import (
 )
 
 func init() {
-	plugins.RegisterHttpPlugin(oidctype.Name, &plugin{})
+	plugins.RegisterPlugin(oidctype.Name, &plugin{})
 }
 
 type plugin struct {

@@ -92,7 +92,7 @@ func ValidateEmbeddedHTTPFilterPolicyStrictly(policy *HTTPFilterPolicy, gk schem
 }
 
 func validateFilter(name string, filter HTTPPlugin, strict bool, targetGateway bool) error {
-	p := plugins.LoadHttpPluginType(name)
+	p := plugins.LoadPluginType(name)
 	if p == nil {
 		if strict {
 			return errors.New("unknown http filter: " + name)
@@ -108,6 +108,11 @@ func validateFilter(name string, filter HTTPPlugin, strict bool, targetGateway b
 			// such number (20 x the number of LDS) of ECDS resources. Perhaps we can use
 			// composite filter to solve this problem?
 			return errors.New("configure native plugins to the Gateway is not implemented")
+		}
+	} else {
+		switch p.Order().Position {
+		case plugins.OrderPositionListener, plugins.OrderPositionNetwork:
+			return errors.New("configure layer 4 plugins to route is invalid")
 		}
 	}
 
@@ -254,7 +259,7 @@ func NormalizeK8sGatewayProtocol(protocol gwapiv1.ProtocolType) string {
 
 func ValidateConsumer(c *Consumer) error {
 	for name, filter := range c.Spec.Auth {
-		plugin := plugins.LoadHttpPluginType(name)
+		plugin := plugins.LoadPluginType(name)
 		if plugin == nil {
 			// reject unknown filter in CP, ignore unknown filter in DP
 			return errors.New("unknown authn filter: " + name)
@@ -276,7 +281,7 @@ func ValidateConsumer(c *Consumer) error {
 	}
 
 	for name, filter := range c.Spec.Filters {
-		p := plugins.LoadHttpPluginType(name)
+		p := plugins.LoadPluginType(name)
 		if p == nil {
 			return errors.New("unknown http filter: " + name)
 		}

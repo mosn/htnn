@@ -20,14 +20,14 @@ import (
 )
 
 func init() {
-	plugins.RegisterHttpPlugin("outerLua", &outerPlugin{})
-	plugins.RegisterHttpPlugin("innerLua", &innerPlugin{})
+	plugins.RegisterPlugin("outerLua", &outerPlugin{})
+	plugins.RegisterPlugin("innerLua", &innerPlugin{})
 }
 
 type plugin struct {
 }
 
-func (p *plugin) RouteConfigTypeURL() string {
+func (p *plugin) ConfigTypeURL() string {
 	return "type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute"
 }
 

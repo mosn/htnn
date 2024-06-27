@@ -22,8 +22,8 @@ import (
 )
 
 func init() {
-	plugins.RegisterHttpPluginType("outerExtProc", &OuterPlugin{})
-	plugins.RegisterHttpPluginType("innerExtProc", &InnerPlugin{})
+	plugins.RegisterPluginType("outerExtProc", &OuterPlugin{})
+	plugins.RegisterPluginType("innerExtProc", &InnerPlugin{})
 }
 
 type plugin struct {

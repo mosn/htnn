@@ -32,7 +32,8 @@ import (
 )
 
 func TestValidateHTTPFilterPolicy(t *testing.T) {
-	plugins.RegisterHttpPluginType("animal", &plugins.MockPlugin{})
+	plugins.RegisterPluginType("animal", &plugins.MockPlugin{})
+	plugins.RegisterPluginType("networkNative", &plugins.MockNetworkNativePlugin{})
 	namespace := gwapiv1.Namespace("ns")
 	sectionName := gwapiv1.SectionName("test")
 
@@ -118,6 +119,27 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 				},
 			},
 			strictErr: "unknown field \"unknown_fields\"",
+		},
+		{
+			name: "l4 plugin, VirtualService",
+			policy: &HTTPFilterPolicy{
+				Spec: HTTPFilterPolicySpec{
+					TargetRef: &gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: "networking.istio.io",
+							Kind:  "VirtualService",
+						},
+					},
+					Filters: map[string]HTTPPlugin{
+						"networkNative": {
+							Config: runtime.RawExtension{
+								Raw: []byte(`{}`),
+							},
+						},
+					},
+				},
+			},
+			err: "configure layer 4 plugins to route is invalid",
 		},
 		{
 			name: "ok, HTTPRoute",
@@ -349,6 +371,26 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 			err: "configure native plugins to the Gateway is not implemented",
 		},
 		{
+			name: "l4 plugin, Istio Gateway",
+			policy: &HTTPFilterPolicy{
+				Spec: HTTPFilterPolicySpec{
+					TargetRef: &gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: "networking.istio.io",
+							Kind:  "Gateway",
+						},
+					},
+					Filters: map[string]HTTPPlugin{
+						"networkNative": {
+							Config: runtime.RawExtension{
+								Raw: []byte(`{}`),
+							},
+						},
+					},
+				},
+			},
+		},
+		{
 			name: "ok, k8s Gateway",
 			policy: &HTTPFilterPolicy{
 				Spec: HTTPFilterPolicySpec{
@@ -415,7 +457,7 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 }
 
 func TestValidateEmbeddedHTTPFilterPolicy(t *testing.T) {
-	plugins.RegisterHttpPluginType("animal", &plugins.MockPlugin{})
+	plugins.RegisterPluginType("animal", &plugins.MockPlugin{})
 
 	tests := []struct {
 		name      string

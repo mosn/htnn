@@ -126,10 +126,10 @@ func translateFilterManagerConfigToPolicyInRDS(fmc *filtermanager.FilterManagerC
 	for _, plugin := range fmc.Plugins {
 		name := plugin.Name
 		url := ""
-		p := plugins.LoadHttpPlugin(name)
+		p := plugins.LoadPlugin(name)
 		if p == nil {
 			// For Go Plugins, only the type is registered
-			p = plugins.LoadHttpPluginType(name)
+			p = plugins.LoadPluginType(name)
 		}
 		// As we don't reject configuration with unknown plugin to keep compatibility...
 		if p == nil {
@@ -149,7 +149,7 @@ func translateFilterManagerConfigToPolicyInRDS(fmc *filtermanager.FilterManagerC
 			plugin.Config = cfg
 			goFilterManager.Plugins = append(goFilterManager.Plugins, plugin)
 		} else {
-			url = nativePlugin.RouteConfigTypeURL()
+			url = nativePlugin.ConfigTypeURL()
 			conf := p.Config()
 			desc := conf.ProtoReflect().Descriptor()
 			fieldDescs := desc.Fields()
@@ -162,7 +162,7 @@ func translateFilterManagerConfigToPolicyInRDS(fmc *filtermanager.FilterManagerC
 			// rewrite the configuration, we should take care of this.
 			stripUnknowFields(m, fieldDescs)
 
-			if wrapper, ok := p.(plugins.NativePluginHasRouteConfigWrapper); ok {
+			if wrapper, ok := p.(plugins.HTTPNativePluginHasRouteConfigWrapper); ok {
 				m = wrapper.ToRouteConfig(m)
 			}
 
@@ -229,14 +229,14 @@ func translateFilterManagerConfigToPolicyInECDS(fmc *filtermanager.FilterManager
 	consumerNeeded := false
 	for _, plugin := range fmc.Plugins {
 		name := plugin.Name
-		p := plugins.LoadHttpPlugin(name)
+		p := plugins.LoadPlugin(name)
 		if p != nil {
 			// Native plugin is not supported
 			continue
 		}
 
 		// For Go Plugins, only the type is registered
-		p = plugins.LoadHttpPluginType(name)
+		p = plugins.LoadPluginType(name)
 		// As we don't reject configuration with unknown plugin to keep compatibility...
 		if p == nil {
 			continue

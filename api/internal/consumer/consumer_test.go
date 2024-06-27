@@ -25,8 +25,8 @@ import (
 )
 
 func TestConsumerInitConfigs(t *testing.T) {
-	plugins.RegisterHttpPlugin("consumerPluginX", &consumerPlugin{})
-	plugins.RegisterHttpPlugin("filterPlugin", &filterPlugin{})
+	plugins.RegisterPlugin("consumerPluginX", &consumerPlugin{})
+	plugins.RegisterPlugin("filterPlugin", &filterPlugin{})
 
 	var tests = []struct {
 		name     string

@@ -485,13 +485,13 @@ func (f *beforeConsumerAndHasOtherMethodFilter) EncodeHeaders(headers api.Respon
 }
 
 func init() {
-	plugins.RegisterHttpPlugin("stream", &streamPlugin{})
-	plugins.RegisterHttpPlugin("buffer", &bufferPlugin{})
-	plugins.RegisterHttpPlugin("localReply", &localReplyPlugin{})
-	plugins.RegisterHttpPlugin("bad", &badPlugin{})
-	plugins.RegisterHttpPlugin("consumer", &consumerPlugin{})
-	plugins.RegisterHttpPlugin("init", &initPlugin{})
-	plugins.RegisterHttpPlugin("benchmark", &benchmarkPlugin{})
-	plugins.RegisterHttpPlugin("benchmark2", &benchmarkPlugin{})
-	plugins.RegisterHttpPlugin("beforeConsumerAndHasOtherMethod", &beforeConsumerAndHasOtherMethodPlugin{})
+	plugins.RegisterPlugin("stream", &streamPlugin{})
+	plugins.RegisterPlugin("buffer", &bufferPlugin{})
+	plugins.RegisterPlugin("localReply", &localReplyPlugin{})
+	plugins.RegisterPlugin("bad", &badPlugin{})
+	plugins.RegisterPlugin("consumer", &consumerPlugin{})
+	plugins.RegisterPlugin("init", &initPlugin{})
+	plugins.RegisterPlugin("benchmark", &benchmarkPlugin{})
+	plugins.RegisterPlugin("benchmark2", &benchmarkPlugin{})
+	plugins.RegisterPlugin("beforeConsumerAndHasOtherMethod", &beforeConsumerAndHasOtherMethodPlugin{})
 }

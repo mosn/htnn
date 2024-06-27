@@ -24,14 +24,14 @@ const (
 )
 
 func init() {
-	plugins.RegisterHttpPlugin(Name, &plugin{})
+	plugins.RegisterPlugin(Name, &plugin{})
 }
 
 type plugin struct {
 	cors.Plugin
 }
 
-func (p *plugin) RouteConfigTypeURL() string {
+func (p *plugin) ConfigTypeURL() string {
 	return "type.googleapis.com/envoy.extensions.filters.http.cors.v3.CorsPolicy"
 }
 

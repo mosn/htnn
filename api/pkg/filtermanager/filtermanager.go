@@ -178,7 +178,7 @@ func FilterManagerFactory(c interface{}) capi.StreamFilterFactory {
 						api.LogErrorf("plugin %s has DecodeRequest but not DecodeHeaders. To run DecodeRequest, we need to return api.WaitAllData from DecodeHeaders", fc.Name)
 					}
 
-					p := pkgPlugins.LoadHttpPluginType(fc.Name)
+					p := pkgPlugins.LoadPluginType(fc.Name)
 					if p != nil {
 						order := p.Order()
 						if order.Position <= pkgPlugins.OrderPositionAuthn {

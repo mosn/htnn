@@ -60,5 +60,5 @@ func (f *coverageFilter) DecodeHeaders(headers api.RequestHeaderMap, endStream b
 }
 
 func init() {
-	plugins.RegisterHttpPlugin("coverage", &coveragePlugin{})
+	plugins.RegisterPlugin("coverage", &coveragePlugin{})
 }

@@ -43,8 +43,8 @@ import (
 )
 
 func init() {
-	plugins.RegisterHttpPluginType("animal", &plugins.MockPlugin{})
-	plugins.RegisterHttpPluginType("localReply", &plugins.MockPlugin{})
+	plugins.RegisterPluginType("animal", &plugins.MockPlugin{})
+	plugins.RegisterPluginType("localReply", &plugins.MockPlugin{})
 }
 
 func testName(inputFile string) string {

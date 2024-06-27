@@ -21,7 +21,7 @@ import (
 )
 
 func init() {
-	plugins.RegisterHttpPlugin(consumer_restriction.Name, &plugin{})
+	plugins.RegisterPlugin(consumer_restriction.Name, &plugin{})
 }
 
 type plugin struct {

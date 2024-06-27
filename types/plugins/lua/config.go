@@ -22,8 +22,8 @@ import (
 )
 
 func init() {
-	plugins.RegisterHttpPluginType("outerLua", &OuterPlugin{})
-	plugins.RegisterHttpPluginType("innerLua", &InnerPlugin{})
+	plugins.RegisterPluginType("outerLua", &OuterPlugin{})
+	plugins.RegisterPluginType("innerLua", &InnerPlugin{})
 }
 
 type plugin struct {

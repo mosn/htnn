@@ -157,13 +157,13 @@ func Init() {
 func postInit() {
 	if !enableNativePlugin {
 		log.Infof("native plugin disabled by configured")
-		plugins.IterateHttpPlugin(func(key string, value plugins.Plugin) bool {
+		plugins.IteratePlugin(func(key string, value plugins.Plugin) bool {
 			_, ok := value.(plugins.NativePlugin)
 			if !ok {
 				return true
 			}
 
-			plugins.DisableHttpPlugin(key)
+			plugins.DisablePlugin(key)
 			return true
 		})
 
