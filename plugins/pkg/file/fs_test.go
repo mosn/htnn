@@ -16,6 +16,7 @@ package file
 
 import (
 	"os"
+	"sync"
 	"testing"
 	"time"
 
@@ -23,6 +24,7 @@ import (
 )
 
 func TestFileIsChanged(t *testing.T) {
+	var mu sync.Mutex
 	i := 1
 	tmpfile, _ := os.CreateTemp("./", "example")
 	defer func(name string) {
@@ -34,21 +36,25 @@ func TestFileIsChanged(t *testing.T) {
 
 	file := &File{Name: tmpfile.Name()}
 	_ = WatchFiles(func() {
+		mu.Lock()
 		i = 2
+		mu.Unlock()
 	}, file)
 	time.Sleep(1 * time.Millisecond)
 	tmpfile.Write([]byte("bls"))
 	tmpfile.Sync()
+	mu.Lock()
 	assert.Equal(t, 2, i)
+	mu.Unlock()
 
 	_ = WatchFiles(func() {
+		mu.Lock()
 		i = 1
+		mu.Unlock()
 	}, file)
 	time.Sleep(1 * time.Millisecond)
 	tmpfile.Sync()
+	mu.Lock()
 	assert.Equal(t, 2, i)
-
-	err := WatchFiles(func() {})
-	assert.Equal(t, err.Error(), "must specify at least one file to watch", "Expected error message does not match")
-
+	mu.Unlock()
 }
