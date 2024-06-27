@@ -22,22 +22,33 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestFileMtimeDetection(t *testing.T) {
-	defaultFs = newFS(2000 * time.Millisecond)
+func TestFileIsChanged(t *testing.T) {
+	i := 1
+	tmpfile, _ := os.CreateTemp("./", "example")
+	defer func(name string) {
+		err := os.Remove(name)
+		if err != nil {
+			t.Logf("%v", err)
+		}
+	}(tmpfile.Name())
 
-	tmpfile, _ := os.CreateTemp("", "example")
-	defer os.Remove(tmpfile.Name()) // clean up
-
-	f, err := Stat(tmpfile.Name())
-	assert.Nil(t, err)
-	assert.False(t, IsChanged(f))
-	time.Sleep(1000 * time.Millisecond)
+	file := &File{Name: tmpfile.Name()}
+	_ = WatchFiles(func() {
+		i = 2
+	}, file)
+	time.Sleep(1 * time.Millisecond)
 	tmpfile.Write([]byte("bls"))
-	tmpfile.Close()
-	assert.False(t, IsChanged(f))
+	tmpfile.Sync()
+	assert.Equal(t, 2, i)
 
-	time.Sleep(2500 * time.Millisecond)
-	assert.True(t, IsChanged(f))
-	assert.True(t, Update(f))
-	assert.False(t, IsChanged(f))
+	_ = WatchFiles(func() {
+		i = 1
+	}, file)
+	time.Sleep(1 * time.Millisecond)
+	tmpfile.Sync()
+	assert.Equal(t, 2, i)
+
+	err := WatchFiles(func() {})
+	assert.Equal(t, err.Error(), "must specify at least one file to watch", "Expected error message does not match")
+
 }
