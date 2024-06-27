@@ -1,9 +1,9 @@
 - metadata:
     annotations:
-      htnn.mosn.io/info: '{"httpfilterpolicies":["default/delay","default/policy"]}'
+      htnn.mosn.io/info: '{"filterpolicies":["default/delay","default/policy"]}'
     creationTimestamp: null
     labels:
-      htnn.mosn.io/created-by: HTTPFilterPolicy
+      htnn.mosn.io/created-by: FilterPolicy
     name: htnn-h-httpbin.example.com
     namespace: default
   spec:

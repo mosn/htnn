@@ -39,7 +39,7 @@ virtualService:
 httpFilterPolicy:
   httpbin:
   - apiVersion: htnn.mosn.io/v1
-    kind: HTTPFilterPolicy
+    kind: FilterPolicy
     metadata:
       name: policy
       namespace: default
@@ -71,7 +71,7 @@ httpFilterPolicy:
               url: "http://x.local"
               policy: "data"
   - apiVersion: htnn.mosn.io/v1
-    kind: HTTPFilterPolicy
+    kind: FilterPolicy
     metadata:
       name: overridden
       namespace: default

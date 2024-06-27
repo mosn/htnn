@@ -76,7 +76,7 @@ spec:
 
 ```yaml
 apiVersion: htnn.mosn.io/v1
-kind: HTTPFilterPolicy
+kind: FilterPolicy
 metadata:
   name: policy
 spec:

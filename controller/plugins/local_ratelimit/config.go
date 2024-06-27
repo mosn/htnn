@@ -38,8 +38,8 @@ func (p *plugin) ConfigTypeURL() string {
 	return "type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit"
 }
 
-// HTTPFilterConfigPlaceholder returns the placeholder config for http filter
-func (p *plugin) HTTPFilterConfigPlaceholder() map[string]interface{} {
+// FilterConfigPlaceholder returns the placeholder config for http filter
+func (p *plugin) FilterConfigPlaceholder() map[string]interface{} {
 	return map[string]interface{}{
 		"typed_config": map[string]interface{}{
 			"@type":      p.ConfigTypeURL(),

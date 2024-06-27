@@ -60,7 +60,7 @@ type mergedPolicy struct {
 	NsName *types.NamespacedName
 }
 
-func toNsName(policy *HTTPFilterPolicyWrapper) string {
+func toNsName(policy *FilterPolicyWrapper) string {
 	return policy.Namespace + "/" + policy.Name
 }
 
@@ -69,7 +69,7 @@ func toNsName(policy *HTTPFilterPolicyWrapper) string {
 // 1. A Policy targeting a more specific scope wins over a policy targeting a lesser specific scope.
 // 2. If multiple polices configure the same plugin, the oldest one (based on creation timestamp) wins.
 // 3. If there are multiple oldest polices, the one appearing first in alphabetical order by {namespace}/{name} wins.
-func sortHttpFilterPolicy(policies []*HTTPFilterPolicyWrapper) {
+func sortFilterPolicy(policies []*FilterPolicyWrapper) {
 	// use Slice instead of SliceStable because each policy has unique namespace/name
 	sort.Slice(policies, func(i, j int) bool {
 		if policies[i].scope != policies[j].scope {
@@ -278,13 +278,13 @@ func translateFilterManagerConfigToPolicyInECDS(fmc *filtermanager.FilterManager
 	return config
 }
 
-func toMergedPolicy(nsName *types.NamespacedName, policies []*HTTPFilterPolicyWrapper,
+func toMergedPolicy(nsName *types.NamespacedName, policies []*FilterPolicyWrapper,
 	policyKind PolicyKind, virtualHost *model.VirtualHost) *mergedPolicy {
 
-	sortHttpFilterPolicy(policies)
+	sortFilterPolicy(policies)
 
-	p := &mosniov1.HTTPFilterPolicy{
-		Spec: mosniov1.HTTPFilterPolicySpec{
+	p := &mosniov1.FilterPolicy{
+		Spec: mosniov1.FilterPolicySpec{
 			Filters: make(map[string]mosniov1.Plugin),
 		},
 	}
@@ -306,14 +306,14 @@ func toMergedPolicy(nsName *types.NamespacedName, policies []*HTTPFilterPolicyWr
 	}
 
 	info := &Info{
-		HTTPFilterPolicies: make([]string, 0, len(usedHFP)),
+		FilterPolicies: make([]string, 0, len(usedHFP)),
 	}
 	for s := range usedHFP {
-		info.HTTPFilterPolicies = append(info.HTTPFilterPolicies, s)
+		info.FilterPolicies = append(info.FilterPolicies, s)
 	}
-	slices.Sort(info.HTTPFilterPolicies) // order is required for later procession
+	slices.Sort(info.FilterPolicies) // order is required for later procession
 
-	fmc := translateHTTPFilterPolicyToFilterManagerConfig(p)
+	fmc := translateFilterPolicyToFilterManagerConfig(p)
 	var config map[string]interface{}
 	if policyKind == PolicyKindRDS {
 		config = translateFilterManagerConfigToPolicyInRDS(fmc, nsName, virtualHost)
@@ -328,7 +328,7 @@ func toMergedPolicy(nsName *types.NamespacedName, policies []*HTTPFilterPolicyWr
 	}
 }
 
-func translateHTTPFilterPolicyToFilterManagerConfig(policy *mosniov1.HTTPFilterPolicy) *filtermanager.FilterManagerConfig {
+func translateFilterPolicyToFilterManagerConfig(policy *mosniov1.FilterPolicy) *filtermanager.FilterManagerConfig {
 	fmc := &filtermanager.FilterManagerConfig{
 		Plugins: []*fmModel.FilterConfig{},
 	}

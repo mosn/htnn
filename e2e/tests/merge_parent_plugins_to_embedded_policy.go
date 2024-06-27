@@ -50,8 +50,8 @@ func init() {
 			err = c.Get(ctx, nsName, &route)
 			require.NoError(t, err)
 
-			policyToMerged := `{"apiVersion":"htnn.mosn.io/v1","kind":"HTTPFilterPolicy","metadata":{"name":"policy"},"spec":{"filters":{"demo":{"config":{"hostName":"micky"}}}}}`
-			route.SetAnnotations(map[string]string{constant.AnnotationHTTPFilterPolicy: policyToMerged})
+			policyToMerged := `{"apiVersion":"htnn.mosn.io/v1","kind":"FilterPolicy","metadata":{"name":"policy"},"spec":{"filters":{"demo":{"config":{"hostName":"micky"}}}}}`
+			route.SetAnnotations(map[string]string{constant.AnnotationFilterPolicy: policyToMerged})
 			err = c.Update(ctx, &route)
 			require.NoError(t, err)
 			time.Sleep(1 * time.Second)

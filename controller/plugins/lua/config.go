@@ -31,7 +31,7 @@ func (p *plugin) ConfigTypeURL() string {
 	return "type.googleapis.com/envoy.extensions.filters.http.lua.v3.LuaPerRoute"
 }
 
-func (p *plugin) HTTPFilterConfigPlaceholder() map[string]interface{} {
+func (p *plugin) FilterConfigPlaceholder() map[string]interface{} {
 	return map[string]interface{}{
 		"typed_config": map[string]interface{}{
 			"@type": "type.googleapis.com/envoy.extensions.filters.http.lua.v3.Lua",

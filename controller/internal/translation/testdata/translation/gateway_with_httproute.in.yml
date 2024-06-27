@@ -34,7 +34,7 @@ httproute:
 httpFilterPolicy:
   gateway:
   - apiVersion: htnn.mosn.io/v1
-    kind: HTTPFilterPolicy
+    kind: FilterPolicy
     metadata:
       name: policy
       namespace: default
@@ -49,7 +49,7 @@ httpFilterPolicy:
             hostName: goldfish
   http:
   - apiVersion: htnn.mosn.io/v1
-    kind: HTTPFilterPolicy
+    kind: FilterPolicy
     metadata:
       name: policy2
       namespace: default

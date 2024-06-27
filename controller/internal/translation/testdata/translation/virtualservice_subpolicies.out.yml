@@ -1,9 +1,9 @@
 - metadata:
     annotations:
-      htnn.mosn.io/info: '{"httpfilterpolicies":["default/policy","default/policy-to-route","default/policy-to-rule"]}'
+      htnn.mosn.io/info: '{"filterpolicies":["default/policy","default/policy-to-route","default/policy-to-rule"]}'
     creationTimestamp: null
     labels:
-      htnn.mosn.io/created-by: HTTPFilterPolicy
+      htnn.mosn.io/created-by: FilterPolicy
     name: htnn-h-httpbin.example.com
     namespace: default
   spec:

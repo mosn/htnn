@@ -31,7 +31,7 @@ import (
 	_ "mosn.io/htnn/types/registries" // register registry types
 )
 
-func TestValidateHTTPFilterPolicy(t *testing.T) {
+func TestValidateFilterPolicy(t *testing.T) {
 	plugins.RegisterPluginType("animal", &plugins.MockPlugin{})
 	plugins.RegisterPluginType("networkNative", &plugins.MockNetworkNativePlugin{})
 	namespace := gwapiv1.Namespace("ns")
@@ -39,14 +39,14 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 
 	tests := []struct {
 		name      string
-		policy    *HTTPFilterPolicy
+		policy    *FilterPolicy
 		err       string
 		strictErr string
 	}{
 		{
 			name: "no TargetRef",
-			policy: &HTTPFilterPolicy{
-				Spec: HTTPFilterPolicySpec{
+			policy: &FilterPolicy{
+				Spec: FilterPolicySpec{
 					Filters: map[string]Plugin{
 						"animal": {
 							Config: runtime.RawExtension{
@@ -60,8 +60,8 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 		},
 		{
 			name: "ok, VirtualService",
-			policy: &HTTPFilterPolicy{
-				Spec: HTTPFilterPolicySpec{
+			policy: &FilterPolicy{
+				Spec: FilterPolicySpec{
 					TargetRef: &gwapiv1a2.PolicyTargetReferenceWithSectionName{
 						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
 							Group: "networking.istio.io",
@@ -80,8 +80,8 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 		},
 		{
 			name: "ok, VirtualService with sectionName",
-			policy: &HTTPFilterPolicy{
-				Spec: HTTPFilterPolicySpec{
+			policy: &FilterPolicy{
+				Spec: FilterPolicySpec{
 					TargetRef: &gwapiv1a2.PolicyTargetReferenceWithSectionName{
 						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
 							Group: "networking.istio.io",
@@ -101,8 +101,8 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 		},
 		{
 			name: "unknown fields, VirtualService",
-			policy: &HTTPFilterPolicy{
-				Spec: HTTPFilterPolicySpec{
+			policy: &FilterPolicy{
+				Spec: FilterPolicySpec{
 					TargetRef: &gwapiv1a2.PolicyTargetReferenceWithSectionName{
 						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
 							Group: "networking.istio.io",
@@ -122,8 +122,8 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 		},
 		{
 			name: "l4 plugin, VirtualService",
-			policy: &HTTPFilterPolicy{
-				Spec: HTTPFilterPolicySpec{
+			policy: &FilterPolicy{
+				Spec: FilterPolicySpec{
 					TargetRef: &gwapiv1a2.PolicyTargetReferenceWithSectionName{
 						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
 							Group: "networking.istio.io",
@@ -143,8 +143,8 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 		},
 		{
 			name: "ok, HTTPRoute",
-			policy: &HTTPFilterPolicy{
-				Spec: HTTPFilterPolicySpec{
+			policy: &FilterPolicy{
+				Spec: FilterPolicySpec{
 					TargetRef: &gwapiv1a2.PolicyTargetReferenceWithSectionName{
 						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
 							Group: "gateway.networking.k8s.io",
@@ -163,8 +163,8 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 		},
 		{
 			name: "unsupported, HTTPRoute with sectionName",
-			policy: &HTTPFilterPolicy{
-				Spec: HTTPFilterPolicySpec{
+			policy: &FilterPolicy{
+				Spec: FilterPolicySpec{
 					TargetRef: &gwapiv1a2.PolicyTargetReferenceWithSectionName{
 						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
 							Group: "gateway.networking.k8s.io",
@@ -185,8 +185,8 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 		},
 		{
 			name: "unknown fields, HTTPRoute",
-			policy: &HTTPFilterPolicy{
-				Spec: HTTPFilterPolicySpec{
+			policy: &FilterPolicy{
+				Spec: FilterPolicySpec{
 					TargetRef: &gwapiv1a2.PolicyTargetReferenceWithSectionName{
 						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
 							Group: "gateway.networking.k8s.io",
@@ -206,8 +206,8 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 		},
 		{
 			name: "unknown",
-			policy: &HTTPFilterPolicy{
-				Spec: HTTPFilterPolicySpec{
+			policy: &FilterPolicy{
+				Spec: FilterPolicySpec{
 					TargetRef: &gwapiv1a2.PolicyTargetReferenceWithSectionName{
 						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
 							Group: "networking.istio.io",
@@ -227,11 +227,11 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 		},
 		{
 			name: "cross namespace",
-			policy: &HTTPFilterPolicy{
+			policy: &FilterPolicy{
 				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "namespace",
 				},
-				Spec: HTTPFilterPolicySpec{
+				Spec: FilterPolicySpec{
 					TargetRef: &gwapiv1a2.PolicyTargetReferenceWithSectionName{
 						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
 							Namespace: &namespace,
@@ -241,19 +241,19 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 					},
 				},
 			},
-			err: "namespace in TargetRef doesn't match HTTPFilterPolicy's namespace",
+			err: "namespace in TargetRef doesn't match FilterPolicy's namespace",
 		},
 		{
 			name: "Filters in SubPolicies",
-			policy: &HTTPFilterPolicy{
-				Spec: HTTPFilterPolicySpec{
+			policy: &FilterPolicy{
+				Spec: FilterPolicySpec{
 					TargetRef: &gwapiv1a2.PolicyTargetReferenceWithSectionName{
 						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
 							Group: "networking.istio.io",
 							Kind:  "VirtualService",
 						},
 					},
-					SubPolicies: []HTTPFilterSubPolicy{
+					SubPolicies: []FilterSubPolicy{
 						{
 							SectionName: sectionName,
 							Filters: map[string]Plugin{
@@ -271,8 +271,8 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 		},
 		{
 			name: "targetRef.SectionName and SubPolicies can not be used together",
-			policy: &HTTPFilterPolicy{
-				Spec: HTTPFilterPolicySpec{
+			policy: &FilterPolicy{
+				Spec: FilterPolicySpec{
 					TargetRef: &gwapiv1a2.PolicyTargetReferenceWithSectionName{
 						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
 							Group: "networking.istio.io",
@@ -280,7 +280,7 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 						},
 						SectionName: &sectionName,
 					},
-					SubPolicies: []HTTPFilterSubPolicy{
+					SubPolicies: []FilterSubPolicy{
 						{
 							SectionName: sectionName,
 						},
@@ -291,15 +291,15 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 		},
 		{
 			name: "targetRef to Gateway and also use SubPolicies",
-			policy: &HTTPFilterPolicy{
-				Spec: HTTPFilterPolicySpec{
+			policy: &FilterPolicy{
+				Spec: FilterPolicySpec{
 					TargetRef: &gwapiv1a2.PolicyTargetReferenceWithSectionName{
 						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
 							Group: "networking.istio.io",
 							Kind:  "Gateway",
 						},
 					},
-					SubPolicies: []HTTPFilterSubPolicy{
+					SubPolicies: []FilterSubPolicy{
 						{
 							SectionName: sectionName,
 						},
@@ -310,8 +310,8 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 		},
 		{
 			name: "bad configuration",
-			policy: &HTTPFilterPolicy{
-				Spec: HTTPFilterPolicySpec{
+			policy: &FilterPolicy{
+				Spec: FilterPolicySpec{
 					TargetRef: &gwapiv1a2.PolicyTargetReferenceWithSectionName{
 						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
 							Group: "networking.istio.io",
@@ -331,8 +331,8 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 		},
 		{
 			name: "ok, Istio Gateway",
-			policy: &HTTPFilterPolicy{
-				Spec: HTTPFilterPolicySpec{
+			policy: &FilterPolicy{
+				Spec: FilterPolicySpec{
 					TargetRef: &gwapiv1a2.PolicyTargetReferenceWithSectionName{
 						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
 							Group: "networking.istio.io",
@@ -351,8 +351,8 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 		},
 		{
 			name: "not implemented, Istio Gateway with Native Plugin",
-			policy: &HTTPFilterPolicy{
-				Spec: HTTPFilterPolicySpec{
+			policy: &FilterPolicy{
+				Spec: FilterPolicySpec{
 					TargetRef: &gwapiv1a2.PolicyTargetReferenceWithSectionName{
 						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
 							Group: "networking.istio.io",
@@ -372,8 +372,8 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 		},
 		{
 			name: "l4 plugin, Istio Gateway",
-			policy: &HTTPFilterPolicy{
-				Spec: HTTPFilterPolicySpec{
+			policy: &FilterPolicy{
+				Spec: FilterPolicySpec{
 					TargetRef: &gwapiv1a2.PolicyTargetReferenceWithSectionName{
 						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
 							Group: "networking.istio.io",
@@ -392,8 +392,8 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 		},
 		{
 			name: "ok, k8s Gateway",
-			policy: &HTTPFilterPolicy{
-				Spec: HTTPFilterPolicySpec{
+			policy: &FilterPolicy{
+				Spec: FilterPolicySpec{
 					TargetRef: &gwapiv1a2.PolicyTargetReferenceWithSectionName{
 						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
 							Group: "gateway.networking.k8s.io",
@@ -412,8 +412,8 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 		},
 		{
 			name: "not implemented, k8s Gateway with Native Plugin",
-			policy: &HTTPFilterPolicy{
-				Spec: HTTPFilterPolicySpec{
+			policy: &FilterPolicy{
+				Spec: FilterPolicySpec{
 					TargetRef: &gwapiv1a2.PolicyTargetReferenceWithSectionName{
 						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
 							Group: "gateway.networking.k8s.io",
@@ -435,14 +435,14 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := ValidateHTTPFilterPolicy(tt.policy)
+			err := ValidateFilterPolicy(tt.policy)
 			if tt.err == "" {
 				assert.Nil(t, err)
 			} else {
 				assert.ErrorContains(t, err, tt.err)
 			}
 
-			err = ValidateHTTPFilterPolicyStrictly(tt.policy)
+			err = ValidateFilterPolicyStrictly(tt.policy)
 			if tt.strictErr == "" && tt.err == "" {
 				assert.Nil(t, err)
 			} else {
@@ -456,20 +456,20 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 	}
 }
 
-func TestValidateEmbeddedHTTPFilterPolicy(t *testing.T) {
+func TestValidateEmbeddedFilterPolicy(t *testing.T) {
 	plugins.RegisterPluginType("animal", &plugins.MockPlugin{})
 
 	tests := []struct {
 		name      string
-		policy    *HTTPFilterPolicy
+		policy    *FilterPolicy
 		gk        schema.GroupKind
 		err       string
 		strictErr string
 	}{
 		{
 			name: "ok, embedded VirtualService",
-			policy: &HTTPFilterPolicy{
-				Spec: HTTPFilterPolicySpec{
+			policy: &FilterPolicy{
+				Spec: FilterPolicySpec{
 					Filters: map[string]Plugin{
 						"animal": {
 							Config: runtime.RawExtension{
@@ -483,8 +483,8 @@ func TestValidateEmbeddedHTTPFilterPolicy(t *testing.T) {
 		},
 		{
 			name: "unknown fields, VirtualService",
-			policy: &HTTPFilterPolicy{
-				Spec: HTTPFilterPolicySpec{
+			policy: &FilterPolicy{
+				Spec: FilterPolicySpec{
 					Filters: map[string]Plugin{
 						"animal": {
 							Config: runtime.RawExtension{
@@ -499,8 +499,8 @@ func TestValidateEmbeddedHTTPFilterPolicy(t *testing.T) {
 		},
 		{
 			name: "bad configuration",
-			policy: &HTTPFilterPolicy{
-				Spec: HTTPFilterPolicySpec{
+			policy: &FilterPolicy{
+				Spec: FilterPolicySpec{
 					Filters: map[string]Plugin{
 						"localRatelimit": {
 							Config: runtime.RawExtension{
@@ -515,8 +515,8 @@ func TestValidateEmbeddedHTTPFilterPolicy(t *testing.T) {
 		},
 		{
 			name: "ok, Istio Gateway",
-			policy: &HTTPFilterPolicy{
-				Spec: HTTPFilterPolicySpec{
+			policy: &FilterPolicy{
+				Spec: FilterPolicySpec{
 					Filters: map[string]Plugin{
 						"animal": {
 							Config: runtime.RawExtension{
@@ -530,8 +530,8 @@ func TestValidateEmbeddedHTTPFilterPolicy(t *testing.T) {
 		},
 		{
 			name: "not implemented, Istio Gateway with Native Plugin",
-			policy: &HTTPFilterPolicy{
-				Spec: HTTPFilterPolicySpec{
+			policy: &FilterPolicy{
+				Spec: FilterPolicySpec{
 					Filters: map[string]Plugin{
 						"localRatelimit": {
 							Config: runtime.RawExtension{
@@ -546,8 +546,8 @@ func TestValidateEmbeddedHTTPFilterPolicy(t *testing.T) {
 		},
 		{
 			name: "not implemented",
-			policy: &HTTPFilterPolicy{
-				Spec: HTTPFilterPolicySpec{
+			policy: &FilterPolicy{
+				Spec: FilterPolicySpec{
 					Filters: map[string]Plugin{
 						"animal": {
 							Config: runtime.RawExtension{
@@ -564,14 +564,14 @@ func TestValidateEmbeddedHTTPFilterPolicy(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := ValidateEmbeddedHTTPFilterPolicy(tt.policy, tt.gk)
+			err := ValidateEmbeddedFilterPolicy(tt.policy, tt.gk)
 			if tt.err == "" {
 				assert.Nil(t, err)
 			} else {
 				assert.ErrorContains(t, err, tt.err)
 			}
 
-			err = ValidateEmbeddedHTTPFilterPolicyStrictly(tt.policy, tt.gk)
+			err = ValidateEmbeddedFilterPolicyStrictly(tt.policy, tt.gk)
 			if tt.strictErr == "" && tt.err == "" {
 				assert.Nil(t, err)
 			} else {

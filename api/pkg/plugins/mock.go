@@ -80,7 +80,7 @@ type MockHTTPNativePlugin struct {
 	MockNativePlugin
 }
 
-func (m *MockHTTPNativePlugin) HTTPFilterConfigPlaceholder() map[string]interface{} {
+func (m *MockHTTPNativePlugin) FilterConfigPlaceholder() map[string]interface{} {
 	return nil
 }
 

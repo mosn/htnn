@@ -1,0 +1,15 @@
+- apiVersion: htnn.mosn.io/v1
+  kind: FilterPolicy
+  metadata:
+    name: policy
+    namespace: default
+  spec:
+    targetRef:
+      group: networking.istio.io
+      kind: VirtualService
+      name: vs
+    filters:
+      demo:
+        config:
+          hostName:
+            - Mary

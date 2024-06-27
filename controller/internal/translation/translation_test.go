@@ -65,7 +65,7 @@ type Features struct {
 
 type testInput struct {
 	// we use sigs.k8s.io/yaml which uses JSON under the hover
-	HTTPFilterPolicy map[string][]*mosniov1.HTTPFilterPolicy `json:"httpFilterPolicy"`
+	FilterPolicy map[string][]*mosniov1.FilterPolicy `json:"httpFilterPolicy"`
 
 	VirtualService map[string][]*istiov1a3.VirtualService `json:"virtualService"`
 	IstioGateway   []*istiov1a3.Gateway                   `json:"istioGateway"`
@@ -131,9 +131,9 @@ func TestTranslate(t *testing.T) {
 					}
 				}
 			}
-			hfpsMap := maps.Clone(input.HTTPFilterPolicy)
+			hfpsMap := maps.Clone(input.FilterPolicy)
 			for name, wrapper := range hrToGws {
-				hfps := input.HTTPFilterPolicy[name]
+				hfps := input.FilterPolicy[name]
 				if hfps != nil {
 					// Currently, a policy can only target one resource.
 					delete(hfpsMap, name)
@@ -289,7 +289,7 @@ func TestPlugins(t *testing.T) {
 	for _, inputFile := range inputFiles {
 		name := testName(inputFile)
 		t.Run(name, func(t *testing.T) {
-			var hfp mosniov1.HTTPFilterPolicy
+			var hfp mosniov1.FilterPolicy
 			mustUnmarshal(t, inputFile, &hfp)
 
 			s := NewInitState()

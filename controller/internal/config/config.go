@@ -75,7 +75,7 @@ func EnableGatewayAPI() bool {
 
 var enableEmbeddedMode = true
 
-// Enable embedded mode to configure the HTTPFilterPolicy directly via the target resource's annotation.
+// Enable embedded mode to configure the FilterPolicy directly via the target resource's annotation.
 // If you don't use this feature, you can turn off it so that HTNN won't check the annotation of the target resource.
 func EnableEmbeddedMode() bool {
 	configLock.RLock()

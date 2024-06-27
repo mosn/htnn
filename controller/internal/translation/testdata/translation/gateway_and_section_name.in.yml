@@ -18,7 +18,7 @@ gateway:
 httpFilterPolicy:
   httpbin-gateway:
   - apiVersion: htnn.mosn.io/v1
-    kind: HTTPFilterPolicy
+    kind: FilterPolicy
     metadata:
       name: policy-gateway
       namespace: default
@@ -32,7 +32,7 @@ httpFilterPolicy:
           config:
             hostName: goldfish
   - apiVersion: htnn.mosn.io/v1
-    kind: HTTPFilterPolicy
+    kind: FilterPolicy
     metadata:
       # Policy targets to sectionName is prior to the one without sectionName
       # For example, policy-port is prior to policy-gateway

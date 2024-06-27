@@ -60,7 +60,7 @@ var ctx context.Context
 var cancel context.CancelFunc
 var clientset *kubernetes.Clientset
 var k8sManager manager.Manager
-var httpFilterPolicyReconciler *controller.HTTPFilterPolicyReconciler
+var httpFilterPolicyReconciler *controller.FilterPolicyReconciler
 
 func mustReadInput(fn string, out interface{}) {
 	fn = filepath.Join("testdata", fn+".yml")
@@ -179,7 +179,7 @@ var _ = BeforeSuite(func() {
 
 	output := component.NewK8sOutput(k8sManager.GetClient())
 	rm := component.NewK8sResourceManager(k8sManager.GetClient())
-	httpFilterPolicyReconciler = controller.NewHTTPFilterPolicyReconciler(
+	httpFilterPolicyReconciler = controller.NewFilterPolicyReconciler(
 		output,
 		rm,
 	)

@@ -1,0 +1,17 @@
+- apiVersion: networking.istio.io/v1beta1
+  kind: Gateway
+  metadata:
+    name: gw-wrong-annotation
+    namespace: default
+    annotations:
+      # ignore annotation that can't be marshalled
+      htnn.mosn.io/filterpolicy: |
+        []
+  spec:
+    servers:
+    - hosts:
+      - default.local
+      port:
+        name: http
+        number: 8889
+        protocol: HTTP

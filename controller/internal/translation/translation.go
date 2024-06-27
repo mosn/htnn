@@ -28,8 +28,8 @@ type Ctx struct {
 }
 
 type Info struct {
-	// HTTPFilterPolicies indicates what HTTPFilterPolicies are used to generated the EnvoyFilter.
-	HTTPFilterPolicies []string `json:"httpfilterpolicies"`
+	// FilterPolicies indicates what FilterPolicies are used to generated the EnvoyFilter.
+	FilterPolicies []string `json:"filterpolicies"`
 }
 
 func (info *Info) String() string {
@@ -38,13 +38,13 @@ func (info *Info) String() string {
 }
 
 func (info *Info) Merge(other *Info) {
-	for _, policy := range other.HTTPFilterPolicies {
-		n := len(info.HTTPFilterPolicies)
-		index := sort.Search(n, func(i int) bool { return info.HTTPFilterPolicies[i] >= policy })
-		if index < n && info.HTTPFilterPolicies[index] == policy {
+	for _, policy := range other.FilterPolicies {
+		n := len(info.FilterPolicies)
+		index := sort.Search(n, func(i int) bool { return info.FilterPolicies[i] >= policy })
+		if index < n && info.FilterPolicies[index] == policy {
 			continue
 		}
-		info.HTTPFilterPolicies = slices.Insert(info.HTTPFilterPolicies, index, policy)
+		info.FilterPolicies = slices.Insert(info.FilterPolicies, index, policy)
 	}
 }
 
@@ -58,8 +58,8 @@ const (
 	PolicyScopeGateway                    // a Istio/k8s Gateway
 )
 
-type HTTPFilterPolicyWrapper struct {
-	*mosniov1.HTTPFilterPolicy
+type FilterPolicyWrapper struct {
+	*mosniov1.FilterPolicy
 
 	scope PolicyScope
 }

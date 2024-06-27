@@ -19,7 +19,8 @@ spec:
   - name: v1
     schema:
       openAPIV3Schema:
-        description: HTTPFilterPolicy is the Schema for the httpfilterpolicies API
+        description: HTTPFilterPolicy is the Schema for the httpfilterpolicies API.
+          It is deprecated and should use FilterPolicy instead.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -38,8 +39,8 @@ spec:
             properties:
               filters:
                 additionalProperties:
-                  description: Plugin defines the plugin configuration used in
-                    the HTTP layer
+                  description: Plugin defines the plugin configuration used in the
+                    HTTP layer
                   properties:
                     config:
                       type: object

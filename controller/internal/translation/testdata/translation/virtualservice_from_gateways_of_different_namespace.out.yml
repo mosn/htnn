@@ -1,9 +1,9 @@
 - metadata:
     annotations:
-      htnn.mosn.io/info: '{"httpfilterpolicies":["default/test2"]}'
+      htnn.mosn.io/info: '{"filterpolicies":["default/test2"]}'
     creationTimestamp: null
     labels:
-      htnn.mosn.io/created-by: HTTPFilterPolicy
+      htnn.mosn.io/created-by: FilterPolicy
     name: htnn-h-a.test.com
     namespace: default
   spec:
@@ -33,10 +33,10 @@
   status: {}
 - metadata:
     annotations:
-      htnn.mosn.io/info: '{"httpfilterpolicies":["test/test"]}'
+      htnn.mosn.io/info: '{"filterpolicies":["test/test"]}'
     creationTimestamp: null
     labels:
-      htnn.mosn.io/created-by: HTTPFilterPolicy
+      htnn.mosn.io/created-by: FilterPolicy
     name: htnn-h-a.test.com
     namespace: test
   spec:

@@ -31,13 +31,13 @@ import (
 
 type VirtualServicePolicies struct {
 	VirtualService *istiov1a3.VirtualService
-	RoutePolicies  map[string][]*HTTPFilterPolicyWrapper
+	RoutePolicies  map[string][]*FilterPolicyWrapper
 	Gateways       []*istiov1a3.Gateway
 }
 
 type HTTPRoutePolicies struct {
 	HTTPRoute     *gwapiv1b1.HTTPRoute
-	RoutePolicies map[string][]*HTTPFilterPolicyWrapper
+	RoutePolicies map[string][]*FilterPolicyWrapper
 	Gateways      []*gwapiv1b1.Gateway
 }
 
@@ -49,7 +49,7 @@ type ServerPort struct {
 
 type GatewayPolicies struct {
 	Port     *ServerPort
-	Policies []*HTTPFilterPolicyWrapper
+	Policies []*FilterPolicyWrapper
 }
 
 type ServerPortKey struct {
@@ -91,7 +91,7 @@ func (s *InitState) GetGatewaysWithVirtualService(vs *istiov1a3.VirtualService) 
 	return vsp.Gateways
 }
 
-func (s *InitState) AddPolicyForVirtualService(policy *mosniov1.HTTPFilterPolicy, vs *istiov1a3.VirtualService, gws []*istiov1a3.Gateway) {
+func (s *InitState) AddPolicyForVirtualService(policy *mosniov1.FilterPolicy, vs *istiov1a3.VirtualService, gws []*istiov1a3.Gateway) {
 	nn := types.NamespacedName{
 		Namespace: vs.Namespace,
 		Name:      vs.Name,
@@ -101,7 +101,7 @@ func (s *InitState) AddPolicyForVirtualService(policy *mosniov1.HTTPFilterPolicy
 	if !ok {
 		vsp = &VirtualServicePolicies{
 			VirtualService: vs,
-			RoutePolicies:  map[string][]*HTTPFilterPolicyWrapper{},
+			RoutePolicies:  map[string][]*FilterPolicyWrapper{},
 			Gateways:       gws,
 		}
 		s.VirtualServicePolicies[nn] = vsp
@@ -111,19 +111,19 @@ func (s *InitState) AddPolicyForVirtualService(policy *mosniov1.HTTPFilterPolicy
 	if targetRef == nil || targetRef.SectionName == nil {
 		for _, httpRoute := range vs.Spec.Http {
 			routeName := httpRoute.Name
-			vsp.RoutePolicies[routeName] = append(vsp.RoutePolicies[routeName], &HTTPFilterPolicyWrapper{
-				HTTPFilterPolicy: policy,
-				scope:            PolicyScopeRoute,
+			vsp.RoutePolicies[routeName] = append(vsp.RoutePolicies[routeName], &FilterPolicyWrapper{
+				FilterPolicy: policy,
+				scope:        PolicyScopeRoute,
 			})
 		}
 
 		if len(policy.Spec.SubPolicies) > 0 {
 			// Some of our cases have over hundreds of sub-policies, so we need to optimize this.
-			subPolicies := make(map[string]*mosniov1.HTTPFilterPolicy, len(policy.Spec.SubPolicies))
+			subPolicies := make(map[string]*mosniov1.FilterPolicy, len(policy.Spec.SubPolicies))
 			for _, subPolicy := range policy.Spec.SubPolicies {
-				p := &mosniov1.HTTPFilterPolicy{}
+				p := &mosniov1.FilterPolicy{}
 				*p = *policy
-				p.Spec = mosniov1.HTTPFilterPolicySpec{
+				p.Spec = mosniov1.FilterPolicySpec{
 					Filters: subPolicy.Filters,
 				}
 				subPolicies[string(subPolicy.SectionName)] = p
@@ -132,9 +132,9 @@ func (s *InitState) AddPolicyForVirtualService(policy *mosniov1.HTTPFilterPolicy
 			for _, httpRoute := range vs.Spec.Http {
 				routeName := httpRoute.Name
 				if subPolicy, ok := subPolicies[routeName]; ok {
-					vsp.RoutePolicies[routeName] = append(vsp.RoutePolicies[routeName], &HTTPFilterPolicyWrapper{
-						HTTPFilterPolicy: subPolicy,
-						scope:            PolicyScopeRule,
+					vsp.RoutePolicies[routeName] = append(vsp.RoutePolicies[routeName], &FilterPolicyWrapper{
+						FilterPolicy: subPolicy,
+						scope:        PolicyScopeRule,
 					})
 				}
 			}
@@ -142,9 +142,9 @@ func (s *InitState) AddPolicyForVirtualService(policy *mosniov1.HTTPFilterPolicy
 
 	} else {
 		routeName := string(*policy.Spec.TargetRef.SectionName)
-		vsp.RoutePolicies[routeName] = append(vsp.RoutePolicies[routeName], &HTTPFilterPolicyWrapper{
-			HTTPFilterPolicy: policy,
-			scope:            PolicyScopeRule,
+		vsp.RoutePolicies[routeName] = append(vsp.RoutePolicies[routeName], &FilterPolicyWrapper{
+			FilterPolicy: policy,
+			scope:        PolicyScopeRule,
 		})
 	}
 }
@@ -163,7 +163,7 @@ func (s *InitState) GetGatewaysWithHTTPRoute(route *gwapiv1b1.HTTPRoute) []*gwap
 	return hp.Gateways
 }
 
-func (s *InitState) AddPolicyForHTTPRoute(policy *mosniov1.HTTPFilterPolicy, route *gwapiv1b1.HTTPRoute, gws []*gwapiv1b1.Gateway) {
+func (s *InitState) AddPolicyForHTTPRoute(policy *mosniov1.FilterPolicy, route *gwapiv1b1.HTTPRoute, gws []*gwapiv1b1.Gateway) {
 	nn := types.NamespacedName{
 		Namespace: route.Namespace,
 		Name:      route.Name,
@@ -173,7 +173,7 @@ func (s *InitState) AddPolicyForHTTPRoute(policy *mosniov1.HTTPFilterPolicy, rou
 	if !ok {
 		hp = &HTTPRoutePolicies{
 			HTTPRoute:     route,
-			RoutePolicies: map[string][]*HTTPFilterPolicyWrapper{},
+			RoutePolicies: map[string][]*FilterPolicyWrapper{},
 			Gateways:      gws,
 		}
 		s.HTTPRoutePolicies[nn] = hp
@@ -181,9 +181,9 @@ func (s *InitState) AddPolicyForHTTPRoute(policy *mosniov1.HTTPFilterPolicy, rou
 
 	for i := range route.Spec.Rules {
 		name := fmt.Sprintf("%s.%s.%d", route.Namespace, route.Name, i)
-		hp.RoutePolicies[name] = append(hp.RoutePolicies[name], &HTTPFilterPolicyWrapper{
-			HTTPFilterPolicy: policy,
-			scope:            PolicyScopeRoute,
+		hp.RoutePolicies[name] = append(hp.RoutePolicies[name], &FilterPolicyWrapper{
+			FilterPolicy: policy,
+			scope:        PolicyScopeRoute,
 		})
 	}
 }
@@ -192,7 +192,7 @@ func (s *InitState) AddIstioGateway(gw *istiov1a3.Gateway) {
 	s.AddPolicyForIstioGateway(nil, gw)
 }
 
-func (s *InitState) AddPolicyForIstioGateway(policy *mosniov1.HTTPFilterPolicy, gw *istiov1a3.Gateway) {
+func (s *InitState) AddPolicyForIstioGateway(policy *mosniov1.FilterPolicy, gw *istiov1a3.Gateway) {
 	var targetRef *gwapiv1a2.PolicyTargetReferenceWithSectionName
 	if policy != nil {
 		targetRef = policy.Spec.TargetRef
@@ -242,7 +242,7 @@ func (s *InitState) AddK8sGateway(gw *gwapiv1b1.Gateway) {
 	s.AddPolicyForK8sGateway(nil, gw)
 }
 
-func (s *InitState) AddPolicyForK8sGateway(policy *mosniov1.HTTPFilterPolicy, gw *gwapiv1b1.Gateway) {
+func (s *InitState) AddPolicyForK8sGateway(policy *mosniov1.FilterPolicy, gw *gwapiv1b1.Gateway) {
 	var targetRef *gwapiv1a2.PolicyTargetReferenceWithSectionName
 	if policy != nil {
 		targetRef = policy.Spec.TargetRef
@@ -282,7 +282,7 @@ func (s *InitState) AddPolicyForK8sGateway(policy *mosniov1.HTTPFilterPolicy, gw
 	}
 }
 
-func (s *InitState) addPolicyForGateway(policy *mosniov1.HTTPFilterPolicy, gs model.GatewaySection, port ServerPort, scope PolicyScope) {
+func (s *InitState) addPolicyForGateway(policy *mosniov1.FilterPolicy, gs model.GatewaySection, port ServerPort, scope PolicyScope) {
 	// If two Gateways have the same port + protocol, like TLS with different hostnames,
 	// skip the second one.
 	k := ServerPortKey{Namespace: gs.NsName.Namespace, ServerPort: port}
@@ -310,15 +310,15 @@ func (s *InitState) addPolicyForGateway(policy *mosniov1.HTTPFilterPolicy, gs mo
 	gwp, ok := s.GatewayPolicies[gs]
 	if !ok {
 		gwp = &GatewayPolicies{
-			Policies: []*HTTPFilterPolicyWrapper{},
+			Policies: []*FilterPolicyWrapper{},
 			Port:     &port,
 		}
 		s.GatewayPolicies[gs] = gwp
 	}
 
-	gwp.Policies = append(gwp.Policies, &HTTPFilterPolicyWrapper{
-		HTTPFilterPolicy: policy,
-		scope:            scope,
+	gwp.Policies = append(gwp.Policies, &FilterPolicyWrapper{
+		FilterPolicy: policy,
+		scope:        scope,
 	})
 }
 

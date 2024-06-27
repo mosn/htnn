@@ -34,14 +34,14 @@ type Reconciler interface {
 	Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error)
 }
 
-type HTTPFilterPolicyReconciler interface {
+type FilterPolicyReconciler interface {
 	Reconciler
 
 	NeedReconcile(ctx context.Context, meta component.ResourceMeta) bool
 }
 
-func NewHTTPFilterPolicyReconciler(output component.Output, manager component.ResourceManager) HTTPFilterPolicyReconciler {
-	return controller.NewHTTPFilterPolicyReconciler(
+func NewFilterPolicyReconciler(output component.Output, manager component.ResourceManager) FilterPolicyReconciler {
+	return controller.NewFilterPolicyReconciler(
 		output,
 		manager,
 	)

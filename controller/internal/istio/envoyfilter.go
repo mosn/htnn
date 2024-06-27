@@ -101,7 +101,7 @@ func DefaultEnvoyFilters() map[component.EnvoyFilterKey]*istiov1a3.EnvoyFilter {
 			return true
 		}
 
-		filter := nativePlugin.HTTPFilterConfigPlaceholder()
+		filter := nativePlugin.FilterConfigPlaceholder()
 		filter["name"] = fmt.Sprintf("htnn.filters.http.%s", key)
 		filter["disabled"] = true
 		configs = append(configs, &configWrapper{
@@ -160,7 +160,7 @@ func DefaultEnvoyFilters() map[component.EnvoyFilterKey]*istiov1a3.EnvoyFilter {
 			Namespace: ctrlcfg.RootNamespace(),
 			Name:      DefaultHttpFilter,
 			Labels: map[string]string{
-				constant.LabelCreatedBy: "HTTPFilterPolicy",
+				constant.LabelCreatedBy: "FilterPolicy",
 			},
 		},
 		Spec: istioapi.EnvoyFilter{

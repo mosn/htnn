@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	HFP                     = "htnn_httpfilterpolicy"
+	HFP                     = "htnn_filterpolicy"
 	Consumer                = "htnn_consumer"
 	SR                      = "htnn_service_registry"
 	TranslateDurationSuffix = "translate_duration_seconds"
@@ -42,12 +42,12 @@ var (
 
 func InitMetrics(provider component.MetricProvider) {
 	HFPTranslateDurationDistribution = provider.NewDistribution(fmt.Sprintf("%s_%s", HFP, TranslateDurationSuffix),
-		"How long in seconds HTNN translates HTTPFilterPolicy in a batch.",
+		"How long in seconds HTNN translates FilterPolicy in a batch.",
 		// minimal: 100 microseconds
 		[]float64{1e-4, 1e-3, 0.01, 0.1, 1, 10},
 	)
 	HFPReconcileDurationDistribution = provider.NewDistribution(fmt.Sprintf("%s_%s", HFP, ReconcileDurationSuffix),
-		"How long in seconds HTNN reconciles HTTPFilterPolicy.",
+		"How long in seconds HTNN reconciles FilterPolicy.",
 		// Reconciliation time = Fetch resource time + Translate time + Write Envoy Filter to config store time
 		// minimal: 100 microseconds
 		[]float64{1e-4, 1e-3, 0.01, 0.1, 1, 10},

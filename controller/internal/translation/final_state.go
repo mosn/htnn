@@ -61,7 +61,7 @@ func envoyFilterNameFromVirtualHost(vhost *model.VirtualHost) string {
 		domain = "-" + domain[2:]
 	}
 
-	// The `htnn-h` means the HTNN's HTTPFilterPolicy.
+	// The `htnn-h` means the HTNN's FilterPolicy.
 	prefix := "htnn-h"
 	domain, err := idna.ToASCII(domain)
 	if err == nil {
@@ -172,7 +172,7 @@ func toFinalState(_ *Ctx, state *mergedState) (*FinalState, error) {
 		if ef.Labels == nil {
 			ef.Labels = map[string]string{}
 		}
-		ef.Labels[constant.LabelCreatedBy] = "HTTPFilterPolicy"
+		ef.Labels[constant.LabelCreatedBy] = "FilterPolicy"
 
 		// Sort here to avoid EnvoyFilter change caused by the order of ConfigPatch.
 		sort.Slice(ef.Spec.ConfigPatches, func(i, j int) bool {
