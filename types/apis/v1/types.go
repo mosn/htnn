@@ -18,7 +18,7 @@ package v1
 
 import runtime "k8s.io/apimachinery/pkg/runtime"
 
-// HTTPPlugin defines the plugin configuration used in the HTTP layer
-type HTTPPlugin struct {
+// Plugin defines the plugin configuration used in the HTTP layer
+type Plugin struct {
 	Config runtime.RawExtension `json:"config"`
 }

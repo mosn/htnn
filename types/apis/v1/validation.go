@@ -91,7 +91,7 @@ func ValidateEmbeddedHTTPFilterPolicyStrictly(policy *HTTPFilterPolicy, gk schem
 	return validateHTTPFilterPolicy(policy, true)
 }
 
-func validateFilter(name string, filter HTTPPlugin, strict bool, targetGateway bool) error {
+func validateFilter(name string, filter Plugin, strict bool, targetGateway bool) error {
 	p := plugins.LoadPluginType(name)
 	if p == nil {
 		if strict {

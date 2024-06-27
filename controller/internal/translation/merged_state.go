@@ -285,7 +285,7 @@ func toMergedPolicy(nsName *types.NamespacedName, policies []*HTTPFilterPolicyWr
 
 	p := &mosniov1.HTTPFilterPolicy{
 		Spec: mosniov1.HTTPFilterPolicySpec{
-			Filters: make(map[string]mosniov1.HTTPPlugin),
+			Filters: make(map[string]mosniov1.Plugin),
 		},
 	}
 

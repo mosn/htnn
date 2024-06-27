@@ -81,7 +81,7 @@ func init() {
 			err = c.Get(ctx, nsName, &policy)
 			require.NoError(t, err)
 
-			policy.Spec.Filters["demo"] = mosniov1.HTTPPlugin{
+			policy.Spec.Filters["demo"] = mosniov1.Plugin{
 				Config: runtime.RawExtension{
 					Raw: []byte(`{"hostName":"Rick"}`),
 				},

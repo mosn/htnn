@@ -47,7 +47,7 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 			name: "no TargetRef",
 			policy: &HTTPFilterPolicy{
 				Spec: HTTPFilterPolicySpec{
-					Filters: map[string]HTTPPlugin{
+					Filters: map[string]Plugin{
 						"animal": {
 							Config: runtime.RawExtension{
 								Raw: []byte(`{"pet":"cat"}`),
@@ -68,7 +68,7 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 							Kind:  "VirtualService",
 						},
 					},
-					Filters: map[string]HTTPPlugin{
+					Filters: map[string]Plugin{
 						"animal": {
 							Config: runtime.RawExtension{
 								Raw: []byte(`{"pet":"cat"}`),
@@ -89,7 +89,7 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 						},
 						SectionName: &sectionName,
 					},
-					Filters: map[string]HTTPPlugin{
+					Filters: map[string]Plugin{
 						"animal": {
 							Config: runtime.RawExtension{
 								Raw: []byte(`{"pet":"cat"}`),
@@ -109,7 +109,7 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 							Kind:  "VirtualService",
 						},
 					},
-					Filters: map[string]HTTPPlugin{
+					Filters: map[string]Plugin{
 						"animal": {
 							Config: runtime.RawExtension{
 								Raw: []byte(`{"pet":"cat", "unknown_fields":"should be ignored"}`),
@@ -130,7 +130,7 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 							Kind:  "VirtualService",
 						},
 					},
-					Filters: map[string]HTTPPlugin{
+					Filters: map[string]Plugin{
 						"networkNative": {
 							Config: runtime.RawExtension{
 								Raw: []byte(`{}`),
@@ -151,7 +151,7 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 							Kind:  "HTTPRoute",
 						},
 					},
-					Filters: map[string]HTTPPlugin{
+					Filters: map[string]Plugin{
 						"animal": {
 							Config: runtime.RawExtension{
 								Raw: []byte(`{"pet":"cat"}`),
@@ -172,7 +172,7 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 						},
 						SectionName: &sectionName,
 					},
-					Filters: map[string]HTTPPlugin{
+					Filters: map[string]Plugin{
 						"animal": {
 							Config: runtime.RawExtension{
 								Raw: []byte(`{"pet":"cat"}`),
@@ -193,7 +193,7 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 							Kind:  "HTTPRoute",
 						},
 					},
-					Filters: map[string]HTTPPlugin{
+					Filters: map[string]Plugin{
 						"animal": {
 							Config: runtime.RawExtension{
 								Raw: []byte(`{"pet":"cat", "unknown_fields":"should be ignored"}`),
@@ -214,7 +214,7 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 							Kind:  "VirtualService",
 						},
 					},
-					Filters: map[string]HTTPPlugin{
+					Filters: map[string]Plugin{
 						"property": {
 							Config: runtime.RawExtension{
 								Raw: []byte(`{"pet":"cat"}`),
@@ -256,7 +256,7 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 					SubPolicies: []HTTPFilterSubPolicy{
 						{
 							SectionName: sectionName,
-							Filters: map[string]HTTPPlugin{
+							Filters: map[string]Plugin{
 								"property": {
 									Config: runtime.RawExtension{
 										Raw: []byte(`{"pet":"cat"}`),
@@ -318,7 +318,7 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 							Kind:  "VirtualService",
 						},
 					},
-					Filters: map[string]HTTPPlugin{
+					Filters: map[string]Plugin{
 						"localRatelimit": {
 							Config: runtime.RawExtension{
 								Raw: []byte(`{}`),
@@ -339,7 +339,7 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 							Kind:  "Gateway",
 						},
 					},
-					Filters: map[string]HTTPPlugin{
+					Filters: map[string]Plugin{
 						"animal": {
 							Config: runtime.RawExtension{
 								Raw: []byte(`{"pet":"cat"}`),
@@ -359,7 +359,7 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 							Kind:  "Gateway",
 						},
 					},
-					Filters: map[string]HTTPPlugin{
+					Filters: map[string]Plugin{
 						"localRatelimit": {
 							Config: runtime.RawExtension{
 								Raw: []byte(`{}`),
@@ -380,7 +380,7 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 							Kind:  "Gateway",
 						},
 					},
-					Filters: map[string]HTTPPlugin{
+					Filters: map[string]Plugin{
 						"networkNative": {
 							Config: runtime.RawExtension{
 								Raw: []byte(`{}`),
@@ -400,7 +400,7 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 							Kind:  "Gateway",
 						},
 					},
-					Filters: map[string]HTTPPlugin{
+					Filters: map[string]Plugin{
 						"animal": {
 							Config: runtime.RawExtension{
 								Raw: []byte(`{"pet":"cat"}`),
@@ -420,7 +420,7 @@ func TestValidateHTTPFilterPolicy(t *testing.T) {
 							Kind:  "Gateway",
 						},
 					},
-					Filters: map[string]HTTPPlugin{
+					Filters: map[string]Plugin{
 						"localRatelimit": {
 							Config: runtime.RawExtension{
 								Raw: []byte(`{}`),
@@ -470,7 +470,7 @@ func TestValidateEmbeddedHTTPFilterPolicy(t *testing.T) {
 			name: "ok, embedded VirtualService",
 			policy: &HTTPFilterPolicy{
 				Spec: HTTPFilterPolicySpec{
-					Filters: map[string]HTTPPlugin{
+					Filters: map[string]Plugin{
 						"animal": {
 							Config: runtime.RawExtension{
 								Raw: []byte(`{"pet":"cat"}`),
@@ -485,7 +485,7 @@ func TestValidateEmbeddedHTTPFilterPolicy(t *testing.T) {
 			name: "unknown fields, VirtualService",
 			policy: &HTTPFilterPolicy{
 				Spec: HTTPFilterPolicySpec{
-					Filters: map[string]HTTPPlugin{
+					Filters: map[string]Plugin{
 						"animal": {
 							Config: runtime.RawExtension{
 								Raw: []byte(`{"pet":"cat", "unknown_fields":"should be ignored"}`),
@@ -501,7 +501,7 @@ func TestValidateEmbeddedHTTPFilterPolicy(t *testing.T) {
 			name: "bad configuration",
 			policy: &HTTPFilterPolicy{
 				Spec: HTTPFilterPolicySpec{
-					Filters: map[string]HTTPPlugin{
+					Filters: map[string]Plugin{
 						"localRatelimit": {
 							Config: runtime.RawExtension{
 								Raw: []byte(`{}`),
@@ -517,7 +517,7 @@ func TestValidateEmbeddedHTTPFilterPolicy(t *testing.T) {
 			name: "ok, Istio Gateway",
 			policy: &HTTPFilterPolicy{
 				Spec: HTTPFilterPolicySpec{
-					Filters: map[string]HTTPPlugin{
+					Filters: map[string]Plugin{
 						"animal": {
 							Config: runtime.RawExtension{
 								Raw: []byte(`{"pet":"cat"}`),
@@ -532,7 +532,7 @@ func TestValidateEmbeddedHTTPFilterPolicy(t *testing.T) {
 			name: "not implemented, Istio Gateway with Native Plugin",
 			policy: &HTTPFilterPolicy{
 				Spec: HTTPFilterPolicySpec{
-					Filters: map[string]HTTPPlugin{
+					Filters: map[string]Plugin{
 						"localRatelimit": {
 							Config: runtime.RawExtension{
 								Raw: []byte(`{}`),
@@ -548,7 +548,7 @@ func TestValidateEmbeddedHTTPFilterPolicy(t *testing.T) {
 			name: "not implemented",
 			policy: &HTTPFilterPolicy{
 				Spec: HTTPFilterPolicySpec{
-					Filters: map[string]HTTPPlugin{
+					Filters: map[string]Plugin{
 						"animal": {
 							Config: runtime.RawExtension{
 								Raw: []byte(`{"pet":"cat"}`),
@@ -655,7 +655,7 @@ func TestValidateConsumer(t *testing.T) {
 							},
 						},
 					},
-					Filters: map[string]HTTPPlugin{
+					Filters: map[string]Plugin{
 						"animal": {
 							Config: runtime.RawExtension{
 								Raw: []byte(`{"pet":"cat", "unknown_fields":"should be ignored"}`),
@@ -706,7 +706,7 @@ func TestValidateConsumer(t *testing.T) {
 							},
 						},
 					},
-					Filters: map[string]HTTPPlugin{
+					Filters: map[string]Plugin{
 						"opa": {
 							Config: runtime.RawExtension{
 								Raw: []byte(`{}`),
@@ -728,7 +728,7 @@ func TestValidateConsumer(t *testing.T) {
 							},
 						},
 					},
-					Filters: map[string]HTTPPlugin{
+					Filters: map[string]Plugin{
 						"keyAuth": {
 							Config: runtime.RawExtension{
 								Raw: []byte(`{}`),

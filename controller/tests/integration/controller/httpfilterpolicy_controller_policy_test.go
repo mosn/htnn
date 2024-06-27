@@ -92,7 +92,7 @@ var _ = Describe("HTTPFilterPolicy controller, for policy", func() {
 
 			// to valid
 			base := client.MergeFrom(p.DeepCopy())
-			p.Spec.Filters["demo"] = mosniov1.HTTPPlugin{
+			p.Spec.Filters["demo"] = mosniov1.Plugin{
 				Config: runtime.RawExtension{
 					Raw: []byte(`{"hostName":"Mary"}`),
 				},
@@ -138,7 +138,7 @@ var _ = Describe("HTTPFilterPolicy controller, for policy", func() {
 
 			// to invalid
 			base := client.MergeFrom(p.DeepCopy())
-			p.Spec.Filters["demo"] = mosniov1.HTTPPlugin{
+			p.Spec.Filters["demo"] = mosniov1.Plugin{
 				Config: runtime.RawExtension{
 					Raw: []byte(`{}`),
 				},

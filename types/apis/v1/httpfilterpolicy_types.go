@@ -36,7 +36,7 @@ type HTTPFilterPolicySpec struct {
 	TargetRef *gwapiv1a2.PolicyTargetReferenceWithSectionName `json:"targetRef"`
 
 	// Filters is a map of filter names to filter configurations.
-	Filters map[string]HTTPPlugin `json:"filters,omitempty"`
+	Filters map[string]Plugin `json:"filters,omitempty"`
 
 	// SubPolicies is an array of sub-policies to specific section name.
 	// If the specific section name is not found, the HTTPFilterPolicy will still be
@@ -53,7 +53,7 @@ type HTTPFilterSubPolicy struct {
 	// SectionName is the name of a section within the target resource.
 	SectionName gwapiv1.SectionName `json:"sectionName"`
 	// Filters is a map of filter names to filter configurations.
-	Filters map[string]HTTPPlugin `json:"filters,omitempty"`
+	Filters map[string]Plugin `json:"filters,omitempty"`
 }
 
 // HTTPFilterPolicyStatus defines the observed state of HTTPFilterPolicy
