@@ -27,6 +27,7 @@ require (
 	github.com/casbin/casbin/v2 v2.88.0
 	github.com/coreos/go-oidc/v3 v3.10.0
 	github.com/envoyproxy/envoy v1.29.4
+	github.com/fsnotify/fsnotify v1.7.0
 	github.com/google/cel-go v0.20.1
 	github.com/google/uuid v1.6.0
 	github.com/gorilla/securecookie v1.1.2
@@ -54,7 +55,6 @@ require (
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/envoyproxy/go-control-plane v0.12.1-0.20240117015050-472addddff92 // indirect
 	github.com/envoyproxy/protoc-gen-validate v1.0.4 // indirect
-	github.com/fsnotify/fsnotify v1.7.0 // indirect
 	github.com/go-ini/ini v1.67.0 // indirect
 	github.com/go-jose/go-jose/v4 v4.0.1 // indirect
 	github.com/go-logr/logr v1.4.1 // indirect
