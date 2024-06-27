@@ -21,7 +21,6 @@ import (
 	"runtime/debug"
 	"sort"
 	"sync"
-	"sync/atomic"
 
 	capi "github.com/envoyproxy/envoy/contrib/golang/common/go/api"
 
@@ -43,8 +42,7 @@ type filterManager struct {
 	encodeIdx            int
 	rspHdr               api.ResponseHeaderMap
 
-	runningInGoThread atomic.Bool
-	hdrLock           sync.Mutex // FIXME: remove this once we get request headers from the OnLog directly
+	hdrLock sync.Mutex // FIXME: remove this once we get request headers from the OnLog directly
 
 	// use a group of bools instead of map to avoid lookup
 	canSkipDecodeHeaders bool
@@ -58,34 +56,6 @@ type filterManager struct {
 	config    *filterManagerConfig
 
 	capi.PassThroughStreamFilter
-}
-
-func (m *filterManager) Reset() {
-	m.filters = nil
-
-	m.decodeRequestNeeded = false
-	m.decodeIdx = -1
-	m.reqHdr = nil
-
-	m.encodeResponseNeeded = false
-	m.encodeIdx = -1
-	m.rspHdr = nil
-
-	m.canSkipDecodeHeaders = false
-	m.canSkipDecodeData = false
-	m.canSkipEncodeHeaders = false
-	m.canSkipEncodeData = false
-	m.canSkipOnLog = false
-
-	m.callbacks.Reset()
-}
-
-func (m *filterManager) IsRunningInGoThread() bool {
-	return m.runningInGoThread.Load()
-}
-
-func (m *filterManager) MarkRunningInGoThread(flag bool) {
-	m.runningInGoThread.Store(flag)
 }
 
 func (m *filterManager) DebugModeEnabled() bool {
@@ -138,13 +108,17 @@ func FilterManagerFactory(c interface{}) capi.StreamFilterFactory {
 			}
 		}()
 
-		data := conf.pool.Get()
-		fm, ok := data.(*filterManager)
-		if !ok {
-			panic(fmt.Sprintf("unexpected type: %s", reflect.TypeOf(data)))
+		callbacks := &filterManagerCallbackHandler{
+			namespace:             conf.namespace,
+			FilterCallbackHandler: cb,
 		}
+		fm := &filterManager{
+			callbacks: callbacks,
+			config:    conf,
 
-		fm.callbacks.FilterCallbackHandler = cb
+			decodeIdx: -1,
+			encodeIdx: -1,
+		}
 
 		canSkipMethod := fm.canSkipMethod
 		if canSkipMethod == nil {
@@ -206,7 +180,6 @@ func FilterManagerFactory(c interface{}) capi.StreamFilterFactory {
 			fm.canSkipMethod = canSkipMethod
 		}
 
-		// We can't cache the slice of filters as it may be changed by consumer
 		fm.filters = filters
 
 		// The skip check is based on the compiled code. So if the DecodeRequest is defined,
@@ -312,10 +285,7 @@ func (m *filterManager) DecodeHeaders(headers capi.RequestHeaderMap, endStream b
 		return capi.Continue
 	}
 
-	m.MarkRunningInGoThread(true)
-
 	go func() {
-		defer m.MarkRunningInGoThread(false)
 		defer m.callbacks.RecoverPanic()
 		var res api.ResultAction
 
@@ -490,10 +460,7 @@ func (m *filterManager) DecodeData(buf capi.BufferInstance, endStream bool) capi
 		return capi.Continue
 	}
 
-	m.MarkRunningInGoThread(true)
-
 	go func() {
-		defer m.MarkRunningInGoThread(false)
 		defer m.callbacks.RecoverPanic()
 		var res api.ResultAction
 
@@ -594,10 +561,7 @@ func (m *filterManager) EncodeHeaders(headers capi.ResponseHeaderMap, endStream 
 		return capi.Continue
 	}
 
-	m.MarkRunningInGoThread(true)
-
 	go func() {
-		defer m.MarkRunningInGoThread(false)
 		defer m.callbacks.RecoverPanic()
 		var res api.ResultAction
 
@@ -639,10 +603,7 @@ func (m *filterManager) EncodeData(buf capi.BufferInstance, endStream bool) capi
 		return capi.Continue
 	}
 
-	m.MarkRunningInGoThread(true)
-
 	go func() {
-		defer m.MarkRunningInGoThread(false)
 		defer m.callbacks.RecoverPanic()
 		var res api.ResultAction
 
@@ -739,12 +700,4 @@ func (m *filterManager) OnLog() {
 		// Envoy Go API. But it is not supported yet.
 		f.OnLog(reqHdr, nil, rspHdr, nil)
 	}
-
-	if m.IsRunningInGoThread() {
-		return
-	}
-
-	// Safe to recycle the filterManager
-	m.Reset()
-	m.config.pool.Put(m)
 }

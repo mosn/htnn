@@ -150,18 +150,6 @@ type filterManagerCallbackHandler struct {
 	streamInfo *filterManagerStreamInfo
 }
 
-func (cb *filterManagerCallbackHandler) Reset() {
-	cb.cacheLock.Lock()
-
-	cb.FilterCallbackHandler = nil
-	// We don't reset namespace, as filterManager will only be reused in the same route,
-	// which must have the same namespace.
-	cb.consumer = nil
-	cb.streamInfo = nil
-
-	cb.cacheLock.Unlock()
-}
-
 func (cb *filterManagerCallbackHandler) StreamInfo() api.StreamInfo {
 	cb.cacheLock.Lock()
 	if cb.streamInfo == nil {

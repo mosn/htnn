@@ -55,7 +55,6 @@ type filterManagerConfig struct {
 	initFailedPluginName string
 
 	parsed []*model.ParsedFilterConfig
-	pool   *sync.Pool
 
 	namespace string
 
@@ -65,21 +64,6 @@ type filterManagerConfig struct {
 func initFilterManagerConfig(namespace string) *filterManagerConfig {
 	config := &filterManagerConfig{
 		namespace: namespace,
-	}
-	config.pool = &sync.Pool{
-		New: func() any {
-			callbacks := &filterManagerCallbackHandler{
-				namespace: namespace,
-			}
-			fm := &filterManager{
-				callbacks: callbacks,
-				config:    config,
-
-				decodeIdx: -1,
-				encodeIdx: -1,
-			}
-			return fm
-		},
 	}
 	return config
 }
