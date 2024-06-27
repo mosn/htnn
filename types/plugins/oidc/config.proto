@@ -32,6 +32,7 @@ message Config {
   string redirect_url = 4 [(validate.rules).string = {uri: true}];
   repeated string scopes = 5;
 
+  // [#do_not_document]
   // This option is provided to skip the nonce verification. It is designed for local development.
   bool skip_nonce_verify = 6;
 

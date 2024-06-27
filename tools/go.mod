@@ -15,3 +15,8 @@
 module mosn.io/htnn/tools
 
 go 1.21
+
+require (
+	github.com/yoheimuta/go-protoparser/v4 v4.11.0
+	golang.org/x/text v0.16.0
+)

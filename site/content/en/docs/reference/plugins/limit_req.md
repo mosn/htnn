@@ -16,7 +16,7 @@ The `limitReq` plugin limits the number of requests per second to this proxy. Th
 ## Configuration
 | Name    | Type                            | Required | Validation | Description                                                                                        |
 |---------|---------------------------------|----------|------------|----------------------------------------------------------------------------------------------------|
-| average | uint32                          | True     | gt: 0      | The threshold value, by default calculated as the number of requests per second.                   |
+| average | uint32                          | True     | > 0        | The threshold value, by default calculated as the number of requests per second.                   |
 | period  | [Duration](../../type#duration) | False    |            | The time unit for the rate. The rate limit is defined as `average / period`. Defaults to 1 second. |
 | burst   | uint32                          | False    |            | The number of requests allowed to exceed the rate. Defaults to 1.                                  |
 | key     | string                          | False    |            | The key used for rate limiting. Defaults to client IP. Supports [CEL expressions](../../expr).        |

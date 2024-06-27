@@ -96,9 +96,7 @@ func (m *Config) validate(all bool) error {
 		}
 	}
 
-	if m.GetBurst() != 0 {
-
-	}
+	// no validation rules for Burst
 
 	// no validation rules for Key
 

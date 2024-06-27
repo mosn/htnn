@@ -17,8 +17,8 @@ title: Limit Count Redis
 
 | 名称                    | 类型                                | 必选 | 校验规则                   | 说明                                                                                |
 | ----------------------- | ----------------------------------- | ---- | -------------------------- | ----------------------------------------------------------------------------------- |
-| address                 | string                              | 是   |                            | Redis 地址                                                                          |
-| cluster                 | Cluster                             | 是   |                            | Redis cluster 配置。`address` 和`cluster` 只能配置一个。                            |
+| address                 | string                              | 否   |                            | Redis 地址。`address` 和`cluster` 只能配置一个。                                                                          |
+| cluster                 | Cluster                             | 否   |                            | Redis cluster 配置。`address` 和`cluster` 只能配置一个。                            |
 | rules                   | Rule                                | 是   | min_items: 1, max_items: 8 | 规则                                                                                |
 | failureModeDeny         | bool                                | 否   |                            | 默认情况下，如果访问 Redis 失败，会放行请求。该值为 true 时，会拒绝请求。           |
 | enableLimitQuotaHeaders | bool                                | 否   |                            | 是否设置限流额度相关的响应头                                                        |
