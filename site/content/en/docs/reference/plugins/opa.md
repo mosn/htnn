@@ -18,8 +18,8 @@ You can use it to interact with remote OPA service (the remote mode), or authori
 
 | Name   | Type   | Required | Validation | Description |
 |--------|--------|----------|------------|-------------|
-| remote | Remote | True     |            |             |
-| local  | Local  | True     |            |             |
+| remote | Remote | False    |            |             |
+| local  | Local  | False    |            |             |
 
 Either `remote` or `local` is required.
 

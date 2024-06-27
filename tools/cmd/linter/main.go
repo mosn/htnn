@@ -17,14 +17,27 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"encoding/json"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
+
+	protoparser "github.com/yoheimuta/go-protoparser/v4"
+	"github.com/yoheimuta/go-protoparser/v4/parser"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 // This tool does what the third party linters don't
+
+const (
+	LangEn     = "en"
+	LangZhHans = "zh-hans"
+)
 
 func lintSite() error {
 	enDocs := map[string]struct{}{}
@@ -109,8 +122,24 @@ func lintSite() error {
 		if _, ok := enDocs[doc]; !ok {
 			fmt.Printf("file %s is missing in English documentation\n", doc)
 		}
+
+		zhMs, err := readDoc(filepath.Join("site", "content", "zh-hans", doc), LangZhHans)
+		if err != nil {
+			return err
+		}
+
+		enMs, err := readDoc(filepath.Join("site", "content", "en", doc), LangEn)
+		if err != nil {
+			return err
+		}
+
+		if !reflect.DeepEqual(enMs, zhMs) {
+			zhMsOut, _ := json.MarshalIndent(zhMs, "", "  ")
+			enMsOut, _ := json.MarshalIndent(enMs, "", "  ")
+			fmt.Printf("mismatched fields in %s:\nSimpilified Chinese %s\nEnglish %s\n", doc, zhMsOut, enMsOut)
+		}
+
 	}
-	// TODO: Check if the attribute tables are consistent
 
 	return nil
 }
@@ -219,6 +248,15 @@ func lintFilenameForCode(root string) error {
 	})
 }
 
+// snakeToCamel converts a snake_case string to a camelCase string.
+func snakeToCamel(s string) string {
+	words := strings.Split(s, "_")
+	for i := 1; i < len(words); i++ {
+		words[i] = cases.Title(language.Und, cases.NoLower).String(words[i])
+	}
+	return strings.Join(words, "")
+}
+
 func lintFilenameForDoc(root string) error {
 	return filepath.Walk(root, func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
@@ -247,11 +285,236 @@ func lintFilenameForDoc(root string) error {
 	})
 }
 
+func lintConfiguration() error {
+	for _, t := range []string{"plugins", "registries"} {
+		err := lintConfigurationByCategory(t)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+type Field struct {
+	Required bool
+}
+
+type Message struct {
+	Fields map[string]Field
+}
+
+func exactCommonField(field *parser.OneofField, n int) *parser.Field {
+	return &parser.Field{
+		FieldName:    field.FieldName,
+		Type:         field.Type,
+		FieldNumber:  field.FieldNumber,
+		FieldOptions: field.FieldOptions,
+		Comments:     field.Comments,
+		// For oneof fields, we document the requirement according to the number of fields in the oneof.
+		IsRequired: n == 1,
+	}
+}
+
+func parseField(fs map[string]Field, field *parser.Field) {
+	f := Field{}
+	if len(field.Comments) > 0 {
+		if strings.Contains(field.Comments[0].Lines()[0], "[#do_not_document]") {
+			return
+		}
+	}
+
+	if field.IsRequired || (len(field.FieldOptions) > 0 && !field.IsRepeated && field.Type != "google.protobuf.Duration") {
+		f.Required = true
+	}
+
+	if len(field.FieldOptions) > 0 {
+		for _, option := range field.FieldOptions {
+			if option.OptionName == "(validate.rules).repeated" {
+				f.Required = true
+			}
+			if strings.Contains(option.Constant, "required:true") {
+				f.Required = true
+			}
+			if strings.Contains(option.Constant, "ignore_empty:true") {
+				f.Required = false
+			}
+		}
+	}
+	fs[snakeToCamel(field.FieldName)] = f
+}
+
+func parseMessage(ms map[string]Message, msg *parser.Message) {
+	m := Message{
+		Fields: map[string]Field{},
+	}
+	for _, body := range msg.MessageBody {
+		switch field := body.(type) {
+		case *parser.Field:
+			parseField(m.Fields, field)
+		case *parser.Message:
+			parseMessage(ms, field)
+		case *parser.Oneof:
+			for _, f := range field.OneofFields {
+				parseField(m.Fields, exactCommonField(f, len(field.OneofFields)))
+			}
+		}
+	}
+	ms[msg.MessageName] = m
+}
+
+func readProto(path string) (map[string]Message, error) {
+	f, err := os.Open(path)
+	// skip Native plugin which doesn't store protobuf file in this repo
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil
+		}
+		return nil, err
+	}
+	defer f.Close()
+
+	got, err := protoparser.Parse(f)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse protobuf %s: %v", path, err)
+	}
+
+	ms := map[string]Message{}
+	for _, elem := range got.ProtoBody {
+		switch msg := elem.(type) {
+		case *parser.Message:
+			parseMessage(ms, msg)
+		}
+	}
+	return ms, nil
+}
+
+func readDoc(path string, lang string) (map[string]Message, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+
+	messageName := "Config"
+	ms := map[string]Message{
+		messageName: {
+			Fields: map[string]Field{},
+		},
+	}
+	scanner := bufio.NewScanner(bytes.NewReader(data))
+
+	configTitle := "## Configuration"
+	consumerConfigTitle := "## Consumer Configuration"
+	trueStr := "True"
+	if lang == LangZhHans {
+		configTitle = "## 配置"
+		consumerConfigTitle = "## 消费者配置"
+		trueStr = "是"
+	}
+
+	confStarted := false
+	for scanner.Scan() {
+		text := scanner.Text()
+		if confStarted {
+			if strings.HasPrefix(text, "## ") && text != consumerConfigTitle {
+				confStarted = false
+				break
+			}
+
+			if strings.HasPrefix(text, "##") {
+				if text == consumerConfigTitle {
+					messageName = "ConsumerConfig"
+				} else {
+					ss := strings.Split(text, " ")
+					if len(ss) < 2 {
+						return nil, errors.New("bad format")
+					}
+					messageName = ss[1]
+				}
+				m := Message{
+					Fields: map[string]Field{},
+				}
+				ms[messageName] = m
+
+			} else if strings.HasPrefix(text, "|") && strings.Contains(text, "--") {
+				for scanner.Scan() {
+					text = scanner.Text()
+					if text == "" {
+						break
+					}
+
+					ss := strings.Fields(text)
+					if len(ss) < 6 {
+						return nil, errors.New("bad format")
+					}
+					fieldName := ss[1]
+					f := Field{}
+					required := ss[5]
+					if required == trueStr {
+						f.Required = true
+					} else {
+						f.Required = false
+					}
+					ms[messageName].Fields[fieldName] = f
+				}
+			}
+		}
+
+		if text == configTitle {
+			confStarted = true
+		}
+	}
+
+	return ms, nil
+}
+
+func lintConfigurationByCategory(category string) error {
+	err := filepath.Walk(filepath.Join("site", "content", "en", "docs", "reference", category), func(path string, info fs.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if info.IsDir() {
+			return nil
+		}
+
+		ext := filepath.Ext(path)
+		if ext != ".md" || strings.HasSuffix(path, "_index.md") {
+			return nil
+		}
+
+		name := filepath.Base(path)[:len(filepath.Base(path))-len(ext)]
+		pb := filepath.Join("types", category, name, "config.proto")
+		ms, err := readProto(pb)
+		if err != nil {
+			return err
+		}
+
+		if ms == nil {
+			return nil
+		}
+
+		docMs, err := readDoc(path, LangEn)
+		if err != nil {
+			return err
+		}
+
+		if !reflect.DeepEqual(ms, docMs) {
+			docMsOut, _ := json.MarshalIndent(docMs, "", "  ")
+			msOut, _ := json.MarshalIndent(ms, "", "  ")
+			// TODO: also check field type and validation rule
+			return fmt.Errorf("mismatched fields in %s:\ndocumented %s\nactual %s", path, docMsOut, msOut)
+		}
+		return nil
+	})
+	return err
+}
+
 func main() {
 	type linter func() error
 	linters := []linter{
-		lintSite,
+		lintConfiguration,
 		lintFilename,
+		lintSite,
 	}
 	for _, linter := range linters {
 		err := linter()
