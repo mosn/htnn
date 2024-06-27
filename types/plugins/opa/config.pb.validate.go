@@ -88,6 +88,36 @@ func (m *Remote) validate(all bool) error {
 		errors = append(errors, err)
 	}
 
+	if d := m.GetTimeout(); d != nil {
+		dur, err := d.AsDuration(), d.CheckValid()
+		if err != nil {
+			err = RemoteValidationError{
+				field:  "Timeout",
+				reason: "value is not a valid duration",
+				cause:  err,
+			}
+			if !all {
+				return err
+			}
+			errors = append(errors, err)
+		} else {
+
+			gt := time.Duration(0*time.Second + 0*time.Nanosecond)
+
+			if dur <= gt {
+				err := RemoteValidationError{
+					field:  "Timeout",
+					reason: "value must be greater than 0s",
+				}
+				if !all {
+					return err
+				}
+				errors = append(errors, err)
+			}
+
+		}
+	}
+
 	if len(errors) > 0 {
 		return RemoteMultiError(errors)
 	}

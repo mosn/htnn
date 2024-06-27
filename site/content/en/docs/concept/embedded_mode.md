@@ -67,4 +67,4 @@ spec:
 
 When the control plane receives the VirtualService, it will check if there's an HTTPFilterPolicy in its annotation `htnn.mosn.io/httpfilterpolicy`. If present, it's as if both HTTPFilterPolicy and the corresponding VirtualService were received. Therefore, when issuing routes and policies, only the VirtualService needs to be issued. Unlike the Ingress annotations, the HTTPFilterPolicy here will still participate in policy merging, so users can still specify a higher-level HTTPFilterPolicy (e.g., affecting the entire `Gateway`) to add additional plugins.
 
-Note that Embedded Mode currently only supports embedding the HTTPFilterPolicy into VirtualService.
+Note that Embedded Mode currently only supports embedding the HTTPFilterPolicy into VirtualService. Embedding HTTPFilterPolicy in Istio Gateway is also supports, but it requires the control plane to enable `HTNN_ENABLE_LDS_PLUGIN_VIA_ECDS`.

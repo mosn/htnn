@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package consumer
+package filtermanager
 
 import (
 	"testing"
@@ -29,7 +29,6 @@ func TestParse(t *testing.T) {
 	ts := xds.TypedStruct{}
 	ts.Value, _ = structpb.NewStruct(map[string]interface{}{})
 	any1 := proto.MessageToAny(&ts)
-	any2 := proto.MessageToAny(&xds.TypedStruct{})
 
 	cases := []struct {
 		name    string
@@ -53,16 +52,11 @@ func TestParse(t *testing.T) {
 			},
 			wantErr: true,
 		},
-		{
-			name:    "empty value",
-			input:   any2,
-			wantErr: true,
-		},
 	}
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			parser := &ConsumerManagerConfigParser{}
+			parser := &FilterManagerConfigParser{}
 
 			_, err := parser.Parse(c.input, nil)
 			if c.wantErr {
@@ -74,8 +68,16 @@ func TestParse(t *testing.T) {
 	}
 }
 
-func TestConsumerManagerFactory(t *testing.T) {
-	assert.PanicsWithValuef(t, "wrong config type: *struct {}", func() {
-		ConsumerManagerFactory(&struct{}{})
-	}, "check if the panic message contains the wrong type")
+func TestMergeDebugFlag(t *testing.T) {
+	parent := initFilterManagerConfig("")
+	child := initFilterManagerConfig("")
+	child.enableDebugMode = true
+	merged := parent.Merge(child)
+	assert.Equal(t, true, merged.enableDebugMode)
+
+	parent = initFilterManagerConfig("")
+	child = initFilterManagerConfig("")
+	parent.enableDebugMode = true
+	merged = parent.Merge(child)
+	assert.Equal(t, true, merged.enableDebugMode)
 }

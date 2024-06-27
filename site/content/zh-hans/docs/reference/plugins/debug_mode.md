@@ -107,9 +107,9 @@ rity":["localhost:10000"],":method":["HEAD"],":path":["/echo"],":scheme":["http"
             ]
         }
     },
-    "response": { // 响应（如果有）
+    "response": {
         "headers": {
-            // 响应头
+            // 响应头（如果有）
             ":status": [
                 "200"
             ],
@@ -136,6 +136,7 @@ rity":["localhost:10000"],":method":["HEAD"],":path":["/echo"],":scheme":["http"
     "executed_plugins": [
         // 执行的插件列表（如果有），以具体执行的顺序排序。
         // 注意因为 OnLog 阶段的时间不会算入请求耗时内，所以这里没有统计 OnLog 阶段执行的插件。
+        // 另外如果客户端提前结束请求，可能会导致某些插件没有执行，或者执行完后没有上报统计数据。
         {
             "name": "debugMode",
             // 每个阶段耗时

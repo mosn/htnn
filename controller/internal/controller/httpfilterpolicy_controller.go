@@ -423,7 +423,13 @@ func (r *HTTPFilterPolicyReconciler) resolveIstioGateway(ctx context.Context,
 		}
 	}
 
-	initState.AddPolicyForIstioGateway(policy, &gateway)
+	return r.resolveWithIstioGateway(ctx, &gateway, policy, initState)
+}
+
+func (r *HTTPFilterPolicyReconciler) resolveWithIstioGateway(_ context.Context,
+	gateway *istiov1a3.Gateway, policy *mosniov1.HTTPFilterPolicy, initState *translation.InitState) error {
+
+	initState.AddPolicyForIstioGateway(policy, gateway)
 	policy.SetAccepted(gwapiv1a2.PolicyReasonAccepted)
 	return nil
 }
@@ -600,6 +606,36 @@ func (r *HTTPFilterPolicyReconciler) policyToTranslationState(ctx context.Contex
 		var gateways istiov1a3.GatewayList
 		if err := r.List(ctx, &gateways); err != nil {
 			return nil, fmt.Errorf("failed to list Istio Gateway: %w", err)
+		}
+
+		if config.EnableEmbeddedMode() {
+			for _, gw := range gateways.Items {
+				ann := gw.GetAnnotations()
+				if ann == nil || ann[constant.AnnotationHTTPFilterPolicy] == "" {
+					continue
+				}
+
+				var policy mosniov1.HTTPFilterPolicy
+				err := json.Unmarshal([]byte(ann[constant.AnnotationHTTPFilterPolicy]), &policy)
+				if err != nil {
+					log.Errorf("failed to unmarshal policy out from Gateway, err: %v, name: %s, namespace: %s", err, gw.Name, gw.Namespace)
+					continue
+				}
+				// We require the embedded policy to be valid, otherwise it's costly to validate and hard to report the error.
+
+				policy.Namespace = gw.Namespace
+				// Name convention is "embedded-$kind-$name"
+				policy.Name = "embedded-gateway-" + gw.Name
+				err = r.resolveWithIstioGateway(ctx, gw, &policy, initState)
+				if err != nil {
+					return nil, err
+				}
+
+				key := getK8sKey(gw.Namespace, gw.Name)
+				istioGwIdx[key] = append(istioGwIdx[key], &policy)
+			}
+
+			// istioGatewayIndexer will be updated at the end of this method
 		}
 
 		for _, gw := range gateways.Items {

@@ -65,4 +65,4 @@ spec:
 
 控制面在收到 VirtualService 时，会查看它的 annotation `htnn.mosn.io/httpfilterpolicy` 里是否有 HTTPFilterPolicy。如果有，则相当于同时收到 HTTPFilterPolicy 和它对应的 VirtualService。所以下发路由和策略时，只需要下发 VirtualService 即可。和 Ingress 的 annotation 不一样的是，这里面的 HTTPFilterPolicy 仍然会参与策略合并，所以用户还是可以指定一个更高级别的 HTTPFilterPolicy（比如作用于整个 Gateway），来添加额外的插件。
 
-注意 Embedded Mode 目前只支持将 HTTPFilterPolicy 嵌入到 VirtualSrvice。
+注意 Embedded Mode 目前只支持将 HTTPFilterPolicy 嵌入到 VirtualSrvice。嵌入 HTTPFilterPolicy 到 Istio Gateway 也是支持的，不过需要在控制面开启 `HTNN_ENABLE_LDS_PLUGIN_VIA_ECDS`。

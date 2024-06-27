@@ -19,7 +19,76 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/types/known/durationpb"
+
+	"mosn.io/htnn/types/plugins/opa"
 )
+
+func TestConfTimeout(t *testing.T) {
+	input := `{
+        "remote": {
+            "url": "http://127.0.0.1:8181",
+            "policy": "test",
+            "timeout": "1s"
+        }
+    }`
+	conf := &config{}
+	err := protojson.Unmarshal([]byte(input), conf)
+	if err == nil {
+		err = conf.Validate()
+	}
+	assert.Nil(t, err)
+	assert.Equal(t, int64(1), conf.GetRemote().Timeout.GetSeconds())
+
+	input = `{
+        "remote": {
+            "url": "http://127.0.0.1:8181",
+            "policy": "test"
+        }
+    }`
+	conf = &config{}
+	err = protojson.Unmarshal([]byte(input), conf)
+	if err == nil {
+		err = conf.Validate()
+	}
+	assert.Nil(t, err)
+}
+
+func TestConfigInit(t *testing.T) {
+	c := &config{
+		CustomConfig: opa.CustomConfig{
+			Config: opa.Config{
+				ConfigType: &opa.Config_Remote{
+					Remote: &opa.Remote{
+						Url:    "http://127.0.0.1:8181",
+						Policy: "httpapi/authz",
+						Timeout: &durationpb.Duration{
+							Seconds: 1,
+							Nanos:   0,
+						},
+					},
+				},
+			},
+		},
+	}
+	err := c.Init(nil)
+	assert.Nil(t, err)
+
+	c = &config{
+		CustomConfig: opa.CustomConfig{
+			Config: opa.Config{
+				ConfigType: &opa.Config_Remote{
+					Remote: &opa.Remote{
+						Url:    "http://127.0.0.1:8181",
+						Policy: "httpapi/authz",
+					},
+				},
+			},
+		},
+	}
+	err = c.Init(nil)
+	assert.Nil(t, err)
+}
 
 func TestBadConfig(t *testing.T) {
 	tests := []struct {
@@ -88,6 +157,17 @@ func TestBadConfig(t *testing.T) {
 				}
 			}`,
 			err: "rego_parse_error",
+		},
+		{
+			name: "invalid timeout",
+			input: `{
+				"remote": {
+					"url": "http://127.0.0.1:8181",
+					"policy": "test",
+                    "timeout": 0.1s
+				}
+			}`,
+			err: "invalid value 0.1s",
 		},
 	}
 

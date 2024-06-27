@@ -25,3 +25,15 @@ index e7f308e890..def9507093 100644
  require (
  	cloud.google.com/go/compute/metadata v0.2.3
  	cloud.google.com/go/logging v1.9.0
+diff --git a/pilot/pkg/config/htnn/types.go b/pilot/pkg/config/htnn/types.go
+new file mode 100644
+index 0000000000..8d39ede5b0
+--- /dev/null
++++ b/pilot/pkg/config/htnn/types.go
+@@ -0,0 +1,6 @@
++package htnn
++
++import (
++   _ "mosn.io/htnn/types/plugins"    // register plugin types
++   _ "mosn.io/htnn/types/registries" // register registry types
++)

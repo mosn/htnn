@@ -16,6 +16,7 @@ package integration
 
 import (
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -90,6 +91,50 @@ func TestConsumerRestriction(t *testing.T) {
 			},
 		},
 		{
+			name: "allowed by method",
+			config: control_plane.NewPluinConfig([]*model.FilterConfig{
+				{
+					Name: "keyAuth",
+					Config: map[string]interface{}{
+						"keys": []interface{}{
+							map[string]interface{}{
+								"name": "Authorization",
+							},
+						},
+					},
+				},
+				{
+					Name: "consumerRestriction",
+					Config: map[string]interface{}{
+						"allow": map[string]interface{}{
+							"rules": []interface{}{
+								map[string]interface{}{
+									"name":    "tom",
+									"methods": []interface{}{"GET", "POST"},
+								},
+							},
+						},
+					},
+				},
+			}),
+			run: func(t *testing.T) {
+				resp, err := dp.Get("/echo", http.Header{"Authorization": []string{"tom"}})
+				require.NoError(t, err)
+				assert.Equal(t, 200, resp.StatusCode)
+				resp, _ = dp.Post("/echo", http.Header{"Authorization": []string{"tom"}}, strings.NewReader("any"))
+				assert.Equal(t, 200, resp.StatusCode)
+				resp, _ = dp.Put("/echo", http.Header{"Authorization": []string{"tom"}}, strings.NewReader("any"))
+				assert.Equal(t, 403, resp.StatusCode)
+
+				resp, _ = dp.Get("/echo", http.Header{"Authorization": []string{"marvin"}})
+				assert.Equal(t, 403, resp.StatusCode)
+				resp, _ = dp.Post("/echo", http.Header{"Authorization": []string{"marvin"}}, strings.NewReader("any"))
+				assert.Equal(t, 403, resp.StatusCode)
+				resp, _ = dp.Put("/echo", http.Header{"Authorization": []string{"marvin"}}, strings.NewReader("any"))
+				assert.Equal(t, 403, resp.StatusCode)
+			},
+		},
+		{
 			name: "deny",
 			config: control_plane.NewPluinConfig([]*model.FilterConfig{
 				{
@@ -109,6 +154,50 @@ func TestConsumerRestriction(t *testing.T) {
 							"rules": []interface{}{
 								map[string]interface{}{
 									"name": "tom",
+								},
+							},
+						},
+					},
+				},
+			}),
+			run: func(t *testing.T) {
+				resp, err := dp.Get("/echo", http.Header{"Authorization": []string{"marvin"}})
+				require.NoError(t, err)
+				assert.Equal(t, 200, resp.StatusCode)
+				resp, _ = dp.Post("/echo", http.Header{"Authorization": []string{"marvin"}}, strings.NewReader("any"))
+				assert.Equal(t, 200, resp.StatusCode)
+				resp, _ = dp.Put("/echo", http.Header{"Authorization": []string{"marvin"}}, strings.NewReader("any"))
+				assert.Equal(t, 200, resp.StatusCode)
+
+				resp, _ = dp.Get("/echo", http.Header{"Authorization": []string{"tom"}})
+				assert.Equal(t, 403, resp.StatusCode)
+				resp, _ = dp.Post("/echo", http.Header{"Authorization": []string{"tom"}}, strings.NewReader("any"))
+				assert.Equal(t, 403, resp.StatusCode)
+				resp, _ = dp.Put("/echo", http.Header{"Authorization": []string{"tom"}}, strings.NewReader("any"))
+				assert.Equal(t, 403, resp.StatusCode)
+			},
+		},
+		{
+			name: "denied by method",
+			config: control_plane.NewPluinConfig([]*model.FilterConfig{
+				{
+					Name: "keyAuth",
+					Config: map[string]interface{}{
+						"keys": []interface{}{
+							map[string]interface{}{
+								"name": "Authorization",
+							},
+						},
+					},
+				},
+				{
+					Name: "consumerRestriction",
+					Config: map[string]interface{}{
+						"deny": map[string]interface{}{
+							"rules": []interface{}{
+								map[string]interface{}{
+									"name":    "tom",
+									"methods": []interface{}{"GET", "POST"},
 								},
 							},
 						},

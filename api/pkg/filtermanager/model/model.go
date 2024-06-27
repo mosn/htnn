@@ -33,6 +33,7 @@ type ParsedFilterConfig struct {
 	Name         string
 	ParsedConfig interface{}
 	InitOnce     sync.Once
+	InitFailure  error
 	Factory      api.FilterFactory
 }
 
