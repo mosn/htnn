@@ -20,8 +20,8 @@ import (
 )
 
 func init() {
-	plugins.RegisterPlugin("outerLua", &outerPlugin{})
-	plugins.RegisterPlugin("innerLua", &innerPlugin{})
+	plugins.RegisterPlugin(lua.OuterName, &outerPlugin{})
+	plugins.RegisterPlugin(lua.InnerName, &innerPlugin{})
 }
 
 type plugin struct {

@@ -19,12 +19,8 @@ import (
 	"mosn.io/htnn/types/plugins/cors"
 )
 
-const (
-	Name = "cors"
-)
-
 func init() {
-	plugins.RegisterPlugin(Name, &plugin{})
+	plugins.RegisterPlugin(cors.Name, &plugin{})
 }
 
 type plugin struct {

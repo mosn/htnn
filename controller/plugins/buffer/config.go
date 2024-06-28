@@ -19,12 +19,8 @@ import (
 	"mosn.io/htnn/types/plugins/buffer"
 )
 
-const (
-	Name = "buffer"
-)
-
 func init() {
-	plugins.RegisterPlugin(Name, &plugin{})
+	plugins.RegisterPlugin(buffer.Name, &plugin{})
 }
 
 type plugin struct {

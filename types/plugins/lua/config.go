@@ -21,9 +21,14 @@ import (
 	"mosn.io/htnn/api/pkg/plugins"
 )
 
+const (
+	OuterName = "outerLua"
+	InnerName = "innerLua"
+)
+
 func init() {
-	plugins.RegisterPluginType("outerLua", &OuterPlugin{})
-	plugins.RegisterPluginType("innerLua", &InnerPlugin{})
+	plugins.RegisterPluginType(OuterName, &OuterPlugin{})
+	plugins.RegisterPluginType(InnerName, &InnerPlugin{})
 }
 
 type plugin struct {

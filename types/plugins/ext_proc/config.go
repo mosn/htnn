@@ -21,9 +21,14 @@ import (
 	"mosn.io/htnn/api/pkg/plugins"
 )
 
+const (
+	OuterName = "outerExtProc"
+	InnerName = "innerExtProc"
+)
+
 func init() {
-	plugins.RegisterPluginType("outerExtProc", &OuterPlugin{})
-	plugins.RegisterPluginType("innerExtProc", &InnerPlugin{})
+	plugins.RegisterPluginType(OuterName, &OuterPlugin{})
+	plugins.RegisterPluginType(InnerName, &InnerPlugin{})
 }
 
 type plugin struct {

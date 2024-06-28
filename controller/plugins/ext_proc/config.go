@@ -20,8 +20,8 @@ import (
 )
 
 func init() {
-	plugins.RegisterPlugin("outerExtProc", &outerPlugin{})
-	plugins.RegisterPlugin("innerExtProc", &innerPlugin{})
+	plugins.RegisterPlugin(ext_proc.OuterName, &outerPlugin{})
+	plugins.RegisterPlugin(ext_proc.InnerName, &innerPlugin{})
 }
 
 type plugin struct {
