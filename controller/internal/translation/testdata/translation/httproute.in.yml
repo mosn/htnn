@@ -49,7 +49,7 @@ httproute:
           backendRefs:
           - name: beta
             port: 8000
-httpFilterPolicy:
+filterPolicy:
   http:
   - apiVersion: htnn.mosn.io/v1
     kind: FilterPolicy

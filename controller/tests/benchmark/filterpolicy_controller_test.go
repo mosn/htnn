@@ -223,7 +223,7 @@ var _ = Describe("FilterPolicy controller", func() {
 			num := 10
 			start := time.Now()
 			for i := 0; i < num; i++ {
-				httpFilterPolicyReconciler.Reconcile(ctx, controllerruntime.Request{
+				filterPolicyReconciler.Reconcile(ctx, controllerruntime.Request{
 					NamespacedName: types.NamespacedName{Namespace: "", Name: "filterpolicy"}})
 			}
 			fmt.Printf("Benchmark with %d VirtualServices (each has two routes), %d FilterPolicies\n", scale, 2*scale)

@@ -24,7 +24,7 @@ istioGateway:
         name: port-https
         number: 443
         protocol: HTTPS
-httpFilterPolicy:
+filterPolicy:
   httpbin-gateway:
   - apiVersion: htnn.mosn.io/v1
     kind: FilterPolicy

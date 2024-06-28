@@ -31,7 +31,7 @@ httproute:
           backendRefs:
           - name: blah
             port: 8000
-httpFilterPolicy:
+filterPolicy:
   gateway:
   - apiVersion: htnn.mosn.io/v1
     kind: FilterPolicy

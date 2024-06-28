@@ -290,7 +290,7 @@ func toMergedPolicy(nsName *types.NamespacedName, policies []*FilterPolicyWrappe
 	}
 
 	// use map to deduplicate policies, especially for the sub-policies
-	usedHFP := make(map[string]struct{}, len(policies))
+	usedFP := make(map[string]struct{}, len(policies))
 	for _, policy := range policies {
 		used := false
 		for name, filter := range policy.Spec.Filters {
@@ -301,14 +301,14 @@ func toMergedPolicy(nsName *types.NamespacedName, policies []*FilterPolicyWrappe
 		}
 
 		if used {
-			usedHFP[toNsName(policy)] = struct{}{}
+			usedFP[toNsName(policy)] = struct{}{}
 		}
 	}
 
 	info := &Info{
-		FilterPolicies: make([]string, 0, len(usedHFP)),
+		FilterPolicies: make([]string, 0, len(usedFP)),
 	}
-	for s := range usedHFP {
+	for s := range usedFP {
 		info.FilterPolicies = append(info.FilterPolicies, s)
 	}
 	slices.Sort(info.FilterPolicies) // order is required for later procession

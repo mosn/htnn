@@ -38,7 +38,7 @@ virtualService:
               host: httpbin
               port:
                 number: 8000
-httpFilterPolicy:
+filterPolicy:
   httpbin:
   - apiVersion: htnn.mosn.io/v1
     kind: FilterPolicy

@@ -14,7 +14,7 @@ istioGateway:
         name: http
         number: 80
         protocol: HTTP
-httpFilterPolicy:
+filterPolicy:
   gateway:
   - apiVersion: htnn.mosn.io/v1
     kind: FilterPolicy

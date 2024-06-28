@@ -12,7 +12,7 @@ gateway:
     - name: gateway
       port: 1234
       protocol: HTTP
-httpFilterPolicy:
+filterPolicy:
   gateway:
   - apiVersion: htnn.mosn.io/v1
     kind: FilterPolicy

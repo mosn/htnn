@@ -139,7 +139,7 @@ func (r *FilterPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	reconcilationStart := time.Now()
 	defer func() {
 		reconcilationDuration := time.Since(reconcilationStart).Seconds()
-		metrics.HFPReconcileDurationDistribution.Record(reconcilationDuration)
+		metrics.FPReconcileDurationDistribution.Record(reconcilationDuration)
 	}()
 
 	log.Info("Reconcile FilterPolicy")
@@ -156,7 +156,7 @@ func (r *FilterPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	start := time.Now()
 	finalState, err := initState.Process(ctx)
 	processDurationInSecs := time.Since(start).Seconds()
-	metrics.HFPTranslateDurationDistribution.Record(processDurationInSecs)
+	metrics.FPTranslateDurationDistribution.Record(processDurationInSecs)
 	if err != nil {
 		log.Errorf("failed to process state: %v", err)
 		// there is no retryable err during processing

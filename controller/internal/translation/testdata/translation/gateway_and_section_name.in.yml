@@ -15,7 +15,7 @@ gateway:
     - name: port2
       port: 1235
       protocol: HTTP
-httpFilterPolicy:
+filterPolicy:
   httpbin-gateway:
   - apiVersion: htnn.mosn.io/v1
     kind: FilterPolicy

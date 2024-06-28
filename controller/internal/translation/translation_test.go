@@ -65,7 +65,7 @@ type Features struct {
 
 type testInput struct {
 	// we use sigs.k8s.io/yaml which uses JSON under the hover
-	FilterPolicy map[string][]*mosniov1.FilterPolicy `json:"httpFilterPolicy"`
+	FilterPolicy map[string][]*mosniov1.FilterPolicy `json:"filterPolicy"`
 
 	VirtualService map[string][]*istiov1a3.VirtualService `json:"virtualService"`
 	IstioGateway   []*istiov1a3.Gateway                   `json:"istioGateway"`
@@ -131,33 +131,33 @@ func TestTranslate(t *testing.T) {
 					}
 				}
 			}
-			hfpsMap := maps.Clone(input.FilterPolicy)
+			fpsMap := maps.Clone(input.FilterPolicy)
 			for name, wrapper := range hrToGws {
-				hfps := input.FilterPolicy[name]
-				if hfps != nil {
+				fps := input.FilterPolicy[name]
+				if fps != nil {
 					// Currently, a policy can only target one resource.
-					delete(hfpsMap, name)
+					delete(fpsMap, name)
 				}
-				for _, hfp := range hfps {
-					if hfp.Namespace == "" {
-						hfp.SetNamespace("default")
+				for _, fp := range fps {
+					if fp.Namespace == "" {
+						fp.SetNamespace("default")
 					}
-					s.AddPolicyForHTTPRoute(hfp, wrapper.hr, wrapper.gws)
+					s.AddPolicyForHTTPRoute(fp, wrapper.hr, wrapper.gws)
 				}
 			}
 
 			// For gateway-only cases
 			for _, gw := range input.Gateway {
 				name := gw.Name
-				hfps := hfpsMap[name]
-				if hfps != nil {
-					delete(hfpsMap, name)
+				fps := fpsMap[name]
+				if fps != nil {
+					delete(fpsMap, name)
 				}
-				for _, hfp := range hfps {
-					if hfp.Namespace == "" {
-						hfp.SetNamespace("default")
+				for _, fp := range fps {
+					if fp.Namespace == "" {
+						fp.SetNamespace("default")
 					}
-					s.AddPolicyForK8sGateway(hfp, gw)
+					s.AddPolicyForK8sGateway(fp, gw)
 				}
 			}
 			if config.EnableLDSPluginViaECDS() {
@@ -189,27 +189,27 @@ func TestTranslate(t *testing.T) {
 			}
 
 			for name, wrapper := range vsToGws {
-				hfps := hfpsMap[name]
-				if hfps != nil {
-					delete(hfpsMap, name)
+				fps := fpsMap[name]
+				if fps != nil {
+					delete(fpsMap, name)
 				}
-				for _, hfp := range hfps {
-					if hfp.Namespace == "" {
-						hfp.SetNamespace("default")
+				for _, fp := range fps {
+					if fp.Namespace == "" {
+						fp.SetNamespace("default")
 					}
-					s.AddPolicyForVirtualService(hfp, wrapper.vs, wrapper.gws)
+					s.AddPolicyForVirtualService(fp, wrapper.vs, wrapper.gws)
 				}
 			}
 
 			// For gateway-only cases
 			for _, gw := range input.IstioGateway {
 				name := gw.Name
-				hfps := hfpsMap[name]
-				for _, hfp := range hfps {
-					if hfp.Namespace == "" {
-						hfp.SetNamespace("default")
+				fps := fpsMap[name]
+				for _, fp := range fps {
+					if fp.Namespace == "" {
+						fp.SetNamespace("default")
 					}
-					s.AddPolicyForIstioGateway(hfp, gw)
+					s.AddPolicyForIstioGateway(fp, gw)
 				}
 			}
 			if config.EnableLDSPluginViaECDS() {
@@ -289,11 +289,11 @@ func TestPlugins(t *testing.T) {
 	for _, inputFile := range inputFiles {
 		name := testName(inputFile)
 		t.Run(name, func(t *testing.T) {
-			var hfp mosniov1.FilterPolicy
-			mustUnmarshal(t, inputFile, &hfp)
+			var fp mosniov1.FilterPolicy
+			mustUnmarshal(t, inputFile, &fp)
 
 			s := NewInitState()
-			s.AddPolicyForVirtualService(&hfp, vs, []*istiov1a3.Gateway{gw})
+			s.AddPolicyForVirtualService(&fp, vs, []*istiov1a3.Gateway{gw})
 
 			fs, err := s.Process(context.Background())
 			require.NoError(t, err)

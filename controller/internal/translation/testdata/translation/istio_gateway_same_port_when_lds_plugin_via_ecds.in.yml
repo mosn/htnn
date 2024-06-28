@@ -61,7 +61,7 @@ istioGateway:
         name: http
         number: 81
         protocol: HTTP
-httpFilterPolicy:
+filterPolicy:
   httpbin-gateway:
   - apiVersion: htnn.mosn.io/v1
     kind: FilterPolicy
