@@ -19,12 +19,8 @@ import (
 	"mosn.io/htnn/types/plugins/local_ratelimit"
 )
 
-const (
-	Name = "localRatelimit"
-)
-
 func init() {
-	plugins.RegisterHttpPlugin(Name, &plugin{})
+	plugins.RegisterHttpPlugin(local_ratelimit.Name, &plugin{})
 }
 
 type plugin struct {

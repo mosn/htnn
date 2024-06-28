@@ -19,12 +19,8 @@ import (
 	"mosn.io/htnn/types/plugins/bandwidth_limit"
 )
 
-const (
-	Name = "bandwidthLimit"
-)
-
 func init() {
-	plugins.RegisterHttpPlugin(Name, &plugin{})
+	plugins.RegisterHttpPlugin(bandwidth_limit.Name, &plugin{})
 }
 
 type plugin struct {
