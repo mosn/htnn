@@ -42,7 +42,7 @@ func (p *plugin) ConfigTypeURL() string {
 	return "type.googleapis.com/envoy.extensions.filters.http.buffer.v3.BufferPerRoute"
 }
 
-func (p *plugin) FilterConfigPlaceholder() map[string]interface{} {
+func (p *plugin) HTTPFilterConfigPlaceholder() map[string]interface{} {
 	return map[string]interface{}{
 		"typed_config": map[string]interface{}{
 			"@type":           "type.googleapis.com/envoy.extensions.filters.http.buffer.v3.Buffer",

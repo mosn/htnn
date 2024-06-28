@@ -31,7 +31,7 @@ func (p *plugin) ConfigTypeURL() string {
 	return "type.googleapis.com/envoy.extensions.filters.http.fault.v3.HTTPFault"
 }
 
-func (p *plugin) FilterConfigPlaceholder() map[string]interface{} {
+func (p *plugin) HTTPFilterConfigPlaceholder() map[string]interface{} {
 	return map[string]interface{}{
 		"typed_config": map[string]interface{}{
 			"@type": p.ConfigTypeURL(),

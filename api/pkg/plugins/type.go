@@ -157,7 +157,7 @@ type NativePlugin interface {
 type HTTPNativePlugin interface {
 	NativePlugin
 
-	FilterConfigPlaceholder() map[string]interface{}
+	HTTPFilterConfigPlaceholder() map[string]interface{}
 }
 
 type HTTPNativePluginHasRouteConfigWrapper interface {

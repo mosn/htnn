@@ -29,13 +29,16 @@ type plugin struct {
 
 // Each Native plugin need to implement the methods below
 
-// ConfigTypeURL returns the type url of per-route config
+// ConfigTypeURL returns the type url of config
 func (p *plugin) ConfigTypeURL() string {
 	return "type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit"
 }
 
-// FilterConfigPlaceholder returns the placeholder config for http filter
-func (p *plugin) FilterConfigPlaceholder() map[string]interface{} {
+// Each HTTP Native plugin need to implement the methods below
+
+// HTTPFilterConfigPlaceholder returns the placeholder config for http filter. The placeholder config
+// will be validated but won't be used.
+func (p *plugin) HTTPFilterConfigPlaceholder() map[string]interface{} {
 	return map[string]interface{}{
 		"typed_config": map[string]interface{}{
 			"@type":      p.ConfigTypeURL(),
