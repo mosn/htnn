@@ -50,7 +50,6 @@ build-controller-image:
 # - be able to push the image to your registry (i.e. if you do not set a valid value via CONTROLLER_IMAGE=<myregistry/image:<tag>> then the export will fail)
 # To adequately provide solutions that are compatible with multiple platforms, you should consider using this option.
 PLATFORMS ?= linux/arm64,linux/amd64
-# TODO: support building proxy image with buildx
 .PHONY: docker-buildx
 docker-buildx: ## Build and push docker image for cross-platform support
 	# copy existing Dockerfile and insert --platform=${BUILDPLATFORM} into Dockerfile.cross, and preserve the original Dockerfile
