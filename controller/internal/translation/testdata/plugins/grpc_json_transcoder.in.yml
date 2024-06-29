@@ -1,0 +1,21 @@
+apiVersion: htnn.mosn.io/v1
+kind: HTTPFilterPolicy
+metadata:
+  name: policy
+  namespace: default
+spec:
+  targetRef:
+    group: networking.istio.io
+    kind: VirtualService
+    name: default
+  filters:
+    grpcJsonTranscoder:
+      config:
+        protoDescriptor: protos/helloworld.pb
+        services:
+          - helloworld.Greeter
+        printOptions:
+          addWhitespace: true
+          alwaysPrintPrimitiveFields: true
+          alwaysPrintEnumsAsInts: false
+          preserveProtoFieldNames: false
