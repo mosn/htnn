@@ -963,6 +963,37 @@ func TestFilterManagerPluginReturnsErrorInInit(t *testing.T) {
 	assert.Equal(t, 500, resp.StatusCode, resp)
 }
 
+func TestFilterManagerPluginPanicInInit(t *testing.T) {
+	dp, err := data_plane.StartDataPlane(t, &data_plane.Option{
+		NoErrorLogCheck: true,
+		ExpectLogPattern: []string{
+			`http: panic serving: panic in init`,
+		},
+	})
+	if err != nil {
+		t.Fatalf("failed to start data plane: %v", err)
+		return
+	}
+	defer dp.Stop()
+
+	config := &filtermanager.FilterManagerConfig{
+		Plugins: []*model.FilterConfig{
+			{
+				Name: "bad",
+				Config: &badPluginConfig{
+					BadPluginConfig: BadPluginConfig{
+						PanicInInit: true,
+					},
+				},
+			},
+		},
+	}
+	controlPlane.UseGoPluginConfig(t, config, dp)
+	resp, err := dp.Get("/echo", nil)
+	require.Nil(t, err)
+	assert.Equal(t, 500, resp.StatusCode, resp)
+}
+
 func TestFilterManagerPluginPanic(t *testing.T) {
 	dp, err := data_plane.StartDataPlane(t, &data_plane.Option{
 		NoErrorLogCheck: true,

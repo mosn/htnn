@@ -19,12 +19,8 @@ import (
 	"mosn.io/htnn/types/plugins/fault"
 )
 
-const (
-	Name = "fault"
-)
-
 func init() {
-	plugins.RegisterHttpPlugin(Name, &plugin{})
+	plugins.RegisterHttpPlugin(fault.Name, &plugin{})
 }
 
 type plugin struct {

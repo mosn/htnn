@@ -18,16 +18,13 @@ IN_CI ?=
 
 TARGET_SO       = libgolang.so
 PROJECT_NAME    = mosn.io/htnn
+DOCKER_MIRROR   = m.daocloud.io/
 # Both images use glibc 2.31. Ensure libc in the images match each other.
-BUILD_IMAGE     ?= golang:1.21-bullseye
-# This is the envoyproxy/envoy:contrib-v1.29.5
-# Use docker inspect --format='{{index .RepoDigests 0}}' envoyproxy/envoy:contrib-v1.29.5
-# to get the sha256 ID
-PROXY_IMAGE     ?= envoyproxy/envoy@sha256:a2221a81a7836f368e6d1e2d55d86099e1b6c5718cfa82317fedc7394928d1a5
+BUILD_IMAGE     ?= $(DOCKER_MIRROR)docker.io/library/golang:1.21-bullseye
 # We don't use istio/proxyv2 because it is not designed to be run separately (need to work around permission issue).
-
+PROXY_IMAGE     ?= $(DOCKER_MIRROR)docker.io/envoyproxy/envoy:contrib-v1.29.5
 # We may need to use timestamp if we need to update the image in one PR
-DEV_TOOLS_IMAGE ?= ghcr.io/mosn/htnn-dev-tools:2024-03-05
+DEV_TOOLS_IMAGE ?= $(DOCKER_MIRROR)ghcr.io/mosn/htnn-dev-tools:2024-03-05
 
 ISTIO_VERSION = 1.21.3
 GATEWAY_API_VERSION = 1.0.0

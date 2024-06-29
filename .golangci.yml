@@ -8,6 +8,7 @@ linters:
     - contextcheck
     - errcheck
     - exportloopref
+    - forcetypeassert
     - gocheckcompilerdirectives
     - gocritic
     - gosec
@@ -38,14 +39,22 @@ issues:
     - path: _test\.go # unit tests
       linters:
         - errcheck
+        - forcetypeassert
         - gosec
         - unparam
     - path: tests/ # integration tests
       linters:
         - bodyclose
         - errcheck
+        - forcetypeassert
         - gosec
         - unparam
+    - path: plugins/ # too much plugin config type assert in the plugins
+      linters:
+        - forcetypeassert
+    - path: registries/ # ditto
+      linters:
+        - forcetypeassert
   # Show the complete output
   max-issues-per-linter: 0
   max-same-issues: 0

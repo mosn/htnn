@@ -87,7 +87,7 @@ spec:
               targetRef:
                 description: TargetRef is the name of the resource this policy is
                   being attached to. This Policy and the TargetRef MUST be in the
-                  same namespace.
+                  same namespace. HTTPFilterPolicy in embedded mode can have no targetRef.
                 properties:
                   group:
                     description: Group is the group of the target resource.

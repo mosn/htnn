@@ -17,12 +17,14 @@ syntax = "proto3";
 package types.plugins.opa;
 
 import "validate/validate.proto";
+import "google/protobuf/duration.proto";
 
 option go_package = "mosn.io/htnn/types/plugins/opa";
 
 message Remote {
   string url = 1 [(validate.rules).string = {uri: true}];
   string policy = 2 [(validate.rules).string = {min_len: 1}];
+  google.protobuf.Duration timeout = 3 [(validate.rules).duration = {gt: {}}];
 }
 
 message Local {

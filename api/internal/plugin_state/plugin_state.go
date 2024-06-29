@@ -15,11 +15,14 @@
 package plugin_state
 
 import (
+	"sync"
+
 	"mosn.io/htnn/api/pkg/filtermanager/api"
 )
 
 type pluginState struct {
 	store map[string]map[string]any
+	lock  sync.Mutex
 }
 
 func NewPluginState() api.PluginState {
@@ -29,6 +32,9 @@ func NewPluginState() api.PluginState {
 }
 
 func (p *pluginState) Get(namespace string, key string) any {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
 	if pluginStore, ok := p.store[namespace]; ok {
 		return pluginStore[key]
 	}
@@ -36,6 +42,9 @@ func (p *pluginState) Get(namespace string, key string) any {
 }
 
 func (p *pluginState) Set(namespace string, key string, value any) {
+	p.lock.Lock()
+	defer p.lock.Unlock()
+
 	pluginStore, ok := p.store[namespace]
 	if !ok {
 		pluginStore = make(map[string]any)

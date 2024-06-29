@@ -16,6 +16,8 @@ package consumer
 
 import (
 	"errors"
+	"fmt"
+	"reflect"
 
 	xds "github.com/cncf/xds/go/xds/type/v3"
 	capi "github.com/envoyproxy/envoy/contrib/golang/common/go/api"
@@ -35,7 +37,10 @@ type consumerManager struct {
 }
 
 func ConsumerManagerFactory(c interface{}) capi.StreamFilterFactory {
-	conf := c.(*consumerManagerConfig)
+	conf, ok := c.(*consumerManagerConfig)
+	if !ok {
+		panic(fmt.Sprintf("wrong config type: %s", reflect.TypeOf(c)))
+	}
 	return func(callbacks capi.FilterCallbackHandler) capi.StreamFilter {
 		return &consumerManager{
 			callbacks: callbacks,
