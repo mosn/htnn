@@ -32,8 +32,6 @@ var (
 )
 
 type File struct {
-	lock sync.RWMutex
-
 	Name  string
 	mtime time.Time
 }
@@ -71,16 +69,13 @@ func WatchFiles(onChange func(), file *File, otherFiles ...*File) (err error) {
 	}
 
 	watcher := defaultFsnotify.Watcher
-	if err != nil {
-		return
-	}
 
 	// Add files to watcher.
 	for _, f := range files {
 		dir := filepath.Dir(f.Name)
-		err = watcher.Add(dir)
+		err = defaultFsnotify.AddFiles(dir)
 		if err != nil {
-			logger.Error(err, "add file to watcher failed")
+			logger.Error(err, "failed to add file")
 		}
 		if _, exists := defaultFsnotify.WatchedFiles[dir]; exists {
 			logger.Info(fmt.Sprintf("File %s is already being watched", f.Name))
@@ -91,6 +86,11 @@ func WatchFiles(onChange func(), file *File, otherFiles ...*File) (err error) {
 		go defaultFsnotify.watchFiles(onChange, watcher, dir)
 	}
 
+	return
+}
+
+func (f *Fsnotify) AddFiles(dir string) (err error) {
+	err = f.Watcher.Add(dir)
 	return
 }
 

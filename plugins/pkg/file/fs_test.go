@@ -39,13 +39,15 @@ func TestFileIsChanged(t *testing.T) {
 	}(tmpfile.Name())
 
 	file := &File{Name: tmpfile.Name()}
-	_ = WatchFiles(func() {
+	err := WatchFiles(func() {
 		wg.Add(1)
 		defer wg.Done()
 		defaultFsnotify.mu.Lock()
 		i = 2
 		defaultFsnotify.mu.Unlock()
 	}, file)
+
+	assert.Nil(t, err)
 	tmpfile.Write([]byte("bls"))
 	tmpfile.Sync()
 	wg.Wait()
@@ -60,7 +62,7 @@ func TestFileIsChanged(t *testing.T) {
 	tmpfile.Sync()
 	wg.Wait()
 
-	err := WatchFiles(func() {}, nil)
+	err = WatchFiles(func() {}, nil)
 	assert.Error(t, err, "file pointer cannot be nil")
 
 	filename := "my_file.txt"
