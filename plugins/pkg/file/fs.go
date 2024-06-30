@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -38,7 +39,9 @@ type File struct {
 }
 
 type Fsnotify struct {
-	Watcher *fsnotify.Watcher
+	mu           sync.Mutex
+	Watcher      *fsnotify.Watcher
+	WatchedFiles map[string]struct{}
 }
 
 func newFsnotify() (fs *Fsnotify) {
@@ -47,53 +50,61 @@ func newFsnotify() (fs *Fsnotify) {
 		logger.Error(err, "create watcher failed")
 		return
 	}
-	fs = &Fsnotify{
-		Watcher: watcher,
+
+	return &Fsnotify{
+		Watcher:      watcher,
+		WatchedFiles: make(map[string]struct{}),
 	}
-	return
+
 }
 
 var (
 	defaultFsnotify = newFsnotify()
 )
 
-func Update(onChange func(), files ...*File) (err error) {
-	err = WatchFiles(onChange, files...)
-	return
-}
-
-func WatchFiles(onChange func(), files ...*File) (err error) {
-	if len(files) < 1 {
-		err = errors.New("must specify at least one file to watch")
-		return
+func WatchFiles(onChange func(), file *File, otherFiles ...*File) (err error) {
+	files := append([]*File{file}, otherFiles...)
+	for _, f := range files {
+		if f == nil {
+			return errors.New("file pointer cannot be nil")
+		}
 	}
 
-	watcher := newFsnotify().Watcher
+	watcher := defaultFsnotify.Watcher
 	if err != nil {
 		return
 	}
 
 	// Add files to watcher.
-	for _, file := range files {
-		go defaultFsnotify.watchFiles(onChange, watcher, file)
+	for _, f := range files {
+		dir := filepath.Dir(f.Name)
+		err = watcher.Add(dir)
+		if err != nil {
+			logger.Error(err, "add file to watcher failed")
+		}
+		if _, exists := defaultFsnotify.WatchedFiles[dir]; exists {
+			logger.Info(fmt.Sprintf("File %s is already being watched", f.Name))
+			continue
+		}
+		// 添加到已监听文件的集合
+		defaultFsnotify.WatchedFiles[dir] = struct{}{}
+		go defaultFsnotify.watchFiles(onChange, watcher, dir)
 	}
 
 	return
 }
 
-func (f *Fsnotify) watchFiles(onChange func(), w *fsnotify.Watcher, files *File) {
+func (f *Fsnotify) watchFiles(onChange func(), w *fsnotify.Watcher, dir string) {
 	defer func(w *fsnotify.Watcher) {
-		logger.Info("stop watch files" + files.Name)
+		f.mu.Lock()
+		delete(defaultFsnotify.WatchedFiles, dir)
+		f.mu.Unlock()
 		err := w.Close()
 		if err != nil {
 			logger.Error(err, "failed to close fsnotify watcher")
 		}
 	}(w)
-	err := w.Add(files.Name)
-	if err != nil {
-		logger.Error(err, "add file to watcher failed")
-	}
-	logger.Info("start watch files" + files.Name)
+
 	for {
 		select {
 		case event, ok := <-w.Events:
@@ -102,7 +113,6 @@ func (f *Fsnotify) watchFiles(onChange func(), w *fsnotify.Watcher, files *File)
 			}
 			logger.Info(fmt.Sprintf("event: %v", event))
 			onChange()
-			return
 		case err, ok := <-w.Errors:
 			if !ok {
 				return

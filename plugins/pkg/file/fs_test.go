@@ -15,17 +15,21 @@
 package file
 
 import (
+	"fmt"
+	"io/ioutil"
 	"os"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/fsnotify/fsnotify"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestFileIsChanged(t *testing.T) {
-	var mu sync.Mutex
-	i := 1
+	var wg sync.WaitGroup
+	i := 4
+
 	tmpfile, _ := os.CreateTemp("./", "example")
 	defer func(name string) {
 		err := os.Remove(name)
@@ -36,41 +40,94 @@ func TestFileIsChanged(t *testing.T) {
 
 	file := &File{Name: tmpfile.Name()}
 	_ = WatchFiles(func() {
-		mu.Lock()
+		wg.Add(1)
+		defer wg.Done()
+		defaultFsnotify.mu.Lock()
 		i = 2
-		mu.Unlock()
+		defaultFsnotify.mu.Unlock()
 	}, file)
-	time.Sleep(1 * time.Millisecond)
 	tmpfile.Write([]byte("bls"))
 	tmpfile.Sync()
-	mu.Lock()
-	assert.Equal(t, 2, i)
-	mu.Unlock()
+	wg.Wait()
 
 	_ = WatchFiles(func() {
-		mu.Lock()
+		wg.Add(1)
+		defer wg.Done()
+		defaultFsnotify.mu.Lock()
 		i = 1
-		mu.Unlock()
+		defaultFsnotify.mu.Unlock()
 	}, file)
-	time.Sleep(1 * time.Millisecond)
 	tmpfile.Sync()
-	mu.Lock()
+	wg.Wait()
+
+	err := WatchFiles(func() {}, nil)
+	assert.Error(t, err, "file pointer cannot be nil")
+
+	filename := "my_file.txt"
+	content := "Hello, World!"
+
+	f, err := os.Create(filename)
+	fi := &File{Name: f.Name()}
+	if err != nil {
+		fmt.Println("Error creating file:", err)
+		return
+	}
+	defer f.Close()
+
+	_ = WatchFiles(func() {
+		wg.Add(1)
+		defer wg.Done()
+		defaultFsnotify.mu.Lock()
+		i = 3
+		defaultFsnotify.mu.Unlock()
+	}, fi)
+	_, _ = f.WriteString(content)
+
+	_ = os.Remove(filename)
+	f, _ = os.Create(filename)
+
+	defer f.Close()
+
+	_, _ = f.WriteString("New content for the file.")
+	_ = os.Remove(filename)
+
+	defaultFsnotify.mu.Lock()
 	assert.Equal(t, 2, i)
-	mu.Unlock()
+	defaultFsnotify.mu.Unlock()
 
-	_ = Update(func() {
-		mu.Lock()
-		i = 1
-		mu.Unlock()
-	}, file)
+	watcher, err := fsnotify.NewWatcher()
+	assert.NoError(t, err)
+	defer watcher.Close()
+	fs := &Fsnotify{
+		WatchedFiles: make(map[string]struct{}),
+	}
+	tmpDir, err := ioutil.TempDir("", "watch_test")
+	assert.NoError(t, err)
+	defer os.RemoveAll(tmpDir)
+	fs.WatchedFiles[tmpDir] = struct{}{}
+	err = watcher.Add(tmpDir)
+	assert.NoError(t, err)
 
-	time.Sleep(1 * time.Millisecond)
-	tmpfile.Sync()
-	mu.Lock()
-	assert.Equal(t, 2, i)
+	// check whether onChange is called
+	onChangeCalled := false
+	onChange := func() {
+		onChangeCalled = true
+	}
 
-	err := WatchFiles(func() {})
-	assert.Error(t, err, "must specify at least one file to watch")
+	go fs.watchFiles(onChange, watcher, tmpDir)
+	tmpFile, err := os.CreateTemp(tmpDir, "testfile")
+	assert.NoError(t, err)
+	defer tmpFile.Close()
+
+	time.Sleep(500 * time.Millisecond)
+	watcher.Close()
+	time.Sleep(500 * time.Millisecond)
+
+	fs.mu.Lock()
+	_, exists := fs.WatchedFiles[tmpDir]
+	fs.mu.Unlock()
+	assert.True(t, exists, "WatchedFiles should be updated")
+	assert.True(t, onChangeCalled, "onChange should be called")
 }
 
 func TestStat(t *testing.T) {
