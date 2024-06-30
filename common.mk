@@ -16,6 +16,11 @@ SHELL = /bin/bash
 OS = $(shell uname)
 IN_CI ?=
 
+ROOT_DIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
+LOCALBIN := $(ROOT_DIR)/bin
+$(LOCALBIN):
+	@mkdir -p $(LOCALBIN)
+
 TARGET_SO       = libgolang.so
 PROJECT_NAME    = mosn.io/htnn
 # Both images use glibc 2.31. Ensure libc in the images match each other.
