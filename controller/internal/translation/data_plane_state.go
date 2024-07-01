@@ -193,7 +193,6 @@ func addVirtualHostToProxy(vh *model.VirtualHost, proxies map[Proxy]*proxyConfig
 	}
 
 	if host, ok := proxy.Hosts[vh.Name]; ok {
-		// TODO: add route name collision detection
 		// Currently, it is the webhook or the user configuration to guarantee the same route
 		// name won't be used in different VirtualServices that share the same host.
 		// For HTTPRoute, Istio guarantees the default route name is unique
