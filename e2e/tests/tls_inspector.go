@@ -12,34 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package model
+package tests
 
 import (
-	"fmt"
+	"testing"
 
-	"k8s.io/apimachinery/pkg/types"
+	"github.com/stretchr/testify/require"
+
+	"mosn.io/htnn/e2e/pkg/suite"
 )
 
-type GatewaySection struct {
-	// Fields here can't be pointer because we use GatewaySection as map key
-	NsName      types.NamespacedName
-	SectionName string
+func init() {
+	suite.Register(suite.Test{
+		Run: func(t *testing.T, suite *suite.Suite) {
+			rsp, err := suite.Get("/echo", nil)
+			require.NoError(t, err)
+			require.Equal(t, 200, rsp.StatusCode)
+		},
+	})
 }
-
-func (g GatewaySection) String() string {
-	return fmt.Sprintf("%s/%s", g.NsName.String(), g.SectionName)
-}
-
-type VirtualHost struct {
-	GatewaySection   *GatewaySection
-	NsName           *types.NamespacedName
-	Name             string
-	ECDSResourceName string
-}
-
-const (
-	ECDSGolangFilter   = "golang"
-	ECDSListenerFilter = "listener"
-
-	GolangPluginsFilter = "golang-filter"
-)
