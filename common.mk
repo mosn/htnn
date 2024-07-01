@@ -16,7 +16,7 @@ SHELL = /bin/bash
 OS = $(shell uname)
 IN_CI ?=
 
-ROOT_DIR := $(shell dirname $(realpath $(firstword $(MAKEFILE_LIST))))
+ROOT_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 LOCALBIN := $(ROOT_DIR)/bin
 $(LOCALBIN):
 	@mkdir -p $(LOCALBIN)

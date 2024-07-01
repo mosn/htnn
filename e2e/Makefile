@@ -14,10 +14,6 @@
 
 include ../common.mk
 
-LOCALBIN ?= $(shell cd .. && pwd)/bin
-$(LOCALBIN):
-	@mkdir -p $(LOCALBIN)
-
 KUBECTL ?= $(LOCALBIN)/kubectl
 KIND ?= $(LOCALBIN)/kind
 HELM ?= $(LOCALBIN)/helm
