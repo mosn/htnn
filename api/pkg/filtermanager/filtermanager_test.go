@@ -528,6 +528,7 @@ func (f *accessFieldOnLogFilter) OnLog(_ api.RequestHeaderMap, _ api.RequestTrai
 }
 
 func TestDoNotRecycleInUsedFilterManager(t *testing.T) {
+	envoy.DisableLogInTest() // otherwise, there is too much output
 	config := initFilterManagerConfig("ns")
 	config.parsed = []*model.ParsedFilterConfig{
 		{
@@ -536,7 +537,7 @@ func TestDoNotRecycleInUsedFilterManager(t *testing.T) {
 		},
 	}
 
-	n := 10
+	n := 100
 	var wg sync.WaitGroup
 
 	// DecodeHeaders
