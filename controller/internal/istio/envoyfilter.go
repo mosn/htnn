@@ -95,8 +95,8 @@ func DefaultEnvoyFilters() map[component.EnvoyFilterKey]*istiov1a3.EnvoyFilter {
 	// Native filters can only be used before/after Go plugins.
 
 	configs := []*configWrapper{}
-	plugins.IterateHttpPlugin(func(key string, value plugins.Plugin) bool {
-		nativePlugin, ok := value.(plugins.NativePlugin)
+	plugins.IteratePlugin(func(key string, value plugins.Plugin) bool {
+		nativePlugin, ok := value.(plugins.HTTPNativePlugin)
 		if !ok {
 			return true
 		}
@@ -160,7 +160,7 @@ func DefaultEnvoyFilters() map[component.EnvoyFilterKey]*istiov1a3.EnvoyFilter {
 			Namespace: ctrlcfg.RootNamespace(),
 			Name:      DefaultHttpFilter,
 			Labels: map[string]string{
-				constant.LabelCreatedBy: "HTTPFilterPolicy",
+				constant.LabelCreatedBy: "FilterPolicy",
 			},
 		},
 		Spec: istioapi.EnvoyFilter{

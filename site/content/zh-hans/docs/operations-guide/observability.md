@@ -18,12 +18,12 @@ HTNN 数据面基于 Go 开发的功能的日志都会使用 `golang` 这一个 
 
 HTNN 控制面额外增加了下面的指标：
 
-| 名称                                             | 类型      | 说明                                                                |
-|--------------------------------------------------|-----------|---------------------------------------------------------------------|
-| htnn_httpfilterpolicy_reconcile_duration_seconds | histogram | HTNN 调和 HTTPFilterPolicy 的耗时，单位为秒。                       |
-| htnn_httpfilterpolicy_translate_duration_seconds | histogram | HTNN 调和 HTTPFilterPolicy 过程中花在翻译 HTTPFilterPolicy 的时间。 |
-| htnn_consumer_reconcile_duration_seconds         | histogram | HTNN 调和 Consumer 的耗时，单位为秒。                               |
-| htnn_serviceregistry_reconcile_duration_seconds  | histogram | HTNN 调和 ServiceRegistry 的耗时，单位为秒。                        |
+| 名称                                            | 类型      | 说明                                                        |
+|-------------------------------------------------|-----------|-------------------------------------------------------------|
+| htnn_filterpolicy_reconcile_duration_seconds    | histogram | HTNN 调和 FilterPolicy 的耗时，单位为秒。                   |
+| htnn_filterpolicy_translate_duration_seconds    | histogram | HTNN 调和 FilterPolicy 过程中花在翻译 FilterPolicy 的时间。 |
+| htnn_consumer_reconcile_duration_seconds        | histogram | HTNN 调和 Consumer 的耗时，单位为秒。                       |
+| htnn_serviceregistry_reconcile_duration_seconds | histogram | HTNN 调和 ServiceRegistry 的耗时，单位为秒。                |
 
 默认访问 istio 的 prometheus 端口 `127.0.0.1:15014/metrics` 即可获取这些指标。注意如果某项指标没有数据，则不会出现。
 
@@ -41,10 +41,10 @@ HTNN 控制面调和时生成的 EnvoyFilter 和 ServiceEntry 都可以通过 is
     "resourceVersion": "52795",
     "creationTimestamp": "2024-05-10T10:38:02Z",
     "labels": {
-      "htnn.mosn.io/created-by": "HTTPFilterPolicy"
+      "htnn.mosn.io/created-by": "FilterPolicy"
     },
     "annotations": {
-      "htnn.mosn.io/info": "{\"httpfilterpolicies\":[\"nodesentry/policy\"]}"
+      "htnn.mosn.io/info": "{\"filterpolicies\":[\"nodesentry/policy\"]}"
     }
   },
   ...
@@ -54,4 +54,4 @@ HTNN 控制面调和时生成的 EnvoyFilter 和 ServiceEntry 都可以通过 is
 
 生成的 EnvoyFilter 会打上 "htnn.mosn.io/created-by" 的 label，标记它是由哪种资源生成的。另外还有一个 annotation "htnn.mosn.io/info"，其中包含下面的字段：
 
-* `httpfilterpolicies`: 生成该 EnvoyFilter 的策略，命名方式为 `$namespace/$name`。
+* `filterpolicies`: 生成该 EnvoyFilter 的策略，命名方式为 `$namespace/$name`。

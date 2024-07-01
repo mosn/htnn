@@ -60,7 +60,7 @@ type mergedPolicy struct {
 	NsName *types.NamespacedName
 }
 
-func toNsName(policy *HTTPFilterPolicyWrapper) string {
+func toNsName(policy *FilterPolicyWrapper) string {
 	return policy.Namespace + "/" + policy.Name
 }
 
@@ -69,7 +69,7 @@ func toNsName(policy *HTTPFilterPolicyWrapper) string {
 // 1. A Policy targeting a more specific scope wins over a policy targeting a lesser specific scope.
 // 2. If multiple polices configure the same plugin, the oldest one (based on creation timestamp) wins.
 // 3. If there are multiple oldest polices, the one appearing first in alphabetical order by {namespace}/{name} wins.
-func sortHttpFilterPolicy(policies []*HTTPFilterPolicyWrapper) {
+func sortFilterPolicy(policies []*FilterPolicyWrapper) {
 	// use Slice instead of SliceStable because each policy has unique namespace/name
 	sort.Slice(policies, func(i, j int) bool {
 		if policies[i].scope != policies[j].scope {
@@ -126,10 +126,10 @@ func translateFilterManagerConfigToPolicyInRDS(fmc *filtermanager.FilterManagerC
 	for _, plugin := range fmc.Plugins {
 		name := plugin.Name
 		url := ""
-		p := plugins.LoadHttpPlugin(name)
+		p := plugins.LoadPlugin(name)
 		if p == nil {
 			// For Go Plugins, only the type is registered
-			p = plugins.LoadHttpPluginType(name)
+			p = plugins.LoadPluginType(name)
 		}
 		// As we don't reject configuration with unknown plugin to keep compatibility...
 		if p == nil {
@@ -149,7 +149,7 @@ func translateFilterManagerConfigToPolicyInRDS(fmc *filtermanager.FilterManagerC
 			plugin.Config = cfg
 			goFilterManager.Plugins = append(goFilterManager.Plugins, plugin)
 		} else {
-			url = nativePlugin.RouteConfigTypeURL()
+			url = nativePlugin.ConfigTypeURL()
 			conf := p.Config()
 			desc := conf.ProtoReflect().Descriptor()
 			fieldDescs := desc.Fields()
@@ -162,7 +162,7 @@ func translateFilterManagerConfigToPolicyInRDS(fmc *filtermanager.FilterManagerC
 			// rewrite the configuration, we should take care of this.
 			stripUnknowFields(m, fieldDescs)
 
-			if wrapper, ok := p.(plugins.NativePluginHasRouteConfigWrapper); ok {
+			if wrapper, ok := p.(plugins.HTTPNativePluginHasRouteConfigWrapper); ok {
 				m = wrapper.ToRouteConfig(m)
 			}
 
@@ -229,14 +229,14 @@ func translateFilterManagerConfigToPolicyInECDS(fmc *filtermanager.FilterManager
 	consumerNeeded := false
 	for _, plugin := range fmc.Plugins {
 		name := plugin.Name
-		p := plugins.LoadHttpPlugin(name)
+		p := plugins.LoadPlugin(name)
 		if p != nil {
 			// Native plugin is not supported
 			continue
 		}
 
 		// For Go Plugins, only the type is registered
-		p = plugins.LoadHttpPluginType(name)
+		p = plugins.LoadPluginType(name)
 		// As we don't reject configuration with unknown plugin to keep compatibility...
 		if p == nil {
 			continue
@@ -278,19 +278,19 @@ func translateFilterManagerConfigToPolicyInECDS(fmc *filtermanager.FilterManager
 	return config
 }
 
-func toMergedPolicy(nsName *types.NamespacedName, policies []*HTTPFilterPolicyWrapper,
+func toMergedPolicy(nsName *types.NamespacedName, policies []*FilterPolicyWrapper,
 	policyKind PolicyKind, virtualHost *model.VirtualHost) *mergedPolicy {
 
-	sortHttpFilterPolicy(policies)
+	sortFilterPolicy(policies)
 
-	p := &mosniov1.HTTPFilterPolicy{
-		Spec: mosniov1.HTTPFilterPolicySpec{
-			Filters: make(map[string]mosniov1.HTTPPlugin),
+	p := &mosniov1.FilterPolicy{
+		Spec: mosniov1.FilterPolicySpec{
+			Filters: make(map[string]mosniov1.Plugin),
 		},
 	}
 
 	// use map to deduplicate policies, especially for the sub-policies
-	usedHFP := make(map[string]struct{}, len(policies))
+	usedFP := make(map[string]struct{}, len(policies))
 	for _, policy := range policies {
 		used := false
 		for name, filter := range policy.Spec.Filters {
@@ -301,19 +301,19 @@ func toMergedPolicy(nsName *types.NamespacedName, policies []*HTTPFilterPolicyWr
 		}
 
 		if used {
-			usedHFP[toNsName(policy)] = struct{}{}
+			usedFP[toNsName(policy)] = struct{}{}
 		}
 	}
 
 	info := &Info{
-		HTTPFilterPolicies: make([]string, 0, len(usedHFP)),
+		FilterPolicies: make([]string, 0, len(usedFP)),
 	}
-	for s := range usedHFP {
-		info.HTTPFilterPolicies = append(info.HTTPFilterPolicies, s)
+	for s := range usedFP {
+		info.FilterPolicies = append(info.FilterPolicies, s)
 	}
-	slices.Sort(info.HTTPFilterPolicies) // order is required for later procession
+	slices.Sort(info.FilterPolicies) // order is required for later procession
 
-	fmc := translateHTTPFilterPolicyToFilterManagerConfig(p)
+	fmc := translateFilterPolicyToFilterManagerConfig(p)
 	var config map[string]interface{}
 	if policyKind == PolicyKindRDS {
 		config = translateFilterManagerConfigToPolicyInRDS(fmc, nsName, virtualHost)
@@ -328,7 +328,7 @@ func toMergedPolicy(nsName *types.NamespacedName, policies []*HTTPFilterPolicyWr
 	}
 }
 
-func translateHTTPFilterPolicyToFilterManagerConfig(policy *mosniov1.HTTPFilterPolicy) *filtermanager.FilterManagerConfig {
+func translateFilterPolicyToFilterManagerConfig(policy *mosniov1.FilterPolicy) *filtermanager.FilterManagerConfig {
 	fmc := &filtermanager.FilterManagerConfig{
 		Plugins: []*fmModel.FilterConfig{},
 	}

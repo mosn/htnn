@@ -44,7 +44,7 @@ type ConsumerSpec struct {
 	// Filters is a map of filter names to filter configurations.
 	//
 	// +optional
-	Filters map[string]HTTPPlugin `json:"filters,omitempty"`
+	Filters map[string]Plugin `json:"filters,omitempty"`
 }
 
 // ConsumerStatus defines the observed state of Consumer

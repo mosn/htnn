@@ -29,7 +29,7 @@ import (
 )
 
 func init() {
-	plugins.RegisterHttpPlugin(opa.Name, &plugin{})
+	plugins.RegisterPlugin(opa.Name, &plugin{})
 }
 
 type plugin struct {

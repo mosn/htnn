@@ -1,9 +1,9 @@
 - metadata:
     annotations:
-      htnn.mosn.io/info: '{"httpfilterpolicies":["default/delay"]}'
+      htnn.mosn.io/info: '{"filterpolicies":["default/delay"]}'
     creationTimestamp: null
     labels:
-      htnn.mosn.io/created-by: HTTPFilterPolicy
+      htnn.mosn.io/created-by: FilterPolicy
     name: htnn-h-default.delay
     namespace: default
   spec:
@@ -55,10 +55,10 @@
   status: {}
 - metadata:
     annotations:
-      htnn.mosn.io/info: '{"httpfilterpolicies":["default/policy"]}'
+      htnn.mosn.io/info: '{"filterpolicies":["default/policy"]}'
     creationTimestamp: null
     labels:
-      htnn.mosn.io/created-by: HTTPFilterPolicy
+      htnn.mosn.io/created-by: FilterPolicy
     name: htnn-h-xn--fiq228c.xn--eqrt2g
     namespace: default
   spec:

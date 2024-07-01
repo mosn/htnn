@@ -39,7 +39,7 @@ index 34cf0a6..f5f5ed7 100644
 @@ -113,6 +113,10 @@ func (s *Server) initConfigController(args *PilotArgs) error {
  		})
  	}
-
+ 
 +	if features.EnableHTNN {
 +		s.addHTNNControllerToConfigStores()
 +	}
@@ -50,7 +50,7 @@ index 34cf0a6..f5f5ed7 100644
 @@ -123,6 +127,10 @@ func (s *Server) initConfigController(args *PilotArgs) error {
  	// Create the config store.
  	s.environment.ConfigStore = aggregateConfigController
-
+ 
 +	if features.EnableHTNN {
 +		s.startHTNNController(args)
 +	}
@@ -126,10 +126,10 @@ index 0000000..41751b3
 +}
 diff --git a/pilot/pkg/config/htnn/component.go b/pilot/pkg/config/htnn/component.go
 new file mode 100644
-index 0000000..275fcc0
+index 0000000..57a257c
 --- /dev/null
 +++ b/pilot/pkg/config/htnn/component.go
-@@ -0,0 +1,174 @@
+@@ -0,0 +1,199 @@
 +// Copyright The HTNN Authors.
 +//
 +// Licensed under the Apache License, Version 2.0 (the "License");
@@ -159,6 +159,7 @@ index 0000000..275fcc0
 +	"k8s.io/apimachinery/pkg/runtime"
 +	"k8s.io/apimachinery/pkg/runtime/schema"
 +	"mosn.io/htnn/controller/pkg/component"
++	"mosn.io/htnn/controller/pkg/constant"
 +	"sigs.k8s.io/controller-runtime/pkg/client"
 +
 +	"istio.io/istio/pilot/pkg/config/kube/crdclient"
@@ -204,7 +205,23 @@ index 0000000..275fcc0
 +	return cfg
 +}
 +
-+func (o *output) FromHTTPFilterPolicy(_ context.Context, generatedEnvoyFilters map[component.EnvoyFilterKey]*istiov1a3.EnvoyFilter) error {
++func convertServiceEntryToConfig(namespace string, name string, se *istioapi.ServiceEntry) *config.Config {
++	cfg := &config.Config{
++		Meta: config.Meta{
++			GroupVersionKind:  gvk.ServiceEntry,
++			CreationTimestamp: time.Now(),
++			Name:              name,
++			Namespace:         namespace,
++			Labels: map[string]string{
++				constant.LabelCreatedBy: "ServiceRegistry",
++			},
++		},
++		Spec: se,
++	}
++	return cfg
++}
++
++func (o *output) FromFilterPolicy(_ context.Context, generatedEnvoyFilters map[component.EnvoyFilterKey]*istiov1a3.EnvoyFilter) error {
 +	efs := make(map[string][]config.Config, 0)
 +
 +	log.Infof("write %d generated envoy filters to PushContext", len(generatedEnvoyFilters))
@@ -216,7 +233,7 @@ index 0000000..275fcc0
 +		efs[ns] = append(efs[ns], *convertEnvoyFilterToConfig(ef))
 +	}
 +	// We don't write the generated filters to the cache here because the cache is read-only
-+	o.ctrl.SetHTTPFilterPolicyEnvoyFilters(efs)
++	o.ctrl.SetFilterPolicyEnvoyFilters(efs)
 +	return nil
 +}
 +
@@ -229,7 +246,15 @@ index 0000000..275fcc0
 +}
 +
 +func (o *output) FromServiceRegistry(ctx context.Context, serviceEntries map[string]*istioapi.ServiceEntry) {
-+	panic("TODO")
++	log.Infof("receive %d generated service entries", len(serviceEntries))
++
++	entries := make(map[string]*config.Config, len(serviceEntries))
++	for name, se := range serviceEntries {
++		cfg := convertServiceEntryToConfig(o.ctrl.RootNamespace(), name, se)
++		entries[name] = cfg
++	}
++
++	o.ctrl.SetServiceEntries(entries)
 +}
 +
 +type resourceManager struct {
@@ -306,10 +331,10 @@ index 0000000..275fcc0
 +}
 diff --git a/pilot/pkg/config/htnn/controller.go b/pilot/pkg/config/htnn/controller.go
 new file mode 100644
-index 0000000..bc3b5ce
+index 0000000..f5ab33c
 --- /dev/null
 +++ b/pilot/pkg/config/htnn/controller.go
-@@ -0,0 +1,346 @@
+@@ -0,0 +1,421 @@
 +// Copyright The HTNN Authors.
 +//
 +// Licensed under the Apache License, Version 2.0 (the "License");
@@ -351,17 +376,22 @@ index 0000000..bc3b5ce
 +
 +var schemas = collection.SchemasFor(
 +	collections.EnvoyFilter,
++	collections.ServiceEntry,
 +)
 +
 +type Controller struct {
-+	httpFilterPolicyReconciler istio.HTTPFilterPolicyReconciler
-+	consumerReconciler         istio.ConsumerReconciler
++	filterPolicyReconciler    istio.FilterPolicyReconciler
++	consumerReconciler        istio.ConsumerReconciler
++	serviceRegistryReconciler istio.ServiceRegistryReconciler
 +
-+	currContext            *model.PushContext
-+	efFromHTTPFilterPolicy map[string][]config.Config
-+	efFromConsumer         *config.Config
-+	rootNamespace          string
-+	cache                  model.ConfigStore
++	currContext          *model.PushContext
++	efFromFilterPolicy   map[string][]config.Config
++	efFromConsumer       *config.Config
++	serviceEntries       map[string]*config.Config
++	prevServiceEntries   map[string]*config.Config
++	serviceEntryHandlers []model.EventHandler
++	rootNamespace        string
++	cache                model.ConfigStore
 +
 +	statusController *status.Controller
 +	statusEnabled    atomic.Bool
@@ -374,12 +404,17 @@ index 0000000..bc3b5ce
 +	c.cache = env.ConfigStore
 +	output := NewOutput(c)
 +	manager := NewResourceManager(c.cache, c)
-+	c.httpFilterPolicyReconciler = istio.NewHTTPFilterPolicyReconciler(output, manager)
++	c.filterPolicyReconciler = istio.NewFilterPolicyReconciler(output, manager)
 +	c.consumerReconciler = istio.NewConsumerReconciler(output, manager)
++	c.serviceRegistryReconciler = istio.NewServiceRegistryReconciler(output, manager)
 +}
 +
 +// Implement model.ConfigStoreController
 +func (c *Controller) RegisterEventHandler(kind config.GroupVersionKind, f model.EventHandler) {
++	switch kind {
++	case gvk.ServiceEntry:
++		c.serviceEntryHandlers = append(c.serviceEntryHandlers, f)
++	}
 +}
 +
 +func (c *Controller) Run(stop <-chan struct{}) {
@@ -398,6 +433,9 @@ index 0000000..bc3b5ce
 +
 +func (c *Controller) Get(typ config.GroupVersionKind, name, namespace string) *config.Config {
 +	if typ != gvk.EnvoyFilter {
++		if typ == gvk.ServiceEntry {
++			return c.GetServiceEntry(name, namespace)
++		}
 +		return nil
 +	}
 +
@@ -408,7 +446,7 @@ index 0000000..bc3b5ce
 +		}
 +	}
 +
-+	if efList, ok := c.efFromHTTPFilterPolicy[namespace]; ok {
++	if efList, ok := c.efFromFilterPolicy[namespace]; ok {
 +		for _, ef := range efList {
 +			if name == ef.Name {
 +				return &ef
@@ -420,12 +458,15 @@ index 0000000..bc3b5ce
 +
 +func (c *Controller) List(typ config.GroupVersionKind, namespace string) []config.Config {
 +	if typ != gvk.EnvoyFilter {
++		if typ == gvk.ServiceEntry {
++			return c.ListServiceEntry(namespace)
++		}
 +		return nil
 +	}
 +
 +	if namespace == "" {
 +		efList := []config.Config{}
-+		for _, efs := range c.efFromHTTPFilterPolicy {
++		for _, efs := range c.efFromFilterPolicy {
 +			efList = append(efList, efs...)
 +		}
 +		if c.efFromConsumer != nil {
@@ -435,7 +476,7 @@ index 0000000..bc3b5ce
 +	}
 +
 +	// We return the internal structure directly as istio claims that the returned data should be read-only
-+	efList := c.efFromHTTPFilterPolicy[namespace]
++	efList := c.efFromFilterPolicy[namespace]
 +	if c.efFromConsumer != nil && namespace == c.rootNamespace {
 +		return append(efList, *c.efFromConsumer)
 +	}
@@ -537,20 +578,21 @@ index 0000000..bc3b5ce
 +	if configsUpdated == nil {
 +		// for the first time
 +
-+		// As we have embed mode, check if HTTPFilterPolicy exists is not enough to detect whether
-+		// reconciling HTTPFilterPolicy is needed. To avoid complex logic, and most of our users
-+		// will use HTTPFilterPolicy, here we assume that HTTPFilterPolicy reconciliation is always needed
++		// As we have embed mode, check if FilterPolicy exists is not enough to detect whether
++		// reconciling FilterPolicy is needed. To avoid complex logic, and most of our users
++		// will use FilterPolicy, here we assume that FilterPolicy reconciliation is always needed
 +		// after startup. Another solution is that if the generated EnvoyFilter is zero, don't generate
-+		// the basic htnn-http-filter EnvoyFilter. But this will break the rule that reducing the HTTPFilterPolicy
++		// the basic htnn-http-filter EnvoyFilter. But this will break the rule that reducing the FilterPolicy
 +		// should not trigger connection close, as when the basic EnvoyFilter is removed, a LDS drain
 +		// will be triggered.
-+		toReconcile[kind.HTTPFilterPolicy] = struct{}{}
++		toReconcile[kind.FilterPolicy] = struct{}{}
 +		// For the other resources, only trigger reconciliation when the resource exists
 +		for _, pair := range []struct {
 +			gvk  config.GroupVersionKind
 +			kind kind.Kind
 +		}{
 +			{gvk.Consumer, kind.Consumer},
++			{gvk.ServiceRegistry, kind.ServiceRegistry},
 +		} {
 +			res := c.cache.List(pair.gvk, "")
 +			if len(res) > 0 {
@@ -561,11 +603,13 @@ index 0000000..bc3b5ce
 +		// here we provide our own change detection, so adding a new CR won't need to touch istio's own one in PushContext
 +		for conf := range configsUpdated {
 +			switch conf.Kind {
-+			case kind.HTTPFilterPolicy, kind.Consumer:
++			case kind.FilterPolicy, kind.Consumer, kind.ServiceRegistry:
 +				toReconcile[conf.Kind] = struct{}{}
++			case kind.HTTPFilterPolicy:
++				toReconcile[kind.FilterPolicy] = struct{}{}
 +			}
 +		}
-+		if _, completed := toReconcile[kind.HTTPFilterPolicy]; !completed {
++		if _, completed := toReconcile[kind.FilterPolicy]; !completed {
 +			for conf := range configsUpdated {
 +				switch conf.Kind {
 +				case kind.VirtualService, kind.Gateway, kind.HTTPRoute, kind.KubernetesGateway:
@@ -577,8 +621,8 @@ index 0000000..bc3b5ce
 +					} else {
 +						r = wrapConfigKeyToResourceMeta(&conf, &gvkValue)
 +					}
-+					if c.httpFilterPolicyReconciler.NeedReconcile(ctx, r) {
-+						toReconcile[kind.HTTPFilterPolicy] = struct{}{}
++					if c.filterPolicyReconciler.NeedReconcile(ctx, r) {
++						toReconcile[kind.FilterPolicy] = struct{}{}
 +						completed = true
 +					}
 +
@@ -605,10 +649,12 @@ index 0000000..bc3b5ce
 +	for k := range toReconcile {
 +		var err error
 +		switch k {
-+		case kind.HTTPFilterPolicy:
-+			_, err = c.httpFilterPolicyReconciler.Reconcile(ctx, req)
++		case kind.FilterPolicy:
++			_, err = c.filterPolicyReconciler.Reconcile(ctx, req)
 +		case kind.Consumer:
 +			_, err = c.consumerReconciler.Reconcile(ctx, req)
++		case kind.ServiceRegistry:
++			_, err = c.serviceRegistryReconciler.Reconcile(ctx, req)
 +		}
 +		errs = append(errs, err) // err can be nil
 +	}
@@ -619,8 +665,8 @@ index 0000000..bc3b5ce
 +	return c.rootNamespace
 +}
 +
-+func (c *Controller) SetHTTPFilterPolicyEnvoyFilters(efs map[string][]config.Config) {
-+	c.efFromHTTPFilterPolicy = efs
++func (c *Controller) SetFilterPolicyEnvoyFilters(efs map[string][]config.Config) {
++	c.efFromFilterPolicy = efs
 +}
 +
 +func (c *Controller) SetConsumerEnvoyFilter(ef *config.Config) {
@@ -655,6 +701,60 @@ index 0000000..bc3b5ce
 +	} else {
 +		c.statusController = nil
 +	}
++}
++
++func (c *Controller) notifySeviceEntryChange(prev, curr config.Config, event model.Event) {
++	log.Debugf("notify ServiceEntry change event %s, name: %s, namespace: %s",
++		event, curr.Name, curr.Namespace)
++
++	for _, f := range c.serviceEntryHandlers {
++		f(prev, curr, event)
++	}
++}
++
++func (c *Controller) SetServiceEntries(entries map[string]*config.Config) {
++	c.prevServiceEntries = c.serviceEntries
++	c.serviceEntries = entries
++
++	for name, entry := range c.prevServiceEntries {
++		if curr, ok := c.serviceEntries[name]; !ok {
++			// Deleted ServiceEntry should be passed as the 'curr' ServiceEntry
++			c.notifySeviceEntryChange(config.Config{}, *entry, model.EventDelete)
++		} else {
++			// Let the serviceEntryHandler to diff them
++			c.notifySeviceEntryChange(*entry, *curr, model.EventUpdate)
++		}
++	}
++
++	for name, entry := range c.serviceEntries {
++		if _, ok := c.prevServiceEntries[name]; !ok {
++			c.notifySeviceEntryChange(config.Config{}, *entry, model.EventAdd)
++		}
++	}
++}
++
++func (c *Controller) GetServiceEntry(name, namespace string) *config.Config {
++	if namespace != "" && namespace != c.rootNamespace {
++		return nil
++	}
++	for _, se := range c.serviceEntries {
++		if se.Name == name {
++			return se
++		}
++	}
++	return nil
++}
++
++func (c *Controller) ListServiceEntry(namespace string) []config.Config {
++	if namespace != "" && namespace != c.rootNamespace {
++		return nil
++	}
++	ses := make([]config.Config, 0, len(c.serviceEntries))
++	for _, entry := range c.serviceEntries {
++		ses = append(ses, *entry)
++	}
++
++	return ses
 +}
 diff --git a/pilot/pkg/config/htnn/htnn.go b/pilot/pkg/config/htnn/htnn.go
 new file mode 100644
@@ -725,7 +825,7 @@ index 6e07fea..26e5d66 100644
 +
  	return c
  }
-
+ 
 diff --git a/pilot/pkg/config/kube/crdclient/htnn.go b/pilot/pkg/config/kube/crdclient/htnn.go
 new file mode 100644
 index 0000000..58d032c
@@ -833,10 +933,10 @@ index dbe58a0..800d200 100644
 +++ b/pilot/pkg/model/context.go
 @@ -111,6 +111,7 @@ type Environment struct {
  	CredentialsController credentials.MulticlusterController
-
+ 
  	GatewayAPIController GatewayController
 +	HTNNController       HTNNController
-
+ 
  	// EndpointShards for a service. This is a global (per-server) list, built from
  	// incremental updates. This is keyed by service and namespace
 diff --git a/pilot/pkg/model/htnn.go b/pilot/pkg/model/htnn.go
@@ -883,7 +983,7 @@ index 7ba2e93..b8c042d 100644
 @@ -1396,6 +1399,11 @@ func (ps *PushContext) updateContext(
  		ps.wasmPluginsByNamespace = oldPushContext.wasmPluginsByNamespace
  	}
-
+ 
 +	if features.EnableHTNN {
 +		generated := ps.initHTNNResources(env, pushReq.ConfigsUpdated)
 +		envoyFiltersChanged = envoyFiltersChanged || generated
@@ -893,7 +993,7 @@ index 7ba2e93..b8c042d 100644
  		ps.initEnvoyFilters(env, changedEnvoyFilters, oldPushContext.envoyFiltersByNamespace)
  	} else {
 @@ -2116,7 +2124,11 @@ func (ps *PushContext) initEnvoyFilters(env *Environment, changed sets.Set[Confi
-
+ 
  	for _, envoyFilterConfig := range envoyFilterConfigs {
  		var efw *EnvoyFilterWrapper
 -		if features.OptimizedConfigRebuild {
@@ -944,59 +1044,24 @@ index 0000000..e68586d
 +	return efGenerated
 +}
 diff --git a/pilot/pkg/xds/ecds.go b/pilot/pkg/xds/ecds.go
-index 305d1eb..278573c 100644
+index 305d1eb..10186a9 100644
 --- a/pilot/pkg/xds/ecds.go
 +++ b/pilot/pkg/xds/ecds.go
 @@ -55,6 +55,8 @@ func ecdsNeedsPush(req *model.PushRequest) bool {
  			return true
  		case kind.Secret:
  			return true
-+		case kind.HTTPFilterPolicy, kind.Consumer, kind.Gateway:
++		case kind.FilterPolicy, kind.HTTPFilterPolicy, kind.Consumer, kind.Gateway:
 +			return true
  		}
  	}
  	return false
-diff --git a/pkg/config/schema/codegen/collections.go b/pkg/config/schema/codegen/collections.go
-index b113480..bd13c63 100644
---- a/pkg/config/schema/codegen/collections.go
-+++ b/pkg/config/schema/codegen/collections.go
-@@ -168,6 +168,8 @@ func toGetter(protoPackage string) string {
- 		return "GatewayAPI"
- 	} else if strings.Contains(protoPackage, "k8s.io/apiextensions-apiserver") {
- 		return "Ext"
-+	} else if strings.Contains(protoPackage, "mosn.io") {
-+		return "MOSN"
- 	}
- 	return "Kube"
- }
-diff --git a/pkg/config/schema/kubeclient/common.go b/pkg/config/schema/kubeclient/common.go
-index 2f82038..f13cae0 100644
---- a/pkg/config/schema/kubeclient/common.go
-+++ b/pkg/config/schema/kubeclient/common.go
-@@ -27,6 +27,7 @@ import (
- 	"k8s.io/client-go/kubernetes"
- 	"k8s.io/client-go/metadata"
- 	"k8s.io/client-go/tools/cache"
-+	mosnclient "mosn.io/htnn/types/pkg/client/clientset/versioned"
- 	gatewayapiclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
-
- 	istioclient "istio.io/client-go/pkg/clientset/versioned"
-@@ -53,6 +54,9 @@ type ClientGetter interface {
- 	// Istio returns the Istio kube client.
- 	Istio() istioclient.Interface
-
-+	// MOSN returns the MOSN kube client.
-+	MOSN() mosnclient.Interface
-+
- 	// GatewayAPI returns the gateway-api kube client.
- 	GatewayAPI() gatewayapiclient.Interface
-
 diff --git a/pkg/config/validation/htnn.go b/pkg/config/validation/htnn.go
 new file mode 100644
-index 0000000..4254676
+index 0000000..75de3a5
 --- /dev/null
 +++ b/pkg/config/validation/htnn.go
-@@ -0,0 +1,80 @@
+@@ -0,0 +1,124 @@
 +// Copyright The HTNN Authors.
 +//
 +// Licensed under the Apache License, Version 2.0 (the "License");
@@ -1024,6 +1089,21 @@ index 0000000..4254676
 +	mosniov1 "mosn.io/htnn/types/apis/v1"
 +)
 +
++// ValidateFilterPolicy checks that FilterPolicy is well-formed.
++var ValidateFilterPolicy = registerValidateFunc("ValidateFilterPolicy",
++	func(cfg config.Config) (Warning, error) {
++		in, ok := cfg.Spec.(*mosniov1.FilterPolicySpec)
++		if !ok {
++			return nil, fmt.Errorf("cannot cast to FilterPolicySpec")
++		}
++
++		var warnings Warning
++		var policy mosniov1.FilterPolicy
++		policy.Spec = *in
++		err := mosniov1.ValidateFilterPolicyStrictly(&policy)
++		return warnings, err
++	})
++
 +// ValidateHTTPFilterPolicy checks that HTTPFilterPolicy is well-formed.
 +var ValidateHTTPFilterPolicy = registerValidateFunc("ValidateHTTPFilterPolicy",
 +	func(cfg config.Config) (Warning, error) {
@@ -1035,7 +1115,22 @@ index 0000000..4254676
 +		var warnings Warning
 +		var policy mosniov1.HTTPFilterPolicy
 +		policy.Spec = *in
-+		err := mosniov1.ValidateHTTPFilterPolicy(&policy)
++		err := mosniov1.ValidateHTTPFilterPolicyStrictly(&policy)
++		return warnings, err
++	})
++
++// ValidateServiceRegistry checks that ServiceRegistry is well-formed.
++var ValidateServiceRegistry = registerValidateFunc("ValidateServiceRegistry",
++	func(cfg config.Config) (Warning, error) {
++		in, ok := cfg.Spec.(*mosniov1.ServiceRegistrySpec)
++		if !ok {
++			return nil, fmt.Errorf("cannot cast to ServiceRegistrySpec")
++		}
++
++		var warnings Warning
++		var serviceRegistry mosniov1.ServiceRegistry
++		serviceRegistry.Spec = *in
++		err := mosniov1.ValidateServiceRegistry(&serviceRegistry)
 +		return warnings, err
 +	})
 +
@@ -1059,20 +1154,34 @@ index 0000000..4254676
 +		return nil
 +	}
 +
-+	hfp := cfg.Annotations[constant.AnnotationHTTPFilterPolicy]
-+	if hfp == "" {
++	fp := cfg.Annotations[constant.AnnotationFilterPolicy]
++	if fp != "" {
++		var policy mosniov1.FilterPolicy
++		err := json.Unmarshal([]byte(fp), &policy)
++		if err != nil {
++			return fmt.Errorf("cannot unmarshal FilterPolicy: %v", err)
++		}
++
++		err = mosniov1.ValidateEmbeddedFilterPolicyStrictly(&policy, gk)
++		if err != nil {
++			return fmt.Errorf("invalid FilterPolicy: %v", err)
++		}
++
 +		return nil
 +	}
 +
-+	var policy mosniov1.HTTPFilterPolicy
-+	err := json.Unmarshal([]byte(hfp), &policy)
-+	if err != nil {
-+		return fmt.Errorf("cannot unmarshal HTTPFilterPolicy: %v", err)
-+	}
++	hfp := cfg.Annotations[constant.AnnotationHTTPFilterPolicy]
++	if hfp != "" {
++		var policy mosniov1.HTTPFilterPolicy
++		err := json.Unmarshal([]byte(hfp), &policy)
++		if err != nil {
++			return fmt.Errorf("cannot unmarshal HTTPFilterPolicy: %v", err)
++		}
 +
-+	err = mosniov1.ValidateEmbeddedHTTPFilterPolicyStrictly(&policy, gk)
-+	if err != nil {
-+		return fmt.Errorf("invalid HTTPFilterPolicy: %v", err)
++		err = mosniov1.ValidateHTTPFilterPolicyStrictly(&policy)
++		if err != nil {
++			return fmt.Errorf("invalid HTTPFilterPolicy: %v", err)
++		}
 +	}
 +
 +	return nil
@@ -1086,13 +1195,13 @@ index db201a3..c976633 100644
  	"google.golang.org/protobuf/types/known/anypb"
  	"google.golang.org/protobuf/types/known/durationpb"
 +	"k8s.io/apimachinery/pkg/runtime/schema"
-
+ 
  	"istio.io/api/annotation"
  	extensions "istio.io/api/extensions/v1alpha1"
 @@ -462,6 +463,13 @@ var ValidateGateway = registerValidateFunc("ValidateGateway",
  	func(cfg config.Config) (Warning, error) {
  		name := cfg.Name
-
+ 
 +		if features.EnableHTNN {
 +			err := validateHTTNAnntation(&cfg, schema.GroupKind{Group: "networking.istio.io", Kind: "Gateway"})
 +			if err != nil {
@@ -1102,7 +1211,7 @@ index db201a3..c976633 100644
 +
  		// Check if this was converted from a k8s gateway-api resource
  		gatewaySemantics := cfg.Annotations[constants.InternalGatewaySemantics] == constants.GatewaySemanticsGateway
-
+ 
 @@ -2318,6 +2326,14 @@ var ValidateVirtualService = registerValidateFunc("ValidateVirtualService",
  		if !ok {
  			return nil, errors.New("cannot cast to virtual service")
@@ -1118,84 +1227,3 @@ index db201a3..c976633 100644
  		errs := Validation{}
  		if len(virtualService.Hosts) == 0 {
  			// This must be delegate - enforce delegate validations.
-diff --git a/pkg/kube/client.go b/pkg/kube/client.go
-index 999c319..fa0870d 100644
---- a/pkg/kube/client.go
-+++ b/pkg/kube/client.go
-@@ -63,6 +63,7 @@ import (
- 	"k8s.io/client-go/tools/cache"
- 	"k8s.io/client-go/tools/clientcmd"
- 	"k8s.io/client-go/tools/remotecommand"
-+	mosnclient "mosn.io/htnn/types/pkg/client/clientset/versioned"
- 	gatewayapiv1 "sigs.k8s.io/gateway-api/apis/v1"
- 	gatewayapi "sigs.k8s.io/gateway-api/apis/v1alpha2"
- 	gatewayapibeta "sigs.k8s.io/gateway-api/apis/v1beta1"
-@@ -78,6 +79,7 @@ import (
- 	clienttelemetry "istio.io/client-go/pkg/apis/telemetry/v1alpha1"
- 	istioclient "istio.io/client-go/pkg/clientset/versioned"
- 	istiofake "istio.io/client-go/pkg/clientset/versioned/fake"
-+	"istio.io/istio/pilot/pkg/features"
- 	"istio.io/istio/pkg/cluster"
- 	"istio.io/istio/pkg/config/schema/gvk"
- 	"istio.io/istio/pkg/kube/informerfactory"
-@@ -117,6 +119,9 @@ type Client interface {
- 	// Istio returns the Istio kube client.
- 	Istio() istioclient.Interface
-
-+	// MOSN returns the MOSN kube client.
-+	MOSN() mosnclient.Interface
-+
- 	// GatewayAPI returns the gateway-api kube client.
- 	GatewayAPI() gatewayapiclient.Interface
-
-@@ -325,6 +330,7 @@ type client struct {
- 	dynamic    dynamic.Interface
- 	metadata   metadata.Interface
- 	istio      istioclient.Interface
-+	mosn       mosnclient.Interface
- 	gatewayapi gatewayapiclient.Interface
-
- 	started atomic.Bool
-@@ -397,6 +403,13 @@ func newClientInternal(clientFactory *clientFactory, revision string, cluster cl
- 		return nil, err
- 	}
-
-+	if features.EnableHTNN {
-+		c.mosn, err = mosnclient.NewForConfig(c.config)
-+		if err != nil {
-+			return nil, err
-+		}
-+	}
-+
- 	c.gatewayapi, err = gatewayapiclient.NewForConfig(c.config)
- 	if err != nil {
- 		return nil, err
-diff --git a/pkg/kube/client_htnn.go b/pkg/kube/client_htnn.go
-new file mode 100644
-index 0000000..51adefb
---- /dev/null
-+++ b/pkg/kube/client_htnn.go
-@@ -0,0 +1,23 @@
-+// Copyright The HTNN Authors.
-+//
-+// Licensed under the Apache License, Version 2.0 (the "License");
-+// you may not use this file except in compliance with the License.
-+// You may obtain a copy of the License at
-+//
-+//     http://www.apache.org/licenses/LICENSE-2.0
-+//
-+// Unless required by applicable law or agreed to in writing, software
-+// distributed under the License is distributed on an "AS IS" BASIS,
-+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-+// See the License for the specific language governing permissions and
-+// limitations under the License.
-+
-+package kube
-+
-+import (
-+	mosnclient "mosn.io/htnn/types/pkg/client/clientset/versioned"
-+)
-+
-+func (c *client) MOSN() mosnclient.Interface {
-+	return c.mosn
-+}

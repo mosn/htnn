@@ -43,7 +43,7 @@ By applying the configuration below, the upload speed of requests sent to `http:
 
 ```yaml
 apiVersion: htnn.mosn.io/v1
-kind: HTTPFilterPolicy
+kind: FilterPolicy
 metadata:
   name: policy
 spec:

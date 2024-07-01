@@ -1,0 +1,40 @@
+- apiVersion: gateway.networking.k8s.io/v1
+  kind: Gateway
+  metadata:
+    name: gw
+    namespace: default
+  spec:
+    gatewayClassName: istio
+    listeners:
+    - name: default
+      hostname: default.local
+      port: 8989
+      protocol: HTTP
+- apiVersion: htnn.mosn.io/v1
+  kind: FilterPolicy
+  metadata:
+    name: policy
+    namespace: default
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: gw
+    filters:
+      demo:
+        config:
+          hostName: goldfish
+- apiVersion: htnn.mosn.io/v1
+  kind: FilterPolicy
+  metadata:
+    name: policy2
+    namespace: default
+  spec:
+    targetRef:
+      group: gateway.networking.k8s.io
+      kind: Gateway
+      name: notfound
+    filters:
+      demo:
+        config:
+          hostName: goldfish

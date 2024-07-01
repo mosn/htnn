@@ -29,11 +29,11 @@ import (
 	"mosn.io/htnn/types/pkg/registry"
 )
 
-// ValidateHTTPFilterPolicy validates HTTPFilterPolicy.
+// ValidateFilterPolicy validates FilterPolicy.
 // It only validate the part it knows, so unknown plugins or fields will be skipped.
 // It's recommended to use this function in the controller.
-func ValidateHTTPFilterPolicy(policy *HTTPFilterPolicy) error {
-	return validateHTTPFilterPolicy(policy, false)
+func ValidateFilterPolicy(policy *FilterPolicy) error {
+	return validateFilterPolicy(policy, false)
 }
 
 func isEmbeddedPolicySupported(gk schema.GroupKind) error {
@@ -46,7 +46,7 @@ func isEmbeddedPolicySupported(gk schema.GroupKind) error {
 	return fmt.Errorf("embed policy to the %s/%s is not implemented", gk.Group, gk.Kind)
 }
 
-func setTargetRef(policy *HTTPFilterPolicy, gk schema.GroupKind) {
+func setTargetRef(policy *FilterPolicy, gk schema.GroupKind) {
 	if policy.Spec.TargetRef == nil {
 		policy.Spec.TargetRef = &gwapiv1a2.PolicyTargetReferenceWithSectionName{
 			PolicyTargetReference: gwapiv1a2.PolicyTargetReference{},
@@ -57,42 +57,71 @@ func setTargetRef(policy *HTTPFilterPolicy, gk schema.GroupKind) {
 	policy.Spec.TargetRef.Kind = gwapiv1.Kind(gk.Kind)
 }
 
-// ValidateEmbeddedHTTPFilterPolicy is similar to ValidateHTTPFilterPolicy, but it's used for embedded HTTPFilterPolicy.
-// This function requires an extra parameter to specify the GroupKind of the object that contains the embedded HTTPFilterPolicy,
-// for example, `ValidateEmbeddedHTTPFilterPolicy(policy, schema.GroupKind{Group: "networking.istio.io", Kind: "VirtualService"})`.
-func ValidateEmbeddedHTTPFilterPolicy(policy *HTTPFilterPolicy, gk schema.GroupKind) error {
+// ValidateEmbeddedFilterPolicy is similar to ValidateFilterPolicy, but it's used for embedded FilterPolicy.
+// This function requires an extra parameter to specify the GroupKind of the object that contains the embedded FilterPolicy,
+// for example, `ValidateEmbeddedFilterPolicy(policy, schema.GroupKind{Group: "networking.istio.io", Kind: "VirtualService"})`.
+func ValidateEmbeddedFilterPolicy(policy *FilterPolicy, gk schema.GroupKind) error {
 	if err := isEmbeddedPolicySupported(gk); err != nil {
 		return err
 	}
 
 	policy = policy.DeepCopy()
 	setTargetRef(policy, gk)
-	return validateHTTPFilterPolicy(policy, false)
+	return validateFilterPolicy(policy, false)
 }
 
-// ValidateHTTPFilterPolicyStrictly validates HTTPFilterPolicy strictly.
+// ValidateFilterPolicyStrictly validates FilterPolicy strictly.
 // Unknown plugins or fields will be rejected.
 // It's recommended to use this function before writing the configuration to persistent storage,
 // for example, in the dashboard or webhook.
-func ValidateHTTPFilterPolicyStrictly(policy *HTTPFilterPolicy) error {
-	return validateHTTPFilterPolicy(policy, true)
+func ValidateFilterPolicyStrictly(policy *FilterPolicy) error {
+	return validateFilterPolicy(policy, true)
 }
 
-// ValidateEmbeddedHTTPFilterPolicyStrictly is similar to ValidateHTTPFilterPolicyStrictly, but it's used for embedded HTTPFilterPolicy.
-// This function requires an extra parameter to specify the GroupKind of the object that contains the embedded HTTPFilterPolicy,
-// for example, `ValidateEmbeddedHTTPFilterPolicy(policy, schema.GroupKind{Group: "networking.istio.io", Kind: "VirtualService"})`.
-func ValidateEmbeddedHTTPFilterPolicyStrictly(policy *HTTPFilterPolicy, gk schema.GroupKind) error {
+// ValidateEmbeddedFilterPolicyStrictly is similar to ValidateFilterPolicyStrictly, but it's used for embedded FilterPolicy.
+// This function requires an extra parameter to specify the GroupKind of the object that contains the embedded FilterPolicy,
+// for example, `ValidateEmbeddedFilterPolicy(policy, schema.GroupKind{Group: "networking.istio.io", Kind: "VirtualService"})`.
+func ValidateEmbeddedFilterPolicyStrictly(policy *FilterPolicy, gk schema.GroupKind) error {
 	if err := isEmbeddedPolicySupported(gk); err != nil {
 		return err
 	}
 
 	policy = policy.DeepCopy()
 	setTargetRef(policy, gk)
-	return validateHTTPFilterPolicy(policy, true)
+	return validateFilterPolicy(policy, true)
 }
 
-func validateFilter(name string, filter HTTPPlugin, strict bool, targetGateway bool) error {
-	p := plugins.LoadHttpPluginType(name)
+// Two functions below is used for deprecated HTTPFilterPolicy.
+
+func ValidateHTTPFilterPolicy(policy *HTTPFilterPolicy) error {
+	p := ConvertHTTPFilterPolicyToFilterPolicy(policy)
+	if p.Spec.TargetRef == nil {
+		// embedded HTTPFilterPolicy is only used with VirtualService
+		p.Spec.TargetRef = &gwapiv1a2.PolicyTargetReferenceWithSectionName{
+			PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+				Group: "networking.istio.io",
+				Kind:  "VirtualService",
+			},
+		}
+	}
+	return ValidateFilterPolicy(&p)
+}
+
+func ValidateHTTPFilterPolicyStrictly(policy *HTTPFilterPolicy) error {
+	p := ConvertHTTPFilterPolicyToFilterPolicy(policy)
+	if p.Spec.TargetRef == nil {
+		p.Spec.TargetRef = &gwapiv1a2.PolicyTargetReferenceWithSectionName{
+			PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+				Group: "networking.istio.io",
+				Kind:  "VirtualService",
+			},
+		}
+	}
+	return ValidateFilterPolicyStrictly(&p)
+}
+
+func validateFilter(name string, filter Plugin, strict bool, targetGateway bool) error {
+	p := plugins.LoadPluginType(name)
 	if p == nil {
 		if strict {
 			return errors.New("unknown http filter: " + name)
@@ -108,6 +137,11 @@ func validateFilter(name string, filter HTTPPlugin, strict bool, targetGateway b
 			// such number (20 x the number of LDS) of ECDS resources. Perhaps we can use
 			// composite filter to solve this problem?
 			return errors.New("configure native plugins to the Gateway is not implemented")
+		}
+	} else {
+		switch p.Order().Position {
+		case plugins.OrderPositionListener, plugins.OrderPositionNetwork:
+			return errors.New("configure layer 4 plugins to route is invalid")
 		}
 	}
 
@@ -129,7 +163,7 @@ func validateFilter(name string, filter HTTPPlugin, strict bool, targetGateway b
 	return nil
 }
 
-func validateHTTPFilterPolicy(policy *HTTPFilterPolicy, strict bool) error {
+func validateFilterPolicy(policy *FilterPolicy, strict bool) error {
 	targetGateway := false
 	ref := policy.Spec.TargetRef
 	if ref == nil {
@@ -139,7 +173,7 @@ func validateHTTPFilterPolicy(policy *HTTPFilterPolicy, strict bool) error {
 	if ref.Namespace != nil {
 		namespace := string(*ref.Namespace)
 		if namespace != policy.Namespace {
-			return errors.New("namespace in TargetRef doesn't match HTTPFilterPolicy's namespace")
+			return errors.New("namespace in TargetRef doesn't match FilterPolicy's namespace")
 		}
 	}
 
@@ -159,10 +193,10 @@ func validateHTTPFilterPolicy(policy *HTTPFilterPolicy, strict bool) error {
 		case "VirtualService":
 			validTarget = true
 		case "Gateway":
-			// To target HTTPFilterPolicy to Gateway, ensure environment variable "HTNN_ENABLE_LDS_PLUGIN_VIA_ECDS"
+			// To target FilterPolicy to Gateway, ensure environment variable "HTNN_ENABLE_LDS_PLUGIN_VIA_ECDS"
 			// is set to "true" in the controller.
 			// Note that the Gateway support may be different than you think. As we attach the generated ECDS to the
-			// LDS, and istio will merge multiple Gateways which listen on the same port to a LDS, so the HTTPFilterPolicy
+			// LDS, and istio will merge multiple Gateways which listen on the same port to a LDS, so the FilterPolicy
 			// will not just target one Gateway if you have multiple Gateway which listen on the same port but have different hostname.
 			//
 			// TODO: implement the Gateway support via RDS, so it matches the model 100%.
@@ -254,7 +288,7 @@ func NormalizeK8sGatewayProtocol(protocol gwapiv1.ProtocolType) string {
 
 func ValidateConsumer(c *Consumer) error {
 	for name, filter := range c.Spec.Auth {
-		plugin := plugins.LoadHttpPluginType(name)
+		plugin := plugins.LoadPluginType(name)
 		if plugin == nil {
 			// reject unknown filter in CP, ignore unknown filter in DP
 			return errors.New("unknown authn filter: " + name)
@@ -276,7 +310,7 @@ func ValidateConsumer(c *Consumer) error {
 	}
 
 	for name, filter := range c.Spec.Filters {
-		p := plugins.LoadHttpPluginType(name)
+		p := plugins.LoadPluginType(name)
 		if p == nil {
 			return errors.New("unknown http filter: " + name)
 		}

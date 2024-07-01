@@ -1,9 +1,9 @@
 - metadata:
     annotations:
-      htnn.mosn.io/info: '{"httpfilterpolicies":["default/policy-port1","default/policy-port2"]}'
+      htnn.mosn.io/info: '{"filterpolicies":["default/policy-port1","default/policy-port2"]}'
     creationTimestamp: null
     labels:
-      htnn.mosn.io/created-by: HTTPFilterPolicy
+      htnn.mosn.io/created-by: FilterPolicy
     name: htnn-h-default
     namespace: default
   spec:

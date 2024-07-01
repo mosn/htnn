@@ -53,7 +53,7 @@ func (c *consumerTest) Build() *structpb.Struct {
 }
 
 func TestUpdateConsumer(t *testing.T) {
-	plugins.RegisterHttpPlugin("consumerPluginX", &consumerPlugin{})
+	plugins.RegisterPlugin("consumerPluginX", &consumerPlugin{})
 
 	// clean index
 	resourceIndex = make(map[string]map[string]*Consumer)

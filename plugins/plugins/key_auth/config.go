@@ -21,7 +21,7 @@ import (
 )
 
 func init() {
-	plugins.RegisterHttpPlugin(key_auth.Name, &plugin{})
+	plugins.RegisterPlugin(key_auth.Name, &plugin{})
 }
 
 type plugin struct {

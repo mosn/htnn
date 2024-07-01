@@ -25,7 +25,7 @@ import (
 )
 
 func init() {
-	plugins.RegisterHttpPlugin(ext_auth.Name, &plugin{})
+	plugins.RegisterPlugin(ext_auth.Name, &plugin{})
 }
 
 type plugin struct {

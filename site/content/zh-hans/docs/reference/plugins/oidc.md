@@ -67,7 +67,7 @@ hydra 返回结果如下：`{"client_id":"5730b1ee-3b0e-4395-b9a2-9e83e8eb1956",
 
 ```yaml
 apiVersion: htnn.mosn.io/v1
-kind: HTTPFilterPolicy
+kind: FilterPolicy
 metadata:
   name: policy
 spec:

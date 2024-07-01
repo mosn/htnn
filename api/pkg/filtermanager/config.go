@@ -137,7 +137,7 @@ func (conf *filterManagerConfig) Merge(another *filterManagerConfig) *filterMana
 	// recompute fields which will be different after merging
 	cp.consumerFiltersEndAt = len(cp.parsed)
 	for i, fc := range cp.parsed {
-		_, ok := pkgPlugins.LoadHttpPlugin(fc.Name).(pkgPlugins.ConsumerPlugin)
+		_, ok := pkgPlugins.LoadPlugin(fc.Name).(pkgPlugins.ConsumerPlugin)
 		if !ok {
 			cp.consumerFiltersEndAt = i
 			break
@@ -237,7 +237,7 @@ func (p *FilterManagerConfigParser) Parse(any *anypb.Any, callbacks capi.ConfigC
 					Factory:      plugin.Factory,
 				})
 
-				_, ok := pkgPlugins.LoadHttpPlugin(name).(pkgPlugins.ConsumerPlugin)
+				_, ok := pkgPlugins.LoadPlugin(name).(pkgPlugins.ConsumerPlugin)
 				if ok {
 					consumerFiltersEndAt = i + 1
 				}

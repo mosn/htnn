@@ -1,0 +1,60 @@
+- apiVersion: networking.istio.io/v1alpha3
+  kind: EnvoyFilter
+  metadata:
+    namespace: istio-system
+    name: not-from-htnn
+- apiVersion: networking.istio.io/v1alpha3
+  kind: EnvoyFilter
+  metadata:
+    namespace: default
+    name: htnn-http-filter # EnvoyFilter to remove
+    labels:
+      htnn.mosn.io/created-by: FilterPolicy
+- apiVersion: networking.istio.io/v1alpha3
+  kind: EnvoyFilter
+  metadata:
+    namespace: default
+    name: htnn-h-default.httpbin # EnvoyFilter to remove
+    labels:
+      htnn.mosn.io/created-by: FilterPolicy
+- apiVersion: networking.istio.io/v1alpha3
+  kind: EnvoyFilter
+  metadata:
+    namespace: istio-system
+    name: htnn-http-filter # EnvoyFilter to update
+    labels:
+      htnn.mosn.io/created-by: FilterPolicy
+- apiVersion: htnn.mosn.io/v1
+  kind: FilterPolicy
+  metadata:
+    name: policy
+    namespace: default
+  spec:
+    targetRef:
+      group: networking.istio.io
+      kind: VirtualService
+      name: vs
+    filters:
+      demo:
+        config:
+          hostName: goldfish
+- apiVersion: networking.istio.io/v1beta1
+  kind: VirtualService
+  metadata:
+    name: vs
+    namespace: default
+  spec:
+    gateways:
+    - default
+    hosts:
+    - default.local
+    http:
+    - match:
+      - uri:
+          prefix: /delay
+      name: default
+      route:
+      - destination:
+          host: httpbin
+          port:
+            number: 8000

@@ -21,7 +21,7 @@ import (
 )
 
 func init() {
-	plugins.RegisterHttpPlugin(hmac_auth.Name, &plugin{})
+	plugins.RegisterPlugin(hmac_auth.Name, &plugin{})
 }
 
 type plugin struct {

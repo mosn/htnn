@@ -30,7 +30,7 @@ import (
 )
 
 func init() {
-	plugins.RegisterHttpPlugin(limit_count_redis.Name, &plugin{})
+	plugins.RegisterPlugin(limit_count_redis.Name, &plugin{})
 }
 
 type plugin struct {

@@ -81,7 +81,7 @@ spec:
       port: 8080
 ---
 apiVersion: htnn.mosn.io/v1
-kind: HTTPFilterPolicy
+kind: FilterPolicy
 metadata:
   name: policy
 spec:
@@ -116,7 +116,7 @@ If you want to use a deny list, replace `allow` with `deny`:
 
 ```yaml
 apiVersion: htnn.mosn.io/v1
-kind: HTTPFilterPolicy
+kind: FilterPolicy
 metadata:
   name: policy
 spec:

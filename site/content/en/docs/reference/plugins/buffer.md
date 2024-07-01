@@ -48,7 +48,7 @@ By applying the configuration below, the request to `http://localhost:10000/` is
 
 ```yaml
 apiVersion: htnn.mosn.io/v1
-kind: HTTPFilterPolicy
+kind: FilterPolicy
 metadata:
   name: policy
 spec:

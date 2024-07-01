@@ -24,7 +24,7 @@ import (
 )
 
 func init() {
-	plugins.RegisterHttpPlugin(cel_script.Name, &plugin{})
+	plugins.RegisterPlugin(cel_script.Name, &plugin{})
 }
 
 type plugin struct {

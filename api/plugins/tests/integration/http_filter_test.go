@@ -25,9 +25,9 @@ import (
 	"mosn.io/htnn/api/plugins/tests/integration/data_plane"
 )
 
-func TestHTTPFilterPlugin(t *testing.T) {
+func TestFilterPlugin(t *testing.T) {
 	dp, err := data_plane.StartDataPlane(t, &data_plane.Option{
-		Bootstrap: data_plane.Bootstrap().SetHTTPFilterGolang(map[string]interface{}{
+		Bootstrap: data_plane.Bootstrap().SetFilterGolang(map[string]interface{}{
 			"plugins": []interface{}{
 				map[string]interface{}{
 					"name": "buffer",
@@ -68,10 +68,10 @@ func TestHTTPFilterPlugin(t *testing.T) {
 	}
 }
 
-func TestHTTPFilterMergeIntoRoute(t *testing.T) {
+func TestFilterMergeIntoRoute(t *testing.T) {
 	dp, err := data_plane.StartDataPlane(t, &data_plane.Option{
 		LogLevel: "debug",
-		Bootstrap: data_plane.Bootstrap().SetHTTPFilterGolang(map[string]interface{}{
+		Bootstrap: data_plane.Bootstrap().SetFilterGolang(map[string]interface{}{
 			"plugins": []interface{}{
 				map[string]interface{}{
 					"name": "buffer",

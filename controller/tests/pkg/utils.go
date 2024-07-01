@@ -54,8 +54,8 @@ func MapToObj(in map[string]interface{}) client.Object {
 		}
 	} else if strings.HasPrefix(group, "htnn.mosn.io") {
 		switch in["kind"] {
-		case "HTTPFilterPolicy":
-			out = &mosniov1.HTTPFilterPolicy{}
+		case "FilterPolicy":
+			out = &mosniov1.FilterPolicy{}
 		case "Consumer":
 			out = &mosniov1.Consumer{}
 		case "ServiceRegistry":

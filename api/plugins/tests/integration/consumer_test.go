@@ -118,7 +118,7 @@ func TestConsumerWithFilterInitFailed(t *testing.T) {
 	}
 }
 
-func TestConsumerWithFilterAndMergeFromHTTPFilter(t *testing.T) {
+func TestConsumerWithFilterAndMergeFromFilter(t *testing.T) {
 	dp, err := data_plane.StartDataPlane(t, &data_plane.Option{
 		LogLevel: "debug",
 		Bootstrap: data_plane.Bootstrap().AddConsumer("marvin", map[string]interface{}{
@@ -130,7 +130,7 @@ func TestConsumerWithFilterAndMergeFromHTTPFilter(t *testing.T) {
 					"config": `{"decode": true, "headers": true}`,
 				},
 			},
-		}).SetHTTPFilterGolang(map[string]interface{}{
+		}).SetFilterGolang(map[string]interface{}{
 			"plugins": []interface{}{
 				map[string]interface{}{
 					"name": "buffer",

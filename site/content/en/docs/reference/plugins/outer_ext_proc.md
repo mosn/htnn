@@ -57,7 +57,7 @@ By applying the configuration below, we can modify the requests to `http://local
 
 ```yaml
 apiVersion: htnn.mosn.io/v1
-kind: HTTPFilterPolicy
+kind: FilterPolicy
 metadata:
   name: policy
 spec:

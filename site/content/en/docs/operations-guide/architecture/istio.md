@@ -4,7 +4,7 @@ title: Istio
 
 ## Introduction
 
-Istio is the main component of the HTNN control plane. In addition, HTNN also implements its own controller to reconcile CRDs such as HTTPFilterPolicy. HTNN combines its controller with Istio through some patches. These patches include the following features:
+Istio is the main component of the HTNN control plane. In addition, HTNN also implements its own controller to reconcile CRDs such as FilterPolicy. HTNN combines its controller with Istio through some patches. These patches include the following features:
 
 * Watching HTNN's own CRDs.
 * In the `PushContext`, detect if there is a need to invoke the HTNN controller to reconcile the current state.

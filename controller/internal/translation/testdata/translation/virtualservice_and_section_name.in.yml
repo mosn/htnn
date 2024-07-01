@@ -45,10 +45,10 @@ virtualService:
               host: httpbin
               port:
                 number: 8000
-httpFilterPolicy:
+filterPolicy:
   httpbin:
   - apiVersion: htnn.mosn.io/v1
-    kind: HTTPFilterPolicy
+    kind: FilterPolicy
     metadata:
       name: policy-route
       namespace: default
@@ -63,7 +63,7 @@ httpFilterPolicy:
           config:
             pet: goldfish
   - apiVersion: htnn.mosn.io/v1
-    kind: HTTPFilterPolicy
+    kind: FilterPolicy
     metadata:
       # Policy targets to sectionName is prior to the one without sectionName.
       # For example, policy-route is prior to policy-host

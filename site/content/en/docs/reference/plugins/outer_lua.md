@@ -55,7 +55,7 @@ By applying the configuration below, we can interrupt the requests to `http://lo
 
 ```yaml
 apiVersion: htnn.mosn.io/v1
-kind: HTTPFilterPolicy
+kind: FilterPolicy
 metadata:
   name: policy
 spec:

@@ -27,7 +27,7 @@ import (
 )
 
 func init() {
-	plugins.RegisterHttpPlugin(casbintype.Name, &plugin{})
+	plugins.RegisterPlugin(casbintype.Name, &plugin{})
 }
 
 type plugin struct {
