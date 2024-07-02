@@ -2,9 +2,9 @@
 title: FilterPolicy
 ---
 
-Most features on gateways and service mesh revolve around the HTTP protocol, such as authentication, rate limiting, request rewriting, etc. HTNN implements these features via configuration rules provided by FilterPolicy.
+Most businesses on gateways and service mesh revolve around network protocols, such as authentication, rate limiting, request rewriting, etc. HTNN abstracts these needs and uses FilterPolicy to express specific configuration rules.
 
-Unlike some products in this area, HTNN does not use different CRDs for different HTTP relative purposes. Instead, it uses a single CRD called FilterPolicy to solve all business needs at the HTTP layer. This is because we believe the cost of multiple CRDs is too high. We even introduced a `0 CRD` [embedded mode](../embedded_mode) to reduce the cost of onboarding and maintenance.
+Unlike some similar products, HTNN does not use different CRDs for different business categories, but unifies all policy-level business needs using a single CRD, FilterPolicy. This is because we feel the cost of multiple CRDs is too high. We even introduced the `0 CRD` [embedded mode](../embedded_mode) to reduce the cost of integration and maintenance.
 
 ## Structure of FilterPolicy
 
@@ -377,6 +377,35 @@ For example, to issue a policy for a particular Listener of a Gateway API's Gate
 
 Plugins configured by different FilterPolicies with overlapping scopes will merge and then execute in the order specified at the time the plugins were registered. If different levels of FilterPolicy configure the same plugin, the configuration on the smaller scoped FilterPolicy will override the broader scoped configuration, namely `SectionName` > `VirtualService/HTTPRoute` > `Gateway`. If the same plugin is configured by the same level of FilterPolicy, the FilterPolicy created earliest takes precedence; if the timings are the same, they are ordered by the namespace and name of the FilterPolicy.
 
+## The Relationship between FilterPolicy and Plugins
+
+FilterPolicy is simply the carrier for plugins. HTNN's plugins can be divided into two categories:
+
+* Go plugins that run on the data plane
+* Plugins that run on the control plane to generate Envoy configurations, which we call Native plugins
+
+Depending on their location, Native plugins can be further divided into the following categories:
+
+* HTTP Native plugins, which affect HTTP filters
+* Network Native plugins, which affect Network filters
+* Listener Native plugins, which affect Listeners
+
+In the documentation for each plugin, we have indicated its category. In the "Attribute" section, if `Order` is:
+
+* `Listener`, it is a Listener Native plugin
+* `Network`, it is a Network Native plugin
+* `Outer` or `Inner`, it is an HTTP Native plugin
+* The rest are Go plugins
+
+Which plugins can be configured on a FilterPolicy depends on the target resource type in `TargetRef`, as shown in the table below:
+
+| Plugin Type             | Configured on Gateway | Configured on Route |
+|-------------------------|-----------------------|---------------------|
+| Go plugins              | Supported             | Supported           |
+| HTTP Native plugins     | Pending support       | Supported           |
+| Network Native plugins  | Supported             | Not supported       |
+| Listener Native plugins | Supported             | Not supported       |
+
 ## Using SubPolicies to Reduce the Number of FilterPolicies
 
 For gateways configured by domain dimension, a VirtualService could contain hundreds of routes. If each route requires its configuration, we would need to create hundreds of FilterPolicies. To reduce the load on the API server, we support targeting multiple routes with a single FilterPolicy as shown below:
@@ -435,3 +464,5 @@ For gateways configured by domain dimension, a VirtualService could contain hund
 ```
 
 FilterPolicy supports using the `subPolicies` field to configure policies for multiple `sectionNames` simultaneously. Both `filters` and `subPolicies` can be used together, and the merging rules for configurations are the same as when using multiple separate FilterPolicies.
+
+Note that `subPolicies` currently only supports VirtualService.

@@ -2,9 +2,9 @@
 title: FilterPolicy
 ---
 
-绝大部分网关和 service mesh 上的业务需求，都是围绕着 HTTP 协议做一些事情，如认证鉴权、限流限速、请求改写等等。HTNN 把这部分的需求都抽象出来，使用 FilterPolicy 来表达具体的配置规则。
+绝大部分网关和 service mesh 上的业务需求，都是围绕着网络协议做一些事情，如认证鉴权、限流限速、请求改写等等。HTNN 把这部分的需求都抽象出来，使用 FilterPolicy 来表达具体的配置规则。
 
-和一些同类产品不同，HTNN 并没有为不同的业务分类使用不同的 CRD，而是统一使用 FilterPolicy 一个 CRD 来解决所有的 HTTP 层面上的业务需求。这是因为我们觉得多 CRD 的成本太大了。我们甚至引入 `0 CRD` 的 [embedded mode](../embedded_mode)，来减低接入和维护成本。
+和一些同类产品不同，HTNN 并没有为不同的业务分类使用不同的 CRD，而是统一使用 FilterPolicy 一个 CRD 来解决所有的策略层面上的业务需求。这是因为我们觉得多 CRD 的成本太大了。我们甚至引入 `0 CRD` 的 [embedded mode](../embedded_mode)，来减低接入和维护成本。
 
 ## FilterPolicy 的结构说明
 
@@ -377,7 +377,36 @@ status:
 如果不同级别的 FilterPolicy 配置了同一个插件，那么范围更小的 FilterPolicy 上的配置会覆盖掉范围更大的配置，即 `SectionName` > `VirtualService/HTTPRoute` > `Gateway`。
 如果同一级别的 FilterPolicy 配置了同一个插件，那么创建时间更早的 FilterPolicy 优先；如果时间都一样，则按 FilterPolicy 的 namespace 和 name 排序。
 
-## 使用 SubPolicies 减少 FilterPolicy 数量
+## 插件和 FilterPolicy 的对应关系
+
+FilterPolicy 只是插件的载体。HTNN 的插件可以分成两类：
+
+* 运行在数据面上的 Go 插件
+* 运行在控制面上，生成对应 Envoy 配置的插件，我们称之为 Native 插件
+
+Native 插件根据其作用位置不同，又可分成以下几类：
+
+* HTTP Native 插件，作用在 HTTP filter 上
+* Network Native 插件，作用在 Network filter 上
+* Listener Native 插件，作用在 Listener 上
+
+在每个插件的文档上，我们标注了它所属的类别。在“属性”这一节里，如果 `Order` 为
+
+* `Listener`，则是 Listener Native 插件
+* `Network`，则是 Network Native 插件
+* `Outer` 或 `Inner`，则是 HTTP Native 插件
+* 剩下的则是 Go 插件
+
+一个 FilterPolicy 上能配置哪些插件取决于 `TargetRef` 里的目标资源类型，见下表：
+
+| 插件类型             | 在 Gateway 上配置 | 在路由上配置 |
+|----------------------|-------------------|--------------|
+| Go 插件              | 支持              | 支持         |
+| HTTP Native 插件     | 待支持            | 支持         |
+| Network Native 插件  | 支持              | 不支持       |
+| Listener Native 插件 | 支持              | 不支持       |
+
+## 使用 subPolicies 减少 FilterPolicy 数量
 
 对于按域名维度配置的网关，一个 VirtualService 内可能会有上百个路由。如果每个路由都需要有自己的配置，那么我们需要创建成百个 FilterPolicy。为了减少对 API server 的压力，我们支持使用同一个 FilterPolicy 匹配多个路由。
 
@@ -437,3 +466,5 @@ status:
 ```
 
 FilterPolicy 支持使用 `subPolicies` 字段同时给多个 `sectionName` 配置策略。`filters` 和 `subPolicies` 能同时使用，配置合并的规则和分开使用多个 FilterPolicy 一样。
+
+注意目前 `subPolicies` 仅支持 VirtualService。
