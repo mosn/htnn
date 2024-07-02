@@ -739,6 +739,13 @@ func TestValidateConsumer(t *testing.T) {
 			},
 			err: "this http filter can not be added by the consumer: keyAuth",
 		},
+		{
+			name: "empty",
+			consumer: &Consumer{
+				Spec: ConsumerSpec{},
+			},
+			err: "authn filter is required",
+		},
 	}
 
 	for _, tt := range tests {

@@ -287,6 +287,10 @@ func NormalizeK8sGatewayProtocol(protocol gwapiv1.ProtocolType) string {
 }
 
 func ValidateConsumer(c *Consumer) error {
+	if len(c.Spec.Auth) == 0 {
+		return errors.New("authn filter is required")
+	}
+
 	for name, filter := range c.Spec.Auth {
 		plugin := plugins.LoadPluginType(name)
 		if plugin == nil {
