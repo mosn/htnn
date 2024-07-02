@@ -16,6 +16,13 @@ SHELL = /bin/bash
 OS = $(shell uname)
 IN_CI ?=
 
+# Remember to remove tools downloaded into bin directory manually before updating them.
+# If they need to be updated frequently, we can consider to store them in the `Dockerfile.dev`.
+ROOT_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
+LOCALBIN := $(ROOT_DIR)/bin
+$(LOCALBIN):
+	@mkdir -p $(LOCALBIN)
+
 TARGET_SO       = libgolang.so
 PROJECT_NAME    = mosn.io/htnn
 DOCKER_MIRROR   = m.daocloud.io/
