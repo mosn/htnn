@@ -15,11 +15,14 @@
 package file
 
 import (
+	"errors"
+	"fmt"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
-	"github.com/jellydator/ttlcache/v3"
+	"github.com/fsnotify/fsnotify"
 
 	"mosn.io/htnn/api/pkg/log"
 )
@@ -29,84 +32,101 @@ var (
 )
 
 type File struct {
-	lock sync.RWMutex
-
 	Name  string
 	mtime time.Time
 }
 
-func (f *File) Mtime() time.Time {
-	f.lock.RLock()
-	defer f.lock.RUnlock()
-	// the returned time.Time should be readonly
-	return f.mtime
+type Fsnotify struct {
+	mu           sync.Mutex
+	Watcher      *fsnotify.Watcher
+	WatchedFiles map[string]struct{}
 }
 
-func (f *File) SetMtime(t time.Time) {
-	f.lock.Lock()
-	f.mtime = t
-	f.lock.Unlock()
-}
-
-type fs struct {
-	cache *ttlcache.Cache[string, os.FileInfo]
-}
-
-func newFS(ttl time.Duration) *fs {
-	loader := ttlcache.LoaderFunc[string, os.FileInfo](
-		func(c *ttlcache.Cache[string, os.FileInfo], key string) *ttlcache.Item[string, os.FileInfo] {
-			info, err := os.Stat(key)
-			if err != nil {
-				logger.Error(err, "reload file info to cache", "file", key)
-				return nil
-			}
-			item := c.Set(key, info, ttlcache.DefaultTTL)
-			logger.Info("update file mtime", "file", key, "mtime", item.Value().ModTime())
-			return item
-		},
-	)
-	cache := ttlcache.New(
-		ttlcache.WithTTL[string, os.FileInfo](ttl),
-		ttlcache.WithLoader[string, os.FileInfo](loader),
-	)
-	go cache.Start()
-
-	return &fs{
-		cache: cache,
+func newFsnotify() (fs *Fsnotify) {
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		logger.Error(err, "create watcher failed")
+		return
 	}
+
+	return &Fsnotify{
+		Watcher:      watcher,
+		WatchedFiles: make(map[string]struct{}),
+	}
+
 }
 
 var (
-	// TODO: rewrite it to use inotify
-	defaultFs = newFS(10 * time.Second)
+	defaultFsnotify = newFsnotify()
 )
 
-func IsChanged(files ...*File) bool {
-	for _, file := range files {
-		changed := defaultFs.isChanged(file)
-		if changed {
-			return true
+func WatchFiles(onChange func(), file *File, otherFiles ...*File) (err error) {
+	files := append([]*File{file}, otherFiles...)
+	for _, f := range files {
+		if f == nil {
+			return errors.New("file pointer cannot be nil")
 		}
 	}
-	return false
-}
 
-func (f *fs) isChanged(file *File) bool {
-	item := f.cache.Get(file.Name)
-	if item == nil {
-		// As a protection, failed to fetch the real file means file not changed
-		return false
+	watcher := defaultFsnotify.Watcher
+
+	// Add files to watcher.
+	for _, f := range files {
+		dir := filepath.Dir(f.Name)
+		err = defaultFsnotify.AddFiles(dir)
+		if err != nil {
+			logger.Error(err, "failed to add file")
+		}
+		if _, exists := defaultFsnotify.WatchedFiles[dir]; exists {
+			logger.Info(fmt.Sprintf("File %s is already being watched", f.Name))
+			continue
+		}
+		// 添加到已监听文件的集合
+		defaultFsnotify.WatchedFiles[dir] = struct{}{}
+		go defaultFsnotify.watchFiles(onChange, watcher, dir)
 	}
 
-	return file.Mtime().Before(item.Value().ModTime())
+	return
 }
 
-func (f *fs) Stat(path string) (*File, error) {
+func (f *Fsnotify) AddFiles(dir string) (err error) {
+	err = f.Watcher.Add(dir)
+	return
+}
+
+func (f *Fsnotify) watchFiles(onChange func(), w *fsnotify.Watcher, dir string) {
+	defer func(w *fsnotify.Watcher) {
+		f.mu.Lock()
+		delete(defaultFsnotify.WatchedFiles, dir)
+		f.mu.Unlock()
+		err := w.Close()
+		if err != nil {
+			logger.Error(err, "failed to close fsnotify watcher")
+		}
+	}(w)
+
+	for {
+		select {
+		case event, ok := <-w.Events:
+			if !ok {
+				return
+			}
+			logger.Info(fmt.Sprintf("event: %v", event))
+			onChange()
+		case err, ok := <-w.Errors:
+			if !ok {
+				return
+			}
+			logger.Error(err, "error watching files")
+		}
+	}
+}
+
+func (f *Fsnotify) Stat(path string) (*File, error) {
 	info, err := os.Stat(path)
 	if err != nil {
 		return nil, err
 	}
-	f.cache.Set(path, info, ttlcache.DefaultTTL)
 
 	return &File{
 		Name:  path,
@@ -115,24 +135,5 @@ func (f *fs) Stat(path string) (*File, error) {
 }
 
 func Stat(path string) (*File, error) {
-	return defaultFs.Stat(path)
-}
-
-func Update(files ...*File) bool {
-	for _, file := range files {
-		if !defaultFs.update(file) {
-			return false
-		}
-	}
-	return true
-}
-
-func (f *fs) update(file *File) bool {
-	item := f.cache.Get(file.Name)
-	if item == nil {
-		return false
-	}
-
-	file.SetMtime(item.Value().ModTime())
-	return true
+	return defaultFsnotify.Stat(path)
 }
