@@ -20,6 +20,7 @@ import (
 	_ "mosn.io/htnn/controller/plugins/cors"
 	_ "mosn.io/htnn/controller/plugins/ext_proc"
 	_ "mosn.io/htnn/controller/plugins/fault"
+	_ "mosn.io/htnn/controller/plugins/grpc_json_transcoder"
 	_ "mosn.io/htnn/controller/plugins/local_ratelimit"
 	_ "mosn.io/htnn/controller/plugins/lua"
 	_ "mosn.io/htnn/types/plugins"
