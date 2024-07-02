@@ -14,8 +14,6 @@
 
 include ../common.mk
 
-SHELL = /bin/bash
-
 .PHONY: build
 build:
 	docker-compose build
