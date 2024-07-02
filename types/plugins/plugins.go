@@ -34,4 +34,5 @@ import (
 	_ "mosn.io/htnn/types/plugins/lua"
 	_ "mosn.io/htnn/types/plugins/oidc"
 	_ "mosn.io/htnn/types/plugins/opa"
+	_ "mosn.io/htnn/types/plugins/tlsinspector"
 )

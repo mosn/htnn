@@ -196,7 +196,7 @@ func translateFilterManagerConfigToPolicyInRDS(fmc *filtermanager.FilterManagerC
 
 		golangFilterName := "htnn.filters.http.golang"
 		if ctrlcfg.EnableLDSPluginViaECDS() {
-			golangFilterName = virtualHost.ECDSResourceName
+			golangFilterName = virtualHost.ECDSResourceName + "-" + model.GolangPluginsFilter
 		}
 		config[golangFilterName] = map[string]interface{}{
 			"@type": "type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.ConfigsPerRoute",
@@ -225,18 +225,18 @@ func translateFilterManagerConfigToPolicyInECDS(fmc *filtermanager.FilterManager
 	goFilterManager := &filtermanager.FilterManagerConfig{
 		Plugins: []*fmModel.FilterConfig{},
 	}
+	nativeFilters := map[string][]*fmModel.FilterConfig{
+		model.ECDSListenerFilter: {},
+	}
 
 	consumerNeeded := false
 	for _, plugin := range fmc.Plugins {
 		name := plugin.Name
 		p := plugins.LoadPlugin(name)
-		if p != nil {
-			// Native plugin is not supported
-			continue
+		if p == nil {
+			// For Go Plugins, only the type is registered
+			p = plugins.LoadPluginType(name)
 		}
-
-		// For Go Plugins, only the type is registered
-		p = plugins.LoadPluginType(name)
 		// As we don't reject configuration with unknown plugin to keep compatibility...
 		if p == nil {
 			continue
@@ -250,20 +250,45 @@ func translateFilterManagerConfigToPolicyInECDS(fmc *filtermanager.FilterManager
 		}
 		_ = json.Unmarshal(b, &cfg)
 
-		plugin.Config = cfg
-		goFilterManager.Plugins = append(goFilterManager.Plugins, plugin)
-		_, ok = p.(plugins.ConsumerPlugin)
-		if ok {
-			consumerNeeded = true
+		nativePlugin, ok := p.(plugins.NativePlugin)
+		if !ok {
+			plugin.Config = cfg
+			goFilterManager.Plugins = append(goFilterManager.Plugins, plugin)
+			_, ok = p.(plugins.ConsumerPlugin)
+			if ok {
+				consumerNeeded = true
+			}
+		} else {
+			order := nativePlugin.Order()
+			if order.Position == plugins.OrderPositionOuter || order.Position == plugins.OrderPositionInner {
+				// HTTP Native plugin is not supported
+				continue
+			}
+
+			url := nativePlugin.ConfigTypeURL()
+			conf := p.Config()
+			desc := conf.ProtoReflect().Descriptor()
+			fieldDescs := desc.Fields()
+			m, ok := cfg.(map[string]interface{})
+			if !ok {
+				panic(fmt.Sprintf("unexpected type: %s", reflect.TypeOf(cfg)))
+			}
+			stripUnknowFields(m, fieldDescs)
+
+			m["@type"] = url
+			plugin.Config = m
+			nativeFilters[model.ECDSListenerFilter] = append(nativeFilters[model.ECDSListenerFilter], plugin)
 		}
 	}
+
 	if consumerNeeded {
 		goFilterManager.Namespace = nsName.Namespace
 	}
 
 	if len(goFilterManager.Plugins) > 0 {
+		cfg := map[string]interface{}{}
 		if goFilterManager.Namespace != "" {
-			config["namespace"] = goFilterManager.Namespace
+			cfg["namespace"] = goFilterManager.Namespace
 		}
 		plugins := make([]interface{}, len(goFilterManager.Plugins))
 		for i, plugin := range goFilterManager.Plugins {
@@ -272,9 +297,13 @@ func translateFilterManagerConfigToPolicyInECDS(fmc *filtermanager.FilterManager
 				"config": plugin.Config,
 			}
 		}
-		config["plugins"] = plugins
+		cfg["plugins"] = plugins
+		config[model.ECDSGolangFilter] = cfg
 	}
 
+	for category, filters := range nativeFilters {
+		config[category] = filters
+	}
 	return config
 }
 

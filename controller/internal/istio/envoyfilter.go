@@ -23,6 +23,7 @@ import (
 	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	fmModel "mosn.io/htnn/api/pkg/filtermanager/model"
 	"mosn.io/htnn/api/pkg/plugins"
 	ctrlcfg "mosn.io/htnn/controller/internal/config"
 	"mosn.io/htnn/controller/internal/model"
@@ -207,69 +208,123 @@ func GenerateRouteFilter(host *model.VirtualHost, route string, config map[strin
 
 func GenerateLDSFilterViaECDS(key string, ldsName string, config map[string]interface{}) *istiov1a3.EnvoyFilter {
 	ef := &istiov1a3.EnvoyFilter{
-		Spec: istioapi.EnvoyFilter{
-			ConfigPatches: []*istioapi.EnvoyFilter_EnvoyConfigObjectPatch{
-				{
-					ApplyTo: istioapi.EnvoyFilter_HTTP_FILTER,
-					Match: &istioapi.EnvoyFilter_EnvoyConfigObjectMatch{
-						ObjectTypes: &istioapi.EnvoyFilter_EnvoyConfigObjectMatch_Listener{
-							Listener: &istioapi.EnvoyFilter_ListenerMatch{
-								Name: ldsName,
-								FilterChain: &istioapi.EnvoyFilter_ListenerMatch_FilterChainMatch{
-									Filter: &istioapi.EnvoyFilter_ListenerMatch_FilterMatch{
-										Name: "envoy.filters.network.http_connection_manager",
-										SubFilter: &istioapi.EnvoyFilter_ListenerMatch_SubFilterMatch{
-											Name: "htnn.filters.http.golang",
-										},
-									},
+		Spec: istioapi.EnvoyFilter{},
+	}
+
+	// Always create a Go filter for ECDS so we don't trigger LDS drain when adding/removing Go Plugins.
+	// We can't do this for native filters now.
+	// For TCP proxy use case, the extra golang-filter is harmless, because it only attaches to HCM.
+	cfg := config[model.ECDSGolangFilter]
+	if cfg == nil {
+		cfg = map[string]interface{}{}
+	}
+	ecdsName := key + "-" + model.GolangPluginsFilter
+	ef.Spec.ConfigPatches = append(ef.Spec.ConfigPatches,
+		&istioapi.EnvoyFilter_EnvoyConfigObjectPatch{
+			ApplyTo: istioapi.EnvoyFilter_HTTP_FILTER,
+			Match: &istioapi.EnvoyFilter_EnvoyConfigObjectMatch{
+				ObjectTypes: &istioapi.EnvoyFilter_EnvoyConfigObjectMatch_Listener{
+					Listener: &istioapi.EnvoyFilter_ListenerMatch{
+						Name: ldsName,
+						FilterChain: &istioapi.EnvoyFilter_ListenerMatch_FilterChainMatch{
+							Filter: &istioapi.EnvoyFilter_ListenerMatch_FilterMatch{
+								Name: "envoy.filters.network.http_connection_manager",
+								SubFilter: &istioapi.EnvoyFilter_ListenerMatch_SubFilterMatch{
+									Name: "htnn.filters.http.golang",
 								},
 							},
 						},
 					},
+				},
+			},
+			Patch: &istioapi.EnvoyFilter_Patch{
+				Operation: istioapi.EnvoyFilter_Patch_INSERT_BEFORE,
+				Value: MustNewStruct(map[string]interface{}{
+					"name": ecdsName,
+					"config_discovery": map[string]interface{}{
+						"apply_default_config_without_warming": true,
+						"default_config": map[string]interface{}{
+							"@type":        "type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.Config",
+							"library_id":   "fm",
+							"library_path": ctrlcfg.GoSoPath(),
+							"plugin_name":  "fm",
+						},
+						"config_source": map[string]interface{}{
+							"ads": map[string]interface{}{},
+						},
+						"type_urls": []interface{}{
+							"type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.Config",
+						},
+					},
+				}),
+			},
+		},
+		&istioapi.EnvoyFilter_EnvoyConfigObjectPatch{
+			ApplyTo: istioapi.EnvoyFilter_EXTENSION_CONFIG,
+			Patch: &istioapi.EnvoyFilter_Patch{
+				Operation: istioapi.EnvoyFilter_Patch_ADD,
+				Value: MustNewStruct(map[string]interface{}{
+					"name": ecdsName,
+					"typed_config": map[string]interface{}{
+						"@type":        "type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.Config",
+						"library_id":   "fm",
+						"library_path": ctrlcfg.GoSoPath(),
+						"plugin_name":  "fm",
+						"plugin_config": map[string]interface{}{
+							"@type": "type.googleapis.com/xds.type.v3.TypedStruct",
+							"value": cfg,
+						},
+					},
+				}),
+			},
+		},
+	)
+
+	if config[model.ECDSListenerFilter] != nil {
+		cfg, _ := config[model.ECDSListenerFilter].([]*fmModel.FilterConfig)
+		for _, filter := range cfg {
+			ecdsName := key + "-" + filter.Name
+			c, _ := filter.Config.(map[string]interface{})
+			typeURL, _ := c["@type"].(string)
+			ef.Spec.ConfigPatches = append(ef.Spec.ConfigPatches,
+				&istioapi.EnvoyFilter_EnvoyConfigObjectPatch{
+					ApplyTo: istioapi.EnvoyFilter_LISTENER_FILTER,
+					Match: &istioapi.EnvoyFilter_EnvoyConfigObjectMatch{
+						ObjectTypes: &istioapi.EnvoyFilter_EnvoyConfigObjectMatch_Listener{
+							Listener: &istioapi.EnvoyFilter_ListenerMatch{
+								Name: ldsName,
+							},
+						},
+					},
 					Patch: &istioapi.EnvoyFilter_Patch{
-						Operation: istioapi.EnvoyFilter_Patch_INSERT_BEFORE,
+						Operation: istioapi.EnvoyFilter_Patch_INSERT_FIRST,
 						Value: MustNewStruct(map[string]interface{}{
-							"name": key,
+							"name": ecdsName,
 							"config_discovery": map[string]interface{}{
-								"apply_default_config_without_warming": true,
-								"default_config": map[string]interface{}{
-									"@type":        "type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.Config",
-									"library_id":   "fm",
-									"library_path": ctrlcfg.GoSoPath(),
-									"plugin_name":  "fm",
-								},
 								"config_source": map[string]interface{}{
 									"ads": map[string]interface{}{},
 								},
 								"type_urls": []interface{}{
-									"type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.Config",
+									typeURL,
 								},
 							},
 						}),
 					},
 				},
-			},
-		},
-	}
-	ef.Spec.ConfigPatches = append(ef.Spec.ConfigPatches, &istioapi.EnvoyFilter_EnvoyConfigObjectPatch{
-		ApplyTo: istioapi.EnvoyFilter_EXTENSION_CONFIG,
-		Patch: &istioapi.EnvoyFilter_Patch{
-			Operation: istioapi.EnvoyFilter_Patch_ADD,
-			Value: MustNewStruct(map[string]interface{}{
-				"name": key,
-				"typed_config": map[string]interface{}{
-					"@type":        "type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.Config",
-					"library_id":   "fm",
-					"library_path": ctrlcfg.GoSoPath(),
-					"plugin_name":  "fm",
-					"plugin_config": map[string]interface{}{
-						"@type": "type.googleapis.com/xds.type.v3.TypedStruct",
-						"value": config,
+				&istioapi.EnvoyFilter_EnvoyConfigObjectPatch{
+					ApplyTo: istioapi.EnvoyFilter_EXTENSION_CONFIG,
+					Patch: &istioapi.EnvoyFilter_Patch{
+						Operation: istioapi.EnvoyFilter_Patch_ADD,
+						Value: MustNewStruct(map[string]interface{}{
+							"name":         ecdsName,
+							"typed_config": filter.Config,
+						}),
 					},
 				},
-			}),
-		},
-	})
+			)
+		}
+	}
+
 	return ef
 }
 

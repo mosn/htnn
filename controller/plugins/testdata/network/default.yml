@@ -1,0 +1,14 @@
+# This configuration is shared across different tests and should only contain minimal fields
+- apiVersion: networking.istio.io/v1beta1
+  kind: Gateway
+  metadata:
+    name: default
+    namespace: default
+  spec:
+    servers:
+    - hosts:
+      - default.local
+      port:
+        name: http
+        number: 18000
+        protocol: HTTP

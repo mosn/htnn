@@ -17,6 +17,7 @@ package translation
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"slices"
 	"sort"
 
@@ -66,4 +67,8 @@ type FilterPolicyWrapper struct {
 
 type Proxy struct {
 	Namespace string
+}
+
+func getECDSResourceName(workloadNamespace string, ldsName string) string {
+	return fmt.Sprintf("htnn-%s-%s", workloadNamespace, ldsName)
 }

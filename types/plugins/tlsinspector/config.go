@@ -12,34 +12,33 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package model
+package tlsinspector
 
 import (
-	"fmt"
+	tls_inspector "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/listener/tls_inspector/v3"
 
-	"k8s.io/apimachinery/pkg/types"
+	"mosn.io/htnn/api/pkg/filtermanager/api"
+	"mosn.io/htnn/api/pkg/plugins"
 )
-
-type GatewaySection struct {
-	// Fields here can't be pointer because we use GatewaySection as map key
-	NsName      types.NamespacedName
-	SectionName string
-}
-
-func (g GatewaySection) String() string {
-	return fmt.Sprintf("%s/%s", g.NsName.String(), g.SectionName)
-}
-
-type VirtualHost struct {
-	GatewaySection   *GatewaySection
-	NsName           *types.NamespacedName
-	Name             string
-	ECDSResourceName string
-}
 
 const (
-	ECDSGolangFilter   = "golang"
-	ECDSListenerFilter = "listener"
-
-	GolangPluginsFilter = "golang-filter"
+	Name = "tlsInspector"
 )
+
+func init() {
+	plugins.RegisterPluginType(Name, &Plugin{})
+}
+
+type Plugin struct {
+	plugins.PluginMethodDefaultImpl
+}
+
+func (p *Plugin) Order() plugins.PluginOrder {
+	return plugins.PluginOrder{
+		Position: plugins.OrderPositionListener,
+	}
+}
+
+func (p *Plugin) Config() api.PluginConfig {
+	return &tls_inspector.TlsInspector{}
+}

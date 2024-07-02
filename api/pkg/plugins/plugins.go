@@ -99,7 +99,9 @@ func RegisterPlugin(name string, plugin Plugin) {
 			goPlugin.Factory(),
 			NewPluginConfigParser(goPlugin))
 	} else if _, ok := plugin.(NativePlugin); ok {
-		if order.Position != OrderPositionOuter && order.Position != OrderPositionInner {
+		switch order.Position {
+		case OrderPositionOuter, OrderPositionInner, OrderPositionListener, OrderPositionNetwork:
+		default:
 			panic(errInvalidNativePluginOrder)
 		}
 	} else {
