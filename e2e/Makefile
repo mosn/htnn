@@ -53,7 +53,7 @@ e2e-prepare-data-plane-image: kind
 
 .PHONY: deploy-istio
 deploy-istio: helm
-	ISTIO_VERSION=$(ISTIO_VERSION) ./istio.sh install
+	ISTIO_VERSION=$(ISTIO_VERSION) LOCALBIN=$(LOCALBIN) ./istio.sh install
 
 .PHONY: run-e2e
 run-e2e:
