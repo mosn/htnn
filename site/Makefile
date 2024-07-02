@@ -12,13 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-SHELL = /bin/bash
+include ../common.mk
 
-LOCALBIN ?= $(shell pwd)/bin
-# Remember to remove tools downloaded into bin directory manually before updating them.
-# If they need to be updated frequently, we can consider to store them in the `Dockerfile.dev`.
-$(LOCALBIN):
-	@mkdir -p $(LOCALBIN)
+SHELL = /bin/bash
 
 .PHONY: build
 build:
