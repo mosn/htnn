@@ -46,12 +46,12 @@ func NewK8sOutput(c client.Client) component.Output {
 	return o
 }
 
-func (o *k8sOutput) FromHTTPFilterPolicy(ctx context.Context, generatedEnvoyFilters map[component.EnvoyFilterKey]*istiov1a3.EnvoyFilter) error {
+func (o *k8sOutput) FromFilterPolicy(ctx context.Context, generatedEnvoyFilters map[component.EnvoyFilterKey]*istiov1a3.EnvoyFilter) error {
 	logger := o.logger
 
 	var envoyfilters istiov1a3.EnvoyFilterList
 	if err := o.List(ctx, &envoyfilters,
-		client.MatchingLabels{constant.LabelCreatedBy: "HTTPFilterPolicy"},
+		client.MatchingLabels{constant.LabelCreatedBy: "FilterPolicy"},
 	); err != nil {
 		return fmt.Errorf("failed to list EnvoyFilter: %w", err)
 	}

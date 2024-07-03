@@ -1,0 +1,44 @@
+- apiVersion: htnn.mosn.io/v1
+  kind: FilterPolicy
+  metadata:
+    name: policy
+    namespace: default
+  spec:
+    targetRef:
+      group: networking.istio.io
+      kind: VirtualService
+      name: vs
+      sectionName: route
+    filters:
+      demo:
+        config:
+          hostName: spacewander
+- apiVersion: networking.istio.io/v1beta1
+  kind: VirtualService
+  metadata:
+    name: vs
+    namespace: default
+  spec:
+    gateways:
+    - default
+    hosts:
+    - default.local
+    http:
+    - match:
+      - uri:
+          exact: /
+      name: red-herring
+      route:
+      - destination:
+          host: httpbin
+          port:
+            number: 8000
+    - match:
+      - uri:
+          prefix: /
+      name: route
+      route:
+      - destination:
+          host: httpbin
+          port:
+            number: 8000

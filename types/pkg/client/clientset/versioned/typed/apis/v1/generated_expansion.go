@@ -20,6 +20,8 @@ package v1
 
 type ConsumerExpansion interface{}
 
+type FilterPolicyExpansion interface{}
+
 type HTTPFilterPolicyExpansion interface{}
 
 type ServiceRegistryExpansion interface{}

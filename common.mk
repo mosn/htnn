@@ -16,6 +16,13 @@ SHELL = /bin/bash
 OS = $(shell uname)
 IN_CI ?=
 
+# Remember to remove tools downloaded into bin directory manually before updating them.
+# If they need to be updated frequently, we can consider to store them in the `Dockerfile.dev`.
+ROOT_DIR := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
+LOCALBIN := $(ROOT_DIR)/bin
+$(LOCALBIN):
+	@mkdir -p $(LOCALBIN)
+
 TARGET_SO       = libgolang.so
 PROJECT_NAME    = mosn.io/htnn
 DOCKER_MIRROR   = m.daocloud.io/
@@ -34,6 +41,8 @@ GO_PROD_MODULES = api types controller plugins # To make life simper, we only ru
 GO_MODULES = $(GO_PROD_MODULES) e2e site tools
 # Don't run `go mod tidy` with `site` module, as this module is managed by docsy build image
 GO_MODULES_EXCLUDE_SITE = $(filter-out site,$(GO_MODULES))
+
+HELM_CHARTS = $(shell find ./manifests/charts -mindepth 1 -maxdepth 1 -type d)
 
 # Define a recursive wildcard function
 rwildcard=$(foreach d,$(wildcard $(addsuffix *,$(1))),$(call rwildcard,$d/,$(2))$(filter $(subst *,%,$(2)),$d))

@@ -43,7 +43,7 @@ type filterManager struct {
 	encodeIdx            int
 	rspHdr               api.ResponseHeaderMap
 
-	runningInGoThread atomic.Bool
+	runningInGoThread atomic.Int32
 	hdrLock           sync.Mutex // FIXME: remove this once we get request headers from the OnLog directly
 
 	// use a group of bools instead of map to avoid lookup
@@ -71,6 +71,8 @@ func (m *filterManager) Reset() {
 	m.encodeIdx = -1
 	m.rspHdr = nil
 
+	m.runningInGoThread.Store(0) // defence in depth
+
 	m.canSkipDecodeHeaders = false
 	m.canSkipDecodeData = false
 	m.canSkipEncodeHeaders = false
@@ -81,11 +83,15 @@ func (m *filterManager) Reset() {
 }
 
 func (m *filterManager) IsRunningInGoThread() bool {
-	return m.runningInGoThread.Load()
+	return m.runningInGoThread.Load() != 0
 }
 
 func (m *filterManager) MarkRunningInGoThread(flag bool) {
-	m.runningInGoThread.Store(flag)
+	if flag {
+		m.runningInGoThread.Add(1)
+	} else {
+		m.runningInGoThread.Add(-1)
+	}
 }
 
 func (m *filterManager) DebugModeEnabled() bool {
@@ -178,7 +184,7 @@ func FilterManagerFactory(c interface{}) capi.StreamFilterFactory {
 						api.LogErrorf("plugin %s has DecodeRequest but not DecodeHeaders. To run DecodeRequest, we need to return api.WaitAllData from DecodeHeaders", fc.Name)
 					}
 
-					p := pkgPlugins.LoadHttpPluginType(fc.Name)
+					p := pkgPlugins.LoadPluginType(fc.Name)
 					if p != nil {
 						order := p.Order()
 						if order.Position <= pkgPlugins.OrderPositionAuthn {

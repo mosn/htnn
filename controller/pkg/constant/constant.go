@@ -17,5 +17,6 @@ package constant
 const (
 	LabelCreatedBy = "htnn.mosn.io/created-by"
 
+	AnnotationFilterPolicy     = "htnn.mosn.io/filterpolicy"
 	AnnotationHTTPFilterPolicy = "htnn.mosn.io/httpfilterpolicy"
 )

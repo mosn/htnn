@@ -4,7 +4,7 @@ title: Istio
 
 ## 介绍
 
-Istio 是 HTNN 控制面的主要组件。除此之外，HTNN 还实现了自己的 controller 来调和 HTTPFilterPolicy 等 CRD。HTNN 通过 patch 将自己的 controller 和 Istio 结合在一起。Patch 里面包含下述功能：
+Istio 是 HTNN 控制面的主要组件。除此之外，HTNN 还实现了自己的 controller 来调和 FilterPolicy 等 CRD。HTNN 通过 patch 将自己的 controller 和 Istio 结合在一起。Patch 里面包含下述功能：
 
 * 监听 HTNN 自己的 CRD。
 * 在 `PushContext` 里面，检测是否有需要调用 HTNN controller 来调和当前状态。

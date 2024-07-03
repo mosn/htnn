@@ -47,10 +47,10 @@ gateway:
     - name: gateway
       port: 1235
       protocol: HTTP
-httpFilterPolicy:
+filterPolicy:
   gateway:
   - apiVersion: htnn.mosn.io/v1
-    kind: HTTPFilterPolicy
+    kind: FilterPolicy
     metadata:
       name: policy
       namespace: default
@@ -65,7 +65,7 @@ httpFilterPolicy:
             hostName: goldfish
   repeated:
   - apiVersion: htnn.mosn.io/v1
-    kind: HTTPFilterPolicy
+    kind: FilterPolicy
     metadata:
       name: repeated
       namespace: default
@@ -80,7 +80,7 @@ httpFilterPolicy:
             hostName: cat
   other:
   - apiVersion: htnn.mosn.io/v1
-    kind: HTTPFilterPolicy
+    kind: FilterPolicy
     metadata:
       name: other
       namespace: default

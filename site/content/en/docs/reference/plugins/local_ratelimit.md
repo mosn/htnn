@@ -43,7 +43,7 @@ By applying the configuration below, the rate of requests to `http://localhost:1
 
 ```yaml
 apiVersion: htnn.mosn.io/v1
-kind: HTTPFilterPolicy
+kind: FilterPolicy
 metadata:
   name: policy
 spec:

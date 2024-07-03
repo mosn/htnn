@@ -17,10 +17,6 @@ include common.mk
 # For some tools, like golangci-lint, we prefer to use the latest version so that we can have the new feature.
 # For the other tools, like kind, we don't upgrade it until there is a strong reason.
 
-LOCALBIN ?= $(shell pwd)/bin
-$(LOCALBIN):
-	@mkdir -p $(LOCALBIN)
-
 GO_FMTTER_VERSION = 0.3.8
 .PHONY: install-go-fmtter
 install-go-fmtter: $(LOCALBIN)
@@ -48,6 +44,13 @@ gen-crd-code: $(LOCALBIN) install-go-fmtter
 gen-helm-docs: $(LOCALBIN)
 	test -x $(LOCALBIN)/helm-docs || GOBIN=$(LOCALBIN) go install github.com/norwoodj/helm-docs/cmd/helm-docs@v1.13.1
 	$(LOCALBIN)/helm-docs --chart-search-root=./manifests/charts
+
+.PHONY: gen-helm-schema
+gen-helm-schema: $(LOCALBIN)
+	test -x $(LOCALBIN)/helm-schema || GOBIN=$(LOCALBIN) go install github.com/dadav/helm-schema/cmd/helm-schema@0.11.3
+	$(foreach CHART, $(HELM_CHARTS), \
+		pushd ./${CHART} && $(LOCALBIN)/helm-schema -n -k additionalProperties || exit 1; popd; \
+	)
 
 .PHONY: dev-tools
 dev-tools:

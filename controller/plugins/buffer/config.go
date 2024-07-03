@@ -19,12 +19,8 @@ import (
 	"mosn.io/htnn/types/plugins/buffer"
 )
 
-const (
-	Name = "buffer"
-)
-
 func init() {
-	plugins.RegisterHttpPlugin(Name, &plugin{})
+	plugins.RegisterPlugin(buffer.Name, &plugin{})
 }
 
 type plugin struct {
@@ -42,7 +38,7 @@ func (p *plugin) ToRouteConfig(config map[string]interface{}) map[string]interfa
 	}
 }
 
-func (p *plugin) RouteConfigTypeURL() string {
+func (p *plugin) ConfigTypeURL() string {
 	return "type.googleapis.com/envoy.extensions.filters.http.buffer.v3.BufferPerRoute"
 }
 

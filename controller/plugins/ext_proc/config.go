@@ -20,8 +20,8 @@ import (
 )
 
 func init() {
-	plugins.RegisterHttpPlugin("outerExtProc", &outerPlugin{})
-	plugins.RegisterHttpPlugin("innerExtProc", &innerPlugin{})
+	plugins.RegisterPlugin(ext_proc.OuterName, &outerPlugin{})
+	plugins.RegisterPlugin(ext_proc.InnerName, &innerPlugin{})
 }
 
 type plugin struct {
@@ -40,7 +40,7 @@ func (p *plugin) ToRouteConfig(config map[string]interface{}) map[string]interfa
 	}
 }
 
-func (p *plugin) RouteConfigTypeURL() string {
+func (p *plugin) ConfigTypeURL() string {
 	return "type.googleapis.com/envoy.extensions.filters.http.ext_proc.v3.ExtProcPerRoute"
 }
 

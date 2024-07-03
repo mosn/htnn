@@ -25,7 +25,7 @@ import (
 
 func TestAddOrUpdate(t *testing.T) {
 	changed := false
-	p := &HTTPFilterPolicy{}
+	p := &FilterPolicy{}
 	c := metav1.Condition{
 		Type:               string(gwapiv1a2.PolicyConditionAccepted),
 		Reason:             "blah",

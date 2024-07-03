@@ -29,7 +29,7 @@ type EnvoyFilterKey struct {
 }
 
 type Output interface {
-	FromHTTPFilterPolicy(ctx context.Context, envoyFilters map[EnvoyFilterKey]*istiov1a3.EnvoyFilter) error
+	FromFilterPolicy(ctx context.Context, envoyFilters map[EnvoyFilterKey]*istiov1a3.EnvoyFilter) error
 	FromConsumer(ctx context.Context, envoyFilter *istiov1a3.EnvoyFilter) error
 	// FromServiceRegistry writes the generated ServiceEntries to the output. Unlike the other generators,
 	// it assumes the write already succeed, and don't retry on error,

@@ -19,26 +19,22 @@ import (
 	"mosn.io/htnn/types/plugins/bandwidth_limit"
 )
 
-const (
-	Name = "bandwidthLimit"
-)
-
 func init() {
-	plugins.RegisterHttpPlugin(Name, &plugin{})
+	plugins.RegisterPlugin(bandwidth_limit.Name, &plugin{})
 }
 
 type plugin struct {
 	bandwidth_limit.Plugin
 }
 
-func (p *plugin) RouteConfigTypeURL() string {
+func (p *plugin) ConfigTypeURL() string {
 	return "type.googleapis.com/envoy.extensions.filters.http.bandwidth_limit.v3.BandwidthLimit"
 }
 
 func (p *plugin) HTTPFilterConfigPlaceholder() map[string]interface{} {
 	return map[string]interface{}{
 		"typed_config": map[string]interface{}{
-			"@type":      p.RouteConfigTypeURL(),
+			"@type":      p.ConfigTypeURL(),
 			"limitKbps":  1,
 			"statPrefix": "bandwidth_limiter",
 		},

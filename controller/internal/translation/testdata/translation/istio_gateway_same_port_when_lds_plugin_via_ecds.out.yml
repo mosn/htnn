@@ -1,9 +1,9 @@
 - metadata:
     annotations:
-      htnn.mosn.io/info: '{"httpfilterpolicies":["default/other","default/policy"]}'
+      htnn.mosn.io/info: '{"filterpolicies":["default/other","default/policy"]}'
     creationTimestamp: null
     labels:
-      htnn.mosn.io/created-by: HTTPFilterPolicy
+      htnn.mosn.io/created-by: FilterPolicy
     name: htnn-h-default
     namespace: default
   spec:
@@ -94,7 +94,7 @@
 - metadata:
     creationTimestamp: null
     labels:
-      htnn.mosn.io/created-by: HTTPFilterPolicy
+      htnn.mosn.io/created-by: FilterPolicy
     name: htnn-h-default2
     namespace: default2
   spec:

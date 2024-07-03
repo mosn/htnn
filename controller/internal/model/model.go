@@ -36,3 +36,10 @@ type VirtualHost struct {
 	Name             string
 	ECDSResourceName string
 }
+
+const (
+	ECDSGolangFilter   = "golang"
+	ECDSListenerFilter = "listener"
+
+	GolangPluginsFilter = "golang-filter"
+)

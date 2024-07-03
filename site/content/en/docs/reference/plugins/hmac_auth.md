@@ -75,7 +75,7 @@ Let's apply the configuration below:
 
 ```yaml
 apiVersion: htnn.mosn.io/v1
-kind: HTTPFilterPolicy
+kind: FilterPolicy
 metadata:
   name: policy
 spec:

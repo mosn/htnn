@@ -81,7 +81,7 @@ spec:
       port: 8080
 ---
 apiVersion: htnn.mosn.io/v1
-kind: HTTPFilterPolicy
+kind: FilterPolicy
 metadata:
   name: policy
 spec:
@@ -116,7 +116,7 @@ HTTP/1.1 403 Forbidden
 
 ```yaml
 apiVersion: htnn.mosn.io/v1
-kind: HTTPFilterPolicy
+kind: FilterPolicy
 metadata:
   name: policy
 spec:

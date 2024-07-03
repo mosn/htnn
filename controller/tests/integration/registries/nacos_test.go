@@ -176,7 +176,7 @@ var _ = Describe("Nacos", func() {
 			return len(entries[0].Spec.Endpoints) == 2
 		}, timeout, interval).Should(BeTrue())
 
-		deregisterInstance("8848", "test", "1.2.3.4", "8080")
+		deregisterInstance("8848", "test", "1.2.3.5", "8080")
 
 		Eventually(func() bool {
 			entries = listServiceEntries()

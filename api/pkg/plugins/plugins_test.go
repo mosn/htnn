@@ -27,11 +27,11 @@ import (
 	_ "mosn.io/htnn/api/plugins/tests/pkg/envoy" // for log implementation
 )
 
-func TestIterateHttpPlugin(t *testing.T) {
+func TestIteratePlugin(t *testing.T) {
 	plugin := &MockPlugin{}
-	RegisterHttpPlugin("test", plugin)
+	RegisterPlugin("test", plugin)
 
-	IterateHttpPlugin(func(name string, p Plugin) bool {
+	IteratePlugin(func(name string, p Plugin) bool {
 		assert.Equal(t, "test", name)
 		assert.Equal(t, p, plugin)
 		return true
@@ -171,7 +171,7 @@ func TestComparePluginOrder(t *testing.T) {
 		},
 	}
 	for name, po := range pluginOrders {
-		RegisterHttpPlugin(name, &goPluginOrderWrapper{
+		RegisterPlugin(name, &goPluginOrderWrapper{
 			GoPlugin: plugin,
 			order:    po,
 		})
@@ -251,14 +251,14 @@ func TestRejectBadPluginDef(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			assert.PanicsWithValue(t, c.err, func() {
-				RegisterHttpPlugin(c.name, c.input)
+				RegisterPlugin(c.name, c.input)
 			})
 		})
 	}
 }
 
 func TestRegisterPluginWithType(t *testing.T) {
-	RegisterHttpPlugin("mock", &MockPlugin{})
-	assert.NotNil(t, LoadHttpPlugin("mock"))
-	assert.NotNil(t, LoadHttpPluginType("mock"))
+	RegisterPlugin("mock", &MockPlugin{})
+	assert.NotNil(t, LoadPlugin("mock"))
+	assert.NotNil(t, LoadPluginType("mock"))
 }

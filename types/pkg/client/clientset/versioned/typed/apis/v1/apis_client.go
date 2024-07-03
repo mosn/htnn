@@ -30,6 +30,7 @@ import (
 type ApisV1Interface interface {
 	RESTClient() rest.Interface
 	ConsumersGetter
+	FilterPoliciesGetter
 	HTTPFilterPoliciesGetter
 	ServiceRegistriesGetter
 }
@@ -41,6 +42,10 @@ type ApisV1Client struct {
 
 func (c *ApisV1Client) Consumers(namespace string) ConsumerInterface {
 	return newConsumers(c, namespace)
+}
+
+func (c *ApisV1Client) FilterPolicies(namespace string) FilterPolicyInterface {
+	return newFilterPolicies(c, namespace)
 }
 
 func (c *ApisV1Client) HTTPFilterPolicies(namespace string) HTTPFilterPolicyInterface {

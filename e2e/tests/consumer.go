@@ -79,7 +79,7 @@ func init() {
 
 			// update consumer
 			base := client.MergeFrom(consumer.DeepCopy())
-			consumer.Spec.Filters = map[string]mosniov1.HTTPPlugin{
+			consumer.Spec.Filters = map[string]mosniov1.Plugin{
 				"limitReq": {
 					Config: runtime.RawExtension{
 						Raw: []byte(`{"average":1,"period":"10s"}`),
@@ -97,7 +97,7 @@ func init() {
 
 			// test webhook
 			base = client.MergeFrom(consumer.DeepCopy())
-			consumer.Spec.Filters = map[string]mosniov1.HTTPPlugin{
+			consumer.Spec.Filters = map[string]mosniov1.Plugin{
 				"limitReq": {
 					Config: runtime.RawExtension{
 						Raw: []byte(`{"average":"invalid"}`),

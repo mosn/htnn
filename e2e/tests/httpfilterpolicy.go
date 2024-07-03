@@ -65,7 +65,7 @@ func init() {
 
 			// test webhook
 			base := client.MergeFrom(policy.DeepCopy())
-			policy.Spec.Filters = map[string]mosniov1.HTTPPlugin{
+			policy.Spec.Filters = map[string]mosniov1.Plugin{
 				"limitReq": {
 					Config: runtime.RawExtension{
 						Raw: []byte(`{"average":"invalid"}`),

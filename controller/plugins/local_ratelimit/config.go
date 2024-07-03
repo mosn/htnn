@@ -19,12 +19,8 @@ import (
 	"mosn.io/htnn/types/plugins/local_ratelimit"
 )
 
-const (
-	Name = "localRatelimit"
-)
-
 func init() {
-	plugins.RegisterHttpPlugin(Name, &plugin{})
+	plugins.RegisterPlugin(local_ratelimit.Name, &plugin{})
 }
 
 type plugin struct {
@@ -33,16 +29,19 @@ type plugin struct {
 
 // Each Native plugin need to implement the methods below
 
-// RouteConfigTypeURL returns the type url of per-route config
-func (p *plugin) RouteConfigTypeURL() string {
+// ConfigTypeURL returns the type url of config
+func (p *plugin) ConfigTypeURL() string {
 	return "type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit"
 }
 
-// HTTPFilterConfigPlaceholder returns the placeholder config for http filter
+// Each HTTP Native plugin need to implement the methods below
+
+// HTTPFilterConfigPlaceholder returns the placeholder config for http filter. The placeholder config
+// will be validated but won't be used.
 func (p *plugin) HTTPFilterConfigPlaceholder() map[string]interface{} {
 	return map[string]interface{}{
 		"typed_config": map[string]interface{}{
-			"@type":      p.RouteConfigTypeURL(),
+			"@type":      p.ConfigTypeURL(),
 			"statPrefix": "http_local_rate_limiter",
 		},
 	}

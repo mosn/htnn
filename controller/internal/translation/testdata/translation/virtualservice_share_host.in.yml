@@ -65,10 +65,10 @@ virtualService:
               host: httpbin
               port:
                 number: 8000
-httpFilterPolicy:
+filterPolicy:
   policy:
   - apiVersion: htnn.mosn.io/v1
-    kind: HTTPFilterPolicy
+    kind: FilterPolicy
     metadata:
       name: policy
       namespace: default
@@ -83,7 +83,7 @@ httpFilterPolicy:
             pet: goldfish
   delay:
   - apiVersion: htnn.mosn.io/v1
-    kind: HTTPFilterPolicy
+    kind: FilterPolicy
     metadata:
       name: delay
       namespace: default

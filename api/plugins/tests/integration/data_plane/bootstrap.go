@@ -70,7 +70,7 @@ func (b *bootstrap) AddConsumer(name string, c map[string]interface{}) *bootstra
 	return b
 }
 
-func (b *bootstrap) SetHTTPFilterGolang(cfg map[string]interface{}) *bootstrap {
+func (b *bootstrap) SetFilterGolang(cfg map[string]interface{}) *bootstrap {
 	b.httpFilterGolang = cfg
 	return b
 }

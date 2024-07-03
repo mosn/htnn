@@ -19,26 +19,22 @@ import (
 	"mosn.io/htnn/types/plugins/fault"
 )
 
-const (
-	Name = "fault"
-)
-
 func init() {
-	plugins.RegisterHttpPlugin(Name, &plugin{})
+	plugins.RegisterPlugin(fault.Name, &plugin{})
 }
 
 type plugin struct {
 	fault.Plugin
 }
 
-func (p *plugin) RouteConfigTypeURL() string {
+func (p *plugin) ConfigTypeURL() string {
 	return "type.googleapis.com/envoy.extensions.filters.http.fault.v3.HTTPFault"
 }
 
 func (p *plugin) HTTPFilterConfigPlaceholder() map[string]interface{} {
 	return map[string]interface{}{
 		"typed_config": map[string]interface{}{
-			"@type": p.RouteConfigTypeURL(),
+			"@type": p.ConfigTypeURL(),
 		},
 	}
 }

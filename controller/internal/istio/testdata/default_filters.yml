@@ -1,7 +1,7 @@
 - metadata:
     creationTimestamp: null
     labels:
-      htnn.mosn.io/created-by: HTTPFilterPolicy
+      htnn.mosn.io/created-by: FilterPolicy
     name: htnn-http-filter
     namespace: istio-system
   spec:

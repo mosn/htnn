@@ -62,7 +62,14 @@ func (p PluginType) String() string {
 type PluginOrderPosition int
 
 const (
-	OrderPositionOuter PluginOrderPosition = iota // First position. It's reserved for Native plugins.
+	// Only for Listener Native plugins
+	OrderPositionListener PluginOrderPosition = iota
+	// Only for Network Native plugins
+	OrderPositionNetwork
+
+	// Only for HTTP Native plugins
+	// The first position in the HTTP filters
+	OrderPositionOuter
 
 	// Now goes the Go plugins
 	OrderPositionAccess
@@ -84,6 +91,10 @@ const (
 
 func (p PluginOrderPosition) String() string {
 	switch p {
+	case OrderPositionListener:
+		return "Listener"
+	case OrderPositionNetwork:
+		return "Network"
 	case OrderPositionOuter:
 		return "Outer"
 	case OrderPositionAccess:
@@ -140,11 +151,16 @@ type Initer interface {
 type NativePlugin interface {
 	Plugin
 
-	RouteConfigTypeURL() string
+	ConfigTypeURL() string
+}
+
+type HTTPNativePlugin interface {
+	NativePlugin
+
 	HTTPFilterConfigPlaceholder() map[string]interface{}
 }
 
-type NativePluginHasRouteConfigWrapper interface {
+type HTTPNativePluginHasRouteConfigWrapper interface {
 	// ToRouteConfig converts the raw config to the real RouteConfig. It's used in some native plugin
 	// for better user experience.
 	// The input `raw` is the configuration user provides in the CRD, the returned value is the

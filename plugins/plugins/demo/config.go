@@ -24,7 +24,7 @@ import (
 
 func init() {
 	// Register the plugin with the given name
-	plugins.RegisterHttpPlugin(demo.Name, &plugin{})
+	plugins.RegisterPlugin(demo.Name, &plugin{})
 }
 
 type plugin struct {

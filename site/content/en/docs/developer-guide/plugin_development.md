@@ -64,7 +64,7 @@ You can specify the plugin's type in its `Order` method.
 If a plugin doesn't claim its order, it will be put into `OrderPositionUnspecified` group, with the operation `OrderOperationNop`.
 
 If you want to configure a plugin in different positions, you can define the plugin as the base class,
-and register its derived classes. Please check [this](https://github.com/mosn/htnn/blob/main/pkg/plugins/plugins_test.go) for the example.
+and register its derived classes. Please check [this](https://github.com/mosn/htnn/blob/main/api/pkg/plugins/plugins_test.go) for the example.
 
 ## Filter manager
 
@@ -148,4 +148,4 @@ A consumer plugin needs to meet the following conditions:
 * Implements the [ConsumerPlugin](https://pkg.go.dev/mosn.io/htnn/pkg/plugins#ConsumerPlugin) interface.
 * Defines the `DecodeHeaders` method, and in this method, it calls `LookupConsumer` and `SetConsumer` to complete the setting of the consumer.
 
-You can take the [keyAuth](https://github.com/mosn/htnn/blob/main/plugins/key_auth/filter.go) plugin as an example to write your own consumer plugin.
+You can take the [keyAuth](https://github.com/mosn/htnn/blob/main/plugins/plugins/key_auth/filter.go) plugin as an example to write your own consumer plugin.
