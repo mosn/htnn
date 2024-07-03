@@ -133,7 +133,7 @@ var _ = BeforeSuite(func() {
 
 	output := component.NewK8sOutput(k8sManager.GetClient())
 	rm := component.NewK8sResourceManager(k8sManager.GetClient())
-	err = controller.NewHTTPFilterPolicyReconciler(
+	err = controller.NewFilterPolicyReconciler(
 		output,
 		rm,
 	).SetupWithManager(k8sManager)

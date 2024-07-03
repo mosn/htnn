@@ -61,7 +61,7 @@ func TestCheckPluginAttributes(t *testing.T) {
 			return err
 		}
 
-		p := plugins.LoadHttpPluginType(plugin)
+		p := plugins.LoadPluginType(plugin)
 		if p == nil {
 			return fmt.Errorf("plugin %s not found", plugin)
 		}

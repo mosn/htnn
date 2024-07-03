@@ -1,0 +1,24 @@
+- apiVersion: networking.istio.io/v1beta1
+  kind: VirtualService
+  metadata:
+    name: vs-wrong-annotation
+    namespace: default
+    annotations:
+      # ignore annotation that can't be marshalled
+      htnn.mosn.io/filterpolicy: |
+        []
+  spec:
+    gateways:
+    - default
+    hosts:
+    - other.local
+    http:
+    - match:
+      - uri:
+          prefix: /
+      name: route
+      route:
+      - destination:
+          host: httpbin
+          port:
+            number: 8000

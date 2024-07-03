@@ -63,7 +63,7 @@ Go 插件结束。
 如果插件没有声明其顺序，它将被放入 `OrderPositionUnspecified` 组，操作为 `OrderOperationNop`。
 
 如果您想在不同位置配置插件，您可以将插件定义为基类，
-并注册其派生类。请检查[此示例](https://github.com/mosn/htnn/blob/main/pkg/plugins/plugins_test.go)。
+并注册其派生类。请检查[此示例](https://github.com/mosn/htnn/blob/main/api/pkg/plugins/plugins_test.go)。
 
 ## Filter manager
 
@@ -143,4 +143,4 @@ filter manager 实现了以下特性：
 * 实现 [ConsumerPlugin](https://pkg.go.dev/mosn.io/htnn/pkg/plugins#ConsumerPlugin) 接口。
 * 定义 `DecodeHeaders` 方法，且在该方法里调用 `LookupConsumer` 和 `SetConsumer` 完成消费者的设置。
 
-您可以以 [keyAuth](https://github.com/mosn/htnn/blob/main/plugins/key_auth/filter.go) 插件为例，编写自己的消费者插件。
+您可以以 [keyAuth](https://github.com/mosn/htnn/blob/main/plugins/plugins/key_auth/filter.go) 插件为例，编写自己的消费者插件。

@@ -17,7 +17,7 @@ spec:
       port: 8080
 ---
 apiVersion: htnn.mosn.io/v1
-kind: HTTPFilterPolicy
+kind: FilterPolicy
 metadata:
   name: policy
 spec:
@@ -50,7 +50,7 @@ spec:
       port: 8080
 ---
 apiVersion: htnn.mosn.io/v1
-kind: HTTPFilterPolicy
+kind: FilterPolicy
 metadata:
   name: policy
   namespace: e2e-another

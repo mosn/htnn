@@ -61,7 +61,7 @@ func envoyFilterNameFromVirtualHost(vhost *model.VirtualHost) string {
 		domain = "-" + domain[2:]
 	}
 
-	// The `htnn-h` means the HTNN's HTTPFilterPolicy.
+	// The `htnn-h` means the HTNN's FilterPolicy.
 	prefix := "htnn-h"
 	domain, err := idna.ToASCII(domain)
 	if err == nil {
@@ -83,10 +83,6 @@ type FinalState struct {
 type envoyFilterWrapper struct {
 	*istiov1a3.EnvoyFilter
 	info *Info
-}
-
-func getECDSResourceName(workloadNamespace string, ldsName string) string {
-	return fmt.Sprintf("htnn-%s-%s-golang-filter", workloadNamespace, ldsName)
 }
 
 func toFinalState(_ *Ctx, state *mergedState) (*FinalState, error) {
@@ -172,7 +168,7 @@ func toFinalState(_ *Ctx, state *mergedState) (*FinalState, error) {
 		if ef.Labels == nil {
 			ef.Labels = map[string]string{}
 		}
-		ef.Labels[constant.LabelCreatedBy] = "HTTPFilterPolicy"
+		ef.Labels[constant.LabelCreatedBy] = "FilterPolicy"
 
 		// Sort here to avoid EnvoyFilter change caused by the order of ConfigPatch.
 		sort.Slice(ef.Spec.ConfigPatches, func(i, j int) bool {
@@ -182,7 +178,9 @@ func toFinalState(_ *Ctx, state *mergedState) (*FinalState, error) {
 			bName := b.Patch.Value.AsMap()["name"]
 			if aName != nil && bName != nil {
 				// EnvoyFilter for ECDS
-				return aName.(string) < bName.(string)
+				as, _ := aName.(string)
+				bs, _ := bName.(string)
+				return as < bs
 			} else if aName != nil {
 				return true
 			} else if bName != nil {

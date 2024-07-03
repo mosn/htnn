@@ -17,8 +17,6 @@ limitations under the License.
 package v1
 
 import (
-	"time"
-
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -30,12 +28,13 @@ import (
 type HTTPFilterPolicySpec struct {
 	// TargetRef is the name of the resource this policy is being attached to.
 	// This Policy and the TargetRef MUST be in the same namespace.
+	// HTTPFilterPolicy in embedded mode can have no targetRef.
 	//
 	// +optional
 	TargetRef *gwapiv1a2.PolicyTargetReferenceWithSectionName `json:"targetRef"`
 
 	// Filters is a map of filter names to filter configurations.
-	Filters map[string]HTTPPlugin `json:"filters,omitempty"`
+	Filters map[string]Plugin `json:"filters,omitempty"`
 
 	// SubPolicies is an array of sub-policies to specific section name.
 	// If the specific section name is not found, the HTTPFilterPolicy will still be
@@ -52,7 +51,7 @@ type HTTPFilterSubPolicy struct {
 	// SectionName is the name of a section within the target resource.
 	SectionName gwapiv1.SectionName `json:"sectionName"`
 	// Filters is a map of filter names to filter configurations.
-	Filters map[string]HTTPPlugin `json:"filters,omitempty"`
+	Filters map[string]Plugin `json:"filters,omitempty"`
 }
 
 // HTTPFilterPolicyStatus defines the observed state of HTTPFilterPolicy
@@ -66,8 +65,6 @@ type HTTPFilterPolicyStatus struct {
 	// +listType=map
 	// +listMapKey=type
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
-
-	ChangeDetector `json:",inline"`
 }
 
 //+genclient
@@ -75,72 +72,14 @@ type HTTPFilterPolicyStatus struct {
 //+kubebuilder:subresource:status
 //+kubebuilder:metadata:labels=gateway.networking.k8s.io/policy=direct
 
-// HTTPFilterPolicy is the Schema for the httpfilterpolicies API
+// HTTPFilterPolicy is the Schema for the httpfilterpolicies API. It is deprecated and should
+// use FilterPolicy instead.
 type HTTPFilterPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	Spec   HTTPFilterPolicySpec   `json:"spec,omitempty"`
 	Status HTTPFilterPolicyStatus `json:"status,omitempty"`
-}
-
-func (p *HTTPFilterPolicy) IsSpecChanged() bool {
-	if len(p.Status.Conditions) == 0 {
-		// newly created
-		return true
-	}
-	for _, cond := range p.Status.Conditions {
-		if cond.ObservedGeneration != p.Generation {
-			return true
-		}
-	}
-	return false
-}
-
-func (p *HTTPFilterPolicy) SetAccepted(reason gwapiv1a2.PolicyConditionReason, msg ...string) {
-	c := metav1.Condition{
-		Type:               string(gwapiv1a2.PolicyConditionAccepted),
-		Reason:             string(reason),
-		LastTransitionTime: metav1.NewTime(time.Now()),
-		ObservedGeneration: p.Generation,
-	}
-	switch reason {
-	case gwapiv1a2.PolicyReasonAccepted:
-		c.Status = metav1.ConditionTrue
-		c.Message = "The policy has been accepted"
-	case gwapiv1a2.PolicyReasonInvalid:
-		c.Status = metav1.ConditionFalse
-		if len(msg) > 0 {
-			c.Message = msg[0]
-		} else {
-			c.Message = "The policy is invalid"
-		}
-	case gwapiv1a2.PolicyReasonTargetNotFound:
-		c.Status = metav1.ConditionFalse
-		if len(msg) > 0 {
-			c.Message = msg[0]
-		} else {
-			c.Message = "The policy targets non-existent resource"
-		}
-	}
-	conds, changed := addOrUpdateCondition(p.Status.Conditions, c)
-	p.Status.Conditions = conds
-
-	if changed {
-		p.Status.MarkAsChanged()
-	}
-}
-
-func (p *HTTPFilterPolicy) IsValid() bool {
-	for _, cond := range p.Status.Conditions {
-		if cond.ObservedGeneration != p.Generation {
-			continue
-		}
-		if cond.Type == string(gwapiv1a2.PolicyConditionAccepted) && cond.Reason == string(gwapiv1a2.PolicyReasonInvalid) {
-			return false
-		}
-	}
-	return true
 }
 
 //+kubebuilder:object:root=true

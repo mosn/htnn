@@ -17,7 +17,7 @@
 set -eo pipefail
 set -x
 
-HELM="$(pwd)/bin/helm"
+HELM="${LOCALBIN}/helm"
 E2E_DIR="$(pwd)"
 
 install() {

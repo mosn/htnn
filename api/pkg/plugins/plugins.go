@@ -28,8 +28,8 @@ import (
 var (
 	logger = log.DefaultLogger.WithName("plugins")
 
-	httpPluginTypes            = map[string]Plugin{}
-	httpPlugins                = map[string]Plugin{}
+	pluginTypes                = map[string]Plugin{}
+	plugins                    = map[string]Plugin{}
 	httpFilterFactoryAndParser = map[string]*FilterFactoryAndParser{}
 )
 
@@ -66,24 +66,24 @@ const (
 	errInvalidConsumerPluginOrder = "invalid plugin order position: Consumer plugin should use OrderPositionAuthn"
 )
 
-func RegisterHttpPluginType(name string, plugin Plugin) {
-	if _, ok := httpPluginTypes[name]; !ok {
-		// As RegisterHttpPluginType also calls RegisterHttpPluginType, we only log for the first time.
+func RegisterPluginType(name string, plugin Plugin) {
+	if _, ok := pluginTypes[name]; !ok {
+		// As RegisterPluginType also calls RegisterPluginType, we only log for the first time.
 		// Otherwise, we will log twice for the plugins loaded in the data plane.
 		logger.Info("register plugin type", "name", name)
 	}
 	// override plugin is allowed so that we can patch plugin with bugfix if upgrading
 	// the whole htnn is not available
-	httpPluginTypes[name] = plugin
+	pluginTypes[name] = plugin
 }
 
-func LoadHttpPluginType(name string) Plugin {
-	return httpPluginTypes[name]
+func LoadPluginType(name string) Plugin {
+	return pluginTypes[name]
 }
 
 // We separate the plugin type storage and plugin storage, to avoid plugin type overrides the plugin by accident.
 
-func RegisterHttpPlugin(name string, plugin Plugin) {
+func RegisterPlugin(name string, plugin Plugin) {
 	if plugin == nil {
 		panic(errNilPlugin)
 	}
@@ -99,7 +99,9 @@ func RegisterHttpPlugin(name string, plugin Plugin) {
 			goPlugin.Factory(),
 			NewPluginConfigParser(goPlugin))
 	} else if _, ok := plugin.(NativePlugin); ok {
-		if order.Position != OrderPositionOuter && order.Position != OrderPositionInner {
+		switch order.Position {
+		case OrderPositionOuter, OrderPositionInner, OrderPositionListener, OrderPositionNetwork:
+		default:
 			panic(errInvalidNativePluginOrder)
 		}
 	} else {
@@ -114,18 +116,18 @@ func RegisterHttpPlugin(name string, plugin Plugin) {
 
 	// override plugin is allowed so that we can patch plugin with bugfix if upgrading
 	// the whole htnn is not available
-	httpPlugins[name] = plugin
+	plugins[name] = plugin
 
 	// We don't force developer to divide their plugin into two parts for better DX.
-	RegisterHttpPluginType(name, plugin)
+	RegisterPluginType(name, plugin)
 }
 
-func LoadHttpPlugin(name string) Plugin {
-	return httpPlugins[name]
+func LoadPlugin(name string) Plugin {
+	return plugins[name]
 }
 
-func IterateHttpPlugin(f func(key string, value Plugin) bool) {
-	for k, v := range httpPlugins {
+func IteratePlugin(f func(key string, value Plugin) bool) {
+	for k, v := range plugins {
 		if !f(k, v) {
 			return
 		}
@@ -133,9 +135,9 @@ func IterateHttpPlugin(f func(key string, value Plugin) bool) {
 }
 
 // This method should be called at startup. There will be race if it's called during runtime.
-func DisableHttpPlugin(name string) {
-	delete(httpPlugins, name)
-	delete(httpPluginTypes, name)
+func DisablePlugin(name string) {
+	delete(plugins, name)
+	delete(pluginTypes, name)
 }
 
 type PluginConfigParser struct {
@@ -200,8 +202,8 @@ func ComparePluginOrder(a, b string) bool {
 }
 
 func ComparePluginOrderInt(a, b string) int {
-	pa := httpPlugins[a]
-	pb := httpPlugins[b]
+	pa := plugins[a]
+	pb := plugins[b]
 	if pa == nil || pb == nil {
 		// The caller should guarantee the a, b are valid plugin name, so this case only happens
 		// in test.

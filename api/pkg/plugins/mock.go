@@ -70,12 +70,32 @@ func (m *MockNativePlugin) Order() PluginOrder {
 	}
 }
 
-func (m *MockNativePlugin) RouteConfigTypeURL() string {
+func (m *MockNativePlugin) ConfigTypeURL() string {
 	return ""
 }
 
-func (m *MockNativePlugin) HTTPFilterConfigPlaceholder() map[string]interface{} {
+var _ NativePlugin = &MockNativePlugin{}
+
+type MockHTTPNativePlugin struct {
+	MockNativePlugin
+}
+
+func (m *MockHTTPNativePlugin) HTTPFilterConfigPlaceholder() map[string]interface{} {
 	return nil
+}
+
+var _ HTTPNativePlugin = &MockHTTPNativePlugin{}
+
+var _ NativePlugin = &MockNativePlugin{}
+
+type MockNetworkNativePlugin struct {
+	MockNativePlugin
+}
+
+func (m *MockNetworkNativePlugin) Order() PluginOrder {
+	return PluginOrder{
+		Position: OrderPositionNetwork,
+	}
 }
 
 var _ NativePlugin = &MockNativePlugin{}

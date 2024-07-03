@@ -12,13 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-SHELL = /bin/bash
-
-LOCALBIN ?= $(shell pwd)/bin
-# Remember to remove tools downloaded into bin directory manually before updating them.
-# If they need to be updated frequently, we can consider to store them in the `Dockerfile.dev`.
-$(LOCALBIN):
-	@mkdir -p $(LOCALBIN)
+include ../common.mk
 
 .PHONY: build
 build:
@@ -41,4 +35,5 @@ publish:
 .PHONY: lint-website
 lint-website: $(LOCALBIN)
 	test -x $(LOCALBIN)/htmltest || GOBIN=$(LOCALBIN) go install github.com/wjdp/htmltest@v0.17.0
-	$(LOCALBIN)/htmltest --conf ./.htmltest.yml ./public | grep 'target does not exist' && exit 1 || true
+	$(LOCALBIN)/htmltest --conf ./.htmltest.yml ./public | grep  -E '(target does not exist|Non-OK status: 404)' \
+		&& exit 1 || true

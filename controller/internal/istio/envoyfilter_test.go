@@ -33,7 +33,7 @@ import (
 type basePlugin struct {
 }
 
-func (p *basePlugin) RouteConfigTypeURL() string {
+func (p *basePlugin) ConfigTypeURL() string {
 	return "type.googleapis.com/envoy.extensions.filters.http.local_ratelimit.v3.LocalRateLimit"
 }
 
@@ -56,7 +56,7 @@ func (p *pluginFirst) Order() plugins.PluginOrder {
 func (p *pluginFirst) HTTPFilterConfigPlaceholder() map[string]interface{} {
 	return map[string]interface{}{
 		"typed_config": map[string]interface{}{
-			"@type":      p.RouteConfigTypeURL(),
+			"@type":      p.ConfigTypeURL(),
 			"statPrefix": "http_local_rate_limiter",
 		},
 	}
@@ -76,7 +76,7 @@ func (p *pluginPre) Order() plugins.PluginOrder {
 func (p *pluginPre) HTTPFilterConfigPlaceholder() map[string]interface{} {
 	return map[string]interface{}{
 		"typed_config": map[string]interface{}{
-			"@type":      p.RouteConfigTypeURL(),
+			"@type":      p.ConfigTypeURL(),
 			"statPrefix": "http_local_rate_limiter",
 		},
 	}
@@ -96,7 +96,7 @@ func (p *pluginPost) Order() plugins.PluginOrder {
 func (p *pluginPost) HTTPFilterConfigPlaceholder() map[string]interface{} {
 	return map[string]interface{}{
 		"typed_config": map[string]interface{}{
-			"@type":      p.RouteConfigTypeURL(),
+			"@type":      p.ConfigTypeURL(),
 			"statPrefix": "http_local_rate_limiter",
 		},
 	}
@@ -117,7 +117,7 @@ func (p *pluginLast) Order() plugins.PluginOrder {
 func (p *pluginLast) HTTPFilterConfigPlaceholder() map[string]interface{} {
 	return map[string]interface{}{
 		"typed_config": map[string]interface{}{
-			"@type":      p.RouteConfigTypeURL(),
+			"@type":      p.ConfigTypeURL(),
 			"statPrefix": "http_local_rate_limiter",
 		},
 	}
@@ -127,10 +127,10 @@ func TestDefaultFilters(t *testing.T) {
 	patch := gomonkey.ApplyFuncReturn(ctrlcfg.GoSoPath, "/path/to/goso")
 	defer patch.Reset()
 
-	plugins.RegisterHttpPlugin("first", &pluginFirst{})
-	plugins.RegisterHttpPlugin("pre", &pluginPre{})
-	plugins.RegisterHttpPlugin("post", &pluginPost{})
-	plugins.RegisterHttpPlugin("last", &pluginLast{})
+	plugins.RegisterPlugin("first", &pluginFirst{})
+	plugins.RegisterPlugin("pre", &pluginPre{})
+	plugins.RegisterPlugin("post", &pluginPost{})
+	plugins.RegisterPlugin("last", &pluginLast{})
 
 	out := []*istiov1a3.EnvoyFilter{}
 	for _, ef := range DefaultEnvoyFilters() {

@@ -43,7 +43,7 @@ By applying the configuration below, Cross-Origin Resource Sharing requests sent
 
 ```yaml
 apiVersion: htnn.mosn.io/v1
-kind: HTTPFilterPolicy
+kind: FilterPolicy
 metadata:
   name: policy
 spec:

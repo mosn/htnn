@@ -111,10 +111,17 @@ func deleteResource(t *testing.T, ctx context.Context, k8sClient client.Client, 
 
 func CleanUp(t *testing.T, c client.Client) {
 	ctx := context.Background()
-	var policies mosniov1.HTTPFilterPolicyList
+	var policies mosniov1.FilterPolicyList
 	err := c.List(ctx, &policies)
 	require.NoError(t, err)
 	for _, e := range policies.Items {
+		deleteResource(t, ctx, c, &e)
+	}
+
+	var httpPolicies mosniov1.HTTPFilterPolicyList
+	err = c.List(ctx, &httpPolicies)
+	require.NoError(t, err)
+	for _, e := range httpPolicies.Items {
 		deleteResource(t, ctx, c, &e)
 	}
 

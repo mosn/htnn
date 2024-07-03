@@ -72,10 +72,10 @@ virtualService:
               host: httpbin
               port:
                 number: 8000
-httpFilterPolicy:
+filterPolicy:
   test:
   - apiVersion: htnn.mosn.io/v1
-    kind: HTTPFilterPolicy
+    kind: FilterPolicy
     metadata:
       name: test
       namespace: test
@@ -90,7 +90,7 @@ httpFilterPolicy:
             pet: cat
   test2:
   - apiVersion: htnn.mosn.io/v1
-    kind: HTTPFilterPolicy
+    kind: FilterPolicy
     metadata:
       name: test2
       namespace: default

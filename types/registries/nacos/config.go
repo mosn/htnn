@@ -18,8 +18,12 @@ import (
 	"mosn.io/htnn/types/pkg/registry"
 )
 
+const (
+	Name = "nacos"
+)
+
 func init() {
-	registry.AddRegistryType("nacos", &RegistryType{})
+	registry.AddRegistryType(Name, &RegistryType{})
 }
 
 type RegistryType struct {

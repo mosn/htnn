@@ -67,7 +67,7 @@ Use the returning results to complete the OIDC configuration:
 
 ```yaml
 apiVersion: htnn.mosn.io/v1
-kind: HTTPFilterPolicy
+kind: FilterPolicy
 metadata:
   name: policy
 spec:

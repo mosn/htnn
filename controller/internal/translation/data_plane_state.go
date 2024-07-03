@@ -43,12 +43,12 @@ type hostPolicy struct {
 
 type routePolicy struct {
 	NsName   *types.NamespacedName
-	Policies []*HTTPFilterPolicyWrapper
+	Policies []*FilterPolicyWrapper
 }
 
 type gatewayPolicy struct {
 	NsName   *types.NamespacedName
-	Policies []*HTTPFilterPolicyWrapper
+	Policies []*FilterPolicyWrapper
 }
 
 type proxyConfig struct {
@@ -224,7 +224,7 @@ func getLDSName(bind string, port uint32) string {
 	return fmt.Sprintf("%s_%d", bind, port)
 }
 
-func addServerPortToProxy(gs *model.GatewaySection, serverPort ServerPort, proxies map[Proxy]*proxyConfig, policies []*HTTPFilterPolicyWrapper) {
+func addServerPortToProxy(gs *model.GatewaySection, serverPort ServerPort, proxies map[Proxy]*proxyConfig, policies []*FilterPolicyWrapper) {
 	name := getLDSName(serverPort.Bind, serverPort.Number)
 	p := Proxy{
 		Namespace: gs.NsName.Namespace,

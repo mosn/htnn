@@ -29,10 +29,10 @@ gateway:
           kind: Secret
           name: cert
         mode: Terminate
-httpFilterPolicy:
+filterPolicy:
   gateway:
   - apiVersion: htnn.mosn.io/v1
-    kind: HTTPFilterPolicy
+    kind: FilterPolicy
     metadata:
       name: policy
       namespace: default

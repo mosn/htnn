@@ -1,0 +1,23 @@
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: vs
+  namespace: istio-system
+  annotations:
+    htnn.mosn.io/filterpolicy: |
+      {"apiVersion":"htnn.mosn.io/v1","kind":"FilterPolicy","metadata":{"name":"policy"},"spec":{"filters":{"demo":{"config":{"hostName":"micky"}}},"subPolicies":[{"sectionName":"route","filters":{"demo":{"config":{"hostName":"doraemon"}}}}]}}
+spec:
+  gateways:
+  - default
+  hosts:
+  - "default.local"
+  http:
+  - match:
+    - uri:
+        prefix: /
+    name: route
+    route:
+    - destination:
+        host: backend
+        port:
+          number: 8080

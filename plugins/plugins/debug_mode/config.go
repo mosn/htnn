@@ -25,7 +25,7 @@ const (
 )
 
 func init() {
-	plugins.RegisterHttpPlugin(Name, &plugin{})
+	plugins.RegisterPlugin(Name, &plugin{})
 }
 
 type plugin struct {

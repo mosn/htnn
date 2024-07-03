@@ -60,7 +60,7 @@ func (c *Consumer) InitConfigs() error {
 
 	c.ConsumerConfigs = make(map[string]api.PluginConsumerConfig, len(c.Auth))
 	for name, data := range c.Auth {
-		p, ok := plugins.LoadHttpPlugin(name).(plugins.ConsumerPlugin)
+		p, ok := plugins.LoadPlugin(name).(plugins.ConsumerPlugin)
 		if !ok {
 			return fmt.Errorf("plugin %s is not for consumer", name)
 		}

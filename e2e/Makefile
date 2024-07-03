@@ -14,10 +14,6 @@
 
 include ../common.mk
 
-LOCALBIN ?= $(shell pwd)/bin
-$(LOCALBIN):
-	@mkdir -p $(LOCALBIN)
-
 KUBECTL ?= $(LOCALBIN)/kubectl
 KIND ?= $(LOCALBIN)/kind
 HELM ?= $(LOCALBIN)/helm
@@ -47,17 +43,19 @@ delete-cluster: kind
 
 .PHONY: e2e-prepare-controller-image
 e2e-prepare-controller-image: kind
-	cd ../manifests/ && CONTROLLER_IMAGE=htnn/controller:e2e make build-controller-image
+	cd ../manifests/ && CONTROLLER_IMAGE=htnn/controller:e2e CONTROLLER_BASE_IMAGE=$(DOCKER_MIRROR)docker.io/istio/pilot:$(ISTIO_VERSION) \
+		make build-controller-image
 	$(KIND) load docker-image -n htnn htnn/controller:e2e
 
 .PHONY: e2e-prepare-data-plane-image
 e2e-prepare-data-plane-image: kind
-	cd ../manifests/ && PROXY_IMAGE=htnn/gateway:e2e make build-proxy-image
+	cd ../manifests/ && PROXY_BASE_IMAGE=$(DOCKER_MIRROR)docker.io/istio/proxyv2:$(ISTIO_VERSION) \
+		PROXY_IMAGE=htnn/gateway:e2e make build-proxy-image
 	$(KIND) load docker-image htnn/gateway:e2e --name htnn
 
 .PHONY: deploy-istio
 deploy-istio: helm
-	ISTIO_VERSION=$(ISTIO_VERSION) ./istio.sh install
+	ISTIO_VERSION=$(ISTIO_VERSION) LOCALBIN=$(LOCALBIN) ./istio.sh install
 
 .PHONY: run-e2e
 run-e2e:

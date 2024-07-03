@@ -41,6 +41,10 @@ func TestCompileCel(t *testing.T) {
 			expr: `request.header()`,
 		},
 		{
+			name: "bad argument type",
+			expr: `request.header(1)`,
+		},
+		{
 			name: "bad return type",
 			expr: `1 + 2`,
 		},

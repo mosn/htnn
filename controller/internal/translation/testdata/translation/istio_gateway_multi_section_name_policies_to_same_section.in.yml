@@ -24,10 +24,10 @@ istioGateway:
         name: port-http
         number: 80
         protocol: HTTP
-httpFilterPolicy:
+filterPolicy:
   httpbin-gateway:
   - apiVersion: htnn.mosn.io/v1
-    kind: HTTPFilterPolicy
+    kind: FilterPolicy
     metadata:
       name: policy-port1
       namespace: default
@@ -42,7 +42,7 @@ httpFilterPolicy:
           config:
             hostName: goldfish
   - apiVersion: htnn.mosn.io/v1
-    kind: HTTPFilterPolicy
+    kind: FilterPolicy
     metadata:
       name: policy-port2
       namespace: default
@@ -57,7 +57,7 @@ httpFilterPolicy:
           config:
             hostName: rick
   - apiVersion: htnn.mosn.io/v1
-    kind: HTTPFilterPolicy
+    kind: FilterPolicy
     metadata:
       name: policy-port3
       namespace: default

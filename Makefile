@@ -17,10 +17,6 @@ include common.mk
 # For some tools, like golangci-lint, we prefer to use the latest version so that we can have the new feature.
 # For the other tools, like kind, we don't upgrade it until there is a strong reason.
 
-LOCALBIN ?= $(shell pwd)/bin
-$(LOCALBIN):
-	@mkdir -p $(LOCALBIN)
-
 GO_FMTTER_VERSION = 0.3.8
 .PHONY: install-go-fmtter
 install-go-fmtter: $(LOCALBIN)

@@ -36,10 +36,10 @@ virtualService:
               host: api
               port:
                 number: 8000
-httpFilterPolicy:
+filterPolicy:
   vs:
   - apiVersion: htnn.mosn.io/v1
-    kind: HTTPFilterPolicy
+    kind: FilterPolicy
     metadata:
       name: policy
       namespace: default

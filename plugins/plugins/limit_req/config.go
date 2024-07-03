@@ -29,7 +29,7 @@ import (
 )
 
 func init() {
-	plugins.RegisterHttpPlugin(limit_req.Name, &plugin{})
+	plugins.RegisterPlugin(limit_req.Name, &plugin{})
 }
 
 type plugin struct {

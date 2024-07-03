@@ -25,10 +25,11 @@ Either `remote` or `local` is required.
 
 ### Remote
 
-| Name   | Type   | Required | Validation        | Description                                               |
-|--------|--------|----------|-------------------|-----------------------------------------------------------|
-| url    | string | True     | must be valid URI | The url to the OPA service, like `http://127.0.0.1:8181/` |
-| policy | string | True     | min_len: 1        | The name of the OPA policy.                               |
+| Name    | Type   | Required | Validation        | Description                                               |
+|---------|--------|----------|-------------------|-----------------------------------------------------------|
+| url     | string | True     | must be valid URI | The url to the OPA service, like `http://127.0.0.1:8181/` |
+| policy  | string | True     | min_len: 1        | The name of the OPA policy.                               |
+| timeout | [Duration](../../type#duration) | False    |                  | http client timeout                                       |
 
 ### Local
 
@@ -136,7 +137,7 @@ spec:
       port: 8080
 ---
 apiVersion: htnn.mosn.io/v1
-kind: HTTPFilterPolicy
+kind: FilterPolicy
 metadata:
   name: policy
 spec:
