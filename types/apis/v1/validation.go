@@ -266,10 +266,6 @@ func ValidateGateway(gw *istiov1a3.Gateway) error {
 		if svr.Port == nil {
 			return fmt.Errorf("spec.servers[%d].port: Required value", i)
 		}
-		proto := NormalizeIstioProtocol(svr.Port.Protocol)
-		if proto != "HTTP" && proto != "HTTPS" {
-			return fmt.Errorf("spec.servers[%d].port.protocol: Only HTTP and HTTPS are supported", i)
-		}
 
 		for _, host := range svr.Hosts {
 			if strings.ContainsRune(host, '/') {

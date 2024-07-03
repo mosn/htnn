@@ -9,6 +9,6 @@
     - hosts:
       - default.local
       port:
-        name: http
+        name: tcp
         number: 18000
-        protocol: HTTP
+        protocol: TCP

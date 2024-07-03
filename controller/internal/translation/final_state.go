@@ -75,6 +75,12 @@ func envoyFilterNameFromVirtualHost(vhost *model.VirtualHost) string {
 	return fmt.Sprintf("%s-%s.%s", prefix, vhost.NsName.Namespace, vhost.NsName.Name)
 }
 
+func envoyFilterNameFromLds(ldsName string) string {
+	ldsName = strings.ReplaceAll(ldsName, "_", "-")
+	ldsName = strings.ReplaceAll(ldsName, ":", "-")
+	return fmt.Sprintf("htnn-lds-%s", ldsName)
+}
+
 // finalState is the end of the translation. We convert the state to EnvoyFilter and write it to k8s.
 type FinalState struct {
 	EnvoyFilters map[component.EnvoyFilterKey]*istiov1a3.EnvoyFilter
@@ -125,10 +131,12 @@ func toFinalState(_ *Ctx, state *mergedState) (*FinalState, error) {
 				info = gateway.Policy.Info
 			}
 
-			ef := istio.GenerateLDSFilterViaECDS(key, name, config)
+			ef := istio.GenerateLDSFilterViaECDS(key, name, gateway.Gateay.HasHCM, config)
 			ef.SetNamespace(ns)
-			// Put all LDS level golang filters of the same namespace into the same EnvoyFilter.
-			ef.SetName(fmt.Sprintf("htnn-h-%s", ns))
+			// Put all LDS level filters of the same LDS into the same EnvoyFilter.
+			efName := envoyFilterNameFromLds(name)
+			// Each LDS has it own EnvoyFilter, so it's easy to figure out how many filters are inserted into one LDS and their order.
+			ef.SetName(efName)
 
 			efList = append(efList, &envoyFilterWrapper{
 				EnvoyFilter: ef,
@@ -138,7 +146,7 @@ func toFinalState(_ *Ctx, state *mergedState) (*FinalState, error) {
 	}
 
 	// Merge EnvoyFilters with same name. The number of EnvoyFilters is equal to the number of
-	// configured domains.
+	// configured domains and lds.
 	efws := map[component.EnvoyFilterKey]*envoyFilterWrapper{}
 	for _, ef := range efList {
 		key := component.EnvoyFilterKey{
@@ -170,29 +178,21 @@ func toFinalState(_ *Ctx, state *mergedState) (*FinalState, error) {
 		}
 		ef.Labels[constant.LabelCreatedBy] = "FilterPolicy"
 
-		// Sort here to avoid EnvoyFilter change caused by the order of ConfigPatch.
-		sort.Slice(ef.Spec.ConfigPatches, func(i, j int) bool {
-			a := ef.Spec.ConfigPatches[i]
-			b := ef.Spec.ConfigPatches[j]
-			aName := a.Patch.Value.AsMap()["name"]
-			bName := b.Patch.Value.AsMap()["name"]
-			if aName != nil && bName != nil {
-				// EnvoyFilter for ECDS
-				as, _ := aName.(string)
-				bs, _ := bName.(string)
-				return as < bs
-			} else if aName != nil {
-				return true
-			} else if bName != nil {
-				return false
-			}
-			aVhost := a.Match.GetRouteConfiguration().GetVhost()
-			bVhost := b.Match.GetRouteConfiguration().GetVhost()
-			if aVhost.Name != bVhost.Name {
-				return aVhost.Name < bVhost.Name
-			}
-			return aVhost.GetRoute().Name < bVhost.GetRoute().Name
-		})
+		if strings.HasPrefix(ef.Name, "htnn-h-") {
+			// Sort here to avoid EnvoyFilter change caused by the order of ConfigPatch.
+			sort.Slice(ef.Spec.ConfigPatches, func(i, j int) bool {
+				a := ef.Spec.ConfigPatches[i]
+				b := ef.Spec.ConfigPatches[j]
+				aVhost := a.Match.GetRouteConfiguration().GetVhost()
+				bVhost := b.Match.GetRouteConfiguration().GetVhost()
+				if aVhost.Name != bVhost.Name {
+					return aVhost.Name < bVhost.Name
+				}
+				return aVhost.GetRoute().Name < bVhost.GetRoute().Name
+			})
+		}
+		// For EnvoyFilter to LDS, we need to keep the original filter order
+
 		efs[key] = ef.EnvoyFilter
 	}
 

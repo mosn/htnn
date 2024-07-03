@@ -1,0 +1,63 @@
+apiVersion: htnn.mosn.io/v1
+kind: FilterPolicy
+metadata:
+  name: policy
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: default
+  filters:
+    networkRBAC:
+      config:
+        statPrefix: network_rbac
+        matcher:
+          matcher_tree:
+            input:
+              name: envoy.matching.inputs.source_ip
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.SourceIPInput
+            custom_match:
+              name: ip-matcher
+              typed_config:
+                "@type": type.googleapis.com/xds.type.matcher.v3.IPMatcher
+                range_matchers:
+                - ranges:
+                  - address_prefix: 127.0.0.1
+                    prefix_len: 32
+                  on_match:
+                    action:
+                      name: envoy.filters.rbac.action
+                      typed_config:
+                        "@type": type.googleapis.com/envoy.config.rbac.v3.Action
+                        name: localhost
+                        action: DENY
+                # match-all action
+                - ranges:
+                  - address_prefix: 0.0.0.0
+                    prefix_len: 0
+                  on_match:
+                    action:
+                      name: envoy.filters.rbac.action
+                      typed_config:
+                        "@type": type.googleapis.com/envoy.config.rbac.v3.Action
+                        name: match-all
+                        action: ALLOW
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: test
+spec:
+  parentRefs:
+  - name: default
+    namespace: e2e
+  hostnames: ["localhost"]
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - name: backend
+      port: 8080

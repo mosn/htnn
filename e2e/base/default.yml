@@ -75,10 +75,18 @@ spec:
   servers:
   - hosts:
     - default.local
+    name: http
     port:
       name: http
       number: 18000
       protocol: HTTP
+  - hosts:
+    - "*"
+    name: tcp
+    port:
+      name: tcp
+      number: 18001
+      protocol: TCP
 ---
 apiVersion: v1
 kind: Service

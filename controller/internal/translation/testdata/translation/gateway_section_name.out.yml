@@ -1,10 +1,10 @@
 - metadata:
     annotations:
-      htnn.mosn.io/info: '{"filterpolicies":["default/policy-port1","default/policy-port2"]}'
+      htnn.mosn.io/info: '{"filterpolicies":["default/policy-port1"]}'
     creationTimestamp: null
     labels:
       htnn.mosn.io/created-by: FilterPolicy
-    name: htnn-h-default
+    name: htnn-lds-0.0.0.0-1234
     namespace: default
   spec:
     configPatches:
@@ -49,6 +49,17 @@
                     hostName: goldfish
                   name: animal
             plugin_name: fm
+  status: {}
+- metadata:
+    annotations:
+      htnn.mosn.io/info: '{"filterpolicies":["default/policy-port2"]}'
+    creationTimestamp: null
+    labels:
+      htnn.mosn.io/created-by: FilterPolicy
+    name: htnn-lds-0.0.0.0-1235
+    namespace: default
+  spec:
+    configPatches:
     - applyTo: HTTP_FILTER
       match:
         listener:

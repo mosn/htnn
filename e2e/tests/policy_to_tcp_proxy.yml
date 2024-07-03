@@ -1,0 +1,68 @@
+# TODO: support Gateway API
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: vs
+  namespace: istio-system
+spec:
+  gateways:
+  - default
+  hosts:
+  - "*"
+  tcp:
+  - match:
+    - port: 18001
+    route:
+    - destination:
+        host: backend
+        port:
+          number: 8080
+---
+apiVersion: htnn.mosn.io/v1
+kind: FilterPolicy
+metadata:
+  name: policy
+  namespace: istio-system
+spec:
+  targetRef:
+    group: networking.istio.io
+    kind: Gateway
+    name: default
+    sectionName: tcp
+  filters:
+    networkRBAC:
+      config:
+        statPrefix: network_rbac
+        matcher:
+          matcher_tree:
+            input:
+              name: envoy.matching.inputs.source_ip
+              typed_config:
+                "@type": type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.SourceIPInput
+            custom_match:
+              name: ip-matcher
+              typed_config:
+                "@type": type.googleapis.com/xds.type.matcher.v3.IPMatcher
+                range_matchers:
+                - ranges:
+                  - address_prefix: 127.0.0.1
+                    prefix_len: 32
+                  on_match:
+                    action:
+                      name: envoy.filters.rbac.action
+                      typed_config:
+                        "@type": type.googleapis.com/envoy.config.rbac.v3.Action
+                        name: localhost
+                        action: DENY
+                # match-all action
+                - ranges:
+                  - address_prefix: 0.0.0.0
+                    prefix_len: 0
+                  on_match:
+                    action:
+                      name: envoy.filters.rbac.action
+                      typed_config:
+                        "@type": type.googleapis.com/envoy.config.rbac.v3.Action
+                        name: match-all
+                        action: ALLOW
+

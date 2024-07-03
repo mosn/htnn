@@ -1,6 +1,6 @@
 - metadata:
     creationTimestamp: null
-    name: htnn-h-default
+    name: htnn-lds-0.0.0.0-18000
     namespace: default
   spec:
     configPatches:

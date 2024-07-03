@@ -21,7 +21,6 @@ import (
 	"slices"
 	"sort"
 
-	"google.golang.org/protobuf/reflect/protoreflect"
 	"k8s.io/apimachinery/pkg/types"
 
 	"mosn.io/htnn/api/pkg/filtermanager"
@@ -51,6 +50,7 @@ type mergedHostPolicy struct {
 }
 
 type mergedGatewayPolicy struct {
+	Gateay *model.Gateway
 	Policy *mergedPolicy
 }
 
@@ -80,29 +80,6 @@ func sortFilterPolicy(policies []*FilterPolicyWrapper) {
 		}
 		return toNsName(policies[i]) < toNsName(policies[j])
 	})
-}
-
-func stripUnknowFields(m map[string]interface{}, fieldDescs protoreflect.FieldDescriptors) {
-	for name, field := range m {
-		fd := fieldDescs.ByJSONName(name)
-		if fd == nil {
-			fd = fieldDescs.ByTextName(name)
-		}
-		if fd == nil {
-			delete(m, name)
-			continue
-		}
-		switch fd.Kind() {
-		case protoreflect.MessageKind, protoreflect.GroupKind:
-			fieldDescs := fd.Message().Fields()
-			m, ok := field.(map[string]interface{})
-			if !ok {
-				// well-known type, like google.protobuf.Duration
-				continue
-			}
-			stripUnknowFields(m, fieldDescs)
-		}
-	}
 }
 
 type PolicyKind int
@@ -150,17 +127,17 @@ func translateFilterManagerConfigToPolicyInRDS(fmc *filtermanager.FilterManagerC
 			goFilterManager.Plugins = append(goFilterManager.Plugins, plugin)
 		} else {
 			url = nativePlugin.ConfigTypeURL()
-			conf := p.Config()
-			desc := conf.ProtoReflect().Descriptor()
-			fieldDescs := desc.Fields()
 			m, ok := cfg.(map[string]interface{})
 			if !ok {
 				panic(fmt.Sprintf("unexpected type: %s", reflect.TypeOf(cfg)))
 			}
-			// TODO: unify the name style of fields. Currently, the field names can be in snake_case or camelCase.
-			// Each style is fine because the protobuf support both of them. However, if people want to
-			// rewrite the configuration, we should take care of this.
-			stripUnknowFields(m, fieldDescs)
+
+			// Extra fields are allowed in cfg, as `--reject-unknown-dynamic-fields` is turned off
+			// by default. If users want to break the backward compatibility by turning it on, this
+			// is their trouble.
+
+			// We expect user to use camelCase as the field name. If not, the ToRouteConfig may not
+			// work as expected.
 
 			if wrapper, ok := p.(plugins.HTTPNativePluginHasRouteConfigWrapper); ok {
 				m = wrapper.ToRouteConfig(m)
@@ -227,6 +204,7 @@ func translateFilterManagerConfigToPolicyInECDS(fmc *filtermanager.FilterManager
 	}
 	nativeFilters := map[string][]*fmModel.FilterConfig{
 		model.ECDSListenerFilter: {},
+		model.ECDSNetworkFilter:  {},
 	}
 
 	consumerNeeded := false
@@ -266,18 +244,19 @@ func translateFilterManagerConfigToPolicyInECDS(fmc *filtermanager.FilterManager
 			}
 
 			url := nativePlugin.ConfigTypeURL()
-			conf := p.Config()
-			desc := conf.ProtoReflect().Descriptor()
-			fieldDescs := desc.Fields()
 			m, ok := cfg.(map[string]interface{})
 			if !ok {
 				panic(fmt.Sprintf("unexpected type: %s", reflect.TypeOf(cfg)))
 			}
-			stripUnknowFields(m, fieldDescs)
 
 			m["@type"] = url
 			plugin.Config = m
-			nativeFilters[model.ECDSListenerFilter] = append(nativeFilters[model.ECDSListenerFilter], plugin)
+
+			if order.Position == plugins.OrderPositionListener {
+				nativeFilters[model.ECDSListenerFilter] = append(nativeFilters[model.ECDSListenerFilter], plugin)
+			} else if order.Position == plugins.OrderPositionNetwork {
+				nativeFilters[model.ECDSNetworkFilter] = append(nativeFilters[model.ECDSNetworkFilter], plugin)
+			}
 		}
 	}
 
@@ -401,9 +380,11 @@ func toMergedState(ctx *Ctx, state *dataPlaneState) (*FinalState, error) {
 
 		mergedGateways := make(map[string]*mergedGatewayPolicy)
 		for name, gateway := range cfg.Gateways {
-			mg := &mergedGatewayPolicy{}
+			mg := &mergedGatewayPolicy{
+				Gateay: gateway.Gateway,
+			}
 			if len(gateway.Policies) > 0 {
-				mg.Policy = toMergedPolicy(gateway.NsName, gateway.Policies, PolicyKindECDS, nil)
+				mg.Policy = toMergedPolicy(&gateway.Gateway.GatewaySection.NsName, gateway.Policies, PolicyKindECDS, nil)
 			}
 
 			mergedGateways[name] = mg

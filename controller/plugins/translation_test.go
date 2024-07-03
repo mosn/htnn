@@ -23,7 +23,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	istioapi "istio.io/api/networking/v1alpha3"
 	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	"sigs.k8s.io/yaml"
 
@@ -84,16 +83,6 @@ func TestNetworkPlugins(t *testing.T) {
 				// drop irrelevant fields
 				ef.Labels = nil
 				ef.Annotations = nil
-				kept := []*istioapi.EnvoyFilter_EnvoyConfigObjectPatch{}
-				for _, cp := range ef.Spec.ConfigPatches {
-					st := cp.Patch.Value
-					name := st.AsMap()["name"].(string)
-					// the golang-filter is harmless if we don't have HCM, because it only attaches to HCM.
-					if !strings.HasSuffix(name, "golang-filter") {
-						kept = append(kept, cp)
-					}
-				}
-				ef.Spec.ConfigPatches = kept
 			}
 
 			var out []*istiov1a3.EnvoyFilter

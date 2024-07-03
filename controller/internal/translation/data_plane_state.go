@@ -47,7 +47,7 @@ type routePolicy struct {
 }
 
 type gatewayPolicy struct {
-	NsName   *types.NamespacedName
+	Gateway  *model.Gateway
 	Policies []*FilterPolicyWrapper
 }
 
@@ -247,7 +247,13 @@ func addServerPortToProxy(gs *model.GatewaySection, serverPort ServerPort, proxi
 	}
 
 	gwPolicy := &gatewayPolicy{
-		NsName: &gs.NsName,
+		Gateway: &model.Gateway{
+			GatewaySection: gs,
+		},
+	}
+	switch serverPort.Protocol {
+	case "HTTP", "HTTPS", "GRPC", "GRPC-WEB", "HTTP2":
+		gwPolicy.Gateway.HasHCM = true
 	}
 	if len(policies) > 0 {
 		gwPolicy.Policies = policies
