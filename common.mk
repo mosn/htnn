@@ -42,6 +42,8 @@ GO_MODULES = $(GO_PROD_MODULES) e2e site tools
 # Don't run `go mod tidy` with `site` module, as this module is managed by docsy build image
 GO_MODULES_EXCLUDE_SITE = $(filter-out site,$(GO_MODULES))
 
+HELM_CHARTS = $(shell find ./manifests/charts -mindepth 1 -maxdepth 1 -type d)
+
 # Define a recursive wildcard function
 rwildcard=$(foreach d,$(wildcard $(addsuffix *,$(1))),$(call rwildcard,$d/,$(2))$(filter $(subst *,%,$(2)),$d))
 
