@@ -1,0 +1,22 @@
+name: Auto Label Conflicts
+on:
+  pull_request_target:
+  # So that PRs touching the same files as the push are updated
+  push:
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  auto-label-conflicts:
+    runs-on: ubuntu-latest
+    steps:
+      - name: conflict
+        uses: "eps1lon/actions-label-merge-conflict@v3.0.2"
+        with:
+          dirtyLabel: "conflict"
+          repoToken: ${{ github.token }}
+          commentOnDirty: |
+            :wave: Hi, I detected conflicts against the base branch :speak_no_evil:
+            You'll want to sync :arrows_counterclockwise: your branch with upstream!
