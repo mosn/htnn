@@ -85,10 +85,6 @@ type envoyFilterWrapper struct {
 	info *Info
 }
 
-func getECDSResourceName(workloadNamespace string, ldsName string) string {
-	return fmt.Sprintf("htnn-%s-%s-golang-filter", workloadNamespace, ldsName)
-}
-
 func toFinalState(_ *Ctx, state *mergedState) (*FinalState, error) {
 	efs := istio.DefaultEnvoyFilters()
 	for _, ef := range efs {

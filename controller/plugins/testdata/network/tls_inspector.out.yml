@@ -1,0 +1,27 @@
+- metadata:
+    creationTimestamp: null
+    name: htnn-h-default
+    namespace: default
+  spec:
+    configPatches:
+    - applyTo: LISTENER_FILTER
+      match:
+        listener:
+          name: 0.0.0.0_18000
+      patch:
+        operation: INSERT_FIRST
+        value:
+          config_discovery:
+            config_source:
+              ads: {}
+            type_urls:
+            - type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
+          name: htnn-default-0.0.0.0_18000-tlsInspector
+    - applyTo: EXTENSION_CONFIG
+      patch:
+        operation: ADD
+        value:
+          name: htnn-default-0.0.0.0_18000-tlsInspector
+          typed_config:
+            '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
+  status: {}
