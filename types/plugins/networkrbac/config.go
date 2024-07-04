@@ -53,7 +53,7 @@ type CustomConfig struct {
 }
 
 var matchingNetworkInputs = []string{
-	"type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.DestinationIPInput", "",
+	"type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.DestinationIPInput",
 	"type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.DestinationPortInput",
 	"type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.SourceIPInput",
 	"type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.SourcePortInput",
