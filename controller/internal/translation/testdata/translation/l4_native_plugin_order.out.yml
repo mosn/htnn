@@ -8,6 +8,48 @@
     namespace: default
   spec:
     configPatches:
+    - applyTo: NETWORK_FILTER
+      match:
+        listener:
+          name: 0.0.0.0_80
+      patch:
+        operation: INSERT_FIRST
+        value:
+          config_discovery:
+            config_source:
+              ads: {}
+            type_urls:
+            - type.googleapis.com/envoy.extensions.filters.network.rbac.v3.RBAC
+          name: htnn-default-0.0.0.0_80-networkRBAC
+    - applyTo: EXTENSION_CONFIG
+      patch:
+        operation: ADD
+        value:
+          name: htnn-default-0.0.0.0_80-networkRBAC
+          typed_config:
+            '@type': type.googleapis.com/envoy.extensions.filters.network.rbac.v3.RBAC
+            statPrefix: network_rbac
+    - applyTo: NETWORK_FILTER
+      match:
+        listener:
+          name: 0.0.0.0_80
+      patch:
+        operation: INSERT_FIRST
+        value:
+          config_discovery:
+            config_source:
+              ads: {}
+            type_urls:
+            - type.googleapis.com/envoy.extensions.filters.network.rbac.v3.RBAC
+          name: htnn-default-0.0.0.0_80-globalNetworkRBAC
+    - applyTo: EXTENSION_CONFIG
+      patch:
+        operation: ADD
+        value:
+          name: htnn-default-0.0.0.0_80-globalNetworkRBAC
+          typed_config:
+            '@type': type.googleapis.com/envoy.extensions.filters.network.rbac.v3.RBAC
+            statPrefix: global_network_rbac
     - applyTo: HTTP_FILTER
       match:
         listener:
@@ -43,62 +85,6 @@
             library_path: /etc/libgolang.so
             plugin_config:
               '@type': type.googleapis.com/xds.type.v3.TypedStruct
-              value:
-                plugins:
-                - config:
-                    hostName: goldfish
-                  name: animal
-            plugin_name: fm
-  status: {}
-- metadata:
-    annotations:
-      htnn.mosn.io/info: '{"filterpolicies":["default/policy"]}'
-    creationTimestamp: null
-    labels:
-      htnn.mosn.io/created-by: FilterPolicy
-    name: htnn-lds-1.1.1.1-443
-    namespace: default
-  spec:
-    configPatches:
-    - applyTo: HTTP_FILTER
-      match:
-        listener:
-          filterChain:
-            filter:
-              name: envoy.filters.network.http_connection_manager
-              subFilter:
-                name: htnn.filters.http.golang
-          name: 1.1.1.1_443
-      patch:
-        operation: INSERT_BEFORE
-        value:
-          config_discovery:
-            apply_default_config_without_warming: true
-            config_source:
-              ads: {}
-            default_config:
-              '@type': type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.Config
-              library_id: fm
-              library_path: /etc/libgolang.so
-              plugin_name: fm
-            type_urls:
-            - type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.Config
-          name: htnn-default-1.1.1.1_443-golang-filter
-    - applyTo: EXTENSION_CONFIG
-      patch:
-        operation: ADD
-        value:
-          name: htnn-default-1.1.1.1_443-golang-filter
-          typed_config:
-            '@type': type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.Config
-            library_id: fm
-            library_path: /etc/libgolang.so
-            plugin_config:
-              '@type': type.googleapis.com/xds.type.v3.TypedStruct
-              value:
-                plugins:
-                - config:
-                    hostName: goldfish
-                  name: animal
+              value: {}
             plugin_name: fm
   status: {}

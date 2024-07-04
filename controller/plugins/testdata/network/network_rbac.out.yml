@@ -1,0 +1,43 @@
+- metadata:
+    creationTimestamp: null
+    name: htnn-lds-0.0.0.0-18000
+    namespace: default
+  spec:
+    configPatches:
+    - applyTo: NETWORK_FILTER
+      match:
+        listener:
+          name: 0.0.0.0_18000
+      patch:
+        operation: INSERT_FIRST
+        value:
+          config_discovery:
+            config_source:
+              ads: {}
+            type_urls:
+            - type.googleapis.com/envoy.extensions.filters.network.rbac.v3.RBAC
+          name: htnn-default-0.0.0.0_18000-networkRBAC
+    - applyTo: EXTENSION_CONFIG
+      patch:
+        operation: ADD
+        value:
+          name: htnn-default-0.0.0.0_18000-networkRBAC
+          typed_config:
+            '@type': type.googleapis.com/envoy.extensions.filters.network.rbac.v3.RBAC
+            matcher:
+              matcherTree:
+                exactMatchMap:
+                  map:
+                    127.0.0.1:
+                      action:
+                        name: action
+                        typedConfig:
+                          '@type': type.googleapis.com/envoy.config.rbac.v3.Action
+                          action: ALLOW
+                          name: allow-localhost
+                input:
+                  name: envoy.matching.inputs.source_ip
+                  typedConfig:
+                    '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.SourceIPInput
+            statPrefix: network_rbac
+  status: {}

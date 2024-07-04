@@ -1,10 +1,43 @@
 - metadata:
     annotations:
+      htnn.mosn.io/info: '{"filterpolicies":["default/policy2"]}'
+    creationTimestamp: null
+    labels:
+      htnn.mosn.io/created-by: FilterPolicy
+    name: htnn-h-httpbin.example.com
+    namespace: default
+  spec:
+    configPatches:
+    - applyTo: HTTP_ROUTE
+      match:
+        routeConfiguration:
+          vhost:
+            name: httpbin.example.com:80
+            route:
+              name: policy
+      patch:
+        operation: MERGE
+        value:
+          typed_per_filter_config:
+            htnn-default-0.0.0.0_80-golang-filter:
+              '@type': type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.ConfigsPerRoute
+              plugins_config:
+                fm:
+                  config:
+                    '@type': type.googleapis.com/xds.type.v3.TypedStruct
+                    value:
+                      plugins:
+                      - config:
+                          hostName: cat
+                        name: animal
+  status: {}
+- metadata:
+    annotations:
       htnn.mosn.io/info: '{"filterpolicies":["default/policy"]}'
     creationTimestamp: null
     labels:
       htnn.mosn.io/created-by: FilterPolicy
-    name: htnn-h-default
+    name: htnn-lds-0.0.0.0-80
     namespace: default
   spec:
     configPatches:
@@ -49,37 +82,4 @@
                     hostName: goldfish
                   name: animal
             plugin_name: fm
-  status: {}
-- metadata:
-    annotations:
-      htnn.mosn.io/info: '{"filterpolicies":["default/policy2"]}'
-    creationTimestamp: null
-    labels:
-      htnn.mosn.io/created-by: FilterPolicy
-    name: htnn-h-httpbin.example.com
-    namespace: default
-  spec:
-    configPatches:
-    - applyTo: HTTP_ROUTE
-      match:
-        routeConfiguration:
-          vhost:
-            name: httpbin.example.com:80
-            route:
-              name: policy
-      patch:
-        operation: MERGE
-        value:
-          typed_per_filter_config:
-            htnn-default-0.0.0.0_80-golang-filter:
-              '@type': type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.ConfigsPerRoute
-              plugins_config:
-                fm:
-                  config:
-                    '@type': type.googleapis.com/xds.type.v3.TypedStruct
-                    value:
-                      plugins:
-                      - config:
-                          hostName: cat
-                        name: animal
   status: {}

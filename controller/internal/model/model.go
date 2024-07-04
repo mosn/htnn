@@ -30,16 +30,26 @@ func (g GatewaySection) String() string {
 	return fmt.Sprintf("%s/%s", g.NsName.String(), g.SectionName)
 }
 
+type Gateway struct {
+	GatewaySection *GatewaySection
+	// HasHCM shows if the HCM HTTP filter is present in the gateway
+	HasHCM bool
+}
+
 type VirtualHost struct {
-	GatewaySection   *GatewaySection
-	NsName           *types.NamespacedName
-	Name             string
+	GatewaySection *GatewaySection
+	// NsName is the namespace and name of the k8s resource which generates VirtualHost
+	NsName *types.NamespacedName
+	// Name is the name of VirtualHost in the RDS
+	Name string
+	// ECDSResourceName is the name of ECDS which is used to configure the Gateway attached by this VirtualHost
 	ECDSResourceName string
 }
 
 const (
 	ECDSGolangFilter   = "golang"
 	ECDSListenerFilter = "listener"
+	ECDSNetworkFilter  = "network"
 
 	GolangPluginsFilter = "golang-filter"
 )

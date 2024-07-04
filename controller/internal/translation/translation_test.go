@@ -42,9 +42,28 @@ import (
 	mosniov1 "mosn.io/htnn/types/apis/v1"
 )
 
+type nativePluginWrapper struct {
+	plugins.NativePlugin
+
+	order plugins.PluginOrder
+}
+
+func (p *nativePluginWrapper) Order() plugins.PluginOrder {
+	return p.order
+}
+
 func init() {
 	plugins.RegisterPluginType("animal", &plugins.MockPlugin{})
 	plugins.RegisterPluginType("localReply", &plugins.MockPlugin{})
+
+	networkrbac := plugins.LoadPlugin("networkRBAC").(plugins.NativePlugin)
+	plugins.RegisterPlugin("globalNetworkRBAC", &nativePluginWrapper{
+		NativePlugin: networkrbac,
+		order: plugins.PluginOrder{
+			Position:  plugins.OrderPositionNetwork,
+			Operation: plugins.OrderOperationInsertFirst,
+		},
+	})
 }
 
 func testName(inputFile string) string {

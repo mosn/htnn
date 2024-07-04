@@ -4,10 +4,30 @@
     creationTimestamp: null
     labels:
       htnn.mosn.io/created-by: FilterPolicy
-    name: htnn-h-default
+    name: htnn-lds-0.0.0.0-80
     namespace: default
   spec:
     configPatches:
+    - applyTo: LISTENER_FILTER
+      match:
+        listener:
+          name: 0.0.0.0_80
+      patch:
+        operation: INSERT_FIRST
+        value:
+          config_discovery:
+            config_source:
+              ads: {}
+            type_urls:
+            - type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
+          name: htnn-default-0.0.0.0_80-tlsInspector
+    - applyTo: EXTENSION_CONFIG
+      patch:
+        operation: ADD
+        value:
+          name: htnn-default-0.0.0.0_80-tlsInspector
+          typed_config:
+            '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
     - applyTo: HTTP_FILTER
       match:
         listener:
@@ -45,24 +65,4 @@
               '@type': type.googleapis.com/xds.type.v3.TypedStruct
               value: {}
             plugin_name: fm
-    - applyTo: LISTENER_FILTER
-      match:
-        listener:
-          name: 0.0.0.0_80
-      patch:
-        operation: INSERT_FIRST
-        value:
-          config_discovery:
-            config_source:
-              ads: {}
-            type_urls:
-            - type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
-          name: htnn-default-0.0.0.0_80-tlsInspector
-    - applyTo: EXTENSION_CONFIG
-      patch:
-        operation: ADD
-        value:
-          name: htnn-default-0.0.0.0_80-tlsInspector
-          typed_config:
-            '@type': type.googleapis.com/envoy.extensions.filters.listener.tls_inspector.v3.TlsInspector
   status: {}

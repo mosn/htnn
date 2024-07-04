@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"os"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -113,7 +114,7 @@ var _ = Describe("FilterPolicy controller, for gateway", func() {
 				}
 				efFound := false
 				for _, ef := range envoyfilters.Items {
-					if ef.Name == "htnn-h-default" {
+					if ef.Name == "htnn-lds-0.0.0.0-8888" {
 						efFound = true
 
 						Expect(len(ef.Spec.ConfigPatches)).To(Equal(2))
@@ -149,22 +150,20 @@ var _ = Describe("FilterPolicy controller, for gateway", func() {
 				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
 					return false
 				}
-				if len(envoyfilters.Items) != 2 {
-					return false
-				}
+				count := 0
 				for _, ef := range envoyfilters.Items {
-					// Two from the default gateway, and two from the istio_gateway input
-					if ef.Name == "htnn-h-default" && len(ef.Spec.ConfigPatches) == 4 {
-						return true
+					if strings.HasPrefix(ef.Name, "htnn-lds-") {
+						count += len(ef.Spec.ConfigPatches)
 					}
 				}
-				return false
+				// Two from the default gateway, and two from the istio_gateway input
+				return count == 4
 			}, timeout, interval).Should(BeTrue())
 
 			ecdsFound := false
 			names := []string{}
 			for _, ef := range envoyfilters.Items {
-				if ef.Name == "htnn-h-default" {
+				if strings.HasPrefix(ef.Name, "htnn-lds-") {
 					for _, cp := range ef.Spec.ConfigPatches {
 						if cp.ApplyTo == istioapi.EnvoyFilter_EXTENSION_CONFIG {
 							ecdsFound = true
@@ -220,16 +219,10 @@ var _ = Describe("FilterPolicy controller, for gateway", func() {
 				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
 					return false
 				}
-				if len(envoyfilters.Items) != 2 {
-					return false
-				}
+				count := 0
 				for _, ef := range envoyfilters.Items {
-					if ef.Name == "htnn-h-default" {
-						// Two from the default gateway, and four from the input
-						if len(ef.Spec.ConfigPatches) != 6 {
-							return false
-						}
-
+					if strings.HasPrefix(ef.Name, "htnn-lds-") {
+						count += len(ef.Spec.ConfigPatches)
 						for _, cp := range ef.Spec.ConfigPatches {
 							v := cp.Patch.Value.AsMap()
 							name := v["name"].(string)
@@ -245,7 +238,8 @@ var _ = Describe("FilterPolicy controller, for gateway", func() {
 						}
 					}
 				}
-				return false
+				// Two from the default gateway, and four from the input
+				return count == 6
 			}, timeout, interval).Should(BeTrue())
 
 			var policies mosniov1.FilterPolicyList
@@ -284,7 +278,7 @@ var _ = Describe("FilterPolicy controller, for gateway", func() {
 					return false
 				}
 				for _, e := range envoyfilters.Items {
-					if e.Name == "htnn-h-default" {
+					if e.Name == "htnn-lds-0.0.0.0-8889" {
 						ef = e
 						return true
 					}
@@ -324,7 +318,7 @@ var _ = Describe("FilterPolicy controller, for gateway", func() {
 					return false
 				}
 				for _, ef := range envoyfilters.Items {
-					if ef.Name == "htnn-h-default" {
+					if ef.Name == "htnn-lds-0.0.0.0-8889" {
 						for _, cp := range ef.Spec.ConfigPatches {
 							v := cp.Patch.Value.AsMap()
 							name := v["name"].(string)
@@ -383,7 +377,7 @@ var _ = Describe("FilterPolicy controller, for gateway", func() {
 				}
 				efFound := false
 				for _, ef := range envoyfilters.Items {
-					if ef.Name == "htnn-h-default" {
+					if ef.Name == "htnn-lds-0.0.0.0-8888" {
 						efFound = true
 
 						Expect(len(ef.Spec.ConfigPatches)).To(Equal(2))
@@ -419,22 +413,20 @@ var _ = Describe("FilterPolicy controller, for gateway", func() {
 				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
 					return false
 				}
-				if len(envoyfilters.Items) != 2 {
-					return false
-				}
+				count := 0
 				for _, ef := range envoyfilters.Items {
-					// Two from the default gateway, and two from the gateway input
-					if ef.Name == "htnn-h-default" && len(ef.Spec.ConfigPatches) == 4 {
-						return true
+					if strings.HasPrefix(ef.Name, "htnn-lds-") {
+						count += len(ef.Spec.ConfigPatches)
 					}
 				}
-				return false
+				// Two from the default gateway, and two from the istio_gateway input
+				return count == 4
 			}, timeout, interval).Should(BeTrue())
 
 			ecdsFound := false
 			names := []string{}
 			for _, ef := range envoyfilters.Items {
-				if ef.Name == "htnn-h-default" {
+				if strings.HasPrefix(ef.Name, "htnn-lds-") {
 					for _, cp := range ef.Spec.ConfigPatches {
 						if cp.ApplyTo == istioapi.EnvoyFilter_EXTENSION_CONFIG {
 							ecdsFound = true
@@ -490,16 +482,10 @@ var _ = Describe("FilterPolicy controller, for gateway", func() {
 				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
 					return false
 				}
-				if len(envoyfilters.Items) != 2 {
-					return false
-				}
+				count := 0
 				for _, ef := range envoyfilters.Items {
-					if ef.Name == "htnn-h-default" {
-						// Two from the default gateway, and four from the input
-						if len(ef.Spec.ConfigPatches) != 6 {
-							return false
-						}
-
+					if strings.HasPrefix(ef.Name, "htnn-lds-") {
+						count += len(ef.Spec.ConfigPatches)
 						for _, cp := range ef.Spec.ConfigPatches {
 							v := cp.Patch.Value.AsMap()
 							name := v["name"].(string)
@@ -516,7 +502,8 @@ var _ = Describe("FilterPolicy controller, for gateway", func() {
 						}
 					}
 				}
-				return false
+				// Two from the default gateway, and four from the input
+				return count == 6
 			}, timeout, interval).Should(BeTrue())
 
 			var policies mosniov1.FilterPolicyList

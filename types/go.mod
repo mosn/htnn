@@ -23,6 +23,7 @@ go 1.21.5
 
 require (
 	github.com/agiledragon/gomonkey/v2 v2.11.0
+	github.com/cncf/xds/go v0.0.0-20231128003011-0fa0005c9caa
 	github.com/envoyproxy/go-control-plane v0.12.1-0.20240326194405-485b2263e153
 	github.com/envoyproxy/protoc-gen-validate v1.0.4
 	github.com/google/cel-go v0.20.1
@@ -46,7 +47,6 @@ require (
 	github.com/antlr4-go/antlr/v4 v4.13.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.2.0 // indirect
-	github.com/cncf/xds/go v0.0.0-20231128003011-0fa0005c9caa // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/emicklei/go-restful/v3 v3.11.0 // indirect
