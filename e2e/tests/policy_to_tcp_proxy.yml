@@ -34,35 +34,34 @@ spec:
       config:
         statPrefix: network_rbac
         matcher:
-          matcher_tree:
+          matcherTree:
             input:
               name: envoy.matching.inputs.source_ip
-              typed_config:
+              typedConfig:
                 "@type": type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.SourceIPInput
-            custom_match:
+            customMatch:
               name: ip-matcher
-              typed_config:
+              typedConfig:
                 "@type": type.googleapis.com/xds.type.matcher.v3.IPMatcher
-                range_matchers:
+                rangeMatchers:
                 - ranges:
-                  - address_prefix: 127.0.0.1
-                    prefix_len: 32
-                  on_match:
+                  - addressPrefix: 127.0.0.1
+                    prefixLen: 32
+                  onMatch:
                     action:
                       name: envoy.filters.rbac.action
-                      typed_config:
+                      typedConfig:
                         "@type": type.googleapis.com/envoy.config.rbac.v3.Action
                         name: localhost
                         action: DENY
                 # match-all action
                 - ranges:
-                  - address_prefix: 0.0.0.0
-                    prefix_len: 0
-                  on_match:
+                  - addressPrefix: 0.0.0.0
+                    prefixLen: 0
+                  onMatch:
                     action:
                       name: envoy.filters.rbac.action
-                      typed_config:
+                      typedConfig:
                         "@type": type.googleapis.com/envoy.config.rbac.v3.Action
                         name: match-all
                         action: ALLOW
-

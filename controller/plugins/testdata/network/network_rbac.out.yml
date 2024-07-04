@@ -25,19 +25,19 @@
           typed_config:
             '@type': type.googleapis.com/envoy.extensions.filters.network.rbac.v3.RBAC
             matcher:
-              matcher_tree:
-                exact_match_map:
+              matcherTree:
+                exactMatchMap:
                   map:
                     127.0.0.1:
                       action:
                         name: action
-                        typed_config:
+                        typedConfig:
                           '@type': type.googleapis.com/envoy.config.rbac.v3.Action
                           action: ALLOW
                           name: allow-localhost
                 input:
                   name: envoy.matching.inputs.source_ip
-                  typed_config:
+                  typedConfig:
                     '@type': type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.SourceIPInput
             statPrefix: network_rbac
   status: {}

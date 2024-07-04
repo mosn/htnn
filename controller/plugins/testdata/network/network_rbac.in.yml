@@ -13,17 +13,17 @@ spec:
       config:
         statPrefix: network_rbac
         matcher:
-          matcher_tree:
+          matcherTree:
             input:
               name: envoy.matching.inputs.source_ip
-              typed_config:
+              typedConfig:
                 "@type": type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.SourceIPInput
-            exact_match_map:
+            exactMatchMap:
               map:
                 "127.0.0.1":
                   action:
                     name: action
-                    typed_config:
+                    typedConfig:
                       "@type": type.googleapis.com/envoy.config.rbac.v3.Action
                       name: allow-localhost
                       action: ALLOW
