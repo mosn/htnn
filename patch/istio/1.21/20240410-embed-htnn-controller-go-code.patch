@@ -1149,7 +1149,7 @@ index 0000000..75de3a5
 +		return warnings, err
 +	})
 +
-+func validateHTTNAnnotation(cfg *config.Config, gk schema.GroupKind) error {
++func validateHTNNAnnotation(cfg *config.Config, gk schema.GroupKind) error {
 +	if cfg.Annotations == nil {
 +		return nil
 +	}
@@ -1203,7 +1203,7 @@ index db201a3..c976633 100644
  		name := cfg.Name
  
 +		if features.EnableHTNN {
-+			err := validateHTTNAnnotation(&cfg, schema.GroupKind{Group: "networking.istio.io", Kind: "Gateway"})
++			err := validateHTNNAnnotation(&cfg, schema.GroupKind{Group: "networking.istio.io", Kind: "Gateway"})
 +			if err != nil {
 +				return nil, err
 +			}
@@ -1218,7 +1218,7 @@ index db201a3..c976633 100644
  		}
 +
 +		if features.EnableHTNN {
-+			err := validateHTTNAnnotation(&cfg, schema.GroupKind{Group: "networking.istio.io", Kind: "VirtualService"})
++			err := validateHTNNAnnotation(&cfg, schema.GroupKind{Group: "networking.istio.io", Kind: "VirtualService"})
 +			if err != nil {
 +				return nil, err
 +			}

@@ -277,9 +277,9 @@ func (r *FilterPolicyReconciler) resolveWithVirtualService(ctx context.Context,
 		// For reducing the write to K8S API server and reconciliation,
 		// we don't add `gateway.networking.k8s.io/PolicyAffected` to the affected resource.
 		// If people want to check whether the VirtualService/HTTPRoute is affected, they can
-		// check whether there is an EnvoyFilter named `httn-h-$host` (the `$host` is one of the resources' hosts).
+		// check whether there is an EnvoyFilter named `htnn-h-$host` (the `$host` is one of the resources' hosts).
 		// For wildcard host, the `*.` is converted to `-`. For example, `*.example.com` results in
-		// EnvoyFilter name `htnn-h--example.com`, and `www.example.com` results in `httn-h-www.example.com`.
+		// EnvoyFilter name `htnn-h--example.com`, and `www.example.com` results in `htnn-h-www.example.com`.
 	} else {
 		policy.SetAccepted(gwapiv1a2.PolicyReasonTargetNotFound, "all gateways are not found or unsupported")
 	}
