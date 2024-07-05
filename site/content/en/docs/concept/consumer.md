@@ -94,7 +94,7 @@ Each Consumer plugin configured on the Route will proceed through the following 
 
 If no Consumer is matched after all the Consumer plugins have been executed, a 401 HTTP status code will be returned.
 
-Furthermore, we can configure specific plugins for the consumer. These plugins will only execute after the authentication process has passed. Take the following configuration as an example:
+In addition to that, we can configure additional plugins for consumers under the `filters` field. These plugins are only executed after the consumer has been authenticated. Take the following configuration as an example:
 
 ```yaml
 apiVersion: htnn.mosn.io/v1
@@ -142,5 +142,7 @@ spec:
 ```
 
 If the authentication result is for a prestigious VIP member, then the `average` configuration would be 10. If it's a regular member, then the corresponding configuration would be just 1.
+
+All plugins implemented in Go and set to execute after the authentication order can be configured as additional plugins for consumers.
 
 Unlike consumers in some gateways, HTNN's consumers are at the `namespace` level. Consumers from different `namespaces` will only apply to the Routes within their respective `namespace` configurations (HTTPRoute, VirtualService, etc.). This design prevents consumer conflicts between different business units.
