@@ -53,6 +53,25 @@ func init() {
 			rsp, err := client.Get("http://default.local:18001/echo")
 			require.NoError(t, err)
 			require.Equal(t, 200, rsp.StatusCode)
+
+			// Do the same with Gateway API
+			tr = &http.Transport{DialContext: func(ctx context.Context, proto, addr string) (conn net.Conn, err error) {
+				return net.DialTimeout("tcp", ":10001", 1*time.Second)
+			}}
+			client = &http.Client{Transport: tr, Timeout: 10 * time.Second}
+			_, err = client.Get("http://localhost:10001/echo")
+			require.Error(t, err)
+
+			nsName = types.NamespacedName{Name: "policy", Namespace: k8s.DefaultNamespace}
+			err = c.Get(ctx, nsName, &policy)
+			require.NoError(t, err)
+			err = c.Delete(ctx, &policy)
+			require.NoError(t, err)
+
+			time.Sleep(1 * time.Second)
+			rsp, err = client.Get("http://localhost:10001/echo")
+			require.NoError(t, err)
+			require.Equal(t, 200, rsp.StatusCode)
 		},
 	})
 }
