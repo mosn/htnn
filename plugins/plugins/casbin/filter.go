@@ -35,7 +35,7 @@ type filter struct {
 	config    *config
 }
 
-func reloadEnforcer(f *filter) {
+func (f *filter) reloadEnforcer() {
 	conf := f.config
 	if !conf.updating.Load() {
 		conf.updating.Store(true)
@@ -44,17 +44,16 @@ func reloadEnforcer(f *filter) {
 		go func() {
 			defer conf.updating.Store(false)
 			defer f.callbacks.RecoverPanic()
-
-			e, err := casbin.NewEnforcer(conf.Rule.Model, conf.Rule.Policy)
+			e, err := casbin.NewEnforcer(conf.Rule.Model, conf.Rule.Policy, true)
 			if err != nil {
 				api.LogErrorf("failed to update Enforcer: %v", err)
 			} else {
 				conf.lock.Lock()
-				conf.enforcer = e
+				f.config.enforcer = e
 				conf.lock.Unlock()
 
 				err = file.WatchFiles(func() {
-					reloadEnforcer(f)
+					f.reloadEnforcer()
 				}, conf.modelFile, conf.policyFile)
 
 				if err != nil {
@@ -69,18 +68,18 @@ func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api
 	conf := f.config
 	role, _ := headers.Get(conf.Token.Name) // role can be ""
 	url := headers.Url()
-
 	err := file.WatchFiles(func() {
-		reloadEnforcer(f)
+		f.reloadEnforcer()
 	}, conf.modelFile, conf.policyFile)
-
 	if err != nil {
 		api.LogErrorf("failed to watch files: %v", err)
 		return &api.LocalResponse{Code: 500}
 	}
 
+	e, _ := casbin.NewEnforcer(conf.Rule.Model, conf.Rule.Policy, true)
+
 	conf.lock.RLock()
-	ok, err := f.config.enforcer.Enforce(role, url.Path, headers.Method())
+	ok, err := e.Enforce(role, url.Path, headers.Method())
 	conf.lock.RUnlock()
 
 	if !ok {

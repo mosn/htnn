@@ -16,8 +16,8 @@ package file
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
+	"path/filepath"
 	"sync"
 	"testing"
 	"time"
@@ -43,10 +43,10 @@ func TestFileIsChanged(t *testing.T) {
 		wg.Add(1)
 		defer wg.Done()
 		defaultFsnotify.mu.Lock()
-		i = 2
+		i = 5
 		defaultFsnotify.mu.Unlock()
 	}, file)
-
+	i = 6
 	assert.Nil(t, err)
 	tmpfile.Write([]byte("bls"))
 	tmpfile.Sync()
@@ -94,7 +94,7 @@ func TestFileIsChanged(t *testing.T) {
 	_ = os.Remove(filename)
 
 	defaultFsnotify.mu.Lock()
-	assert.Equal(t, 2, i)
+	assert.Equal(t, 5, i)
 	defaultFsnotify.mu.Unlock()
 
 	watcher, err := fsnotify.NewWatcher()
@@ -103,8 +103,8 @@ func TestFileIsChanged(t *testing.T) {
 	fs := &Fsnotify{
 		WatchedFiles: make(map[string]struct{}),
 	}
-	tmpDir, err := ioutil.TempDir("", "watch_test")
-	assert.NoError(t, err)
+	tmp, err := os.CreateTemp("", "watch_test")
+	tmpDir := filepath.Dir(tmp.Name())
 	defer os.RemoveAll(tmpDir)
 	fs.WatchedFiles[tmpDir] = struct{}{}
 	err = watcher.Add(tmpDir)

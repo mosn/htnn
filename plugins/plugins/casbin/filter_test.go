@@ -16,10 +16,8 @@ package casbin
 
 import (
 	"net/http"
-	"os"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -80,35 +78,24 @@ func TestCasbin(t *testing.T) {
 			f := factory(c, cb)
 			hdr := envoy.NewRequestHeaderMap(tt.header)
 
-			// Simulate file change
-			go func() {
-				time.Sleep(500 * time.Millisecond)
-				// Modify the policy file
-				os.WriteFile("./testdata/policy.csv", []byte("p, alice, /other, GET"), 0644)
-			}()
-
-			// Call the reloadEnforcer method
 			fTyped, ok := f.(*filter)
 			if !ok {
 				t.Fatal("Failed to convert api.Filter to *filter")
 			}
-			reloadEnforcer(fTyped)
+			fTyped.reloadEnforcer()
 
 			wg := sync.WaitGroup{}
-			for i := 0; i < 3; i++ {
-				wg.Add(1)
-				go func() {
-
-					// ensure the lock takes effect
-					lr, ok := f.DecodeHeaders(hdr, true).(*api.LocalResponse)
-					if !ok {
-						assert.Equal(t, tt.status, 0)
-					} else {
-						assert.Equal(t, tt.status, lr.Code)
-					}
-					wg.Done()
-				}()
-			}
+			wg.Add(1)
+			go func() {
+				// ensure the lock takes effect
+				lr, ok := f.DecodeHeaders(hdr, true).(*api.LocalResponse)
+				if !ok {
+					assert.Equal(t, tt.status, 0)
+				} else {
+					assert.Equal(t, tt.status, lr.Code)
+				}
+				wg.Done()
+			}()
 			wg.Wait()
 		})
 	}

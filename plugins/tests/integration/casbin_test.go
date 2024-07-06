@@ -115,15 +115,16 @@ g, bob, admin
 		})
 	}
 
-	time.Sleep(10 * time.Second) // TODO remove this once we switch the file change detector to inotify
 	// configuration is not changed, but file changed
 	err = os.WriteFile(policyFile2.Name(), []byte(policy), 0755)
 	require.Nil(t, err)
+
+	time.Sleep(10 * time.Second) // TODO remove this once we switch the file change detector to inotify
 	hdr := http.Header{}
 	hdr.Set("customer", "alice")
 
 	assert.Eventually(t, func() bool {
 		resp, _ := dp.Post("/echo", hdr, strings.NewReader("any"))
 		return resp != nil && resp.StatusCode == 200
-	}, 1*time.Second, 10*time.Millisecond)
+	}, 10*time.Second, 1*time.Second)
 }

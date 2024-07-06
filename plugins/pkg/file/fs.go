@@ -16,9 +16,7 @@ package file
 
 import (
 	"errors"
-	"fmt"
 	"os"
-	"path/filepath"
 	"sync"
 	"time"
 
@@ -72,13 +70,13 @@ func WatchFiles(onChange func(), file *File, otherFiles ...*File) (err error) {
 
 	// Add files to watcher.
 	for _, f := range files {
-		dir := filepath.Dir(f.Name)
+		//dir := filepath.Dir(f.Name)
+		dir := f.Name
 		err = defaultFsnotify.AddFiles(dir)
 		if err != nil {
 			logger.Error(err, "failed to add file")
 		}
 		if _, exists := defaultFsnotify.WatchedFiles[dir]; exists {
-			logger.Info(fmt.Sprintf("File %s is already being watched", f.Name))
 			continue
 		}
 		// 添加到已监听文件的集合
@@ -111,7 +109,7 @@ func (f *Fsnotify) watchFiles(onChange func(), w *fsnotify.Watcher, dir string) 
 			if !ok {
 				return
 			}
-			logger.Info(fmt.Sprintf("event: %v", event))
+			logger.Info("file changed: ", "event", event)
 			onChange()
 		case err, ok := <-w.Errors:
 			if !ok {
