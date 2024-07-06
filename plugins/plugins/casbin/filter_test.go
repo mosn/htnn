@@ -78,6 +78,10 @@ func TestCasbin(t *testing.T) {
 			f := factory(c, cb)
 			hdr := envoy.NewRequestHeaderMap(tt.header)
 
+			ff, _ := f.(*filter)
+
+			reloadEnforcer(ff)
+
 			wg := sync.WaitGroup{}
 			wg.Add(1)
 			go func() {

@@ -37,6 +37,40 @@ type filter struct {
 
 var Changed = false
 
+func reloadEnforcer(f *filter) {
+	conf := f.config
+	if !conf.updating.Load() {
+		conf.updating.Store(true)
+		api.LogWarnf("policy %s or model %s Changed, reload enforcer", conf.policyFile.Name, conf.modelFile.Name)
+
+		go func() {
+			defer conf.updating.Store(false)
+			defer f.callbacks.RecoverPanic()
+			e, err := casbin.NewEnforcer(conf.Rule.Model, conf.Rule.Policy)
+			if err != nil {
+				api.LogErrorf("failed to update Enforcer: %v", err)
+			} else {
+				conf.lock.Lock()
+				f.config.enforcer = e
+				Changed = false
+				conf.lock.Unlock()
+
+				err = file.WatchFiles(func() {
+					conf.lock.Lock()
+					Changed = true
+					conf.lock.Unlock()
+				}, conf.modelFile, conf.policyFile)
+
+				if err != nil {
+					api.LogErrorf("failed to watch files: %v", err)
+				}
+
+				api.LogWarnf("policy %s or model %s Changed, enforcer reloaded", conf.policyFile.Name, conf.modelFile.Name)
+			}
+		}()
+	}
+}
+
 func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {
 
 	conf := f.config
@@ -53,36 +87,7 @@ func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api
 	}
 
 	if Changed {
-		if !conf.updating.Load() {
-			conf.updating.Store(true)
-			api.LogWarnf("policy %s or model %s Changed, reload enforcer", conf.policyFile.Name, conf.modelFile.Name)
-
-			go func() {
-				defer conf.updating.Store(false)
-				defer f.callbacks.RecoverPanic()
-				e, err := casbin.NewEnforcer(conf.Rule.Model, conf.Rule.Policy)
-				if err != nil {
-					api.LogErrorf("failed to update Enforcer: %v", err)
-				} else {
-					conf.lock.Lock()
-					f.config.enforcer = e
-					Changed = false
-					conf.lock.Unlock()
-
-					err = file.WatchFiles(func() {
-						conf.lock.Lock()
-						Changed = true
-						conf.lock.Unlock()
-					}, conf.modelFile, conf.policyFile)
-
-					if err != nil {
-						api.LogErrorf("failed to watch files: %v", err)
-					}
-
-					api.LogWarnf("policy %s or model %s Changed, enforcer reloaded", conf.policyFile.Name, conf.modelFile.Name)
-				}
-			}()
-		}
+		reloadEnforcer(f)
 	}
 
 	conf.lock.RLock()
