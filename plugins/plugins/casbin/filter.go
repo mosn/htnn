@@ -35,36 +35,6 @@ type filter struct {
 	config    *config
 }
 
-func (f *filter) reloadEnforcer() {
-	conf := f.config
-	if !conf.updating.Load() {
-		conf.updating.Store(true)
-		api.LogWarnf("policy %s or model %s Changed, reload enforcer", conf.policyFile.Name, conf.modelFile.Name)
-
-		go func() {
-			defer conf.updating.Store(false)
-			defer f.callbacks.RecoverPanic()
-			e, err := casbin.NewEnforcer(conf.Rule.Model, conf.Rule.Policy)
-			if err != nil {
-				api.LogErrorf("failed to update Enforcer: %v", err)
-			} else {
-				conf.lock.Lock()
-				f.config.enforcer = e
-				conf.lock.Unlock()
-
-				err = file.WatchFiles(func() {
-					f.reloadEnforcer()
-				}, conf.modelFile, conf.policyFile)
-
-				if err != nil {
-					api.LogErrorf("failed to watch files: %v", err)
-				}
-				api.LogWarnf("policy %s or model %s changed, enforcer reloaded", conf.policyFile.Name, conf.modelFile.Name)
-			}
-		}()
-	}
-}
-
 var Changed = false
 
 func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {
@@ -73,7 +43,9 @@ func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api
 	role, _ := headers.Get(conf.Token.Name) // role can be ""
 	url := headers.Url()
 	err := file.WatchFiles(func() {
+		conf.lock.Lock()
 		Changed = true
+		conf.lock.Unlock()
 	}, conf.modelFile, conf.policyFile)
 	if err != nil {
 		api.LogErrorf("failed to watch files: %v", err)
@@ -94,11 +66,13 @@ func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api
 				} else {
 					conf.lock.Lock()
 					f.config.enforcer = e
+					Changed = false
 					conf.lock.Unlock()
 
-					Changed = false
 					err = file.WatchFiles(func() {
+						conf.lock.Lock()
 						Changed = true
+						conf.lock.Unlock()
 					}, conf.modelFile, conf.policyFile)
 
 					if err != nil {

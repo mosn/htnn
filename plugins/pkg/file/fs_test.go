@@ -103,7 +103,7 @@ func TestFileIsChanged(t *testing.T) {
 	fs := &Fsnotify{
 		WatchedFiles: make(map[string]struct{}),
 	}
-	tmp, err := os.CreateTemp("", "watch_test")
+	tmp, _ := os.CreateTemp("", "watch_test")
 	tmpDir := filepath.Dir(tmp.Name())
 	defer os.RemoveAll(tmpDir)
 	fs.WatchedFiles[tmpDir] = struct{}{}

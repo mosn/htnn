@@ -78,25 +78,22 @@ func TestCasbin(t *testing.T) {
 			f := factory(c, cb)
 			hdr := envoy.NewRequestHeaderMap(tt.header)
 
-			fTyped, ok := f.(*filter)
-			if !ok {
-				t.Fatal("Failed to convert api.Filter to *filter")
-			}
-			fTyped.reloadEnforcer()
-
 			wg := sync.WaitGroup{}
 			wg.Add(1)
 			go func() {
 				// ensure the lock takes effect
 				lr, ok := f.DecodeHeaders(hdr, true).(*api.LocalResponse)
+
 				if !ok {
 					assert.Equal(t, tt.status, 0)
 				} else {
 					assert.Equal(t, tt.status, lr.Code)
+					assert.False(t, Changed)
 				}
 				wg.Done()
 			}()
 			wg.Wait()
 		})
 	}
+
 }
