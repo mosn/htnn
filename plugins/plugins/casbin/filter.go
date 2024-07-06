@@ -39,12 +39,12 @@ func (f *filter) reloadEnforcer() {
 	conf := f.config
 	if !conf.updating.Load() {
 		conf.updating.Store(true)
-		api.LogWarnf("policy %s or model %s changed, reload enforcer", conf.policyFile.Name, conf.modelFile.Name)
+		api.LogWarnf("policy %s or model %s Changed, reload enforcer", conf.policyFile.Name, conf.modelFile.Name)
 
 		go func() {
 			defer conf.updating.Store(false)
 			defer f.callbacks.RecoverPanic()
-			e, err := casbin.NewEnforcer(conf.Rule.Model, conf.Rule.Policy, true)
+			e, err := casbin.NewEnforcer(conf.Rule.Model, conf.Rule.Policy)
 			if err != nil {
 				api.LogErrorf("failed to update Enforcer: %v", err)
 			} else {
@@ -64,22 +64,55 @@ func (f *filter) reloadEnforcer() {
 		}()
 	}
 }
+
+var Changed = false
+
 func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {
+
 	conf := f.config
 	role, _ := headers.Get(conf.Token.Name) // role can be ""
 	url := headers.Url()
 	err := file.WatchFiles(func() {
-		f.reloadEnforcer()
+		Changed = true
 	}, conf.modelFile, conf.policyFile)
 	if err != nil {
 		api.LogErrorf("failed to watch files: %v", err)
 		return &api.LocalResponse{Code: 500}
 	}
 
-	e, _ := casbin.NewEnforcer(conf.Rule.Model, conf.Rule.Policy, true)
+	if Changed {
+		if !conf.updating.Load() {
+			conf.updating.Store(true)
+			api.LogWarnf("policy %s or model %s Changed, reload enforcer", conf.policyFile.Name, conf.modelFile.Name)
+
+			go func() {
+				defer conf.updating.Store(false)
+				defer f.callbacks.RecoverPanic()
+				e, err := casbin.NewEnforcer(conf.Rule.Model, conf.Rule.Policy)
+				if err != nil {
+					api.LogErrorf("failed to update Enforcer: %v", err)
+				} else {
+					conf.lock.Lock()
+					f.config.enforcer = e
+					conf.lock.Unlock()
+
+					Changed = false
+					err = file.WatchFiles(func() {
+						Changed = true
+					}, conf.modelFile, conf.policyFile)
+
+					if err != nil {
+						api.LogErrorf("failed to watch files: %v", err)
+					}
+
+					api.LogWarnf("policy %s or model %s Changed, enforcer reloaded", conf.policyFile.Name, conf.modelFile.Name)
+				}
+			}()
+		}
+	}
 
 	conf.lock.RLock()
-	ok, err := e.Enforce(role, url.Path, headers.Method())
+	ok, err := f.config.enforcer.Enforce(role, url.Path, headers.Method())
 	conf.lock.RUnlock()
 
 	if !ok {

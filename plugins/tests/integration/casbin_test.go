@@ -119,7 +119,6 @@ g, bob, admin
 	err = os.WriteFile(policyFile2.Name(), []byte(policy), 0755)
 	require.Nil(t, err)
 
-	time.Sleep(10 * time.Second) // TODO remove this once we switch the file change detector to inotify
 	hdr := http.Header{}
 	hdr.Set("customer", "alice")
 

@@ -17,6 +17,7 @@ package file
 import (
 	"errors"
 	"os"
+	"path/filepath"
 	"sync"
 	"time"
 
@@ -70,8 +71,7 @@ func WatchFiles(onChange func(), file *File, otherFiles ...*File) (err error) {
 
 	// Add files to watcher.
 	for _, f := range files {
-		//dir := filepath.Dir(f.Name)
-		dir := f.Name
+		dir := filepath.Dir(f.Name)
 		err = defaultFsnotify.AddFiles(dir)
 		if err != nil {
 			logger.Error(err, "failed to add file")
