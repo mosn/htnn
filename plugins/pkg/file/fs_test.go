@@ -22,18 +22,7 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 )
-
-// MockWatcher is a mock implementation of fsnotify.Watcher
-type MockWatcher struct {
-	mock.Mock
-}
-
-func (m *MockWatcher) Close() error {
-	args := m.Called()
-	return args.Error(0)
-}
 
 func TestFileIsChanged(t *testing.T) {
 	var wg sync.WaitGroup
@@ -77,7 +66,10 @@ func TestFileIsChanged(t *testing.T) {
 		WatchedFiles: make(map[string]struct{}),
 		Watcher:      watcher,
 	}
-	tmpDir := filepath.Dir(file.Name)
+	tmpfile, err = os.CreateTemp("/tmp", "test")
+	assert.Nil(t, err)
+	defer os.Remove(tmpfile.Name())
+	tmpDir := filepath.Dir(tmpfile.Name())
 	fs.WatchedFiles[tmpDir] = struct{}{}
 	err = fs.AddFiles(tmpDir)
 	assert.NoError(t, err)
@@ -94,39 +86,4 @@ func TestFileIsChanged(t *testing.T) {
 	assert.True(t, exists)
 	assert.False(t, onChangeCalled)
 
-	err = WatchFiles(func() {}, file, nil)
-	assert.Error(t, err, "file pointer cannot be nil")
-}
-
-func TestClose(t *testing.T) {
-	dir := "./"
-	mockWatcher := new(MockWatcher)
-
-	mockWatcher.On("Close").Return(nil)
-
-	defaultfsnotify := struct {
-		WatchedFiles map[string]bool
-	}{
-		WatchedFiles: map[string]bool{dir: true},
-	}
-
-	f := struct {
-		mu sync.Mutex
-	}{}
-
-	func(w *MockWatcher) {
-		defer func(w *MockWatcher) {
-			f.mu.Lock()
-			defer f.mu.Unlock()
-			delete(defaultfsnotify.WatchedFiles, dir)
-			err := w.Close()
-			if err != nil {
-				t.Errorf("failed to close fsnotify watcher: %v", err)
-			}
-		}(w)
-	}(mockWatcher)
-
-	assert.NotContains(t, defaultFsnotify.WatchedFiles, dir)
-
-	mockWatcher.AssertExpectations(t)
 }

@@ -39,8 +39,8 @@ var Changed = false
 
 func reloadEnforcer(f *filter) {
 	conf := f.config
+	conf.lock.Lock()
 	if !conf.updating.Load() {
-		conf.lock.Lock()
 		conf.updating.Store(true)
 		conf.lock.Unlock()
 		api.LogWarnf("policy %s or model %s Changed, reload enforcer", conf.policyFile.Name, conf.modelFile.Name)
@@ -74,6 +74,8 @@ func reloadEnforcer(f *filter) {
 				api.LogWarnf("policy %s or model %s Changed, enforcer reloaded", conf.policyFile.Name, conf.modelFile.Name)
 			}
 		}()
+	} else {
+		conf.lock.Unlock()
 	}
 }
 
