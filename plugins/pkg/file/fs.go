@@ -16,9 +16,10 @@ package file
 
 import (
 	"errors"
-	"github.com/fsnotify/fsnotify"
 	"path/filepath"
 	"sync"
+
+	"github.com/fsnotify/fsnotify"
 
 	"mosn.io/htnn/api/pkg/log"
 )

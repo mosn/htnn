@@ -18,6 +18,7 @@ import (
 	"net/http"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -78,10 +79,6 @@ func TestCasbin(t *testing.T) {
 			f := factory(c, cb)
 			hdr := envoy.NewRequestHeaderMap(tt.header)
 
-			ff, _ := f.(*filter)
-
-			reloadEnforcer(ff)
-
 			wg := sync.WaitGroup{}
 			wg.Add(1)
 			go func() {
@@ -99,5 +96,29 @@ func TestCasbin(t *testing.T) {
 			wg.Wait()
 		})
 	}
+}
+
+func TestReloadEnforcer(t *testing.T) {
+	cb := envoy.NewFilterCallbackHandler()
+	c := &config{
+		Config: casbin.Config{
+			Rule: &casbin.Config_Rule{
+				Model:  "./testdata/model.conf",
+				Policy: "./testdata/policy.csv",
+			},
+			Token: &casbin.Config_Token{
+				Name: "user",
+			},
+		},
+	}
+	c.Init(nil)
+	f := factory(c, cb)
+
+	Changed = true
+	ff, _ := f.(*filter)
+	reloadEnforcer(ff)
+	time.Sleep(2 * time.Second)
+
+	assert.False(t, Changed)
 
 }

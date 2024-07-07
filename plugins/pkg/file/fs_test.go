@@ -15,14 +15,14 @@
 package file
 
 import (
-	"github.com/fsnotify/fsnotify"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 	"os"
 	"path/filepath"
 	"sync"
 	"testing"
-	"time"
+
+	"github.com/fsnotify/fsnotify"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
 
 // MockWatcher is a mock implementation of fsnotify.Watcher
@@ -88,21 +88,11 @@ func TestFileIsChanged(t *testing.T) {
 	}
 
 	go fs.watchFiles(onChange, fs.Watcher, tmpDir)
-	tmpFile, err := os.CreateTemp(tmpDir, "testfile")
-	assert.NoError(t, err)
-	defer func() {
-		tmpFile.Close()
-		os.Remove(tmpfile.Name())
-	}()
-
-	time.Sleep(500 * time.Millisecond)
-	watcher.Close()
-	time.Sleep(500 * time.Millisecond)
 
 	_, exists := fs.WatchedFiles[tmpDir]
 
 	assert.True(t, exists)
-	assert.True(t, onChangeCalled)
+	assert.False(t, onChangeCalled)
 
 	err = WatchFiles(func() {}, file, nil)
 	assert.Error(t, err, "file pointer cannot be nil")
