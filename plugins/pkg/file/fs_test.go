@@ -15,15 +15,14 @@
 package file
 
 import (
+	"github.com/fsnotify/fsnotify"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 	"os"
 	"path/filepath"
 	"sync"
 	"testing"
 	"time"
-
-	"github.com/fsnotify/fsnotify"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/mock"
 )
 
 // MockWatcher is a mock implementation of fsnotify.Watcher
@@ -38,6 +37,7 @@ func (m *MockWatcher) Close() error {
 
 func TestFileIsChanged(t *testing.T) {
 	var wg sync.WaitGroup
+	var mu sync.Mutex
 	i := 4
 
 	tmpfile, _ := os.CreateTemp("./", "example")
@@ -54,9 +54,9 @@ func TestFileIsChanged(t *testing.T) {
 	err = WatchFiles(func() {
 		wg.Add(1)
 		defer wg.Done()
-		defaultFsnotify.mu.Lock()
+		mu.Lock()
 		i = 5
-		defaultFsnotify.mu.Unlock()
+		mu.Unlock()
 	}, file)
 	assert.Nil(t, err)
 	tmpfile.Write([]byte("bls"))
@@ -66,31 +66,34 @@ func TestFileIsChanged(t *testing.T) {
 	err = WatchFiles(func() {}, nil)
 	assert.Error(t, err, "file pointer cannot be nil")
 
-	defaultFsnotify.mu.Lock()
+	mu.Lock()
 	assert.Equal(t, 5, i)
-	defaultFsnotify.mu.Unlock()
+	mu.Unlock()
 
 	watcher, err := fsnotify.NewWatcher()
 	assert.NoError(t, err)
 	defer watcher.Close()
 	fs := &Fsnotify{
 		WatchedFiles: make(map[string]struct{}),
+		Watcher:      watcher,
 	}
 	tmpDir := filepath.Dir(file.Name)
 	fs.WatchedFiles[tmpDir] = struct{}{}
-	err = watcher.Add(tmpDir)
+	err = fs.AddFiles(tmpDir)
 	assert.NoError(t, err)
 
-	// check whether onChange is called
 	onChangeCalled := false
 	onChange := func() {
 		onChangeCalled = true
 	}
 
-	go fs.watchFiles(onChange, watcher, tmpDir)
+	go fs.watchFiles(onChange, fs.Watcher, tmpDir)
 	tmpFile, err := os.CreateTemp(tmpDir, "testfile")
 	assert.NoError(t, err)
-	defer tmpFile.Close()
+	defer func() {
+		tmpFile.Close()
+		os.Remove(tmpfile.Name())
+	}()
 
 	time.Sleep(500 * time.Millisecond)
 	watcher.Close()

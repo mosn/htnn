@@ -40,11 +40,17 @@ var Changed = false
 func reloadEnforcer(f *filter) {
 	conf := f.config
 	if !conf.updating.Load() {
+		conf.lock.Lock()
 		conf.updating.Store(true)
+		conf.lock.Unlock()
 		api.LogWarnf("policy %s or model %s Changed, reload enforcer", conf.policyFile.Name, conf.modelFile.Name)
 
 		go func() {
-			defer conf.updating.Store(false)
+			defer func() {
+				conf.lock.Lock()
+				conf.updating.Store(false)
+				conf.lock.Unlock()
+			}()
 			defer f.callbacks.RecoverPanic()
 			e, err := casbin.NewEnforcer(conf.Rule.Model, conf.Rule.Policy)
 			if err != nil {

@@ -16,11 +16,9 @@ package file
 
 import (
 	"errors"
+	"github.com/fsnotify/fsnotify"
 	"path/filepath"
 	"sync"
-	"time"
-
-	"github.com/fsnotify/fsnotify"
 
 	"mosn.io/htnn/api/pkg/log"
 )
@@ -30,8 +28,7 @@ var (
 )
 
 type File struct {
-	Name  string
-	mtime time.Time
+	Name string
 }
 
 type Fsnotify struct {
