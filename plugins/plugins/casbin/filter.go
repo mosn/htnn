@@ -72,7 +72,6 @@ func reloadEnforcer(f *filter) {
 }
 
 func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {
-
 	conf := f.config
 	role, _ := headers.Get(conf.Token.Name) // role can be ""
 	url := headers.Url()

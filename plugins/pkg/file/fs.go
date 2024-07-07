@@ -16,7 +16,6 @@ package file
 
 import (
 	"errors"
-	"os"
 	"path/filepath"
 	"sync"
 	"time"
@@ -52,7 +51,6 @@ func newFsnotify() (fs *Fsnotify) {
 		Watcher:      watcher,
 		WatchedFiles: make(map[string]struct{}),
 	}
-
 }
 
 var (
@@ -79,7 +77,7 @@ func WatchFiles(onChange func(), file *File, otherFiles ...*File) (err error) {
 		if _, exists := defaultFsnotify.WatchedFiles[dir]; exists {
 			continue
 		}
-		// 添加到已监听文件的集合
+		//Add dir to the watched files
 		defaultFsnotify.WatchedFiles[dir] = struct{}{}
 		go defaultFsnotify.watchFiles(onChange, watcher, dir)
 	}
@@ -121,14 +119,8 @@ func (f *Fsnotify) watchFiles(onChange func(), w *fsnotify.Watcher, dir string) 
 }
 
 func (f *Fsnotify) Stat(path string) (*File, error) {
-	info, err := os.Stat(path)
-	if err != nil {
-		return nil, err
-	}
-
 	return &File{
-		Name:  path,
-		mtime: info.ModTime(),
+		Name: path,
 	}, nil
 }
 

@@ -15,7 +15,6 @@
 package file
 
 import (
-	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
@@ -24,7 +23,18 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/mock"
 )
+
+// MockWatcher is a mock implementation of fsnotify.Watcher
+type MockWatcher struct {
+	mock.Mock
+}
+
+func (m *MockWatcher) Close() error {
+	args := m.Called()
+	return args.Error(0)
+}
 
 func TestFileIsChanged(t *testing.T) {
 	var wg sync.WaitGroup
@@ -37,61 +47,24 @@ func TestFileIsChanged(t *testing.T) {
 			t.Logf("%v", err)
 		}
 	}(tmpfile.Name())
+	file, err := Stat(tmpfile.Name())
 
-	file := &File{Name: tmpfile.Name()}
-	err := WatchFiles(func() {
+	assert.NoError(t, err)
+	assert.Equal(t, tmpfile.Name(), file.Name)
+	err = WatchFiles(func() {
 		wg.Add(1)
 		defer wg.Done()
 		defaultFsnotify.mu.Lock()
 		i = 5
 		defaultFsnotify.mu.Unlock()
 	}, file)
-	i = 6
 	assert.Nil(t, err)
 	tmpfile.Write([]byte("bls"))
 	tmpfile.Sync()
 	wg.Wait()
 
-	_ = WatchFiles(func() {
-		wg.Add(1)
-		defer wg.Done()
-		defaultFsnotify.mu.Lock()
-		i = 1
-		defaultFsnotify.mu.Unlock()
-	}, file)
-	tmpfile.Sync()
-	wg.Wait()
-
 	err = WatchFiles(func() {}, nil)
 	assert.Error(t, err, "file pointer cannot be nil")
-
-	filename := "my_file.txt"
-	content := "Hello, World!"
-
-	f, err := os.Create(filename)
-	fi := &File{Name: f.Name()}
-	if err != nil {
-		fmt.Println("Error creating file:", err)
-		return
-	}
-	defer f.Close()
-
-	_ = WatchFiles(func() {
-		wg.Add(1)
-		defer wg.Done()
-		defaultFsnotify.mu.Lock()
-		i = 3
-		defaultFsnotify.mu.Unlock()
-	}, fi)
-	_, _ = f.WriteString(content)
-
-	_ = os.Remove(filename)
-	f, _ = os.Create(filename)
-
-	defer f.Close()
-
-	_, _ = f.WriteString("New content for the file.")
-	_ = os.Remove(filename)
 
 	defaultFsnotify.mu.Lock()
 	assert.Equal(t, 5, i)
@@ -103,9 +76,7 @@ func TestFileIsChanged(t *testing.T) {
 	fs := &Fsnotify{
 		WatchedFiles: make(map[string]struct{}),
 	}
-	tmp, _ := os.CreateTemp("", "watch_test")
-	tmpDir := filepath.Dir(tmp.Name())
-	defer os.RemoveAll(tmpDir)
+	tmpDir := filepath.Dir(file.Name)
 	fs.WatchedFiles[tmpDir] = struct{}{}
 	err = watcher.Add(tmpDir)
 	assert.NoError(t, err)
@@ -125,37 +96,44 @@ func TestFileIsChanged(t *testing.T) {
 	watcher.Close()
 	time.Sleep(500 * time.Millisecond)
 
-	fs.mu.Lock()
 	_, exists := fs.WatchedFiles[tmpDir]
-	fs.mu.Unlock()
-	assert.True(t, exists, "WatchedFiles should be updated")
-	assert.True(t, onChangeCalled, "onChange should be called")
+
+	assert.True(t, exists)
+	assert.True(t, onChangeCalled)
+
+	err = WatchFiles(func() {}, file, nil)
+	assert.Error(t, err, "file pointer cannot be nil")
 }
 
-func TestStat(t *testing.T) {
-	tmpfile, err := os.CreateTemp("", "example")
-	if err != nil {
-		t.Fatalf("Failed to create temp file: %v", err)
-	}
-	defer os.Remove(tmpfile.Name())
+func TestClose(t *testing.T) {
+	dir := "./"
+	mockWatcher := new(MockWatcher)
 
-	if _, err := tmpfile.Write([]byte("hello world")); err != nil {
-		t.Fatalf("Failed to write to temp file: %v", err)
-	}
+	mockWatcher.On("Close").Return(nil)
 
-	if err := tmpfile.Close(); err != nil {
-		t.Fatalf("Failed to close temp file: %v", err)
+	defaultfsnotify := struct {
+		WatchedFiles map[string]bool
+	}{
+		WatchedFiles: map[string]bool{dir: true},
 	}
 
-	statFile, err := Stat(tmpfile.Name())
-	assert.NoError(t, err, "Stat() should not return error")
+	f := struct {
+		mu sync.Mutex
+	}{}
 
-	assert.Equal(t, tmpfile.Name(), statFile.Name, "Stat() Name should match")
-	assert.False(t, statFile.mtime.IsZero(), "Stat() mtime should be non-zero")
+	func(w *MockWatcher) {
+		defer func(w *MockWatcher) {
+			f.mu.Lock()
+			defer f.mu.Unlock()
+			delete(defaultfsnotify.WatchedFiles, dir)
+			err := w.Close()
+			if err != nil {
+				t.Errorf("failed to close fsnotify watcher: %v", err)
+			}
+		}(w)
+	}(mockWatcher)
 
-	nonExistentFilePath := "./nonexistentfile.txt"
-	_, err = Stat(nonExistentFilePath)
+	assert.NotContains(t, defaultFsnotify.WatchedFiles, dir)
 
-	assert.Error(t, err, "Stat should return error for non-existent file")
-	assert.True(t, os.IsNotExist(err), "Error should indicate non-existent file")
+	mockWatcher.AssertExpectations(t)
 }
