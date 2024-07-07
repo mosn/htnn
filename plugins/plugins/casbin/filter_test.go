@@ -115,8 +115,9 @@ func TestReloadEnforcer(t *testing.T) {
 	f := factory(c, cb)
 
 	Changed = true
-	ff, _ := f.(*filter)
-	reloadEnforcer(ff)
+	header := http.Header{":path": []string{"/other"}}
+	hdr := envoy.NewRequestHeaderMap(header)
+	f.DecodeHeaders(hdr, true)
 	time.Sleep(2 * time.Second)
 
 	assert.False(t, Changed)
