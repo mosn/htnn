@@ -82,7 +82,7 @@ func New(opt Options) *Suite {
 func (suite *Suite) Run(t *testing.T) {
 	k8s.Prepare(t, suite.Opt.Client, "base/default.yml")
 	k8s.Prepare(t, suite.Opt.Client, "base/nacos.yml")
-	suite.waitNacos(t)
+	suite.waitDeployments(t)
 	suite.startPortForward(t)
 	defer suite.stopPortForward(t)
 	for _, test := range tests {
@@ -116,24 +116,21 @@ func (suite *Suite) Run(t *testing.T) {
 	}
 }
 
-func (suite *Suite) waitNacos(t *testing.T) {
-	cmdline := "kubectl wait --timeout=5m -n e2e deployment/nacos --for=condition=Available"
-	cmd := strings.Fields(cmdline)
-	wait := exec.Command(cmd[0], cmd[1:]...)
-	err := wait.Run()
-	require.NoError(t, err)
-}
-
-// We use port-forward so that both Linux and Mac can expose port in the same way
-func (suite *Suite) startPortForward(t *testing.T) {
+func (suite *Suite) waitDeployments(t *testing.T) {
 	// TODO: rewrite 'kubectl wait' with Go code
 	for _, cond := range []struct {
 		name string
 		ns   string
 	}{
 		{name: "istio-ingressgateway", ns: k8s.IstioRootNamespace},
+		{name: "backend", ns: k8s.IstioRootNamespace},
+
 		{name: "default-istio", ns: k8s.DefaultNamespace},
+		{name: "backend", ns: k8s.DefaultNamespace},
+		{name: "nacos", ns: k8s.DefaultNamespace},
+
 		{name: "default-istio", ns: k8s.AnotherNamespace},
+		{name: "backend", ns: k8s.AnotherNamespace},
 	} {
 		cmdline := fmt.Sprintf("kubectl wait --timeout=5m -n %s deployment/%s --for=condition=Available",
 			cond.ns, cond.name)
@@ -142,7 +139,10 @@ func (suite *Suite) startPortForward(t *testing.T) {
 		err := wait.Run()
 		require.NoError(t, err, "wait for deployment %s in namespace %s", cond.name, cond.ns)
 	}
+}
 
+// We use port-forward so that both Linux and Mac can expose port in the same way
+func (suite *Suite) startPortForward(t *testing.T) {
 	cmdline := "./port-forward.sh"
 	dests := []string{"istio-ingressgateway", "istio-ingressgateway-tcp",
 		"k8s-gateway-api", "k8s-gateway-api-another"}
