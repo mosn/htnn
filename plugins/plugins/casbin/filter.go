@@ -15,6 +15,8 @@
 package casbin
 
 import (
+	"sync"
+
 	"github.com/casbin/casbin/v2"
 
 	"mosn.io/htnn/api/pkg/filtermanager/api"
@@ -35,14 +37,15 @@ type filter struct {
 	config    *config
 }
 
-var Changed = false
+var (
+	Changed   = false
+	ChangedMu sync.RWMutex
+)
 
 func reloadEnforcer(f *filter) {
 	conf := f.config
-	conf.lock.Lock()
 	if !conf.updating.Load() {
 		conf.updating.Store(true)
-		conf.lock.Unlock()
 		api.LogWarnf("policy %s or model %s Changed, reload enforcer", conf.policyFile.Name, conf.modelFile.Name)
 
 		go func() {
@@ -56,15 +59,15 @@ func reloadEnforcer(f *filter) {
 			if err != nil {
 				api.LogErrorf("failed to update Enforcer: %v", err)
 			} else {
-				conf.lock.Lock()
+				ChangedMu.Lock()
 				f.config.enforcer = e
 				Changed = false
-				conf.lock.Unlock()
+				ChangedMu.Unlock()
 
 				err = file.WatchFiles(func() {
-					conf.lock.Lock()
+					ChangedMu.Lock()
 					Changed = true
-					conf.lock.Unlock()
+					ChangedMu.Unlock()
 				}, conf.modelFile, conf.policyFile)
 
 				if err != nil {
@@ -74,26 +77,27 @@ func reloadEnforcer(f *filter) {
 				api.LogWarnf("policy %s or model %s Changed, enforcer reloaded", conf.policyFile.Name, conf.modelFile.Name)
 			}
 		}()
-	} else {
-		conf.lock.Unlock()
 	}
 }
 
 func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {
 	conf := f.config
+	ChangedMu.Lock()
+	isChanged := Changed
+	ChangedMu.Unlock()
 	role, _ := headers.Get(conf.Token.Name) // role can be ""
 	url := headers.Url()
 	err := file.WatchFiles(func() {
-		conf.lock.Lock()
+		ChangedMu.Lock()
 		Changed = true
-		conf.lock.Unlock()
+		ChangedMu.Unlock()
 	}, conf.modelFile, conf.policyFile)
 	if err != nil {
 		api.LogErrorf("failed to watch files: %v", err)
 		return &api.LocalResponse{Code: 500}
 	}
 
-	if Changed {
+	if isChanged {
 		reloadEnforcer(f)
 	}
 

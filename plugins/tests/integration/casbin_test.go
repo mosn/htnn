@@ -119,6 +119,9 @@ g, bob, admin
 	err = os.WriteFile(policyFile2.Name(), []byte(policy), 0755)
 	require.Nil(t, err)
 
+	//wait to run reloadEnforcer
+	time.Sleep(5 * time.Second)
+
 	hdr := http.Header{}
 	hdr.Set("customer", "alice")
 
