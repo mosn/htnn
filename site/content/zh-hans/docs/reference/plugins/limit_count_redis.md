@@ -95,7 +95,7 @@ spec:
         failureModeDeny: true
         rules:
         - count: 2
-            timeWindow: "60s"
+          timeWindow: "60s"
 ```
 
 对 `/echo` 路径发起请求，前两个请求将成功，随后的请求将失败：
