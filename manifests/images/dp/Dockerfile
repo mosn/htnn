@@ -33,9 +33,10 @@ COPY plugins/ plugins/
 COPY controller/ controller/
 # Remember to run `make prebuild` before building the image
 COPY external/istio/ external/istio/
-RUN cd ./external/istio && \
-    CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -C pilot/cmd/pilot-agent -a -o /workspace/pilot-agent
+WORKDIR /workspace/external/istio
+RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -C pilot/cmd/pilot-agent -a -o /workspace/pilot-agent
 
+# hadolint ignore=DL3006
 FROM ${PROXY_BASE_IMAGE}
 
 # Labels below are consumed by GitHub Container Registry

@@ -34,9 +34,10 @@ COPY plugins/ plugins/
 COPY controller/ controller/
 # Remember to run `make prebuild` before building the image
 COPY external/istio/ external/istio/
-RUN cd ./external/istio && \
-    CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -C pilot/cmd/pilot-discovery -a -o /workspace/pilot-discovery
+WORKDIR /workspace/external/istio
+RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -C pilot/cmd/pilot-discovery -a -o /workspace/pilot-discovery
 
+# hadolint ignore=DL3006
 FROM ${CONTROLLER_BASE_IMAGE}
 
 # Labels below are consumed by GitHub Container Registry
