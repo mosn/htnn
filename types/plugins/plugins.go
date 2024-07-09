@@ -32,6 +32,7 @@ import (
 	_ "mosn.io/htnn/types/plugins/limit_req"
 	_ "mosn.io/htnn/types/plugins/local_ratelimit"
 	_ "mosn.io/htnn/types/plugins/lua"
+	_ "mosn.io/htnn/types/plugins/networkrbac"
 	_ "mosn.io/htnn/types/plugins/oidc"
 	_ "mosn.io/htnn/types/plugins/opa"
 	_ "mosn.io/htnn/types/plugins/tlsinspector"

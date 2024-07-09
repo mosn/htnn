@@ -1,10 +1,10 @@
 - metadata:
     annotations:
-      htnn.mosn.io/info: '{"filterpolicies":["default/policy-gateway","default/policy-port"]}'
+      htnn.mosn.io/info: '{"filterpolicies":["default/policy-port"]}'
     creationTimestamp: null
     labels:
       htnn.mosn.io/created-by: FilterPolicy
-    name: htnn-h-default
+    name: htnn-lds-0.0.0.0-80
     namespace: default
   spec:
     configPatches:
@@ -49,6 +49,17 @@
                     pet: cat
                   name: animal
             plugin_name: fm
+  status: {}
+- metadata:
+    annotations:
+      htnn.mosn.io/info: '{"filterpolicies":["default/policy-gateway"]}'
+    creationTimestamp: null
+    labels:
+      htnn.mosn.io/created-by: FilterPolicy
+    name: htnn-lds-1.1.1.1-443
+    namespace: default
+  spec:
+    configPatches:
     - applyTo: HTTP_FILTER
       match:
         listener:

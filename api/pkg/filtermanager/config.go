@@ -199,7 +199,7 @@ func (p *FilterManagerConfigParser) Parse(any *anypb.Any, callbacks capi.ConfigC
 	}
 
 	// TODO: figure out a way to identify what the config is belonged to, like using the route name
-	api.LogInfof("receive filtermanager config: %s", string(data))
+	api.LogInfof("receive filtermanager config: %s", data)
 
 	fmConfig := &FilterManagerConfig{}
 	if err := json.Unmarshal(data, fmConfig); err != nil {

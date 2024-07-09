@@ -16,6 +16,12 @@ spec:
     hostname: "localhost"
     port: 10000
     protocol: HTTP
+  - name: tcp
+    port: 10001
+    protocol: TCP
+    allowedRoutes:
+      kinds:
+      - kind: TCPRoute
 ---
 apiVersion: v1
 kind: Service
@@ -75,10 +81,18 @@ spec:
   servers:
   - hosts:
     - default.local
+    name: http
     port:
       name: http
       number: 18000
       protocol: HTTP
+  - hosts:
+    - "*"
+    name: tcp
+    port:
+      name: tcp
+      number: 18001
+      protocol: TCP
 ---
 apiVersion: v1
 kind: Service

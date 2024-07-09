@@ -266,10 +266,6 @@ func ValidateGateway(gw *istiov1a3.Gateway) error {
 		if svr.Port == nil {
 			return fmt.Errorf("spec.servers[%d].port: Required value", i)
 		}
-		proto := NormalizeIstioProtocol(svr.Port.Protocol)
-		if proto != "HTTP" && proto != "HTTPS" {
-			return fmt.Errorf("spec.servers[%d].port.protocol: Only HTTP and HTTPS are supported", i)
-		}
 
 		for _, host := range svr.Hosts {
 			if strings.ContainsRune(host, '/') {
@@ -287,6 +283,10 @@ func NormalizeK8sGatewayProtocol(protocol gwapiv1.ProtocolType) string {
 }
 
 func ValidateConsumer(c *Consumer) error {
+	if len(c.Spec.Auth) == 0 {
+		return errors.New("authn filter is required")
+	}
+
 	for name, filter := range c.Spec.Auth {
 		plugin := plugins.LoadPluginType(name)
 		if plugin == nil {

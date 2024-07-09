@@ -1,0 +1,29 @@
+apiVersion: htnn.mosn.io/v1
+kind: FilterPolicy
+metadata:
+  name: policy
+  namespace: default
+spec:
+  targetRef:
+    group: networking.istio.io
+    kind: Gateway
+    name: default
+  filters:
+    networkRBAC:
+      config:
+        statPrefix: network_rbac
+        matcher:
+          matcherTree:
+            input:
+              name: envoy.matching.inputs.source_ip
+              typedConfig:
+                "@type": type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.SourceIPInput
+            exactMatchMap:
+              map:
+                "127.0.0.1":
+                  action:
+                    name: action
+                    typedConfig:
+                      "@type": type.googleapis.com/envoy.config.rbac.v3.Action
+                      name: allow-localhost
+                      action: ALLOW

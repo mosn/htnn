@@ -1,0 +1,32 @@
+- metadata:
+    annotations:
+      htnn.mosn.io/info: '{"filterpolicies":["default/policy"]}'
+    creationTimestamp: null
+    labels:
+      htnn.mosn.io/created-by: FilterPolicy
+    name: htnn-lds-0.0.0.0-80
+    namespace: default
+  spec:
+    configPatches:
+    - applyTo: NETWORK_FILTER
+      match:
+        listener:
+          name: 0.0.0.0_80
+      patch:
+        operation: INSERT_FIRST
+        value:
+          config_discovery:
+            config_source:
+              ads: {}
+            type_urls:
+            - type.googleapis.com/envoy.extensions.filters.network.rbac.v3.RBAC
+          name: htnn-default-0.0.0.0_80-networkRBAC
+    - applyTo: EXTENSION_CONFIG
+      patch:
+        operation: ADD
+        value:
+          name: htnn-default-0.0.0.0_80-networkRBAC
+          typed_config:
+            '@type': type.googleapis.com/envoy.extensions.filters.network.rbac.v3.RBAC
+            statPrefix: network_rbac
+  status: {}

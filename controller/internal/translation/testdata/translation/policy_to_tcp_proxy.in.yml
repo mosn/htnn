@@ -1,0 +1,34 @@
+features:
+  enableLDSPluginViaECDS: true
+istioGateway:
+- apiVersion: networking.istio.io/v1beta1
+  kind: Gateway
+  metadata:
+    name: gateway
+    namespace: default
+  spec:
+    selector:
+      istio: ingressgateway
+    servers:
+    - hosts:
+      - "*"
+      port:
+        name: tcp
+        number: 80
+        protocol: TCP
+filterPolicy:
+  gateway:
+  - apiVersion: htnn.mosn.io/v1
+    kind: FilterPolicy
+    metadata:
+      name: policy
+      namespace: default
+    spec:
+      targetRef:
+        group: networking.istio.io
+        kind: Gateway
+        name: gateway
+      filters:
+        networkRBAC:
+          config:
+            statPrefix: network_rbac

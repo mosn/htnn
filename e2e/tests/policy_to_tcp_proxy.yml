@@ -1,0 +1,126 @@
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: vs
+  namespace: istio-system
+spec:
+  gateways:
+  - default
+  hosts:
+  - "*"
+  tcp:
+  - match:
+    - port: 18001
+    route:
+    - destination:
+        host: backend
+        port:
+          number: 8080
+---
+apiVersion: htnn.mosn.io/v1
+kind: FilterPolicy
+metadata:
+  name: policy
+  namespace: istio-system
+spec:
+  targetRef:
+    group: networking.istio.io
+    kind: Gateway
+    name: default
+    sectionName: tcp
+  filters:
+    networkRBAC:
+      config:
+        statPrefix: network_rbac
+        matcher:
+          matcherTree:
+            input:
+              name: envoy.matching.inputs.source_ip
+              typedConfig:
+                "@type": type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.SourceIPInput
+            customMatch:
+              name: ip-matcher
+              typedConfig:
+                "@type": type.googleapis.com/xds.type.matcher.v3.IPMatcher
+                rangeMatchers:
+                - ranges:
+                  - addressPrefix: 127.0.0.1
+                    prefixLen: 32
+                  onMatch:
+                    action:
+                      name: envoy.filters.rbac.action
+                      typedConfig:
+                        "@type": type.googleapis.com/envoy.config.rbac.v3.Action
+                        name: localhost
+                        action: DENY
+                # match-all action
+                - ranges:
+                  - addressPrefix: 0.0.0.0
+                    prefixLen: 0
+                  onMatch:
+                    action:
+                      name: envoy.filters.rbac.action
+                      typedConfig:
+                        "@type": type.googleapis.com/envoy.config.rbac.v3.Action
+                        name: match-all
+                        action: ALLOW
+---
+apiVersion: gateway.networking.k8s.io/v1alpha2
+kind: TCPRoute
+metadata:
+  name: test
+spec:
+  parentRefs:
+  - name: default
+    sectionName: tcp
+  rules:
+  - backendRefs:
+    - name: backend
+      port: 8080
+---
+apiVersion: htnn.mosn.io/v1
+kind: FilterPolicy
+metadata:
+  name: policy
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: default
+    sectionName: tcp
+  filters:
+    networkRBAC:
+      config:
+        statPrefix: network_rbac
+        matcher:
+          matcherTree:
+            input:
+              name: envoy.matching.inputs.source_ip
+              typedConfig:
+                "@type": type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.SourceIPInput
+            customMatch:
+              name: ip-matcher
+              typedConfig:
+                "@type": type.googleapis.com/xds.type.matcher.v3.IPMatcher
+                rangeMatchers:
+                - ranges:
+                  - addressPrefix: 127.0.0.1
+                    prefixLen: 32
+                  onMatch:
+                    action:
+                      name: envoy.filters.rbac.action
+                      typedConfig:
+                        "@type": type.googleapis.com/envoy.config.rbac.v3.Action
+                        name: localhost
+                        action: DENY
+                # match-all action
+                - ranges:
+                  - addressPrefix: 0.0.0.0
+                    prefixLen: 0
+                  onMatch:
+                    action:
+                      name: envoy.filters.rbac.action
+                      typedConfig:
+                        "@type": type.googleapis.com/envoy.config.rbac.v3.Action
+                        name: match-all
+                        action: ALLOW

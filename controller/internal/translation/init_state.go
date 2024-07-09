@@ -200,10 +200,6 @@ func (s *InitState) AddPolicyForIstioGateway(policy *mosniov1.FilterPolicy, gw *
 
 	for _, svr := range gw.Spec.Servers {
 		proto := mosniov1.NormalizeIstioProtocol(svr.Port.Protocol)
-		if proto != "HTTP" && proto != "HTTPS" {
-			continue
-		}
-
 		scope := PolicyScopeGateway
 		if targetRef != nil && targetRef.SectionName != nil {
 			if svr.Name != string(*targetRef.SectionName) {
@@ -250,10 +246,6 @@ func (s *InitState) AddPolicyForK8sGateway(policy *mosniov1.FilterPolicy, gw *gw
 
 	for _, ls := range gw.Spec.Listeners {
 		proto := mosniov1.NormalizeK8sGatewayProtocol(ls.Protocol)
-		if proto != "HTTP" && proto != "HTTPS" {
-			continue
-		}
-
 		scope := PolicyScopeGateway
 		if targetRef != nil && targetRef.SectionName != nil {
 			if ls.Name != *targetRef.SectionName {

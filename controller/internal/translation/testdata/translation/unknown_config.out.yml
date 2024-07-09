@@ -37,4 +37,5 @@
               tokenBucket:
                 fillInterval: 10s
                 max_tokens: 100
+              unknown_field_in_native_plugin: xx
   status: {}

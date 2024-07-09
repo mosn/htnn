@@ -4,7 +4,7 @@
     creationTimestamp: null
     labels:
       htnn.mosn.io/created-by: FilterPolicy
-    name: htnn-h-default
+    name: htnn-lds-0.0.0.0-80
     namespace: default
   spec:
     configPatches:
