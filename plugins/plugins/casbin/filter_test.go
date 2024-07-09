@@ -80,19 +80,21 @@ func TestCasbin(t *testing.T) {
 			hdr := envoy.NewRequestHeaderMap(tt.header)
 
 			wg := sync.WaitGroup{}
-			wg.Add(1)
-			go func() {
-				// ensure the lock takes effect
-				lr, ok := f.DecodeHeaders(hdr, true).(*api.LocalResponse)
+			for i := 0; i < 3; i++ {
+				wg.Add(1)
+				go func() {
+					// ensure the lock takes effect
+					lr, ok := f.DecodeHeaders(hdr, true).(*api.LocalResponse)
 
-				if !ok {
-					assert.Equal(t, tt.status, 0)
-				} else {
-					assert.Equal(t, tt.status, lr.Code)
-					assert.False(t, Changed)
-				}
-				wg.Done()
-			}()
+					if !ok {
+						assert.Equal(t, tt.status, 0)
+					} else {
+						assert.Equal(t, tt.status, lr.Code)
+						assert.False(t, Changed)
+					}
+					wg.Done()
+				}()
+			}
 			wg.Wait()
 		})
 	}
@@ -114,15 +116,13 @@ func TestReloadEnforcer(t *testing.T) {
 	c.Init(nil)
 	f := factory(c, cb)
 
-	Changed = true
+	c.SetChanged(true)
 
 	header := http.Header{":path": []string{"/other"}}
 	hdr := envoy.NewRequestHeaderMap(header)
 	f.DecodeHeaders(hdr, true)
 	time.Sleep(2 * time.Second)
 
-	ChangedMu.Lock()
-	assert.False(t, Changed)
-	ChangedMu.Unlock()
+	assert.False(t, c.GetChanged())
 
 }

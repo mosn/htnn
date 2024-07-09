@@ -25,37 +25,17 @@ import (
 )
 
 var (
-	logger = log.DefaultLogger.WithName("file")
+	logger       = log.DefaultLogger.WithName("file")
+	WatchedFiles = make(map[string]struct{})
 )
 
 type File struct {
-	Name string
+	Name    string
+	Watcher *fsnotify.Watcher
+	mu      sync.RWMutex
 }
 
-type Fsnotify struct {
-	mu           sync.Mutex
-	Watcher      *fsnotify.Watcher
-	WatchedFiles map[string]struct{}
-}
-
-func newFsnotify() (fs *Fsnotify) {
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		logger.Error(err, "create watcher failed")
-		return
-	}
-
-	return &Fsnotify{
-		Watcher:      watcher,
-		WatchedFiles: make(map[string]struct{}),
-	}
-}
-
-var (
-	defaultFsnotify = newFsnotify()
-)
-
-func WatchFiles(onChange func(), file *File, otherFiles ...*File) (err error) {
+func WatchFiles(onChanged func(), file *File, otherFiles ...*File) (err error) {
 	files := append([]*File{file}, otherFiles...)
 	for _, f := range files {
 		if f == nil {
@@ -63,51 +43,32 @@ func WatchFiles(onChange func(), file *File, otherFiles ...*File) (err error) {
 		}
 	}
 
-	watcher := defaultFsnotify.Watcher
-
 	// Add files to watcher.
 	for _, f := range files {
-		dir := filepath.Dir(f.Name)
-		err = defaultFsnotify.AddFiles(dir)
-		if err != nil {
-			logger.Error(err, "failed to add file")
-		}
-		if _, exists := defaultFsnotify.WatchedFiles[dir]; exists {
-			continue
-		}
-		//Add dir to the watched files
-		defaultFsnotify.WatchedFiles[dir] = struct{}{}
-		go defaultFsnotify.watchFiles(onChange, watcher, dir)
+		go watchFiles(onChanged, f)
 	}
 
 	return
 }
 
-func (f *Fsnotify) AddFiles(dir string) (err error) {
-	err = f.Watcher.Add(dir)
-	return
-}
+func watchFiles(onChanged func(), file *File) {
+	dir := filepath.Dir(file.Name)
+	defer func() {
+		file.mu.Lock()
+		delete(WatchedFiles, dir)
+		file.mu.Unlock()
 
-func (f *Fsnotify) watchFiles(onChange func(), w *fsnotify.Watcher, dir string) {
-	defer func(w *fsnotify.Watcher) {
-		f.mu.Lock()
-		delete(defaultFsnotify.WatchedFiles, dir)
-		f.mu.Unlock()
-		err := w.Close()
-		if err != nil {
-			logger.Error(err, "failed to close fsnotify watcher")
-		}
-	}(w)
+	}()
 
 	for {
 		select {
-		case event, ok := <-w.Events:
+		case event, ok := <-file.Watcher.Events:
 			if !ok {
 				return
 			}
 			logger.Info("file changed: ", "event", event)
-			onChange()
-		case err, ok := <-w.Errors:
+			onChanged()
+		case err, ok := <-file.Watcher.Errors:
 			if !ok {
 				return
 			}
@@ -116,12 +77,20 @@ func (f *Fsnotify) watchFiles(onChange func(), w *fsnotify.Watcher, dir string) 
 	}
 }
 
-func (f *Fsnotify) Stat(path string) (*File, error) {
-	return &File{
-		Name: path,
-	}, nil
+func AddFiles(file string, w *fsnotify.Watcher) (err error) {
+	dir := filepath.Dir(file)
+	if _, exists := WatchedFiles[dir]; exists {
+		return
+	}
+	WatchedFiles[dir] = struct{}{}
+	err = w.Add(dir)
+	return
 }
-
-func Stat(path string) (*File, error) {
-	return defaultFsnotify.Stat(path)
+func Stat(file string, w *fsnotify.Watcher) (*File, error) {
+	err := AddFiles(file, w)
+	return &File{
+		Name:    file,
+		Watcher: w,
+		mu:      sync.RWMutex{},
+	}, err
 }

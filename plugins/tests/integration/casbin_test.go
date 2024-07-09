@@ -128,5 +128,5 @@ g, bob, admin
 	assert.Eventually(t, func() bool {
 		resp, _ := dp.Post("/echo", hdr, strings.NewReader("any"))
 		return resp != nil && resp.StatusCode == 200
-	}, 10*time.Second, 1*time.Second)
+	}, 3*time.Second, 1*time.Second)
 }
