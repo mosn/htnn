@@ -1,0 +1,30 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: default
+  namespace: istio-system
+spec:
+  gatewayClassName: istio
+  listeners:
+  - name: default
+    port: 18001
+    protocol: HTTP
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: route
+  namespace: istio-system
+spec:
+  parentRefs:
+  - name: default
+    namespace: istio-system
+  hostnames: ["default.local"]
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - name: backend
+      port: 8080

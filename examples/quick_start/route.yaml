@@ -1,0 +1,36 @@
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: default
+  namespace: istio-system
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - hosts:
+    - '*'
+    name: http
+    port:
+      name: http
+      number: 18000
+      protocol: HTTP
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: vs
+  namespace: istio-system
+spec:
+  gateways:
+  - default
+  hosts:
+  - "default.local"
+  http:
+  - match:
+    - uri:
+        prefix: /
+    route:
+    - destination:
+        host: backend
+        port:
+          number: 8080
