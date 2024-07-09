@@ -26,14 +26,18 @@ import (
 
 var (
 	wg sync.WaitGroup
-	mu sync.Mutex
 )
 
 func TestFileIsChanged(t *testing.T) {
 	changed := false
 	var mu sync.Mutex
 	watcher, err := fsnotify.NewWatcher()
-	defer watcher.Close()
+	defer func(watcher *fsnotify.Watcher) {
+		err := watcher.Close()
+		if err != nil {
+			t.Errorf("close watcher err:%v", err)
+		}
+	}(watcher)
 
 	assert.Nil(t, err)
 
