@@ -15,6 +15,7 @@
 package casbin
 
 import (
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -59,4 +60,12 @@ func TestBadConfig(t *testing.T) {
 			assert.ErrorContains(t, err, tt.err)
 		})
 	}
+}
+
+func TestChanged(t *testing.T) {
+	conf := &config{
+		lock: &sync.RWMutex{},
+	}
+	conf.SetChanged(true)
+	assert.True(t, conf.GetChanged())
 }
