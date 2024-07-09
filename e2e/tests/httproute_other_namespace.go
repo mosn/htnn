@@ -42,7 +42,7 @@ func init() {
 
 			// Same host, in different gateway of different namespace
 			tr = &http.Transport{DialContext: func(ctx context.Context, proto, addr string) (conn net.Conn, err error) {
-				return net.DialTimeout("tcp", ":10001", 1*time.Second)
+				return net.DialTimeout("tcp", ":10100", 1*time.Second)
 			}}
 			client = &http.Client{Transport: tr, Timeout: 10 * time.Second}
 			rsp, err = client.Get("http://localhost:10000/echo")

@@ -24,6 +24,8 @@ elif [[ "$DEST" == "istio-ingressgateway-tcp" ]]; then
     exec kubectl port-forward -n istio-system pod/"$(kubectl -n istio-system get pods | grep '^istio-ingressgateway' |  cut -d' ' -f 1)" 18001:18001
 elif [[ "$DEST" == "k8s-gateway-api" ]]; then
     exec kubectl port-forward -n e2e pod/"$(kubectl -n e2e get pods | grep '^default-istio' |  cut -d' ' -f 1)" 10000:10000
+elif [[ "$DEST" == "k8s-gateway-api-tcp" ]]; then
+    exec kubectl port-forward -n e2e pod/"$(kubectl -n e2e get pods | grep '^default-istio' |  cut -d' ' -f 1)" 10001:10001
 else
-    exec kubectl port-forward -n e2e-another pod/"$(kubectl -n e2e-another get pods | grep '^default-istio' |  cut -d' ' -f 1)" 10001:10000
+    exec kubectl port-forward -n e2e-another pod/"$(kubectl -n e2e-another get pods | grep '^default-istio' |  cut -d' ' -f 1)" 10100:10000
 fi

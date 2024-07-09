@@ -145,7 +145,8 @@ func (suite *Suite) startPortForward(t *testing.T) {
 
 	cmdline := "./port-forward.sh"
 	dests := []string{"istio-ingressgateway", "istio-ingressgateway-tcp",
-		"k8s-gateway-api", "k8s-gateway-api-another"}
+		"k8s-gateway-api", "k8s-gateway-api-tcp",
+		"k8s-gateway-api-another"}
 	for _, d := range dests {
 		forwarder := exec.Command(cmdline, d)
 		forwarder.Stdout = os.Stdout

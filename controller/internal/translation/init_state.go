@@ -246,10 +246,6 @@ func (s *InitState) AddPolicyForK8sGateway(policy *mosniov1.FilterPolicy, gw *gw
 
 	for _, ls := range gw.Spec.Listeners {
 		proto := mosniov1.NormalizeK8sGatewayProtocol(ls.Protocol)
-		if proto != "HTTP" && proto != "HTTPS" {
-			continue
-		}
-
 		scope := PolicyScopeGateway
 		if targetRef != nil && targetRef.SectionName != nil {
 			if ls.Name != *targetRef.SectionName {
