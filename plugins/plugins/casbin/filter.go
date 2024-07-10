@@ -15,6 +15,8 @@
 package casbin
 
 import (
+	"sync"
+
 	"mosn.io/htnn/api/pkg/filtermanager/api"
 	"mosn.io/htnn/plugins/pkg/file"
 )
@@ -33,21 +35,24 @@ type filter struct {
 	config    *config
 }
 
-var Changed = false
+var (
+	Changed   = false
+	ChangedMu sync.RWMutex
+)
 
 func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {
 	conf := f.config
 	role, _ := headers.Get(conf.Token.Name) // role can be ""
 	url := headers.Url()
 	err := file.WatchFiles(func() {
-		conf.SetChanged(true)
+		setChanged(true)
 	}, conf.modelFile, conf.policyFile)
 	if err != nil {
 		api.LogErrorf("failed to watch files: %v", err)
 		return &api.LocalResponse{Code: 500}
 	}
 
-	if conf.GetChanged() {
+	if getChanged() {
 		conf.reloadEnforcer()
 	}
 
@@ -65,4 +70,17 @@ func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api
 		}
 	}
 	return api.Continue
+}
+
+func setChanged(change bool) {
+	ChangedMu.Lock()
+	Changed = change
+	ChangedMu.Unlock()
+}
+
+func getChanged() bool {
+	ChangedMu.RLock()
+	changed := Changed
+	ChangedMu.RUnlock()
+	return changed
 }

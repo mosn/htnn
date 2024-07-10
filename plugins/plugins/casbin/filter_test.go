@@ -84,7 +84,6 @@ func TestCasbin(t *testing.T) {
 				go func() {
 					// ensure the lock takes effect
 					lr, ok := f.DecodeHeaders(hdr, true).(*api.LocalResponse)
-
 					if !ok {
 						assert.Equal(t, tt.status, 0)
 					} else {

@@ -110,7 +110,7 @@ func (conf *config) reloadEnforcer() {
 			if err != nil {
 				api.LogErrorf("failed to update Enforcer: %v", err)
 			} else {
-				conf.SetChanged(false)
+				setChanged(false)
 				conf.lock.Lock()
 				conf.enforcer = e
 				conf.lock.Unlock()
@@ -118,17 +118,4 @@ func (conf *config) reloadEnforcer() {
 			}
 		}()
 	}
-}
-
-func (conf *config) SetChanged(change bool) {
-	conf.lock.Lock()
-	Changed = change
-	conf.lock.Unlock()
-}
-
-func (conf *config) GetChanged() bool {
-	conf.lock.RLock()
-	changed := Changed
-	conf.lock.RUnlock()
-	return changed
 }
