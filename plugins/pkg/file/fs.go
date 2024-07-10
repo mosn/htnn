@@ -25,8 +25,7 @@ import (
 )
 
 var (
-	logger       = log.DefaultLogger.WithName("file")
-	WatchedFiles = make(map[string]struct{})
+	logger = log.DefaultLogger.WithName("file")
 )
 
 type File struct {
@@ -34,6 +33,20 @@ type File struct {
 	Watcher *fsnotify.Watcher
 	mu      sync.RWMutex
 }
+
+type StoreWatchedFiles struct {
+	WatchedFiles map[string]struct{}
+	lock         *sync.RWMutex
+}
+
+func newStoreWatcherFiles() *StoreWatchedFiles {
+	return &StoreWatchedFiles{
+		WatchedFiles: make(map[string]struct{}),
+		lock:         &sync.RWMutex{},
+	}
+}
+
+var storeWatchedFiles = newStoreWatcherFiles()
 
 func WatchFiles(onChanged func(), file *File, otherFiles ...*File) (err error) {
 	files := append([]*File{file}, otherFiles...)
@@ -54,9 +67,9 @@ func WatchFiles(onChanged func(), file *File, otherFiles ...*File) (err error) {
 func watchFiles(onChanged func(), file *File) {
 	dir := filepath.Dir(file.Name)
 	defer func() {
-		file.mu.Lock()
-		delete(WatchedFiles, dir)
-		file.mu.Unlock()
+		storeWatchedFiles.lock.Lock()
+		defer storeWatchedFiles.lock.Unlock()
+		delete(storeWatchedFiles.WatchedFiles, dir)
 
 	}()
 
@@ -79,10 +92,19 @@ func watchFiles(onChanged func(), file *File) {
 
 func AddFiles(file string, w *fsnotify.Watcher) (err error) {
 	dir := filepath.Dir(file)
-	if _, exists := WatchedFiles[dir]; exists {
+
+	storeWatchedFiles.lock.RLock()
+
+	if _, exists := storeWatchedFiles.WatchedFiles[dir]; exists {
+		storeWatchedFiles.lock.RUnlock()
 		return
 	}
-	WatchedFiles[dir] = struct{}{}
+	storeWatchedFiles.lock.RUnlock()
+
+	storeWatchedFiles.lock.Lock()
+	storeWatchedFiles.WatchedFiles[dir] = struct{}{}
+	storeWatchedFiles.lock.Unlock()
+
 	err = w.Add(dir)
 	return
 }

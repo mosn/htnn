@@ -48,7 +48,9 @@ func TestFileIsChanged(t *testing.T) {
 	assert.Equal(t, tmpfile.Name(), file.Name)
 
 	tmpDir := filepath.Dir(tmpfile.Name())
-	_, exists := WatchedFiles[tmpDir]
+	storeWatchedFiles.lock.RLock()
+	_, exists := storeWatchedFiles.WatchedFiles[tmpDir]
+	storeWatchedFiles.lock.RUnlock()
 	assert.True(t, exists)
 
 	err = WatchFiles(func() {
