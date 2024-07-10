@@ -24,13 +24,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-var (
-	wg sync.WaitGroup
-)
-
 func TestFileIsChanged(t *testing.T) {
-	changed := false
-	var mu sync.Mutex
+	var (
+		wg      sync.WaitGroup
+		mu      sync.Mutex
+		changed bool
+	)
 	watcher, err := fsnotify.NewWatcher()
 	defer func(watcher *fsnotify.Watcher) {
 		err := watcher.Close()
