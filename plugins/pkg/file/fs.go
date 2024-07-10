@@ -31,7 +31,6 @@ var (
 type File struct {
 	Name    string
 	Watcher *fsnotify.Watcher
-	mu      sync.RWMutex
 }
 
 type StoreWatchedFiles struct {
@@ -113,6 +112,5 @@ func Stat(file string, w *fsnotify.Watcher) (*File, error) {
 	return &File{
 		Name:    file,
 		Watcher: w,
-		mu:      sync.RWMutex{},
 	}, err
 }
