@@ -14,6 +14,7 @@ The `hmacAuth` plugin authenticates the client based on the consumer configurati
 | Order | Authn |
 
 ## Configuration
+
 | Name            | Type   | Required | Validation | Description                                                                                                                            |
 |-----------------|--------|----------|------------|----------------------------------------------------------------------------------------------------------------------------------------|
 | signatureHeader | string | False    |            | The request header that contains the signature. Default is `x-hmac-signature`                                                          |
@@ -25,6 +26,7 @@ If the configured `signatureHeader` is not present, the signature in the request
 If the configured `dateHeader` is not present, the timestamp will be deemed as an empty string.
 
 ## Consumer Configuration
+
 | Name          | Type     | Required | Validation                              | Description                                                                                                               |
 |---------------|----------|----------|-----------------------------------------|---------------------------------------------------------------------------------------------------------------------------|
 | accessKey     | string   | True     | min_len: 1                              | The consumer's access key.                                                                                                |
