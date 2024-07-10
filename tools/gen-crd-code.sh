@@ -41,4 +41,5 @@ echo "Generating clientset at ${OUTPUT_PKG}/${CLIENTSET_PKG_NAME}"
     --input-base "" \
     --input "${APIS_PKG}/apis/v1" \
     --output-package "${OUTPUT_PKG}/${CLIENTSET_PKG_NAME}" \
+    -v 3 \
     ${COMMON_FLAGS}
