@@ -28,7 +28,7 @@ Only one of `allow` or `deny` can be configured.
 |-------|--------|----------|----------------|--------------------|
 | rules | Rule[] | True     | min_items: 1   | List of rules      |
 
-## Rule
+### Rule
 
 | Name | Type   | Required | Validation   | Description          |
 |------|--------|----------|--------------|----------------------|
