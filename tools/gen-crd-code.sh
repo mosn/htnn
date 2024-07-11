@@ -21,8 +21,8 @@ readonly OUTPUT_PKG=${REPO}/types/pkg/client
 readonly APIS_PKG=${REPO}/types
 readonly CLIENTSET_NAME=versioned
 readonly CLIENTSET_PKG_NAME=clientset
-readonly GOPATH="$(mktemp -d)"
-readonly SCRIPT_ROOT="$(pwd)/types"
+GOPATH="$(mktemp -d)"
+SCRIPT_ROOT="$(pwd)/types"
 
 export GOPATH
 mkdir -p "$GOPATH/src/$REPO"
@@ -36,9 +36,11 @@ fi
 readonly COMMON_FLAGS="${VERIFY_FLAG:-} --go-header-file ${SCRIPT_ROOT}/hack/boilerplate.go.txt"
 
 echo "Generating clientset at ${OUTPUT_PKG}/${CLIENTSET_PKG_NAME}"
+# shellcheck disable=SC2086
 "${LOCALBIN}"/client-gen \
     --clientset-name "${CLIENTSET_NAME}" \
     --input-base "" \
     --input "${APIS_PKG}/apis/v1" \
     --output-package "${OUTPUT_PKG}/${CLIENTSET_PKG_NAME}" \
+    -v 3 \
     ${COMMON_FLAGS}
