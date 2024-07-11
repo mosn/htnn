@@ -280,6 +280,49 @@ func TestLimitCountRedis(t *testing.T) {
 				assert.Equal(t, 429, resp.StatusCode)
 			},
 		},
+		{
+			name: "keep counter across rds update (part 1)",
+			config: control_plane.NewSinglePluinConfig("limitCountRedis", map[string]interface{}{
+				"prefix":  "f7ce8fcc",
+				"address": "redis:6379",
+				"rules": []interface{}{
+					map[string]interface{}{
+						"count":      1,
+						"timeWindow": "10s",
+						"key":        `request.header("x-key")`,
+					},
+				},
+			}),
+			run: func(t *testing.T) {
+				hdr := http.Header{}
+				hdr.Add("x-key", "1")
+				resp, _ := dp.Head("/echo", hdr)
+				assert.Equal(t, 200, resp.StatusCode)
+				assert.Equal(t, "", resp.Header.Get("X-Envoy-Ratelimited"))
+				resp, _ = dp.Head("/echo", hdr)
+			},
+		},
+		{
+			name: "keep counter across rds update (part 2)",
+			config: control_plane.NewSinglePluinConfig("limitCountRedis", map[string]interface{}{
+				"prefix":  "f7ce8fcc",
+				"address": "redis:6379",
+				"rules": []interface{}{
+					map[string]interface{}{
+						"count":      1,
+						"timeWindow": "10s",
+						"key":        `request.header("x-key")`,
+					},
+				},
+			}),
+			run: func(t *testing.T) {
+				hdr := http.Header{}
+				hdr.Add("x-key", "1")
+				resp, _ := dp.Head("/echo", hdr)
+				assert.Equal(t, 429, resp.StatusCode)
+				assert.Equal(t, "true", resp.Header.Get("X-Envoy-Ratelimited"))
+			},
+		},
 	}
 
 	for _, tt := range tests {
