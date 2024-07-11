@@ -44,9 +44,11 @@ func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api
 	conf := f.config
 	role, _ := headers.Get(conf.Token.Name) // role can be ""
 	url := headers.Url()
+
 	err := file.WatchFiles(func() {
 		setChanged(true)
 	}, conf.modelFile, conf.policyFile)
+
 	if err != nil {
 		api.LogErrorf("failed to watch files: %v", err)
 		return &api.LocalResponse{Code: 500}
