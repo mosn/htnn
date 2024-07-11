@@ -299,7 +299,6 @@ func TestLimitCountRedis(t *testing.T) {
 				resp, _ := dp.Head("/echo", hdr)
 				assert.Equal(t, 200, resp.StatusCode)
 				assert.Equal(t, "", resp.Header.Get("X-Envoy-Ratelimited"))
-				resp, _ = dp.Head("/echo", hdr)
 			},
 		},
 		{
