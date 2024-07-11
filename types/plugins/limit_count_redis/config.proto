@@ -55,4 +55,6 @@ message Config {
 
   api.v1.StatusCode status_on_error = 9;
   api.v1.StatusCode rate_limited_status = 10;
+
+  string prefix = 12 [(validate.rules).string = {min_len: 1}];
 }

@@ -15,19 +15,20 @@ title: Limit Count Redis
 
 ## 配置
 
-| 名称                    | 类型                                | 必选 | 校验规则                   | 说明                                                                                |
-| ----------------------- | ----------------------------------- | ---- | -------------------------- | ----------------------------------------------------------------------------------- |
-| address                 | string                              | 否   |                            | Redis 地址。`address` 和`cluster` 只能配置一个。                                                                          |
-| cluster                 | Cluster                             | 否   |                            | Redis cluster 配置。`address` 和`cluster` 只能配置一个。                            |
-| rules                   | Rule                                | 是   | min_items: 1, max_items: 8 | 规则                                                                                |
-| failureModeDeny         | bool                                | 否   |                            | 默认情况下，如果访问 Redis 失败，会放行请求。该值为 true 时，会拒绝请求。           |
-| enableLimitQuotaHeaders | bool                                | 否   |                            | 是否设置限流额度相关的响应头                                                        |
-| username                | string                              | 否   |                            | 用于访问 Redis 的用户名                                                             |
-| password                | string                              | 否   |                            | 用于访问 Redis 的密码                                                               |
-| tls                     | bool                                | 否   |                            | 是否通过 TLS 访问 Redis                                                             |
-| tlsSkipVerify           | bool                                | 否   |                            | 通过 TLS 访问 Redis 时是否跳过验证                                                  |
-| statusOnError           | [StatusCode](../../type#statuscode) | 否   |                            | 当无法访问 Redis 且 `failureModeDeny` 为 true 时，拒绝请求使用的状态码。默认为 500. |
-| rateLimitedStatus       | [StatusCode](../../type#statuscode) | 否   |                            | 因限流产生的拒绝响应的状态码。默认为 429. 该配置仅在不小于 400 时生效。             |
+| 名称                    | 类型                                | 必选 | 校验规则                   | 说明                                                                                                                                                                                                                                                                                 |
+|-------------------------|-------------------------------------|------|----------------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| address                 | string                              | 否   |                            | Redis 地址。`address` 和`cluster` 只能配置一个。                                                                                                                                                                                                                                     |
+| cluster                 | Cluster                             | 否   |                            | Redis cluster 配置。`address` 和`cluster` 只能配置一个。                                                                                                                                                                                                                             |
+| prefix                  | string                              | 是   | min_len: 1                 | 该字段将用作 Redis key 的前缀。引入这个字段是为了在重新创建路由时不会重置计数器，因为新的限制统计将使用与前一个相同的 key。通常，用一个随机字符串作为它的值就够了。要在多条路由中共享计数器，我们可以使用相同的前缀。在这种情况下，请确保这些路由的 `limitCountRedis` 插件配置相同。 |
+| rules                   | Rule                                | 是   | min_items: 1, max_items: 8 | 规则                                                                                                                                                                                                                                                                                 |
+| failureModeDeny         | bool                                | 否   |                            | 默认情况下，如果访问 Redis 失败，会放行请求。该值为 true 时，会拒绝请求。                                                                                                                                                                                                            |
+| enableLimitQuotaHeaders | bool                                | 否   |                            | 是否设置限流额度相关的响应头                                                                                                                                                                                                                                                         |
+| username                | string                              | 否   |                            | 用于访问 Redis 的用户名                                                                                                                                                                                                                                                              |
+| password                | string                              | 否   |                            | 用于访问 Redis 的密码                                                                                                                                                                                                                                                                |
+| tls                     | bool                                | 否   |                            | 是否通过 TLS 访问 Redis                                                                                                                                                                                                                                                              |
+| tlsSkipVerify           | bool                                | 否   |                            | 通过 TLS 访问 Redis 时是否跳过验证                                                                                                                                                                                                                                                   |
+| statusOnError           | [StatusCode](../../type#statuscode) | 否   |                            | 当无法访问 Redis 且 `failureModeDeny` 为 true 时，拒绝请求使用的状态码。默认为 500.                                                                                                                                                                                                  |
+| rateLimitedStatus       | [StatusCode](../../type#statuscode) | 否   |                            | 因限流产生的拒绝响应的状态码。默认为 429. 该配置仅在不小于 400 时生效。                                                                                                                                                                                                              |
 
 每个规则的统计是独立的。当任一规则的额度用完后，就会触发限流操作。因限流产生的拒绝的响应中会包含 header `x-envoy-ratelimited: true`。如果配置了 `enableLimitQuotaHeaders` 为 `true` 且访问 Redis 成功，所有响应中都会包括下面三个头：
 
@@ -90,6 +91,7 @@ spec:
   filters:
     limitCountRedis:
       config:
+        prefix: "47d26c6c"
         address: "redis.service:6379"
         enableLimitQuotaHeaders: true
         failureModeDeny: true

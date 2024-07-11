@@ -28,7 +28,6 @@ require (
 	github.com/coreos/go-oidc/v3 v3.10.0
 	github.com/envoyproxy/envoy v1.29.4
 	github.com/google/cel-go v0.20.1
-	github.com/google/uuid v1.6.0
 	github.com/gorilla/securecookie v1.1.2
 	github.com/jellydator/ttlcache/v3 v3.2.0
 	github.com/open-policy-agent/opa v0.64.1
@@ -62,6 +61,7 @@ require (
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/golang/mock v1.6.0 // indirect
 	github.com/golang/protobuf v1.5.4 // indirect
+	github.com/google/uuid v1.6.0 // indirect
 	github.com/gorilla/mux v1.8.1 // indirect
 	github.com/pmezard/go-difflib v1.0.1-0.20181226105442-5d4384ee4fb2 // indirect
 	github.com/prometheus/client_golang v1.19.0 // indirect
