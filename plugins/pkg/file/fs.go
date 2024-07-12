@@ -19,7 +19,6 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 
-	"mosn.io/htnn/api/pkg/filtermanager/api"
 	"mosn.io/htnn/api/pkg/log"
 )
 
@@ -56,7 +55,6 @@ func (w *Watcher) AddFile(files ...*File) error {
 	for _, file := range files {
 		if _, exists := w.files[file.Name]; !exists {
 			if err := w.watcher.Add(file.Name); err != nil {
-				api.LogInfof("file watched: %v", err)
 				return err
 			}
 			w.files[file.Name] = true
