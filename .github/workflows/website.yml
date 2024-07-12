@@ -18,9 +18,6 @@ jobs:
   check:
     timeout-minutes: 10
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./site
     steps:
     - uses: actions/checkout@v4
 
@@ -33,7 +30,15 @@ jobs:
           ./site/tmp
         key: ${{ runner.os }}-${{ hashFiles('./Makefile') }}
 
+    - name: lint cjk
+      run: |
+        if ! make lint-cjk; then
+          echo "Please run 'make fix-cjk', edit the detected files and commit changes."
+          exit 1
+        fi
+
     - name: build
+      working-directory: ./site
       run: |
         set -euo pipefail
         make build

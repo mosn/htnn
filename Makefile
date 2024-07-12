@@ -64,7 +64,7 @@ dev-tools:
 build-dev-tools:
 	# before running this task, please run `make build-dev-tools-local` and check if the image work locally
 	docker buildx build --platform=linux/amd64,linux/arm64 \
-		--network=host --build-arg GOPROXY=${GOPROXY} -t ${DEV_TOOLS_IMAGE} --push -f tools/Dockerfile.dev ./tools
+		--network=host --build-arg GOPROXY=${GOPROXY} -t ${REAL_DEV_TOOLS_IMAGE} --push -f tools/Dockerfile.dev ./tools
 
 .PHONY: build-dev-tools-local
 build-dev-tools-local:
@@ -159,16 +159,35 @@ lint-editorconfig: $(LOCALBIN)
 	test -x $(LOCALBIN)/editorconfig-checker || GOBIN=$(LOCALBIN) go install github.com/editorconfig-checker/editorconfig-checker/cmd/editorconfig-checker@2.7.2
 	$(LOCALBIN)/editorconfig-checker
 
+.PHONY: lint-cjk
+lint-cjk: dev-tools
+	docker run --rm -v $(PWD):/go/src/${PROJECT_NAME} -w /go/src/${PROJECT_NAME} \
+		${DEV_TOOLS_IMAGE} \
+		autocorrect --lint ./site/content/zh-hans
+
+.PHONY: fix-cjk
+fix-cjk: dev-tools
+	docker run --rm -v $(PWD):/go/src/${PROJECT_NAME} -w /go/src/${PROJECT_NAME} \
+		${DEV_TOOLS_IMAGE} \
+		autocorrect --fix ./site/content/zh-hans
+
+# we don't add this to the umbrella `lint` task because it requires the website to be generated first
+.PHONY: lint-website
+lint-website: $(LOCALBIN)
+	test -x $(LOCALBIN)/htmltest || GOBIN=$(LOCALBIN) go install github.com/wjdp/htmltest@v0.17.0
+	$(LOCALBIN)/htmltest --conf ./.htmltest.yml ./public | grep  -E '(target does not exist|Non-OK status: 404)' \
+		&& exit 1 || true
+
 .PHONY: lint-remain
 lint-remain:
 	grep '>>>>>>' $(shell git ls-files .) | grep -v 'Makefile:' && exit 1 || true
 	go run tools/cmd/linter/main.go
 
 .PHONY: lint
-lint: lint-go lint-proto lint-license lint-spell lint-editorconfig lint-remain
+lint: lint-go lint-proto lint-license lint-spell lint-editorconfig lint-cjk lint-remain
 
 .PHONY: fmt
-fmt: fmt-go fmt-proto
+fmt: fmt-go fmt-proto fix-spell fix-cjk
 
 .PHONY: verify-example
 verify-example:

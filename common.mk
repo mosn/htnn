@@ -31,7 +31,8 @@ BUILD_IMAGE     ?= $(DOCKER_MIRROR)docker.io/library/golang:1.21-bullseye
 # We don't use istio/proxyv2 because it is not designed to be run separately (need to work around permission issue).
 PROXY_IMAGE     ?= $(DOCKER_MIRROR)docker.io/envoyproxy/envoy:contrib-v1.29.5
 # We may need to use timestamp if we need to update the image in one PR
-DEV_TOOLS_IMAGE ?= $(DOCKER_MIRROR)ghcr.io/mosn/htnn-dev-tools:2024-03-05
+REAL_DEV_TOOLS_IMAGE ?= ghcr.io/mosn/htnn-dev-tools:2024-07-12
+DEV_TOOLS_IMAGE ?= $(DOCKER_MIRROR)$(REAL_DEV_TOOLS_IMAGE)
 
 ISTIO_VERSION = 1.21.3
 GATEWAY_API_VERSION = 1.0.0

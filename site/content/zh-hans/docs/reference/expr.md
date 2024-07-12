@@ -2,7 +2,7 @@
 title: 表达式
 ---
 
-HTNN 许多地方使用了 CEL（Common Expression Language） 作为运行时动态执行的表达式。关于 CEL 的语法，请参考[官方文档](https://github.com/google/cel-spec)。为了让 CEL 可以在网络代理的上下文中大显身手，HTNN 提供了一套 CEL 拓展库以供表达式访问相关的信息。本文档将描述该 CEL 拓展库。
+HTNN 许多地方使用了 CEL（Common Expression Language）作为运行时动态执行的表达式。关于 CEL 的语法，请参考[官方文档](https://github.com/google/cel-spec)。为了让 CEL 可以在网络代理的上下文中大显身手，HTNN 提供了一套 CEL 拓展库以供表达式访问相关的信息。本文档将描述该 CEL 拓展库。
 
 ## request
 
