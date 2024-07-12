@@ -60,8 +60,3 @@ func TestBadConfig(t *testing.T) {
 		})
 	}
 }
-
-func TestChanged(t *testing.T) {
-	setChanged(true)
-	assert.True(t, getChanged())
-}

@@ -115,12 +115,10 @@ g, bob, admin
 		})
 	}
 
+	time.Sleep(5 * time.Second)
 	// configuration is not changed, but file changed
 	err = os.WriteFile(policyFile2.Name(), []byte(policy), 0755)
 	require.Nil(t, err)
-
-	//wait to run reloadEnforcer
-	time.Sleep(5 * time.Second)
 
 	hdr := http.Header{}
 	hdr.Set("customer", "alice")
@@ -128,5 +126,5 @@ g, bob, admin
 	assert.Eventually(t, func() bool {
 		resp, _ := dp.Post("/echo", hdr, strings.NewReader("any"))
 		return resp != nil && resp.StatusCode == 200
-	}, 3*time.Second, 1*time.Second)
+	}, 15*time.Second, 5*time.Second)
 }

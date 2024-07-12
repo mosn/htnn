@@ -15,12 +15,11 @@
 package file
 
 import (
-	"errors"
-	"path/filepath"
 	"sync"
 
 	"github.com/fsnotify/fsnotify"
 
+	"mosn.io/htnn/api/pkg/filtermanager/api"
 	"mosn.io/htnn/api/pkg/log"
 )
 
@@ -29,88 +28,74 @@ var (
 )
 
 type File struct {
-	Name    string
-	Watcher *fsnotify.Watcher
+	Name string
 }
 
-type StoreWatchedFiles struct {
-	WatchedFiles map[string]struct{}
-	lock         *sync.RWMutex
+type Watcher struct {
+	watcher *fsnotify.Watcher
+	files   map[string]bool
+	mu      sync.Mutex
+	done    chan struct{}
 }
 
-func newStoreWatcherFiles() *StoreWatchedFiles {
-	return &StoreWatchedFiles{
-		WatchedFiles: make(map[string]struct{}),
-		lock:         &sync.RWMutex{},
+func NewWatcher() (*Watcher, error) {
+	w, err := fsnotify.NewWatcher()
+	if err != nil {
+		return nil, err
 	}
+	return &Watcher{
+		watcher: w,
+		files:   make(map[string]bool),
+		done:    make(chan struct{}),
+	}, nil
 }
 
-var storeWatchedFiles = newStoreWatcherFiles()
-
-func WatchFiles(onChanged func(), file *File, otherFiles ...*File) (err error) {
-	files := append([]*File{file}, otherFiles...)
-	for _, f := range files {
-		if f == nil {
-			return errors.New("file pointer cannot be nil")
+func (w *Watcher) AddFile(files ...*File) error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	for _, file := range files {
+		if _, exists := w.files[file.Name]; !exists {
+			if err := w.watcher.Add(file.Name); err != nil {
+				api.LogInfof("file watched: %v", err)
+				return err
+			}
+			w.files[file.Name] = true
 		}
 	}
-
-	// Add files to watcher.
-	for _, f := range files {
-		go watchFiles(onChanged, f)
-	}
-
-	return
+	return nil
 }
 
-func watchFiles(onChanged func(), file *File) {
-	dir := filepath.Dir(file.Name)
-	defer func() {
-		storeWatchedFiles.lock.Lock()
-		defer storeWatchedFiles.lock.Unlock()
-		delete(storeWatchedFiles.WatchedFiles, dir)
-
+func (w *Watcher) Start(onChanged func()) {
+	go func() {
+		logger.Info("start watch files")
+		for {
+			select {
+			case event, ok := <-w.watcher.Events:
+				if !ok {
+					return
+				}
+				logger.Info("file changed: ", "event", event)
+				onChanged()
+			case err, ok := <-w.watcher.Errors:
+				if !ok {
+					return
+				}
+				logger.Error(err, "error watching files")
+			case <-w.done:
+				return
+			}
+		}
 	}()
-
-	for {
-		select {
-		case event, ok := <-file.Watcher.Events:
-			if !ok {
-				return
-			}
-			logger.Info("file changed: ", "event", event)
-			onChanged()
-		case err, ok := <-file.Watcher.Errors:
-			if !ok {
-				return
-			}
-			logger.Error(err, "error watching files")
-		}
-	}
 }
 
-func AddFiles(file string, w *fsnotify.Watcher) (err error) {
-	dir := filepath.Dir(file)
-
-	storeWatchedFiles.lock.RLock()
-
-	if _, exists := storeWatchedFiles.WatchedFiles[dir]; exists {
-		storeWatchedFiles.lock.RUnlock()
-		return
-	}
-	storeWatchedFiles.lock.RUnlock()
-
-	storeWatchedFiles.lock.Lock()
-	storeWatchedFiles.WatchedFiles[dir] = struct{}{}
-	storeWatchedFiles.lock.Unlock()
-
-	err = w.Add(dir)
-	return
+func (w *Watcher) Stop() error {
+	logger.Info("stop watcher")
+	close(w.done)
+	return w.watcher.Close()
 }
-func Stat(file string, w *fsnotify.Watcher) (*File, error) {
-	err := AddFiles(file, w)
+
+func Stat(file string) *File {
 	return &File{
-		Name:    file,
-		Watcher: w,
-	}, err
+		Name: file,
+	}
 }

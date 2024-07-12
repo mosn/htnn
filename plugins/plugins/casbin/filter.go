@@ -18,7 +18,6 @@ import (
 	"sync"
 
 	"mosn.io/htnn/api/pkg/filtermanager/api"
-	"mosn.io/htnn/plugins/pkg/file"
 )
 
 func factory(c interface{}, callbacks api.FilterCallbackHandler) api.Filter {
@@ -45,19 +44,6 @@ func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api
 	role, _ := headers.Get(conf.Token.Name) // role can be ""
 	url := headers.Url()
 
-	err := file.WatchFiles(func() {
-		setChanged(true)
-	}, conf.modelFile, conf.policyFile)
-
-	if err != nil {
-		api.LogErrorf("failed to watch files: %v", err)
-		return &api.LocalResponse{Code: 500}
-	}
-
-	if getChanged() {
-		conf.reloadEnforcer()
-	}
-
 	conf.lock.RLock()
 	ok, err := f.config.enforcer.Enforce(role, url.Path, headers.Method())
 	conf.lock.RUnlock()
@@ -72,17 +58,4 @@ func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api
 		}
 	}
 	return api.Continue
-}
-
-func setChanged(change bool) {
-	ChangedMu.Lock()
-	Changed = change
-	ChangedMu.Unlock()
-}
-
-func getChanged() bool {
-	ChangedMu.RLock()
-	changed := Changed
-	ChangedMu.RUnlock()
-	return changed
 }

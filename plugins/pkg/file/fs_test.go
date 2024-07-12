@@ -16,56 +16,39 @@ package file
 
 import (
 	"os"
-	"path/filepath"
 	"sync"
 	"testing"
 
-	"github.com/fsnotify/fsnotify"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestFileIsChanged(t *testing.T) {
 	var (
-		wg      sync.WaitGroup
 		mu      sync.Mutex
 		changed bool
 	)
-	watcher, err := fsnotify.NewWatcher()
-	defer func(watcher *fsnotify.Watcher) {
-		err := watcher.Close()
-		if err != nil {
-			t.Errorf("close watcher err:%v", err)
-		}
-	}(watcher)
+	watcher, err := NewWatcher()
+	defer watcher.Stop()
 
 	assert.Nil(t, err)
 
 	tmpfile, _ := os.CreateTemp("./", "example")
 
-	file, err := Stat(tmpfile.Name(), watcher)
+	file := Stat(tmpfile.Name())
 
-	assert.NoError(t, err)
 	assert.Equal(t, tmpfile.Name(), file.Name)
 
-	tmpDir := filepath.Dir(tmpfile.Name())
-	storeWatchedFiles.lock.RLock()
-	_, exists := storeWatchedFiles.WatchedFiles[tmpDir]
-	storeWatchedFiles.lock.RUnlock()
-	assert.True(t, exists)
+	err = watcher.AddFile(file)
+	assert.Nil(t, err)
 
-	err = WatchFiles(func() {
+	watcher.Start(func() {
 		mu.Lock()
 		changed = true
 		mu.Unlock()
-	}, file)
+	})
 	assert.Nil(t, err)
 	tmpfile.Write([]byte("bls"))
 	tmpfile.Sync()
-	wg.Wait()
-
-	err = WatchFiles(func() {}, nil)
-
-	assert.Error(t, err, "file pointer cannot be nil")
 
 	mu.Lock()
 	assert.True(t, changed)

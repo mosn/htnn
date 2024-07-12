@@ -20,7 +20,6 @@ import (
 	"sync/atomic"
 
 	"github.com/casbin/casbin/v2"
-	"github.com/fsnotify/fsnotify"
 
 	"mosn.io/htnn/api/pkg/filtermanager/api"
 	"mosn.io/htnn/api/pkg/plugins"
@@ -54,29 +53,18 @@ type config struct {
 	policyFile *file.File
 	updating   atomic.Bool
 
-	watcher *fsnotify.Watcher
+	watcher *file.Watcher
 }
 
 func (conf *config) Init(cb api.ConfigCallbackHandler) error {
 	conf.lock = &sync.RWMutex{}
 
-	watcher, err := fsnotify.NewWatcher()
-	if err != nil {
-		return err
-	}
+	f := file.Stat(conf.Rule.Model)
 
-	conf.watcher = watcher
-
-	f, err := file.Stat(conf.Rule.Model, watcher)
-	if err != nil {
-		return err
-	}
 	conf.modelFile = f
 
-	f, err = file.Stat(conf.Rule.Policy, watcher)
-	if err != nil {
-		return err
-	}
+	f = file.Stat(conf.Rule.Policy)
+
 	conf.policyFile = f
 
 	e, err := casbin.NewEnforcer(conf.Rule.Model, conf.Rule.Policy)
@@ -85,8 +73,22 @@ func (conf *config) Init(cb api.ConfigCallbackHandler) error {
 	}
 	conf.enforcer = e
 
+	watcher, err := file.NewWatcher()
+	if err != nil {
+		return err
+	}
+
+	conf.watcher = watcher
+
+	err = conf.watcher.AddFile(conf.modelFile, conf.policyFile)
+	if err != nil {
+		return err
+	}
+
+	conf.watcher.Start(conf.reloadEnforcer)
+
 	runtime.SetFinalizer(conf, func(conf *config) {
-		err := conf.watcher.Close()
+		err := conf.watcher.Stop()
 		if err != nil {
 			api.LogErrorf("failed to close watcher, err: %v", err)
 		}
@@ -110,7 +112,6 @@ func (conf *config) reloadEnforcer() {
 			if err != nil {
 				api.LogErrorf("failed to update Enforcer: %v", err)
 			} else {
-				setChanged(false)
 				conf.lock.Lock()
 				conf.enforcer = e
 				conf.lock.Unlock()
