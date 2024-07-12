@@ -4,6 +4,7 @@ IgnoreURLs:
   - https://mosn.io/ # fake base url for now
   - http://localhost:1313/ # path used in local dev
   # ignore code generated links from the GitHub component
+  - https://github.com/mosn/htnn/tree/main/site/content
   - https://github.com/mosn/htnn/edit/
   - https://github.com/mosn/htnn/new
   - https://github.com/mosn/htnn/issues/new
