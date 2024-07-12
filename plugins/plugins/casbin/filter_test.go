@@ -88,7 +88,6 @@ func TestCasbin(t *testing.T) {
 						assert.Equal(t, tt.status, 0)
 					} else {
 						assert.Equal(t, tt.status, lr.Code)
-						assert.False(t, Changed)
 					}
 					wg.Done()
 				}()

@@ -15,8 +15,6 @@
 package casbin
 
 import (
-	"sync"
-
 	"mosn.io/htnn/api/pkg/filtermanager/api"
 )
 
@@ -33,11 +31,6 @@ type filter struct {
 	callbacks api.FilterCallbackHandler
 	config    *config
 }
-
-var (
-	Changed   = false
-	ChangedMu sync.RWMutex
-)
 
 func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {
 	conf := f.config
