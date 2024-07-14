@@ -23,10 +23,9 @@ import (
 )
 
 func TestFileIsChanged(t *testing.T) {
-	var (
-		mu      sync.Mutex
-		changed bool
-	)
+	changed := false
+	wg := sync.WaitGroup{}
+
 	watcher, err := NewWatcher()
 	defer watcher.Stop()
 
@@ -38,21 +37,19 @@ func TestFileIsChanged(t *testing.T) {
 
 	assert.Equal(t, tmpfile.Name(), file.Name)
 
-	err = watcher.AddFile(file)
+	err = watcher.AddFiles(file)
 	assert.Nil(t, err)
-
+	wg.Add(1)
 	watcher.Start(func() {
-		mu.Lock()
 		changed = true
-		mu.Unlock()
+		wg.Done()
 	})
 	assert.Nil(t, err)
 	tmpfile.Write([]byte("bls"))
 	tmpfile.Sync()
 
-	mu.Lock()
+	wg.Wait()
 	assert.True(t, changed)
-	mu.Unlock()
 
 	err = os.Remove(tmpfile.Name())
 	assert.Nil(t, err)

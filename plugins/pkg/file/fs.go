@@ -15,6 +15,7 @@
 package file
 
 import (
+	"path/filepath"
 	"sync"
 
 	"github.com/fsnotify/fsnotify"
@@ -34,6 +35,7 @@ type Watcher struct {
 	watcher *fsnotify.Watcher
 	files   map[string]bool
 	mu      sync.Mutex
+	dir     map[string]bool
 	done    chan struct{}
 }
 
@@ -46,18 +48,23 @@ func NewWatcher() (*Watcher, error) {
 		watcher: w,
 		files:   make(map[string]bool),
 		done:    make(chan struct{}),
+		dir:     make(map[string]bool),
 	}, nil
 }
 
-func (w *Watcher) AddFile(files ...*File) error {
+func (w *Watcher) AddFiles(files ...*File) error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	for _, file := range files {
 		if _, exists := w.files[file.Name]; !exists {
-			if err := w.watcher.Add(file.Name); err != nil {
+			w.files[file.Name] = true
+		}
+		dir := filepath.Dir(file.Name)
+		if _, exists := w.dir[dir]; !exists {
+			if err := w.watcher.Add(dir); err != nil {
 				return err
 			}
-			w.files[file.Name] = true
+			w.dir[dir] = true
 		}
 	}
 	return nil
@@ -65,19 +72,15 @@ func (w *Watcher) AddFile(files ...*File) error {
 
 func (w *Watcher) Start(onChanged func()) {
 	go func() {
-		logger.Info("start watch files")
+		logger.Info("start watching files")
 		for {
 			select {
-			case event, ok := <-w.watcher.Events:
-				if !ok {
-					return
+			case event, _ := <-w.watcher.Events:
+				if _, exists := w.files[event.Name]; exists {
+					logger.Info("file changed: ", "event", event)
+					onChanged()
 				}
-				logger.Info("file changed: ", "event", event)
-				onChanged()
-			case err, ok := <-w.watcher.Errors:
-				if !ok {
-					return
-				}
+			case err, _ := <-w.watcher.Errors:
 				logger.Error(err, "error watching files")
 			case <-w.done:
 				return

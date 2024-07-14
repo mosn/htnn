@@ -43,7 +43,7 @@ func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api
 
 	if !ok {
 		if err != nil {
-			api.LogErrorf("failed to enforece %s: %v", role, err)
+			api.LogErrorf("failed to enforce %s: %v", role, err)
 		}
 		api.LogInfof("reject forbidden user %s", role)
 		return &api.LocalResponse{

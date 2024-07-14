@@ -80,7 +80,7 @@ func (conf *config) Init(cb api.ConfigCallbackHandler) error {
 
 	conf.watcher = watcher
 
-	err = conf.watcher.AddFile(conf.modelFile, conf.policyFile)
+	err = conf.watcher.AddFiles(conf.modelFile, conf.policyFile)
 	if err != nil {
 		return err
 	}
@@ -90,7 +90,7 @@ func (conf *config) Init(cb api.ConfigCallbackHandler) error {
 	runtime.SetFinalizer(conf, func(conf *config) {
 		err := conf.watcher.Stop()
 		if err != nil {
-			api.LogErrorf("failed to close watcher, err: %v", err)
+			api.LogErrorf("failed to stop watcher, err: %v", err)
 		}
 	})
 	return nil
