@@ -75,12 +75,12 @@ func (w *Watcher) Start(onChanged func()) {
 		logger.Info("start watching files")
 		for {
 			select {
-			case event, _ := <-w.watcher.Events:
+			case event := <-w.watcher.Events:
 				if _, exists := w.files[event.Name]; exists {
 					logger.Info("file changed: ", "event", event)
 					onChanged()
 				}
-			case err, _ := <-w.watcher.Errors:
+			case err := <-w.watcher.Errors:
 				logger.Error(err, "error watching files")
 			case <-w.done:
 				return

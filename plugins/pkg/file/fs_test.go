@@ -25,9 +25,9 @@ import (
 func TestFileIsChanged(t *testing.T) {
 	changed := false
 	wg := sync.WaitGroup{}
+	once := sync.Once{}
 
 	watcher, err := NewWatcher()
-	defer watcher.Stop()
 
 	assert.Nil(t, err)
 
@@ -41,8 +41,10 @@ func TestFileIsChanged(t *testing.T) {
 	assert.Nil(t, err)
 	wg.Add(1)
 	watcher.Start(func() {
-		changed = true
-		wg.Done()
+		once.Do(func() {
+			changed = true
+			wg.Done()
+		})
 	})
 	assert.Nil(t, err)
 	tmpfile.Write([]byte("bls"))
@@ -52,5 +54,8 @@ func TestFileIsChanged(t *testing.T) {
 	assert.True(t, changed)
 
 	err = os.Remove(tmpfile.Name())
+	assert.Nil(t, err)
+
+	err = watcher.Stop()
 	assert.Nil(t, err)
 }
