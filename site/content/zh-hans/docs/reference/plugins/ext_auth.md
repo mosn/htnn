@@ -25,7 +25,7 @@ title: Ext Auth
 
 | 名称                  | 类型                                       | 必选 | 校验规则           | 说明                                                                                                                                                  |
 |---------------------|--------------------------------------------|------|--------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|
-| url                   | string                                     | 是   | must be valid URI    | 外部服务的 uri，如 `http://ext_auth/prefix`。 uri 的路径将作为鉴权请求路径的前缀。                                                                    |
+| url                   | string                                     | 是   | must be valid URI    | 外部服务的 uri，如 `http://ext_auth/prefix`。uri 的路径将作为鉴权请求路径的前缀。                                                                    |
 | timeout               | [Duration](../../type#duration)             | 否   | > 0s                 | 超时时长。例如，`10s` 表示超时时间为 10 秒。默认值为 0.2s。                                                                                             |
 | authorizationRequest  | AuthorizationRequest                        | 否   |                      |                                                                                                                                                        |
 | authorizationResponse | AuthorizationResponse                       | 否   |                      |                                                                                                                                                        |

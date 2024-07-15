@@ -199,7 +199,7 @@ status:
           pet: cat
 ```
 
-对于 VirtualService 里的其他路由，“pet” 对应的配置都是 goldfish。只有 “to-httpbin” 这条路由的配置是 cat。
+对于 VirtualService 里的其他路由，“pet”对应的配置都是 goldfish。只有“to-httpbin”这条路由的配置是 cat。
 
 我们也可以在 [LDS](https://www.envoyproxy.io/docs/envoy/latest/configuration/listeners/lds.html) 级别上配置策略。简单来说，你可以理解成端口级别上的配置。要想配置 LDS 级别的策略，需要在启动控制面时设置环境变量 `HTNN_ENABLE_LDS_PLUGIN_VIA_ECDS` 为 true。
 
