@@ -39,7 +39,7 @@ spec:
       port: 8080
 ```
 
-通过应用下述配置，`http://localhost:10000/` 的请求速率被限制为每秒 1 个请求:
+通过应用下述配置，`http://localhost:10000/` 的请求速率被限制为每秒 1 个请求：
 
 ```yaml
 apiVersion: htnn.mosn.io/v1
@@ -69,7 +69,7 @@ spec:
             denominator: HUNDRED
 ```
 
-我们可以进行测试:
+我们可以进行测试：
 
 ```
 $ while true; do curl -I http://localhost:10000/ 2>/dev/null | head -1 ;done

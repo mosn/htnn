@@ -31,9 +31,3 @@ clean:
 publish:
 	# FIXME: change baseURL to real link
 	docker run --rm -v $(PWD):/src --name docsy htnn-docsy -- hugo --minify --gc --baseURL https://mosn.io/
-
-.PHONY: lint-website
-lint-website: $(LOCALBIN)
-	test -x $(LOCALBIN)/htmltest || GOBIN=$(LOCALBIN) go install github.com/wjdp/htmltest@v0.17.0
-	$(LOCALBIN)/htmltest --conf ./.htmltest.yml ./public | grep  -E '(target does not exist|Non-OK status: 404)' \
-		&& exit 1 || true

@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM --platform=$TARGETPLATFORM golang:1.21-bullseye
+FROM --platform=$TARGETPLATFORM m.daocloud.io/docker.io/library/golang:1.21-bullseye
 
 # If this image is changed, tell @spacewander to push it.
 # TODO: Maybe we can push this image automatically by tag?
@@ -69,3 +69,11 @@ RUN VER=24.4 && \
 
 # clang-format
 RUN pip install --no-cache-dir clang-format==17.0.6
+
+# autocorrect
+RUN VER=2.11.1 && \
+    ARCH=$(dpkg --print-architecture) && \
+    wget --progress=dot:giga https://github.com/huacnlee/autocorrect/releases/download/v${VER}/autocorrect-linux-${ARCH}.tar.gz -O autocorrect.tar.gz && \
+    tar -zxvpf autocorrect.tar.gz && \
+    mv autocorrect /usr/bin && \
+    autocorrect --version

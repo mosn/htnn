@@ -18,19 +18,20 @@ title: Ext Auth
 | 名称          | 类型          | 必选 | 校验规则 | 说明 |
 |--------------|---------------|------|----------|------|
 | httpService | HttpService   | 是   |          |      |
-| failure_mode_allow | bool | 否 | | 默认为 false。当设置为 true 时，即使与授权服务的通信失败，或者授权服务返回了 HTTP 5xx 错误，过滤器仍会接受客户端请求 |
-| failure_mode_allow_header_add | bool | 否 | | 默认为 false。当 `failure_mode_allow` 和 `failure_mode_allow_header_add` 都设置为 true 时，若与授权服务的通信失败，或授权服务返回了 HTTP 5xx 错误，那么请求头中将会添加 `x-envoy-auth-failure-mode-allowed: true` |
+| failureModeAllow | bool | 否 | | 默认为 false。当设置为 true 时，即使与授权服务的通信失败，或者授权服务返回了 HTTP 5xx 错误，过滤器仍会接受客户端请求 |
+| failureModeAllowHeaderAdd | bool | 否 | | 默认为 false。当 `failureModeAllow` 和 `failureModeAllowHeaderAdd` 都设置为 true 时，若与授权服务的通信失败，或授权服务返回了 HTTP 5xx 错误，那么请求头中将会添加 `x-envoy-auth-failure-mode-allowed: true` |
 
 ### HttpService
 
 | 名称                  | 类型                                       | 必选 | 校验规则           | 说明                                                                                                                                                  |
 |---------------------|--------------------------------------------|------|--------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|
-| url                   | string                                     | 是   | must be valid URI    | 外部服务的 uri，如 `http://ext_auth/prefix`。 uri 的路径将作为鉴权请求路径的前缀。                                                                    |
+| url                   | string                                     | 是   | must be valid URI    | 外部服务的 uri，如 `http://ext_auth/prefix`。uri 的路径将作为鉴权请求路径的前缀。                                                                    |
 | timeout               | [Duration](../../type#duration)             | 否   | > 0s                 | 超时时长。例如，`10s` 表示超时时间为 10 秒。默认值为 0.2s。                                                                                             |
 | authorizationRequest  | AuthorizationRequest                        | 否   |                      |                                                                                                                                                        |
 | authorizationResponse | AuthorizationResponse                       | 否   |                      |                                                                                                                                                        |
 | statusOnError         | [StatusCode](../../type#statuscode)         | 否   |                      | 当鉴权服务器返回错误或无法访问时，设置返回给客户端的 HTTP 状态码。默认状态码是 `401`。                                                                   |
 | withRequestBody       | bool                                       | 否   |                      | 缓冲客户端请求体，并将其发送至鉴权请求中。                                                                                                          |
+
 ### AuthorizationRequest
 
 | 名称        | 类型                                             | 必选 | 校验规则           | 说明                                                                                                                                                        |

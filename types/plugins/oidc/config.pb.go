@@ -51,6 +51,7 @@ type Config struct {
 	// for the Client pre-registered at the OpenID Provider
 	RedirectUrl string   `protobuf:"bytes,4,opt,name=redirect_url,json=redirectUrl,proto3" json:"redirect_url,omitempty"`
 	Scopes      []string `protobuf:"bytes,5,rep,name=scopes,proto3" json:"scopes,omitempty"`
+	// [#do_not_document]
 	// This option is provided to skip the nonce verification. It is designed for local development.
 	SkipNonceVerify bool `protobuf:"varint,6,opt,name=skip_nonce_verify,json=skipNonceVerify,proto3" json:"skip_nonce_verify,omitempty"`
 	// Default to "x-id-token"

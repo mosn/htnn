@@ -23,5 +23,6 @@ use (
 	./e2e
 	./plugins
 	./site
+	./tools
 	./types
 )

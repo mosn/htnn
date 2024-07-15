@@ -107,6 +107,7 @@ jobs:
         reporter: github-pr-review
         path: "."
         pattern: "*.sh"
+        fail_on_error: true
 
     - name: lint dockerfile
       uses: hadolint/hadolint-action@v3.1.0

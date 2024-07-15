@@ -17,8 +17,8 @@ title: Limit Count Redis
 
 | 名称                    | 类型                                | 必选 | 校验规则                   | 说明                                                                                |
 | ----------------------- | ----------------------------------- | ---- | -------------------------- | ----------------------------------------------------------------------------------- |
-| address                 | string                              | 是   |                            | Redis 地址                                                                          |
-| cluster                 | Cluster                             | 是   |                            | Redis cluster 配置。`address` 和`cluster` 只能配置一个。                            |
+| address                 | string                              | 否   |                            | Redis 地址。`address` 和`cluster` 只能配置一个。                                                                          |
+| cluster                 | Cluster                             | 否   |                            | Redis cluster 配置。`address` 和`cluster` 只能配置一个。                            |
 | rules                   | Rule                                | 是   | min_items: 1, max_items: 8 | 规则                                                                                |
 | failureModeDeny         | bool                                | 否   |                            | 默认情况下，如果访问 Redis 失败，会放行请求。该值为 true 时，会拒绝请求。           |
 | enableLimitQuotaHeaders | bool                                | 否   |                            | 是否设置限流额度相关的响应头                                                        |
@@ -31,7 +31,7 @@ title: Limit Count Redis
 
 每个规则的统计是独立的。当任一规则的额度用完后，就会触发限流操作。因限流产生的拒绝的响应中会包含 header `x-envoy-ratelimited: true`。如果配置了 `enableLimitQuotaHeaders` 为 `true` 且访问 Redis 成功，所有响应中都会包括下面三个头：
 
-* `x-ratelimit-limit`：表示当前应用的限流规则。格式为“当前剩余额度最少的规则, (规则额度;w=时间窗口){1个或多个规则}”，例如 `2, 2;w=60`。
+* `x-ratelimit-limit`：表示当前应用的限流规则。格式为“当前剩余额度最少的规则，(规则额度;w=时间窗口){1 个或多个规则}”，例如 `2, 2;w=60`。
 * `x-ratelimit-remaining`：表示当前剩余额度最少的规则的剩余额度，最小值为 `0`。
 * `x-ratelimit-reset`：表示当前剩余额度最少的规则什么时候重置，单位为秒，例如 `59`。注意由于网络延迟等原因，该值并非绝对精准。
 
