@@ -31,7 +31,7 @@ func TestFileIsChanged(t *testing.T) {
 
 	assert.Nil(t, err)
 
-	tmpfile, _ := os.CreateTemp("./", "example")
+	tmpfile, _ := os.CreateTemp("", "example")
 
 	file := Stat(tmpfile.Name())
 
