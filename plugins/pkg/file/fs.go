@@ -56,13 +56,15 @@ func (w *Watcher) AddFiles(files ...*File) error {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	for _, file := range files {
-		if _, exists := w.files[file.Name]; !exists {
-			w.files[file.Name] = true
-		}
-		dir, err := filepath.Abs(file.Name)
+		absPath, err := filepath.Abs(file.Name)
 		if err != nil {
 			return err
 		}
+		if _, exists := w.files[absPath]; !exists {
+			w.files[absPath] = true
+		}
+
+		dir := filepath.Dir(absPath)
 		if _, exists := w.dir[dir]; !exists {
 			if err := w.watcher.Add(dir); err != nil {
 				return err
@@ -79,7 +81,7 @@ func (w *Watcher) Start(onChanged func()) {
 		for {
 			select {
 			case event := <-w.watcher.Events:
-				if event.Op&fsnotify.Chmod == fsnotify.Chmod {
+				if event.Op.Has(fsnotify.Chmod) {
 					continue
 				}
 				absPath, err := filepath.Abs(event.Name)
