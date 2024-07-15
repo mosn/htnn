@@ -19,9 +19,10 @@ HTNN 在 `controller/` 模块主要做了下面的事：
 * 提供 Native Plugin 框架，允许以插件的方式修改发送给数据面的 xDS
 * 提供 Service Registry 机制，允许以 registry 的方式对接外部服务发现系统，转换成数据面内的上游信息
 
-其中和开发者紧密相关的是 Plugin 和 Registry，建议阅读 `plugins/` 和 `registries/` 两个目录下的代码，看看如何使用 HTNN 提供的接口开发功能。
+其中和开发者紧密相关的是 Plugin 和 Registry。建议阅读 `plugins/` 和 `registries/` 两个目录下的代码，看看如何使用 HTNN 提供的接口开发功能。
 
 传统上想要修改 istio 的行为有两种方法，
+
 1. 将自己的资源翻译成 EnvoyFilter 写入到 k8s 里，让 istio 处理 EnvoyFilter。
 2. 让自己成为 MCP server。调和自己的资源，再把结果通过 MCP 协议给 istio。
 
@@ -39,7 +40,7 @@ HTNN 在 `plugins/` 模块下放置在数据面上运行的 Go Plugin 以及它�
 
 在开发自己的插件之前建议读一下现有插件的代码，尤其是和你开发的功能相似的插件，至少应该看看 [demo](https://github.com/mosn/htnn/tree/main/plugins/plugins/demo) 插件。插件代码位于 `plugins/` 目录下面。关于插件开发的更多信息，请参考[插件开发](./plugin_development)文档。
 
-HTNN 提供了一个[插件集成测试框架](./plugin_integration_test_framework)，允许在只运行数据面的情况下测试 Go Plugin 的逻辑。在 dev_your_plugin 这个范例里也展示了如何在第三方仓库中运行集成测试框架。
+HTNN 提供了一个[插件集成测试框架](./plugin_integration_test_framework)，允许在只运行数据面的情况下测试 Go Plugin 的逻辑。在 `dev_your_plugin` 这个范例里也展示了如何在第三方仓库中运行集成测试框架。
 
 每个插件都包含两类对象：`config` 和 `filter`。其中 `config` 负责配置管理，`filter` 负责执行请求级别的逻辑。
 
