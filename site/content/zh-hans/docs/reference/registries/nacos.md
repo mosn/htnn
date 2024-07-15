@@ -6,7 +6,7 @@ title: Nacos
 
 `nacos` registry 对接 [Nacos](https://nacos.io/) 服务发现，将服务信息转换成 `ServiceEntry`。该 registry 支持的是 V1 API，但根据 Nacos OpenAPI 文档，亦可用于对接 Nacos 2.x。
 
-> Nacos 2.X 版本兼容 Nacos1.X 版本的OpenAPI, 请参考文档Nacos1.X OpenAPI使用。
+> Nacos 2.X 版本兼容 Nacos1.X 版本的 OpenAPI, 请参考文档 Nacos1.X OpenAPI 使用。
 >
 > https://nacos.io/zh-cn/docs/v2/guide/user/open-api.html
 
@@ -25,7 +25,7 @@ Nacos 1.x 没有提供订阅当前服务列表的接口，所以只能通过轮�
 
 注意：由于心跳间隔、网络延迟等原因，服务的变化可能需要几十秒之后才会引起 `ServiceEntry` 改变。尤其是因为 https://github.com/nacos-group/nacos-sdk-go/issues/139，服务中最后一个示例的移除不会导致 `ServiceEntry` 改变。另外，为了避免因为轮询失败或 Nacos 暂时不可用导致 `ServiceEntry` 被错误删除，只有在 registry 配置变化时，才会清除生成的 `ServiceEntry`。
 
-注意：因为 [nacos-sdk-go](https://github.com/nacos-group/nacos-sdk-go/) 会向文件系统写入日志和缓存，而默认情况下 HTNN 的控制面是以只读模式挂载的，所以会导致无法对接 Nacos 。解决方法是在部署 HTNN 时往 `/log` 和 `/cache` 挂载可写的目录。以通过 helm 安装 HTNN 为例，可以通过以下方式挂载可写的目录：
+注意：因为 [nacos-sdk-go](https://github.com/nacos-group/nacos-sdk-go/) 会向文件系统写入日志和缓存，而默认情况下 HTNN 的控制面是以只读模式挂载的，所以会导致无法对接 Nacos。解决方法是在部署 HTNN 时往 `/log` 和 `/cache` 挂载可写的目录。以通过 helm 安装 HTNN 为例，可以通过以下方式挂载可写的目录：
 
 ```shell
 helm install htnn-controller htnn/htnn-controller ... -f custom-values.yaml
