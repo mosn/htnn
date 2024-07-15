@@ -59,7 +59,10 @@ func (w *Watcher) AddFiles(files ...*File) error {
 		if _, exists := w.files[file.Name]; !exists {
 			w.files[file.Name] = true
 		}
-		dir := filepath.Dir(file.Name)
+		dir, err := filepath.Abs(file.Name)
+		if err != nil {
+			return err
+		}
 		if _, exists := w.dir[dir]; !exists {
 			if err := w.watcher.Add(dir); err != nil {
 				return err
@@ -76,7 +79,14 @@ func (w *Watcher) Start(onChanged func()) {
 		for {
 			select {
 			case event := <-w.watcher.Events:
-				if _, exists := w.files[event.Name]; exists {
+				if event.Op&fsnotify.Chmod == fsnotify.Chmod {
+					continue
+				}
+				absPath, err := filepath.Abs(event.Name)
+				if err != nil {
+					logger.Error(err, "get file absPath failed")
+				}
+				if _, exists := w.files[absPath]; exists {
 					logger.Info("file changed: ", "event", event)
 					onChanged()
 				}
