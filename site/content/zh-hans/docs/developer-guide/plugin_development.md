@@ -39,7 +39,11 @@ HTNN 的插件分成两种：Go 插件和 Native 插件。Native 插件在运行
 对于操作相同的插件，它们按字母顺序排序。
 以下是顺序组（从第一个到最后一个排序）：
 
-* `Outer`：首位。它为 Native 插件保留。
+前三个顺序组为 Native 插件保留：
+
+* `Listener`: 和 [Envoy listener filters](https://www.envoyproxy.io/docs/envoy/latest/configuration/listeners/listener_filters/listener_filters) 相关的插件。
+* `Network`: 和 [Envoy network filters](https://www.envoyproxy.io/docs/envoy/latest/configuration/listeners/network_filters/network_filters) 相关的插件。
+* `Outer`：在 HTTP 上运行最前端的插件。
 
 现在开始是 Go 插件：
 
