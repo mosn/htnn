@@ -81,11 +81,8 @@ func (w *Watcher) Start(onChanged func()) {
 		for {
 			select {
 			case event := <-w.watcher.Events:
-				if event.Op&fsnotify.Chmod != 0 {
-					event.Op &= ^fsnotify.Chmod // Remove the Chmod bit
-					if event.Op == 0 {
-						continue // Skip if it was only a Chmod event
-					}
+				if event.Op == fsnotify.Chmod {
+					continue // Skip chmod event
 				}
 				absPath, err := filepath.Abs(event.Name)
 				if err != nil {
