@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM --platform=$TARGETPLATFORM golang:1.21-bullseye
+FROM --platform=$TARGETPLATFORM m.daocloud.io/docker.io/library/golang:1.21-bullseye
 
 # If this image is changed, tell @spacewander to push it.
 # TODO: Maybe we can push this image automatically by tag?
@@ -31,15 +31,16 @@ ARG GOPROXY
 ENV GOPROXY=$GOPROXY
 
 # codespell
-RUN apt update && apt install -y --no-install-recommends pip && pip install codespell==2.2.6
+# hadolint ignore=DL3008
+RUN apt-get update && apt-get install -y --no-install-recommends pip && pip install --no-cache-dir codespell==2.2.6
 
 # protoc
-RUN apt install -y --no-install-recommends unzip
+# hadolint ignore=DL3008
+RUN apt-get install -y --no-install-recommends unzip
 # I have researched https://github.com/bufbuild/protovalidate/ which claims itself as the successor of protoc-gen-validate.
 # Currently (2023 year), this project looks experimental and it has lots of break change compared with protoc-gen-validate.
 # So we still stick on the protoc-gen-validate.
 RUN VER=1.0.2 && \
-    ARCH=$(dpkg --print-architecture) && \
     set -ex && \
     git clone https://github.com/bufbuild/protoc-gen-validate -b v${VER} --depth 1 /go/src/protoc-gen-validate
 # Break down the git clone & wget so that we can cache git repo early
@@ -67,4 +68,12 @@ RUN VER=24.4 && \
     go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.31.0
 
 # clang-format
-RUN pip install clang-format==17.0.6
+RUN pip install --no-cache-dir clang-format==17.0.6
+
+# autocorrect
+RUN VER=2.11.1 && \
+    ARCH=$(dpkg --print-architecture) && \
+    wget --progress=dot:giga https://github.com/huacnlee/autocorrect/releases/download/v${VER}/autocorrect-linux-${ARCH}.tar.gz -O autocorrect.tar.gz && \
+    tar -zxvpf autocorrect.tar.gz && \
+    mv autocorrect /usr/bin && \
+    autocorrect --version

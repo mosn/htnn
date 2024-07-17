@@ -107,6 +107,20 @@ jobs:
         reporter: github-pr-review
         path: "."
         pattern: "*.sh"
+        fail_on_error: true
+
+    - name: lint dockerfile
+      uses: hadolint/hadolint-action@v3.1.0
+      with:
+        dockerfile: Dockerfile
+        recursive: true
+        failure-threshold: warning
+
+    - name: lint dev dockerfile
+      uses: hadolint/hadolint-action@v3.1.0
+      with:
+        dockerfile: ./tools/Dockerfile.dev
+        failure-threshold: warning
 
     - name: lint remain
       run: |

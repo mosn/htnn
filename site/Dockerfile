@@ -15,5 +15,6 @@
 # Use debian image for ARM64 support
 FROM floryn90/hugo:ext-debian@sha256:fee85ef1ff05dce85043b445fb7e1774594f35a943e7c019a378de345d91cf18
 
-RUN apt install -y --no-install-recommends git && \
+# hadolint ignore=DL3008
+RUN apt-get install -y --no-install-recommends git && \
   git config --global --add safe.directory /src
