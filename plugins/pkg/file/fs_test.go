@@ -16,28 +16,46 @@ package file
 
 import (
 	"os"
+	"sync"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func TestFileMtimeDetection(t *testing.T) {
-	defaultFs = newFS(2000 * time.Millisecond)
+func TestFileIsChanged(t *testing.T) {
+	changed := false
+	wg := sync.WaitGroup{}
+	once := sync.Once{}
+
+	watcher, err := NewWatcher()
+
+	assert.Nil(t, err)
 
 	tmpfile, _ := os.CreateTemp("", "example")
-	defer os.Remove(tmpfile.Name()) // clean up
 
-	f, err := Stat(tmpfile.Name())
+	file := Stat(tmpfile.Name())
+
+	assert.Equal(t, tmpfile.Name(), file.Name)
+
+	err = watcher.AddFiles(file)
 	assert.Nil(t, err)
-	assert.False(t, IsChanged(f))
-	time.Sleep(1000 * time.Millisecond)
+	wg.Add(1)
+	watcher.Start(func() {
+		once.Do(func() {
+			changed = true
+			wg.Done()
+		})
+	})
+	assert.Nil(t, err)
 	tmpfile.Write([]byte("bls"))
-	tmpfile.Close()
-	assert.False(t, IsChanged(f))
+	tmpfile.Sync()
 
-	time.Sleep(2500 * time.Millisecond)
-	assert.True(t, IsChanged(f))
-	assert.True(t, Update(f))
-	assert.False(t, IsChanged(f))
+	wg.Wait()
+	assert.True(t, changed)
+
+	err = os.Remove(tmpfile.Name())
+	assert.Nil(t, err)
+
+	err = watcher.Stop()
+	assert.Nil(t, err)
 }

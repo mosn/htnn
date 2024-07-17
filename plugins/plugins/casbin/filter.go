@@ -15,10 +15,7 @@
 package casbin
 
 import (
-	"github.com/casbin/casbin/v2"
-
 	"mosn.io/htnn/api/pkg/filtermanager/api"
-	"mosn.io/htnn/plugins/pkg/file"
 )
 
 func factory(c interface{}, callbacks api.FilterCallbackHandler) api.Filter {
@@ -40,37 +37,13 @@ func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api
 	role, _ := headers.Get(conf.Token.Name) // role can be ""
 	url := headers.Url()
 
-	policyChanged := file.IsChanged(conf.modelFile, conf.policyFile)
-	if policyChanged && !conf.updating.Load() {
-		conf.updating.Store(true)
-		api.LogWarnf("policy %s or model %s changed, reload enforcer", conf.policyFile.Name, conf.modelFile.Name)
-
-		go func() {
-			defer conf.updating.Store(false)
-			defer f.callbacks.RecoverPanic()
-
-			e, err := casbin.NewEnforcer(conf.Rule.Model, conf.Rule.Policy)
-			if err != nil {
-				api.LogErrorf("failed to update Enforcer: %v", err)
-				// next request will retry
-			} else {
-				conf.lock.Lock()
-				conf.enforcer = e
-				conf.lock.Unlock()
-
-				file.Update(conf.modelFile, conf.policyFile)
-				api.LogWarnf("policy %s or model %s changed, enforcer reloaded", conf.policyFile.Name, conf.modelFile.Name)
-			}
-		}()
-	}
-
 	conf.lock.RLock()
 	ok, err := f.config.enforcer.Enforce(role, url.Path, headers.Method())
 	conf.lock.RUnlock()
 
 	if !ok {
 		if err != nil {
-			api.LogErrorf("failed to enforece %s: %v", role, err)
+			api.LogErrorf("failed to enforce %s: %v", role, err)
 		}
 		api.LogInfof("reject forbidden user %s", role)
 		return &api.LocalResponse{

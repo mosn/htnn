@@ -15,11 +15,10 @@
 package file
 
 import (
-	"os"
+	"path/filepath"
 	"sync"
-	"time"
 
-	"github.com/jellydator/ttlcache/v3"
+	"github.com/fsnotify/fsnotify"
 
 	"mosn.io/htnn/api/pkg/log"
 )
@@ -29,110 +28,87 @@ var (
 )
 
 type File struct {
-	lock sync.RWMutex
-
-	Name  string
-	mtime time.Time
+	Name string
 }
 
-func (f *File) Mtime() time.Time {
-	f.lock.RLock()
-	defer f.lock.RUnlock()
-	// the returned time.Time should be readonly
-	return f.mtime
+type Watcher struct {
+	watcher *fsnotify.Watcher
+	files   map[string]bool
+	mu      sync.Mutex
+	dir     map[string]bool
+	done    chan struct{}
 }
 
-func (f *File) SetMtime(t time.Time) {
-	f.lock.Lock()
-	f.mtime = t
-	f.lock.Unlock()
-}
-
-type fs struct {
-	cache *ttlcache.Cache[string, os.FileInfo]
-}
-
-func newFS(ttl time.Duration) *fs {
-	loader := ttlcache.LoaderFunc[string, os.FileInfo](
-		func(c *ttlcache.Cache[string, os.FileInfo], key string) *ttlcache.Item[string, os.FileInfo] {
-			info, err := os.Stat(key)
-			if err != nil {
-				logger.Error(err, "reload file info to cache", "file", key)
-				return nil
-			}
-			item := c.Set(key, info, ttlcache.DefaultTTL)
-			logger.Info("update file mtime", "file", key, "mtime", item.Value().ModTime())
-			return item
-		},
-	)
-	cache := ttlcache.New(
-		ttlcache.WithTTL[string, os.FileInfo](ttl),
-		ttlcache.WithLoader[string, os.FileInfo](loader),
-	)
-	go cache.Start()
-
-	return &fs{
-		cache: cache,
-	}
-}
-
-var (
-	// TODO: rewrite it to use inotify
-	defaultFs = newFS(10 * time.Second)
-)
-
-func IsChanged(files ...*File) bool {
-	for _, file := range files {
-		changed := defaultFs.isChanged(file)
-		if changed {
-			return true
-		}
-	}
-	return false
-}
-
-func (f *fs) isChanged(file *File) bool {
-	item := f.cache.Get(file.Name)
-	if item == nil {
-		// As a protection, failed to fetch the real file means file not changed
-		return false
-	}
-
-	return file.Mtime().Before(item.Value().ModTime())
-}
-
-func (f *fs) Stat(path string) (*File, error) {
-	info, err := os.Stat(path)
+func NewWatcher() (*Watcher, error) {
+	w, err := fsnotify.NewWatcher()
 	if err != nil {
 		return nil, err
 	}
-	f.cache.Set(path, info, ttlcache.DefaultTTL)
-
-	return &File{
-		Name:  path,
-		mtime: info.ModTime(),
+	return &Watcher{
+		watcher: w,
+		files:   make(map[string]bool),
+		done:    make(chan struct{}),
+		dir:     make(map[string]bool),
 	}, nil
 }
 
-func Stat(path string) (*File, error) {
-	return defaultFs.Stat(path)
-}
-
-func Update(files ...*File) bool {
+func (w *Watcher) AddFiles(files ...*File) error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
 	for _, file := range files {
-		if !defaultFs.update(file) {
-			return false
+		absPath, err := filepath.Abs(file.Name)
+		if err != nil {
+			return err
+		}
+		if _, exists := w.files[absPath]; !exists {
+			w.files[absPath] = true
+		}
+
+		dir := filepath.Dir(absPath)
+		if _, exists := w.dir[dir]; !exists {
+			if err := w.watcher.Add(dir); err != nil {
+				return err
+			}
+			w.dir[dir] = true
 		}
 	}
-	return true
+	return nil
 }
 
-func (f *fs) update(file *File) bool {
-	item := f.cache.Get(file.Name)
-	if item == nil {
-		return false
-	}
+func (w *Watcher) Start(onChanged func()) {
+	go func() {
+		logger.Info("start watching files")
+		for {
+			select {
+			case event := <-w.watcher.Events:
+				if event.Op == fsnotify.Chmod {
+					continue // Skip chmod event
+				}
+				absPath, err := filepath.Abs(event.Name)
+				if err != nil {
+					logger.Error(err, "get file absPath failed")
+				}
+				if _, exists := w.files[absPath]; exists {
+					logger.Info("file changed: ", "event", event)
+					onChanged()
+				}
+			case err := <-w.watcher.Errors:
+				logger.Error(err, "error watching files")
+			case <-w.done:
+				return
+			}
+		}
+	}()
+}
 
-	file.SetMtime(item.Value().ModTime())
-	return true
+func (w *Watcher) Stop() error {
+	logger.Info("stop watcher")
+	close(w.done)
+	return w.watcher.Close()
+}
+
+func Stat(file string) *File {
+	return &File{
+		Name: file,
+	}
 }
