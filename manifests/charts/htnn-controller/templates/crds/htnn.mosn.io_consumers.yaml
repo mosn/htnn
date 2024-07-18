@@ -51,8 +51,7 @@ spec:
                 type: object
               filters:
                 additionalProperties:
-                  description: Plugin defines the plugin configuration used in the
-                    HTTP layer
+                  description: Plugin defines the plugin configuration
                   properties:
                     config:
                       type: object
