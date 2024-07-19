@@ -119,9 +119,9 @@ type HeaderMap = api.HeaderMap
 type RequestHeaderMap interface {
 	api.RequestHeaderMap
 
-	// Url returns the parsed `url.URL`. Changing the field in the returned `url.URL` will not affect the original path.
+	// URL returns the parsed `url.URL`. Changing the field in the returned `url.URL` will not affect the original path.
 	// Please use `Set(":path", ...)` to change it.
-	Url() *url.URL
+	URL() *url.URL
 	// Cookie returns the HTTP Cookie. If there is no cookie with the given name, nil will be returned.
 	// If multiple cookies match the given name, only one cookie will be returned.
 	// Changing the field in the returned `http.Cookie` will not affect the cookies sent to the upstream.

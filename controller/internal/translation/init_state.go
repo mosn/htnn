@@ -314,11 +314,11 @@ func (s *InitState) addPolicyForGateway(policy *mosniov1.FilterPolicy, gs model.
 	})
 }
 
-func (s *InitState) Process(original_ctx context.Context) (*FinalState, error) {
+func (s *InitState) Process(originalCtx context.Context) (*FinalState, error) {
 	// Process chain:
 	// InitState -> DataPlaneState -> MergedState -> FinalState
 	ctx := &Ctx{
-		Context: original_ctx,
+		Context: originalCtx,
 	}
 
 	return toDataPlaneState(ctx, s)

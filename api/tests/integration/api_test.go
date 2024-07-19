@@ -21,12 +21,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"mosn.io/htnn/api/plugins/tests/integration/control_plane"
-	"mosn.io/htnn/api/plugins/tests/integration/data_plane"
+	"mosn.io/htnn/api/plugins/tests/integration/controlplane"
+	"mosn.io/htnn/api/plugins/tests/integration/dataplane"
 )
 
 func TestLogLevelCache(t *testing.T) {
-	dp, err := data_plane.StartDataPlane(t, &data_plane.Option{
+	dp, err := dataplane.StartDataPlane(t, &dataplane.Option{
 		LogLevel: "error",
 		Envs: map[string]string{
 			"ENVOY_GOLANG_LOG_LEVEL_SYNC_INTERVAL": "10ms",
@@ -44,7 +44,7 @@ func TestLogLevelCache(t *testing.T) {
 	}
 	defer dp.Stop()
 
-	config := control_plane.NewSinglePluinConfig("buffer", map[string]interface{}{})
+	config := controlplane.NewSinglePluinConfig("buffer", map[string]interface{}{})
 	controlPlane.UseGoPluginConfig(t, config, dp)
 	err = dp.SetLogLevel("golang", "debug")
 	require.Nil(t, err)

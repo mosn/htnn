@@ -21,13 +21,13 @@ import (
 
 	"mosn.io/htnn/api/pkg/filtermanager"
 	"mosn.io/htnn/api/pkg/filtermanager/model"
-	"mosn.io/htnn/api/plugins/tests/integration/control_plane"
-	"mosn.io/htnn/api/plugins/tests/integration/data_plane"
+	"mosn.io/htnn/api/plugins/tests/integration/controlplane"
+	"mosn.io/htnn/api/plugins/tests/integration/dataplane"
 )
 
 func TestFilterPlugin(t *testing.T) {
-	dp, err := data_plane.StartDataPlane(t, &data_plane.Option{
-		Bootstrap: data_plane.Bootstrap().SetFilterGolang(map[string]interface{}{
+	dp, err := dataplane.StartDataPlane(t, &dataplane.Option{
+		Bootstrap: dataplane.Bootstrap().SetFilterGolang(map[string]interface{}{
 			"plugins": []interface{}{
 				map[string]interface{}{
 					"name": "buffer",
@@ -69,9 +69,9 @@ func TestFilterPlugin(t *testing.T) {
 }
 
 func TestFilterMergeIntoRoute(t *testing.T) {
-	dp, err := data_plane.StartDataPlane(t, &data_plane.Option{
+	dp, err := dataplane.StartDataPlane(t, &dataplane.Option{
 		LogLevel: "debug",
-		Bootstrap: data_plane.Bootstrap().SetFilterGolang(map[string]interface{}{
+		Bootstrap: dataplane.Bootstrap().SetFilterGolang(map[string]interface{}{
 			"plugins": []interface{}{
 				map[string]interface{}{
 					"name": "buffer",
@@ -119,7 +119,7 @@ func TestFilterMergeIntoRoute(t *testing.T) {
 		},
 		{
 			name:   "init should be called only once (route version)",
-			config: control_plane.NewSinglePluinConfig("init", map[string]interface{}{}),
+			config: controlplane.NewSinglePluinConfig("init", map[string]interface{}{}),
 			run: func(t *testing.T) {
 				resp, _ := dp.Get("/echo", nil)
 				assert.Equal(t, 200, resp.StatusCode)
@@ -131,7 +131,7 @@ func TestFilterMergeIntoRoute(t *testing.T) {
 		},
 		{
 			name: "override",
-			config: control_plane.NewSinglePluinConfig("buffer", map[string]interface{}{
+			config: controlplane.NewSinglePluinConfig("buffer", map[string]interface{}{
 				"decode": true,
 				"need":   true,
 			}),
@@ -143,7 +143,7 @@ func TestFilterMergeIntoRoute(t *testing.T) {
 		},
 		{
 			name: "sort merged plugins",
-			config: control_plane.NewPluinConfig([]*model.FilterConfig{
+			config: controlplane.NewPluinConfig([]*model.FilterConfig{
 				{
 					Name:   "stream",
 					Config: map[string]interface{}{},

@@ -21,13 +21,13 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"mosn.io/htnn/api/pkg/filtermanager"
-	"mosn.io/htnn/api/plugins/tests/integration/control_plane"
-	"mosn.io/htnn/api/plugins/tests/integration/data_plane"
+	"mosn.io/htnn/api/plugins/tests/integration/controlplane"
+	"mosn.io/htnn/api/plugins/tests/integration/dataplane"
 	"mosn.io/htnn/api/plugins/tests/integration/helper"
 )
 
 func TestOpa(t *testing.T) {
-	dp, err := data_plane.StartDataPlane(t, &data_plane.Option{})
+	dp, err := dataplane.StartDataPlane(t, &dataplane.Option{})
 	if err != nil {
 		t.Fatalf("failed to start data plane: %v", err)
 		return
@@ -43,7 +43,7 @@ func TestOpa(t *testing.T) {
 	}{
 		{
 			name: "happy path",
-			config: control_plane.NewSinglePluinConfig("opa", map[string]interface{}{
+			config: controlplane.NewSinglePluinConfig("opa", map[string]interface{}{
 				"remote": map[string]string{
 					"url":    "http://opa:8181",
 					"policy": "test",
@@ -59,7 +59,7 @@ func TestOpa(t *testing.T) {
 		},
 		{
 			name: "local",
-			config: control_plane.NewSinglePluinConfig("opa", map[string]interface{}{
+			config: controlplane.NewSinglePluinConfig("opa", map[string]interface{}{
 				"local": map[string]string{
 					"text": `package test
 						import input.request

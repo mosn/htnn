@@ -28,8 +28,8 @@ import (
 
 	"mosn.io/htnn/api/pkg/filtermanager"
 	"mosn.io/htnn/api/pkg/filtermanager/model"
-	"mosn.io/htnn/api/plugins/tests/integration/control_plane"
-	"mosn.io/htnn/api/plugins/tests/integration/data_plane"
+	"mosn.io/htnn/api/plugins/tests/integration/controlplane"
+	"mosn.io/htnn/api/plugins/tests/integration/dataplane"
 )
 
 func assertBody(t *testing.T, exp string, resp *http.Response) {
@@ -38,7 +38,7 @@ func assertBody(t *testing.T, exp string, resp *http.Response) {
 }
 
 func TestFilterManagerDecode(t *testing.T) {
-	dp, err := data_plane.StartDataPlane(t, nil)
+	dp, err := dataplane.StartDataPlane(t, nil)
 	if err != nil {
 		t.Fatalf("failed to start data plane: %v", err)
 		return
@@ -266,7 +266,7 @@ func assertBodyHas(t *testing.T, exp string, resp *http.Response) {
 }
 
 func TestFilterManagerEncode(t *testing.T) {
-	dp, err := data_plane.StartDataPlane(t, nil)
+	dp, err := dataplane.StartDataPlane(t, nil)
 	if err != nil {
 		t.Fatalf("failed to start data plane: %v", err)
 		return
@@ -479,7 +479,7 @@ func TestFilterManagerEncode(t *testing.T) {
 }
 
 func TestFilterManagerDecodeLocalReply(t *testing.T) {
-	dp, err := data_plane.StartDataPlane(t, nil)
+	dp, err := dataplane.StartDataPlane(t, nil)
 	if err != nil {
 		t.Fatalf("failed to start data plane: %v", err)
 		return
@@ -718,7 +718,7 @@ func TestFilterManagerDecodeLocalReply(t *testing.T) {
 }
 
 func TestFilterManagerEncodeLocalReply(t *testing.T) {
-	dp, err := data_plane.StartDataPlane(t, nil)
+	dp, err := dataplane.StartDataPlane(t, nil)
 	if err != nil {
 		t.Fatalf("failed to start data plane: %v", err)
 		return
@@ -894,14 +894,14 @@ func TestFilterManagerEncodeLocalReply(t *testing.T) {
 }
 
 func TestFilterManagerIgnoreUnknownFields(t *testing.T) {
-	dp, err := data_plane.StartDataPlane(t, nil)
+	dp, err := dataplane.StartDataPlane(t, nil)
 	if err != nil {
 		t.Fatalf("failed to start data plane: %v", err)
 		return
 	}
 	defer dp.Stop()
 
-	config := control_plane.NewSinglePluinConfig("buffer", map[string]interface{}{
+	config := controlplane.NewSinglePluinConfig("buffer", map[string]interface{}{
 		"unknown": "blah",
 	})
 	controlPlane.UseGoPluginConfig(t, config, dp)
@@ -911,7 +911,7 @@ func TestFilterManagerIgnoreUnknownFields(t *testing.T) {
 }
 
 func TestFilterManagerPluginReturnsErrorInParse(t *testing.T) {
-	dp, err := data_plane.StartDataPlane(t, &data_plane.Option{
+	dp, err := dataplane.StartDataPlane(t, &dataplane.Option{
 		NoErrorLogCheck: true,
 		ExpectLogPattern: []string{
 			`error in plugin buffer: `,
@@ -923,7 +923,7 @@ func TestFilterManagerPluginReturnsErrorInParse(t *testing.T) {
 	}
 	defer dp.Stop()
 
-	config := control_plane.NewSinglePluinConfig("buffer", map[string]interface{}{
+	config := controlplane.NewSinglePluinConfig("buffer", map[string]interface{}{
 		"decode": []string{"wrong type"},
 	})
 	controlPlane.UseGoPluginConfig(t, config, dp)
@@ -933,7 +933,7 @@ func TestFilterManagerPluginReturnsErrorInParse(t *testing.T) {
 }
 
 func TestFilterManagerPluginReturnsErrorInInit(t *testing.T) {
-	dp, err := data_plane.StartDataPlane(t, &data_plane.Option{
+	dp, err := dataplane.StartDataPlane(t, &dataplane.Option{
 		NoErrorLogCheck: true,
 		ExpectLogPattern: []string{
 			`error in plugin bad: ouch`,
@@ -964,7 +964,7 @@ func TestFilterManagerPluginReturnsErrorInInit(t *testing.T) {
 }
 
 func TestFilterManagerPluginPanicInInit(t *testing.T) {
-	dp, err := data_plane.StartDataPlane(t, &data_plane.Option{
+	dp, err := dataplane.StartDataPlane(t, &dataplane.Option{
 		NoErrorLogCheck: true,
 		ExpectLogPattern: []string{
 			`http: panic serving: panic in init`,
@@ -995,7 +995,7 @@ func TestFilterManagerPluginPanicInInit(t *testing.T) {
 }
 
 func TestFilterManagerPluginPanic(t *testing.T) {
-	dp, err := data_plane.StartDataPlane(t, &data_plane.Option{
+	dp, err := dataplane.StartDataPlane(t, &dataplane.Option{
 		NoErrorLogCheck: true,
 	})
 	if err != nil {
@@ -1040,7 +1040,7 @@ func TestFilterManagerPluginPanic(t *testing.T) {
 }
 
 func TestFilterManagerPluginIncorrectMethodDefinition(t *testing.T) {
-	dp, err := data_plane.StartDataPlane(t, &data_plane.Option{
+	dp, err := dataplane.StartDataPlane(t, &dataplane.Option{
 		LogLevel:        "debug",
 		NoErrorLogCheck: true,
 		ExpectLogPattern: []string{

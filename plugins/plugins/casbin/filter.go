@@ -35,7 +35,7 @@ type filter struct {
 func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {
 	conf := f.config
 	role, _ := headers.Get(conf.Token.Name) // role can be ""
-	url := headers.Url()
+	url := headers.URL()
 
 	conf.lock.RLock()
 	ok, err := f.config.enforcer.Enforce(role, url.Path, headers.Method())

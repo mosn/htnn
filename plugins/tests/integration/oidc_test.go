@@ -26,13 +26,13 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"mosn.io/htnn/api/plugins/tests/integration/control_plane"
-	"mosn.io/htnn/api/plugins/tests/integration/data_plane"
+	"mosn.io/htnn/api/plugins/tests/integration/controlplane"
+	"mosn.io/htnn/api/plugins/tests/integration/dataplane"
 	"mosn.io/htnn/api/plugins/tests/integration/helper"
 )
 
 func TestOIDC(t *testing.T) {
-	dp, err := data_plane.StartDataPlane(t, &data_plane.Option{})
+	dp, err := dataplane.StartDataPlane(t, &dataplane.Option{})
 	if err != nil {
 		t.Fatalf("failed to start data plane: %v", err)
 		return
@@ -41,10 +41,10 @@ func TestOIDC(t *testing.T) {
 
 	helper.WaitServiceUp(t, ":4444", "hydra")
 
-	redirectUrl := "http://127.0.0.1:10000/echo"
+	redirectURL := "http://127.0.0.1:10000/echo"
 	hydraCmd := "hydra create client --response-type code,id_token " +
 		"--grant-type authorization_code,refresh_token -e http://127.0.0.1:4445 " +
-		"--redirect-uri " + redirectUrl + " --format json"
+		"--redirect-uri " + redirectURL + " --format json"
 	cmdline := "docker compose -f ./testdata/services/docker-compose.yml " +
 		"exec --no-TTY hydra " + hydraCmd
 	cmds := strings.Fields(cmdline)
@@ -57,17 +57,17 @@ func TestOIDC(t *testing.T) {
 	t.Logf("hydra output: %s", stdout)
 
 	type hydraOutput struct {
-		ClientId     string `json:"client_id"`
+		ClientID     string `json:"client_id"`
 		ClientSecret string `json:"client_secret"`
 	}
 
 	var hydra hydraOutput
 	json.Unmarshal(stdout, &hydra)
 
-	config := control_plane.NewSinglePluinConfig("oidc", map[string]interface{}{
-		"clientId":     hydra.ClientId,
+	config := controlplane.NewSinglePluinConfig("oidc", map[string]interface{}{
+		"clientId":     hydra.ClientID,
 		"clientSecret": hydra.ClientSecret,
-		"redirectUrl":  redirectUrl,
+		"redirectUrl":  redirectURL,
 		"issuer":       "http://hydra:4444",
 	})
 	controlPlane.UseGoPluginConfig(t, config, dp)
@@ -84,12 +84,12 @@ func TestOIDC(t *testing.T) {
 	u, err := url.ParseRequestURI(uri)
 	require.NoError(t, err)
 	require.Equal(t, "hydra:4444", u.Host)
-	require.Equal(t, hydra.ClientId, u.Query().Get("client_id"))
-	require.Equal(t, redirectUrl, u.Query().Get("redirect_uri"))
-	encodedUrl := strings.Split(u.Query().Get("state"), ".")[1]
-	b, _ := base64.URLEncoding.DecodeString(encodedUrl)
-	originUrl := string(b)
-	require.Equal(t, "http://localhost:10000/echo?a=1", originUrl)
+	require.Equal(t, hydra.ClientID, u.Query().Get("client_id"))
+	require.Equal(t, redirectURL, u.Query().Get("redirect_uri"))
+	encodedURL := strings.Split(u.Query().Get("state"), ".")[1]
+	b, _ := base64.URLEncoding.DecodeString(encodedURL)
+	originURL := string(b)
+	require.Equal(t, "http://localhost:10000/echo?a=1", originURL)
 	require.NotEmpty(t, u.Query().Get("nonce"))
 	require.NotEmpty(t, u.Query().Get("code_challenge"))
 	cookie := resp.Header.Get("Set-Cookie")

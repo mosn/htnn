@@ -27,8 +27,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"mosn.io/htnn/api/pkg/filtermanager/model"
-	"mosn.io/htnn/api/plugins/tests/integration/control_plane"
-	"mosn.io/htnn/api/plugins/tests/integration/data_plane"
+	"mosn.io/htnn/api/plugins/tests/integration/controlplane"
+	"mosn.io/htnn/api/plugins/tests/integration/dataplane"
 )
 
 // The benchmarks here are used to profile and improve the data plane performance.
@@ -77,7 +77,7 @@ func runBenchmarkWithHeaders(t *testing.T, clientBin string, url string, hdr htt
 func TestBenchmarkPlugin(t *testing.T) {
 	clientBin := benchmarkClient(t)
 
-	dp, err := data_plane.StartDataPlane(t, &data_plane.Option{
+	dp, err := dataplane.StartDataPlane(t, &dataplane.Option{
 		LogLevel: "warn",
 	})
 	if err != nil {
@@ -86,7 +86,7 @@ func TestBenchmarkPlugin(t *testing.T) {
 	}
 	defer dp.Stop()
 
-	config := control_plane.NewSinglePluinConfig("benchmark", map[string]interface{}{})
+	config := controlplane.NewSinglePluinConfig("benchmark", map[string]interface{}{})
 	controlPlane.UseGoPluginConfig(t, config, dp)
 
 	runBenchmark(t, clientBin, "http://localhost:10000/echo")
@@ -95,9 +95,9 @@ func TestBenchmarkPlugin(t *testing.T) {
 func TestBenchmarkPluginFromConsumer(t *testing.T) {
 	clientBin := benchmarkClient(t)
 
-	dp, err := data_plane.StartDataPlane(t, &data_plane.Option{
+	dp, err := dataplane.StartDataPlane(t, &dataplane.Option{
 		LogLevel: "warn",
-		Bootstrap: data_plane.Bootstrap().AddConsumer("marvin", map[string]interface{}{
+		Bootstrap: dataplane.Bootstrap().AddConsumer("marvin", map[string]interface{}{
 			"auth": map[string]interface{}{
 				"consumer": `{"name":"marvin"}`,
 			},
@@ -114,7 +114,7 @@ func TestBenchmarkPluginFromConsumer(t *testing.T) {
 	}
 	defer dp.Stop()
 
-	config := control_plane.NewPluinConfig([]*model.FilterConfig{
+	config := controlplane.NewPluinConfig([]*model.FilterConfig{
 		{
 			Name:   "consumer",
 			Config: map[string]interface{}{},

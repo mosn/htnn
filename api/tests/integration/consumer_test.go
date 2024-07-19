@@ -23,13 +23,13 @@ import (
 
 	"mosn.io/htnn/api/pkg/filtermanager"
 	"mosn.io/htnn/api/pkg/filtermanager/model"
-	"mosn.io/htnn/api/plugins/tests/integration/control_plane"
-	"mosn.io/htnn/api/plugins/tests/integration/data_plane"
+	"mosn.io/htnn/api/plugins/tests/integration/controlplane"
+	"mosn.io/htnn/api/plugins/tests/integration/dataplane"
 )
 
 func TestConsumerWithFilter(t *testing.T) {
-	dp, err := data_plane.StartDataPlane(t, &data_plane.Option{
-		Bootstrap: data_plane.Bootstrap().AddConsumer("marvin", map[string]interface{}{
+	dp, err := dataplane.StartDataPlane(t, &dataplane.Option{
+		Bootstrap: dataplane.Bootstrap().AddConsumer("marvin", map[string]interface{}{
 			"auth": map[string]interface{}{
 				"consumer": `{"name":"marvin"}`,
 			},
@@ -53,7 +53,7 @@ func TestConsumerWithFilter(t *testing.T) {
 	}{
 		{
 			name:   "authn & exec",
-			config: control_plane.NewSinglePluinConfig("consumer", map[string]interface{}{}),
+			config: controlplane.NewSinglePluinConfig("consumer", map[string]interface{}{}),
 			run: func(t *testing.T) {
 				resp, _ := dp.Get("/echo", http.Header{"Authorization": []string{"marvin"}})
 				assert.Equal(t, 206, resp.StatusCode)
@@ -73,8 +73,8 @@ func TestConsumerWithFilter(t *testing.T) {
 }
 
 func TestConsumerWithFilterInitFailed(t *testing.T) {
-	dp, err := data_plane.StartDataPlane(t, &data_plane.Option{
-		Bootstrap: data_plane.Bootstrap().AddConsumer("marvin", map[string]interface{}{
+	dp, err := dataplane.StartDataPlane(t, &dataplane.Option{
+		Bootstrap: dataplane.Bootstrap().AddConsumer("marvin", map[string]interface{}{
 			"auth": map[string]interface{}{
 				"consumer": `{"name":"marvin"}`,
 			},
@@ -102,7 +102,7 @@ func TestConsumerWithFilterInitFailed(t *testing.T) {
 	}{
 		{
 			name:   "authn & exec",
-			config: control_plane.NewSinglePluinConfig("consumer", map[string]interface{}{}),
+			config: controlplane.NewSinglePluinConfig("consumer", map[string]interface{}{}),
 			run: func(t *testing.T) {
 				resp, _ := dp.Get("/echo", http.Header{"Authorization": []string{"marvin"}})
 				assert.Equal(t, 500, resp.StatusCode)
@@ -119,9 +119,9 @@ func TestConsumerWithFilterInitFailed(t *testing.T) {
 }
 
 func TestConsumerWithFilterAndMergeFromFilter(t *testing.T) {
-	dp, err := data_plane.StartDataPlane(t, &data_plane.Option{
+	dp, err := dataplane.StartDataPlane(t, &dataplane.Option{
 		LogLevel: "debug",
-		Bootstrap: data_plane.Bootstrap().AddConsumer("marvin", map[string]interface{}{
+		Bootstrap: dataplane.Bootstrap().AddConsumer("marvin", map[string]interface{}{
 			"auth": map[string]interface{}{
 				"consumer": `{"name":"marvin"}`,
 			},
@@ -154,7 +154,7 @@ func TestConsumerWithFilterAndMergeFromFilter(t *testing.T) {
 	}{
 		{
 			name:   "authn & exec",
-			config: control_plane.NewSinglePluinConfig("consumer", map[string]interface{}{}),
+			config: controlplane.NewSinglePluinConfig("consumer", map[string]interface{}{}),
 			run: func(t *testing.T) {
 				resp, _ := dp.Get("/echo", http.Header{"Authorization": []string{"marvin"}})
 				assert.Equal(t, 206, resp.StatusCode)
@@ -179,8 +179,8 @@ func TestConsumerWithFilterAndMergeFromFilter(t *testing.T) {
 }
 
 func TestConsumerFilterNotAfterConsumerRunInLaterPhase(t *testing.T) {
-	dp, err := data_plane.StartDataPlane(t, &data_plane.Option{
-		Bootstrap: data_plane.Bootstrap().AddConsumer("marvin", map[string]interface{}{
+	dp, err := dataplane.StartDataPlane(t, &dataplane.Option{
+		Bootstrap: dataplane.Bootstrap().AddConsumer("marvin", map[string]interface{}{
 			"auth": map[string]interface{}{
 				"consumer": `{"name":"marvin"}`,
 			},
@@ -199,7 +199,7 @@ func TestConsumerFilterNotAfterConsumerRunInLaterPhase(t *testing.T) {
 	}{
 		{
 			name: "authn & exec",
-			config: control_plane.NewPluinConfig([]*model.FilterConfig{
+			config: controlplane.NewPluinConfig([]*model.FilterConfig{
 				{
 					Name:   "beforeConsumerAndHasOtherMethod",
 					Config: map[string]interface{}{},

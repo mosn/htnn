@@ -99,7 +99,7 @@ func (f *accessCacheFieldsFilter) do(headers api.RequestHeaderMap) api.ResultAct
 	// Maybe we can relax the concurreny requirement for header modification?
 	// Update headers in OnLog is meaningless. Anyway, add lock for now.
 	headers.Set("Cookie", "k=v")
-	p := headers.Url().Path
+	p := headers.URL().Path
 	headers.Add("Cookie", fmt.Sprintf("k=%s", p))
 	headers.Cookie("k")
 	headers.Del("Cookie")
