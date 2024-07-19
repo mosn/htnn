@@ -28,8 +28,8 @@ build-test-so-local:
 		-ldflags "-B 0x$(shell head -c20 /dev/urandom|od -An -tx1|tr -d ' \n') " \
 		--buildmode=c-shared \
 		-cover -covermode=atomic -coverpkg=${PROJECT_NAME}/... \
-		-v -o plugins/tests/integration/${TARGET_SO} \
-		${PROJECT_NAME}/api/plugins/tests/integration/libgolang
+		-v -o tests/integration/${TARGET_SO} \
+		${PROJECT_NAME}/api/tests/integration/libgolang
 
 # Go 1.19+ adds vcs check which will cause error "fatal: detected dubious ownership in repository at '...'".
 # So here we disable the error via git configuration when running inside Docker.
@@ -46,11 +46,11 @@ build-test-so:
 .PHONY: integration-test
 integration-test:
 	test -d /tmp/htnn_coverage && rm -rf /tmp/htnn_coverage || true
-	$(foreach PKG, $(shell go list ./plugins/tests/integration/...), \
+	$(foreach PKG, $(shell go list ./tests/integration/...), \
 		go test -v ${PKG} || exit 1; \
 	)
 
 # The benchmark running time can be controlled via env var HTNN_DATA_PLANE_BENCHMARK_DURATION
 .PHONY: benchmark
 benchmark:
-	go test -tags benchmark -v ./plugins/tests/integration/ -run TestBenchmark
+	go test -tags benchmark -v ./tests/integration/ -run TestBenchmark
