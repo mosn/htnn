@@ -33,33 +33,38 @@ func TestConfig(t *testing.T) {
 			err:   "invalid Config.Rules",
 		},
 		{
+			name:  "prefix is required",
+			input: `{"address":"127.9.1.1:6379", "rules":[{"count":1,"timeWindow":"1s"}]}`,
+			err:   "invalid Config.Prefix",
+		},
+		{
 			name:  "invalid address",
-			input: `{"address":"12::0:1", "rules":[{"count":1,"timeWindow":"1s"}]}`,
+			input: `{"address":"12::0:1", "prefix":"test", "rules":[{"count":1,"timeWindow":"1s"}]}`,
 			err:   "bad address 12::0:1",
 		},
 		{
 			name:  "address is required",
-			input: `{"rules":[{"count":1,"timeWindow":"1s"}]}`,
+			input: `{"prefix":"test", "rules":[{"count":1, "timeWindow":"1s"}]}`,
 			err:   "invalid Config.Source: value is required",
 		},
 		{
 			name:  "validate rule",
-			input: `{"address":"127.0.0.1:6479", "rules":[{"count":1}]}`,
+			input: `{"address":"127.0.0.1:6479", "prefix":"test", "rules":[{"count":1}]}`,
 			err:   "invalid Rule.TimeWindow",
 		},
 		{
 			name:  "bad expr",
-			input: `{"address":"127.0.0.1:6479", "rules":[{"count":1,"timeWindow":"1s","key":"request.headers"}]}`,
+			input: `{"address":"127.0.0.1:6479", "prefix":"test", "rules":[{"count":1,"timeWindow":"1s","key":"request.headers"}]}`,
 			err:   "unexpected failed resolution",
 		},
 		{
 			name:  "passwd",
-			input: `{"address":"127.0.0.1:6479", "rules":[{"count":1,"timeWindow":"1s"}], "username":"user"}`,
+			input: `{"address":"127.0.0.1:6479", "prefix":"test", "rules":[{"count":1,"timeWindow":"1s"}], "username":"user"}`,
 			err:   "password is required when username is set",
 		},
 		{
 			name:  "pass",
-			input: `{"address":"127.0.0.1:6479", "rules":[{"count":1,"timeWindow":"1s"}]}`,
+			input: `{"address":"127.0.0.1:6479", "rules":[{"count":1,"timeWindow":"1s"}], "prefix":"test"}`,
 		},
 	}
 

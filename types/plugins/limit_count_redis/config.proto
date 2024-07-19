@@ -55,4 +55,7 @@ message Config {
 
   api.v1.StatusCode status_on_error = 9;
   api.v1.StatusCode rate_limited_status = 10;
+
+  // There is no special reason to limit the length <=128, just to avoid too long string
+  string prefix = 12 [(validate.rules).string = {min_len: 1, max_len: 128}];
 }

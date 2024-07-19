@@ -20,7 +20,6 @@ import (
 	"strings"
 
 	"github.com/google/cel-go/cel"
-	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 
 	"mosn.io/htnn/api/pkg/filtermanager/api"
@@ -104,7 +103,7 @@ func (conf *config) Init(cb api.ConfigCallbackHandler) error {
 		conf.clusterClient = redis.NewClusterClient(opt)
 	}
 
-	prefix := uuid.NewString()[:8] // enough for millions configurations
+	prefix := conf.Prefix
 	api.LogInfof("limitCountRedis filter uses %s as prefix, config: %v", prefix, &conf.Config)
 
 	conf.limiters = make([]*Limiter, len(conf.Rules))

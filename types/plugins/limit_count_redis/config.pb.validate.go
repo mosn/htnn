@@ -382,6 +382,17 @@ func (m *Config) validate(all bool) error {
 
 	// no validation rules for RateLimitedStatus
 
+	if l := utf8.RuneCountInString(m.GetPrefix()); l < 1 || l > 128 {
+		err := ConfigValidationError{
+			field:  "Prefix",
+			reason: "value length must be between 1 and 128 runes, inclusive",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
 	oneofSourcePresent := false
 	switch v := m.Source.(type) {
 	case *Config_Address:
