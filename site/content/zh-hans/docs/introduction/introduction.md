@@ -88,7 +88,7 @@ HTNN 是全栈开源的完整产品，从数据面，到控制面，到 console 
 
 * 高研发效率
 
-  除了数据面提供了 Golang 扩展机制，console 也是用 golang 来实现。除了这两个开发者经常需要扩展的组件，控制面的 Istio 和 HTNN-controller 也是用 golang 实现的，也就意味着开发者可以用 Golang 搞定全栈。
+  除了数据面提供了 Golang 扩展机制，console 也是用 Golang 来实现。除了这两个开发者经常需要扩展的组件，控制面的 Istio 和 HTNN-controller 也是用 Golang 实现的，也就意味着开发者可以用 Golang 搞定全栈。
 
   依托于 Golang 的开发生态，我们可以非常高效的扩展定制 HTNN。
 
