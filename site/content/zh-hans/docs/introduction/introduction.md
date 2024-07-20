@@ -32,7 +32,7 @@ Golang 作为新一代的语言，具有高性能、简洁易学、并发支持�
 
 ## HTNN 的架构
 
-HTNN 是全栈开源的完整产品，从数据面，到控制面，到 console 和 Dashbord（Coming soon），我们都会完整的开源。
+HTNN 是全栈开源的完整产品，从数据面，到控制面，到 console 和 Dashboard（Coming soon），我们都会完整的开源。
 
 ![HTNN-architecture](/images/HTNN-architecture.png)
 
@@ -62,7 +62,7 @@ HTNN 是全栈开源的完整产品，从数据面，到控制面，到 console 
 
   console 对外提供的 HTTP API，根据业务变更请求，翻译为云原生标准网关资源，写入 k8s。
 
-* Dashbord
+* Dashboard
 
   提供友好的操作界面，以及各种可视化的指标浏览。
 
