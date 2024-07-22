@@ -98,7 +98,7 @@ HTNN 是全栈开源的完整产品，从数据面，到控制面，到 console 
 
 ## 快速上手
 
-等不及了？[欢迎快速上手体验](https://github.com/mosn/htnn/blob/main/site/content/zh-hans/docs/getting-started/quick_start.md)
+等不及了？[欢迎快速上手体验](./quick_start)
 
 ## FAQ
 
