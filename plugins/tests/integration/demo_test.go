@@ -22,12 +22,12 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"mosn.io/htnn/api/pkg/filtermanager"
-	"mosn.io/htnn/api/plugins/tests/integration/control_plane"
-	"mosn.io/htnn/api/plugins/tests/integration/data_plane"
+	"mosn.io/htnn/api/plugins/tests/integration/controlplane"
+	"mosn.io/htnn/api/plugins/tests/integration/dataplane"
 )
 
 func TestDemo(t *testing.T) {
-	dp, err := data_plane.StartDataPlane(t, nil)
+	dp, err := dataplane.StartDataPlane(t, nil)
 	if err != nil {
 		t.Fatalf("failed to start data plane: %v", err)
 		return
@@ -41,7 +41,7 @@ func TestDemo(t *testing.T) {
 	}{
 		{
 			name: "happy path",
-			config: control_plane.NewSinglePluinConfig("demo", map[string]interface{}{
+			config: controlplane.NewSinglePluinConfig("demo", map[string]interface{}{
 				"hostName": "Tom",
 			}),
 			expect: func(t *testing.T, resp *http.Response) {
@@ -50,7 +50,7 @@ func TestDemo(t *testing.T) {
 		},
 		{
 			name: "change config",
-			config: control_plane.NewSinglePluinConfig("demo", map[string]interface{}{
+			config: controlplane.NewSinglePluinConfig("demo", map[string]interface{}{
 				"hostName": "Mike",
 			}),
 

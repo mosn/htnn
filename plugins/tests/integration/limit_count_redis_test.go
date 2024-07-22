@@ -22,13 +22,13 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"mosn.io/htnn/api/pkg/filtermanager"
-	"mosn.io/htnn/api/plugins/tests/integration/control_plane"
-	"mosn.io/htnn/api/plugins/tests/integration/data_plane"
+	"mosn.io/htnn/api/plugins/tests/integration/controlplane"
+	"mosn.io/htnn/api/plugins/tests/integration/dataplane"
 	"mosn.io/htnn/api/plugins/tests/integration/helper"
 )
 
 func TestLimitCountRedis(t *testing.T) {
-	dp, err := data_plane.StartDataPlane(t, nil)
+	dp, err := dataplane.StartDataPlane(t, nil)
 	if err != nil {
 		t.Fatalf("failed to start data plane: %v", err)
 		return
@@ -44,7 +44,7 @@ func TestLimitCountRedis(t *testing.T) {
 	}{
 		{
 			name: "sanity",
-			config: control_plane.NewSinglePluinConfig("limitCountRedis", map[string]interface{}{
+			config: controlplane.NewSinglePluinConfig("limitCountRedis", map[string]interface{}{
 				"prefix":  "e27e2f7f",
 				"address": "redis:6379",
 				"rules": []interface{}{
@@ -74,7 +74,7 @@ func TestLimitCountRedis(t *testing.T) {
 		},
 		{
 			name: "multiple rules",
-			config: control_plane.NewSinglePluinConfig("limitCountRedis", map[string]interface{}{
+			config: controlplane.NewSinglePluinConfig("limitCountRedis", map[string]interface{}{
 				"prefix":  "cd81da10",
 				"address": "redis:6379",
 				"rules": []interface{}{
@@ -113,7 +113,7 @@ func TestLimitCountRedis(t *testing.T) {
 		},
 		{
 			name: "single rule, with limit quota headers enabled",
-			config: control_plane.NewSinglePluinConfig("limitCountRedis", map[string]interface{}{
+			config: controlplane.NewSinglePluinConfig("limitCountRedis", map[string]interface{}{
 				"prefix":                  "24e24b12",
 				"address":                 "redis:6379",
 				"enableLimitQuotaHeaders": true,
@@ -142,7 +142,7 @@ func TestLimitCountRedis(t *testing.T) {
 		},
 		{
 			name: "multiple rules, with limit quota headers enabled",
-			config: control_plane.NewSinglePluinConfig("limitCountRedis", map[string]interface{}{
+			config: controlplane.NewSinglePluinConfig("limitCountRedis", map[string]interface{}{
 				"prefix":                  "2ce0ecd7",
 				"address":                 "redis:6379",
 				"enableLimitQuotaHeaders": true,
@@ -188,7 +188,7 @@ func TestLimitCountRedis(t *testing.T) {
 		},
 		{
 			name: "passwd",
-			config: control_plane.NewSinglePluinConfig("limitCountRedis", map[string]interface{}{
+			config: controlplane.NewSinglePluinConfig("limitCountRedis", map[string]interface{}{
 				"prefix":  "ff100fd4",
 				"address": "redis:6379",
 				"rules": []interface{}{
@@ -212,7 +212,7 @@ func TestLimitCountRedis(t *testing.T) {
 		},
 		{
 			name: "tls",
-			config: control_plane.NewSinglePluinConfig("limitCountRedis", map[string]interface{}{
+			config: controlplane.NewSinglePluinConfig("limitCountRedis", map[string]interface{}{
 				"prefix":  "f7ce8fed",
 				"address": "redis:6380",
 				"rules": []interface{}{
@@ -236,7 +236,7 @@ func TestLimitCountRedis(t *testing.T) {
 		},
 		{
 			name: "rateLimitedStatus",
-			config: control_plane.NewSinglePluinConfig("limitCountRedis", map[string]interface{}{
+			config: controlplane.NewSinglePluinConfig("limitCountRedis", map[string]interface{}{
 				"prefix":  "b52c8aee",
 				"address": "redis:6379",
 				"rules": []interface{}{
@@ -259,7 +259,7 @@ func TestLimitCountRedis(t *testing.T) {
 		},
 		{
 			name: "rateLimitedStatus < 400",
-			config: control_plane.NewSinglePluinConfig("limitCountRedis", map[string]interface{}{
+			config: controlplane.NewSinglePluinConfig("limitCountRedis", map[string]interface{}{
 				"prefix":  "56102bea",
 				"address": "redis:6379",
 				"rules": []interface{}{
@@ -282,7 +282,7 @@ func TestLimitCountRedis(t *testing.T) {
 		},
 		{
 			name: "keep counter across rds update (part 1)",
-			config: control_plane.NewSinglePluinConfig("limitCountRedis", map[string]interface{}{
+			config: controlplane.NewSinglePluinConfig("limitCountRedis", map[string]interface{}{
 				"prefix":  "f7ce8fcc",
 				"address": "redis:6379",
 				"rules": []interface{}{
@@ -303,7 +303,7 @@ func TestLimitCountRedis(t *testing.T) {
 		},
 		{
 			name: "keep counter across rds update (part 2)",
-			config: control_plane.NewSinglePluinConfig("limitCountRedis", map[string]interface{}{
+			config: controlplane.NewSinglePluinConfig("limitCountRedis", map[string]interface{}{
 				"prefix":  "f7ce8fcc",
 				"address": "redis:6379",
 				"rules": []interface{}{
@@ -333,7 +333,7 @@ func TestLimitCountRedis(t *testing.T) {
 }
 
 func TestLimitCountRedisBadService(t *testing.T) {
-	dp, err := data_plane.StartDataPlane(t, &data_plane.Option{
+	dp, err := dataplane.StartDataPlane(t, &dataplane.Option{
 		NoErrorLogCheck: true,
 	})
 	if err != nil {
@@ -349,7 +349,7 @@ func TestLimitCountRedisBadService(t *testing.T) {
 	}{
 		{
 			name: "bad redis",
-			config: control_plane.NewSinglePluinConfig("limitCountRedis", map[string]interface{}{
+			config: controlplane.NewSinglePluinConfig("limitCountRedis", map[string]interface{}{
 				"prefix":  "6e1643e9",
 				"address": "redisx:6379",
 				"rules": []interface{}{
@@ -366,7 +366,7 @@ func TestLimitCountRedisBadService(t *testing.T) {
 		},
 		{
 			name: "bad redis, failure mode deny",
-			config: control_plane.NewSinglePluinConfig("limitCountRedis", map[string]interface{}{
+			config: controlplane.NewSinglePluinConfig("limitCountRedis", map[string]interface{}{
 				"prefix":          "22e1afc9",
 				"address":         "redisx:6379",
 				"failureModeDeny": true,
@@ -384,7 +384,7 @@ func TestLimitCountRedisBadService(t *testing.T) {
 		},
 		{
 			name: "statusOnError",
-			config: control_plane.NewSinglePluinConfig("limitCountRedis", map[string]interface{}{
+			config: controlplane.NewSinglePluinConfig("limitCountRedis", map[string]interface{}{
 				"prefix":  "02945c93",
 				"address": "redisx:6379",
 				"rules": []interface{}{
@@ -404,7 +404,7 @@ func TestLimitCountRedisBadService(t *testing.T) {
 		},
 		{
 			name: "statusOnError, no failureModeDeny",
-			config: control_plane.NewSinglePluinConfig("limitCountRedis", map[string]interface{}{
+			config: controlplane.NewSinglePluinConfig("limitCountRedis", map[string]interface{}{
 				"prefix":  "efa91d02",
 				"address": "redisx:6379",
 				"rules": []interface{}{
@@ -423,7 +423,7 @@ func TestLimitCountRedisBadService(t *testing.T) {
 		},
 		{
 			name: "bad redis, wrong passwd",
-			config: control_plane.NewSinglePluinConfig("limitCountRedis", map[string]interface{}{
+			config: controlplane.NewSinglePluinConfig("limitCountRedis", map[string]interface{}{
 				"prefix":          "f446d349",
 				"address":         "redis:6379",
 				"username":        "user",
@@ -443,7 +443,7 @@ func TestLimitCountRedisBadService(t *testing.T) {
 		},
 		{
 			name: "bad redis, tls verify",
-			config: control_plane.NewSinglePluinConfig("limitCountRedis", map[string]interface{}{
+			config: controlplane.NewSinglePluinConfig("limitCountRedis", map[string]interface{}{
 				"prefix":          "6e4fca85",
 				"address":         "redis:6380",
 				"failureModeDeny": true,
@@ -462,7 +462,7 @@ func TestLimitCountRedisBadService(t *testing.T) {
 		},
 		{
 			name: "bad redis, don't produce limit quota headers",
-			config: control_plane.NewSinglePluinConfig("limitCountRedis", map[string]interface{}{
+			config: controlplane.NewSinglePluinConfig("limitCountRedis", map[string]interface{}{
 				"prefix":  "7f1cf524",
 				"address": "redisx:6379",
 				"rules": []interface{}{
@@ -489,7 +489,7 @@ func TestLimitCountRedisBadService(t *testing.T) {
 }
 
 func TestLimitCountRedisClusterMode(t *testing.T) {
-	dp, err := data_plane.StartDataPlane(t, nil)
+	dp, err := dataplane.StartDataPlane(t, nil)
 	if err != nil {
 		t.Fatalf("failed to start data plane: %v", err)
 		return
@@ -505,7 +505,7 @@ func TestLimitCountRedisClusterMode(t *testing.T) {
 	}{
 		{
 			name: "single rules",
-			config: control_plane.NewSinglePluinConfig("limitCountRedis", map[string]interface{}{
+			config: controlplane.NewSinglePluinConfig("limitCountRedis", map[string]interface{}{
 				"prefix": "c8e8eeb9",
 				"cluster": map[string]interface{}{
 					"addresses": []interface{}{
@@ -535,7 +535,7 @@ func TestLimitCountRedisClusterMode(t *testing.T) {
 		},
 		{
 			name: "multiple rules",
-			config: control_plane.NewSinglePluinConfig("limitCountRedis", map[string]interface{}{
+			config: controlplane.NewSinglePluinConfig("limitCountRedis", map[string]interface{}{
 				"prefix": "1d5db164",
 				"cluster": map[string]interface{}{
 					"addresses": []interface{}{
@@ -591,7 +591,7 @@ func TestLimitCountRedisClusterMode(t *testing.T) {
 }
 
 func TestLimitCountRedisClusterModeBadService(t *testing.T) {
-	dp, err := data_plane.StartDataPlane(t, &data_plane.Option{
+	dp, err := dataplane.StartDataPlane(t, &dataplane.Option{
 		NoErrorLogCheck: true,
 	})
 	if err != nil {
@@ -609,7 +609,7 @@ func TestLimitCountRedisClusterModeBadService(t *testing.T) {
 	}{
 		{
 			name: "failure mode deny",
-			config: control_plane.NewSinglePluinConfig("limitCountRedis", map[string]interface{}{
+			config: controlplane.NewSinglePluinConfig("limitCountRedis", map[string]interface{}{
 				"prefix": "e2cbf683",
 				"cluster": map[string]interface{}{
 					"addresses": []interface{}{

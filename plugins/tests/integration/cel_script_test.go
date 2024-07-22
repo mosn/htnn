@@ -21,12 +21,12 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"mosn.io/htnn/api/pkg/filtermanager"
-	"mosn.io/htnn/api/plugins/tests/integration/control_plane"
-	"mosn.io/htnn/api/plugins/tests/integration/data_plane"
+	"mosn.io/htnn/api/plugins/tests/integration/controlplane"
+	"mosn.io/htnn/api/plugins/tests/integration/dataplane"
 )
 
 func TestCelScript(t *testing.T) {
-	dp, err := data_plane.StartDataPlane(t, nil)
+	dp, err := dataplane.StartDataPlane(t, nil)
 	if err != nil {
 		t.Fatalf("failed to start data plane: %v", err)
 		return
@@ -40,7 +40,7 @@ func TestCelScript(t *testing.T) {
 	}{
 		{
 			name: "allowIf",
-			config: control_plane.NewSinglePluinConfig("celScript", map[string]interface{}{
+			config: controlplane.NewSinglePluinConfig("celScript", map[string]interface{}{
 				"allowIf": `request.path() == "/echo" && request.method() == "GET"`,
 			}),
 			expect: func(t *testing.T, resp *http.Response) {
@@ -49,7 +49,7 @@ func TestCelScript(t *testing.T) {
 		},
 		{
 			name: "allowIf, reject",
-			config: control_plane.NewSinglePluinConfig("celScript", map[string]interface{}{
+			config: controlplane.NewSinglePluinConfig("celScript", map[string]interface{}{
 				"allowIf": `request.path() == "/echo" && request.method() != "GET"`,
 			}),
 			expect: func(t *testing.T, resp *http.Response) {

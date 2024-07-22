@@ -52,10 +52,10 @@ type Tokens struct {
 }
 
 func generateState(verifier string, secret string, url string) string {
-	encodedRedirectUrl := base64.URLEncoding.EncodeToString([]byte(url))
-	state := fmt.Sprintf("%s.%s", verifier, encodedRedirectUrl)
+	encodedRedirectURL := base64.URLEncoding.EncodeToString([]byte(url))
+	state := fmt.Sprintf("%s.%s", verifier, encodedRedirectURL)
 	signature := signState(state, secret)
-	// fmt: verifier.originUrl.signature
+	// fmt: verifier.originURL.signature
 	return fmt.Sprintf("%s.%s", state, signature)
 }
 
@@ -87,8 +87,8 @@ func (f *filter) handleInitRequest(headers api.RequestHeaderMap) api.ResultActio
 	_, _ = rand.Read(b)
 	nonce := base64.RawURLEncoding.EncodeToString(b)
 	verifier := oauth2.GenerateVerifier()
-	originUrl := fmt.Sprintf("%s://%s%s", headers.Scheme(), headers.Host(), headers.Path())
-	s := generateState(verifier, config.ClientSecret, originUrl)
+	originURL := fmt.Sprintf("%s://%s%s", headers.Scheme(), headers.Host(), headers.Path())
+	s := generateState(verifier, config.ClientSecret, originURL)
 	url := o2conf.AuthCodeURL(s,
 		// use PKCE to protect against CSRF attacks if possible
 		// https://www.ietf.org/archive/id/draft-ietf-oauth-security-topics-22.html#name-countermeasures-6
@@ -160,9 +160,9 @@ func (f *filter) handleCallback(headers api.RequestHeaderMap, query url.Values) 
 		api.LogInfof("bad state: %s", state)
 		return &api.LocalResponse{Code: 403, Msg: "bad state"}
 	}
-	verifier, encodedUrl, _ := strings.Cut(state, ".")
-	b, _ := base64.URLEncoding.DecodeString(encodedUrl)
-	originUrl := string(b)
+	verifier, encodedURL, _ := strings.Cut(state, ".")
+	b, _ := base64.URLEncoding.DecodeString(encodedURL)
+	originURL := string(b)
 
 	ctx = config.ctxWithClient(ctx)
 	oauth2Token, err := o2conf.Exchange(ctx, code, oauth2.VerifierOption(verifier))
@@ -211,7 +211,7 @@ func (f *filter) handleCallback(headers api.RequestHeaderMap, query url.Values) 
 	return &api.LocalResponse{
 		Code: http.StatusFound,
 		Header: http.Header{
-			"Location":   []string{originUrl},
+			"Location":   []string{originURL},
 			"Set-Cookie": []string{cookie.String()},
 		},
 	}
@@ -275,7 +275,7 @@ func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api
 		return f.attachInfo(headers, token.Value)
 	}
 
-	query := headers.Url().Query()
+	query := headers.URL().Query()
 	code := query.Get("code")
 	if code == "" {
 		return f.handleInitRequest(headers)
