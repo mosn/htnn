@@ -56,9 +56,8 @@ func lintSite() error {
 			if _, err := os.Stat(filepath.Join(path, "_index.md")); err != nil {
 				_, err = os.Stat(filepath.Join(path, "_index.html"))
 				if err != nil {
-					return err
+					return fmt.Errorf("directory %s is missing _index.md or _index.html as the _index file: %s", path, err)
 				}
-				return err
 			}
 			return nil
 		}
