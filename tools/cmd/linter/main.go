@@ -119,26 +119,25 @@ func lintSite() error {
 		}
 	}
 	for doc := range zhHansDocs {
-		if _, ok := enDocs[doc]; !ok {
-			fmt.Printf("file %s is missing in English documentation\n", doc)
-		}
-
 		zhMs, err := readDoc(filepath.Join("site", "content", "zh-hans", doc), LangZhHans)
 		if err != nil {
 			return err
 		}
 
-		enMs, err := readDoc(filepath.Join("site", "content", "en", doc), LangEn)
-		if err != nil {
-			return err
-		}
+		if _, ok := enDocs[doc]; !ok {
+			fmt.Printf("file %s is missing in English documentation\n", doc)
+		} else {
+			enMs, err := readDoc(filepath.Join("site", "content", "en", doc), LangEn)
+			if err != nil {
+				return err
+			}
 
-		if !reflect.DeepEqual(enMs, zhMs) {
-			zhMsOut, _ := json.MarshalIndent(zhMs, "", "  ")
-			enMsOut, _ := json.MarshalIndent(enMs, "", "  ")
-			fmt.Printf("mismatched fields in %s:\nSimpilified Chinese %s\nEnglish %s\n", doc, zhMsOut, enMsOut)
+			if !reflect.DeepEqual(enMs, zhMs) {
+				zhMsOut, _ := json.MarshalIndent(zhMs, "", "  ")
+				enMsOut, _ := json.MarshalIndent(enMs, "", "  ")
+				fmt.Printf("mismatched fields in %s:\nSimpilified Chinese %s\nEnglish %s\n", doc, zhMsOut, enMsOut)
+			}
 		}
-
 	}
 
 	return nil
