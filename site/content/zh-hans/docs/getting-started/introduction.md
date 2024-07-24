@@ -6,7 +6,7 @@ title: 概览简介
 
 HTNN（Hyper Trust-Native Network）是一款基于云原生技术的 L3&L4&L7 Cross-Layer 网络全局解决方案产品。
 
-![HTNN](/images/HTNN.png)
+![HTNN](/site/static/images/HTNN.png)
 
 目前开源的只是其中的一部分，L7 南北向接入网关。简单起见，本文先用 HTNN 来代指 HTNN L7 南北向接入网关。
 
@@ -34,7 +34,7 @@ Golang 作为新一代的语言，具有高性能、简洁易学、并发支持�
 
 HTNN 是全栈开源的完整产品，从数据面，到控制面，到 console 和 Dashboard（Coming soon），我们都会完整的开源。
 
-![HTNN-architecture](/images/HTNN-architecture.png)
+![HTNN-architecture](/site/static/images/HTNN-architecture.png)
 
 整个架构是从下往上，逐级抽象的体现，越底层通用性越强，往上抽象则更倾向于具体场景。
 
