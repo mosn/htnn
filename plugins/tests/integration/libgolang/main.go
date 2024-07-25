@@ -21,7 +21,7 @@ import (
 
 	"mosn.io/htnn/api/pkg/consumer"
 	"mosn.io/htnn/api/pkg/filtermanager"
-	_ "mosn.io/htnn/api/plugins/tests/integration/data_plane" // for utility plugins provided in the test framework
+	_ "mosn.io/htnn/api/plugins/tests/integration/dataplane" // for utility plugins provided in the test framework
 	_ "mosn.io/htnn/plugins"
 )
 

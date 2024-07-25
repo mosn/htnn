@@ -17,6 +17,7 @@ linters:
     - ineffassign
     - loggercheck
     - nilerr
+    - revive
     - staticcheck
     - unconvert
     - unparam
@@ -31,6 +32,10 @@ linters-settings:
   gosec:
     excludes:
       - G402 # TLS InsecureSkipVerify may be true.
+  revive:
+    rules:
+      - name: receiver-naming
+      - name: var-naming
   unparam:
     check-exported: false
 

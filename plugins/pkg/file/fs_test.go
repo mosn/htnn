@@ -16,6 +16,7 @@ package file
 
 import (
 	"os"
+	"runtime"
 	"sync"
 	"testing"
 
@@ -31,7 +32,13 @@ func TestFileIsChanged(t *testing.T) {
 
 	assert.Nil(t, err)
 
-	tmpfile, _ := os.CreateTemp("", "example")
+	var tmpfile *os.File
+	if runtime.GOOS == "darwin" {
+		// Work around https://github.com/fsnotify/fsnotify/issues/642
+		tmpfile, _ = os.CreateTemp("/private/tmp", "example")
+	} else {
+		tmpfile, _ = os.CreateTemp("", "example")
+	}
 
 	file := Stat(tmpfile.Name())
 

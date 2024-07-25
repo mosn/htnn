@@ -8,8 +8,8 @@ HTNN 的插件分成两种：Go 插件和 Native 插件。Native 插件在运行
 
 假设您位于此项目的根目录。
 
-1. 在 `./types/plugins/` 下创建一个目录。文件名必须使用蛇形命名法，如 `key_auth`。
-2. 思考配置并将其写入 `./plugins/$your_plugin/config.proto`。然后运行 `make gen-proto`。`proto` 文件使用 [proto-gen-valdate](https://github.com/bufbuild/protoc-gen-validate?tab=readme-ov-file#constraint-rules) 定义验证。插件名必须使用驼峰式命名法，如 `keyAuth`。配置字段必须使用蛇形命名法，如 `connect_timeout`。枚举值必须使用大写蛇形命名法，如 `HEADER`。详细信息请参见[官方 protobuf 风格指南](https://protobuf.dev/programming-guides/style/)。
+1. 在 `./types/plugins/` 下创建一个目录。目录名必须使用蛇形命名法，如 `keyauth`。
+2. 思考配置并将其写入 `./plugins/$yourplugin/config.proto`。然后运行 `make gen-proto`。`proto` 文件使用 [proto-gen-valdate](https://github.com/bufbuild/protoc-gen-validate?tab=readme-ov-file#constraint-rules) 定义验证。插件名必须使用驼峰式命名法，如 `keyAuth`。配置字段必须使用蛇形命名法，如 `connect_timeout`。枚举值必须使用大写蛇形命名法，如 `HEADER`。详细信息请参见[官方 protobuf 风格指南](https://protobuf.dev/programming-guides/style/)。
 3. 参考同类型的插件，决定你的插件类型和顺序。
 4. 在 `./types/plugins/plugins.go` 中引入你的插件。
 5. 在 `./plugins/plugins/` 下创建一个目录，文件名必须和步骤一里面的名字一致。完成插件编写。不要忘记编写测试。如果您的插件简单，您可以仅编写集成测试。您可以以 `./plugins/plugins/demo` 为例。插件开发中涉及的 API 的文档位于这些 API 的注释当中。
@@ -17,7 +17,7 @@ HTNN 的插件分成两种：Go 插件和 Native 插件。Native 插件在运行
 7. 在 `./plugins/plugins.go` 中引入你的插件。前往目录 `./plugins`，运行 `make build-so`。插件将被编译入当前目录下的 `libgolang.so`。
 8. 在 `./plugins/tests/integration/` 中添加集成测试。有关如何运行集成测试，请阅读[插件集成测试框架](../plugin_integration_test_framework)。
 
-您还可以在 HTNN 项目之外编写插件，请参见 https://github.com/mosn/htnn/tree/main/examples/dev_your_plugin。
+您还可以在 HTNN 项目之外编写插件，请参见 [二次开发 HTNN 指南](./get_involved.md)。
 
 ### 插件类型
 
@@ -147,4 +147,4 @@ filter manager 实现了以下特性：
 * 实现 [ConsumerPlugin](https://pkg.go.dev/mosn.io/htnn/pkg/plugins#ConsumerPlugin) 接口。
 * 定义 `DecodeHeaders` 方法，且在该方法里调用 `LookupConsumer` 和 `SetConsumer` 完成消费者的设置。
 
-您可以以 [keyAuth](https://github.com/mosn/htnn/blob/main/plugins/plugins/key_auth/filter.go) 插件为例，编写自己的消费者插件。
+您可以以 `keyAuth` 插件为例，编写自己的消费者插件。

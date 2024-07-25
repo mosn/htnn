@@ -81,7 +81,7 @@ func (c *Consumer) InitConfigs() error {
 
 	c.FilterConfigs = make(map[string]*fmModel.ParsedFilterConfig, len(c.Filters))
 	for name, data := range c.Filters {
-		p := plugins.LoadHttpFilterFactoryAndParser(name)
+		p := plugins.LoadHTTPFilterFactoryAndParser(name)
 		if p == nil {
 			return fmt.Errorf("plugin %s not found", name)
 		}

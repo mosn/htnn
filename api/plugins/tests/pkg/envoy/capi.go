@@ -27,7 +27,7 @@ import (
 	capi "github.com/envoyproxy/envoy/contrib/golang/common/go/api"
 
 	"mosn.io/htnn/api/internal/cookie"
-	"mosn.io/htnn/api/internal/plugin_state"
+	"mosn.io/htnn/api/internal/pluginstate"
 	"mosn.io/htnn/api/pkg/filtermanager/api"
 )
 
@@ -144,7 +144,7 @@ func (i *RequestHeaderMap) Path() string {
 	return path
 }
 
-func (i *RequestHeaderMap) Url() *url.URL {
+func (i *RequestHeaderMap) URL() *url.URL {
 	path := i.Path()
 	u, _ := url.ParseRequestURI(path)
 	return u
@@ -204,21 +204,21 @@ func (db *dataBuffer) WriteByte(b byte) error {
 	return db.buffer.WriteByte(b)
 }
 
-func (b *dataBuffer) WriteUint16(p uint16) error {
+func (db *dataBuffer) WriteUint16(p uint16) error {
 	s := strconv.FormatUint(uint64(p), 10)
-	_, err := b.WriteString(s)
+	_, err := db.WriteString(s)
 	return err
 }
 
-func (b *dataBuffer) WriteUint32(p uint32) error {
+func (db *dataBuffer) WriteUint32(p uint32) error {
 	s := strconv.FormatUint(uint64(p), 10)
-	_, err := b.WriteString(s)
+	_, err := db.WriteString(s)
 	return err
 }
 
-func (b *dataBuffer) WriteUint64(p uint64) error {
+func (db *dataBuffer) WriteUint64(p uint64) error {
 	s := strconv.FormatUint(p, 10)
-	_, err := b.WriteString(s)
+	_, err := db.WriteString(s)
 	return err
 }
 
@@ -507,7 +507,7 @@ func (i *filterCallbackHandler) SetConsumer(c api.Consumer) {
 
 func (i *filterCallbackHandler) PluginState() api.PluginState {
 	if i.pluginState == nil {
-		i.pluginState = plugin_state.NewPluginState()
+		i.pluginState = pluginstate.NewPluginState()
 	}
 	return i.pluginState
 }

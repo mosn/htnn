@@ -111,12 +111,12 @@ func (c *Consumer) IsSpecChanged() bool {
 	return false
 }
 
-func (consumer *Consumer) SetAccepted(reason ConditionReason, msg ...string) {
-	conds, changed := addOrUpdateAcceptedCondition(consumer.Status.Conditions, consumer.Generation, reason, msg...)
-	consumer.Status.Conditions = conds
+func (c *Consumer) SetAccepted(reason ConditionReason, msg ...string) {
+	conds, changed := addOrUpdateAcceptedCondition(c.Status.Conditions, c.Generation, reason, msg...)
+	c.Status.Conditions = conds
 
 	if changed {
-		consumer.Status.MarkAsChanged()
+		c.Status.MarkAsChanged()
 	}
 }
 

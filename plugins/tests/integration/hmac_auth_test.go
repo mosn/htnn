@@ -22,13 +22,13 @@ import (
 
 	"mosn.io/htnn/api/pkg/filtermanager"
 	"mosn.io/htnn/api/pkg/filtermanager/model"
-	"mosn.io/htnn/api/plugins/tests/integration/control_plane"
-	"mosn.io/htnn/api/plugins/tests/integration/data_plane"
+	"mosn.io/htnn/api/plugins/tests/integration/controlplane"
+	"mosn.io/htnn/api/plugins/tests/integration/dataplane"
 )
 
 func TestHmacAuth(t *testing.T) {
-	dp, err := data_plane.StartDataPlane(t, &data_plane.Option{
-		Bootstrap: data_plane.Bootstrap().AddConsumer("rick", map[string]interface{}{
+	dp, err := dataplane.StartDataPlane(t, &dataplane.Option{
+		Bootstrap: dataplane.Bootstrap().AddConsumer("rick", map[string]interface{}{
 			"auth": map[string]interface{}{
 				"keyAuth":  `{"key":"rick"}`,
 				"hmacAuth": `{"accessKey":"ak","secretKey":"sk","signedHeaders":["x-custom-a"],"algorithm":"HMAC_SHA256"}`,
@@ -57,7 +57,7 @@ func TestHmacAuth(t *testing.T) {
 	}{
 		{
 			name: "sanity",
-			config: control_plane.NewSinglePluinConfig("hmacAuth", map[string]interface{}{
+			config: controlplane.NewSinglePluinConfig("hmacAuth", map[string]interface{}{
 				"signatureHeader": "x-sign-hdr",
 				"accessKeyHeader": "x-ak",
 				"dateHeader":      "x-date",
@@ -76,7 +76,7 @@ func TestHmacAuth(t *testing.T) {
 		},
 		{
 			name: "bypass if no credential",
-			config: control_plane.NewPluinConfig([]*model.FilterConfig{
+			config: controlplane.NewPluinConfig([]*model.FilterConfig{
 				{
 					Name: "hmacAuth",
 					Config: map[string]interface{}{

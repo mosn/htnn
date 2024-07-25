@@ -24,13 +24,13 @@ import (
 
 	"mosn.io/htnn/api/pkg/filtermanager"
 	"mosn.io/htnn/api/pkg/filtermanager/model"
-	"mosn.io/htnn/api/plugins/tests/integration/control_plane"
-	"mosn.io/htnn/api/plugins/tests/integration/data_plane"
+	"mosn.io/htnn/api/plugins/tests/integration/controlplane"
+	"mosn.io/htnn/api/plugins/tests/integration/dataplane"
 )
 
 func TestConsumerRestriction(t *testing.T) {
-	dp, err := data_plane.StartDataPlane(t, &data_plane.Option{
-		Bootstrap: data_plane.Bootstrap().AddConsumer("tom", map[string]interface{}{
+	dp, err := dataplane.StartDataPlane(t, &dataplane.Option{
+		Bootstrap: dataplane.Bootstrap().AddConsumer("tom", map[string]interface{}{
 			"auth": map[string]interface{}{
 				"keyAuth": `{"key":"tom"}`,
 			},
@@ -58,7 +58,7 @@ func TestConsumerRestriction(t *testing.T) {
 	}{
 		{
 			name: "allow",
-			config: control_plane.NewPluinConfig([]*model.FilterConfig{
+			config: controlplane.NewPluinConfig([]*model.FilterConfig{
 				{
 					Name: "keyAuth",
 					Config: map[string]interface{}{
@@ -92,7 +92,7 @@ func TestConsumerRestriction(t *testing.T) {
 		},
 		{
 			name: "allowed by method",
-			config: control_plane.NewPluinConfig([]*model.FilterConfig{
+			config: controlplane.NewPluinConfig([]*model.FilterConfig{
 				{
 					Name: "keyAuth",
 					Config: map[string]interface{}{
@@ -136,7 +136,7 @@ func TestConsumerRestriction(t *testing.T) {
 		},
 		{
 			name: "deny",
-			config: control_plane.NewPluinConfig([]*model.FilterConfig{
+			config: controlplane.NewPluinConfig([]*model.FilterConfig{
 				{
 					Name: "keyAuth",
 					Config: map[string]interface{}{
@@ -179,7 +179,7 @@ func TestConsumerRestriction(t *testing.T) {
 		},
 		{
 			name: "denied by method",
-			config: control_plane.NewPluinConfig([]*model.FilterConfig{
+			config: controlplane.NewPluinConfig([]*model.FilterConfig{
 				{
 					Name: "keyAuth",
 					Config: map[string]interface{}{

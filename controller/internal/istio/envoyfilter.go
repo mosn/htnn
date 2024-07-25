@@ -41,7 +41,7 @@ func MustNewStruct(fields map[string]interface{}) *structpb.Struct {
 }
 
 const (
-	DefaultHttpFilter = "htnn-http-filter"
+	DefaultHTTPFilter = "htnn-http-filter"
 	ECDSConsumerName  = "htnn-consumer"
 )
 
@@ -154,12 +154,12 @@ func DefaultEnvoyFilters() map[component.EnvoyFilterKey]*istiov1a3.EnvoyFilter {
 
 	key := component.EnvoyFilterKey{
 		Namespace: ctrlcfg.RootNamespace(),
-		Name:      DefaultHttpFilter,
+		Name:      DefaultHTTPFilter,
 	}
 	efs[key] = &istiov1a3.EnvoyFilter{
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: ctrlcfg.RootNamespace(),
-			Name:      DefaultHttpFilter,
+			Name:      DefaultHTTPFilter,
 			Labels: map[string]string{
 				constant.LabelCreatedBy: "FilterPolicy",
 			},

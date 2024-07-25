@@ -114,13 +114,11 @@ jobs:
       with:
         dockerfile: Dockerfile
         recursive: true
-        failure-threshold: warning
 
     - name: lint dev dockerfile
       uses: hadolint/hadolint-action@v3.1.0
       with:
         dockerfile: ./tools/Dockerfile.dev
-        failure-threshold: warning
 
     - name: lint remain
       run: |

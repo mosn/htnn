@@ -32,7 +32,8 @@ ENV GOPROXY=$GOPROXY
 
 # codespell
 # hadolint ignore=DL3008
-RUN apt-get update && apt-get install -y --no-install-recommends pip && pip install --no-cache-dir codespell==2.2.6
+RUN apt-get update && apt-get install -y --no-install-recommends pip && pip install --no-cache-dir codespell==2.2.6 && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
 # protoc
 # hadolint ignore=DL3008
@@ -44,13 +45,15 @@ RUN VER=1.0.2 && \
     set -ex && \
     git clone https://github.com/bufbuild/protoc-gen-validate -b v${VER} --depth 1 /go/src/protoc-gen-validate
 # Break down the git clone & wget so that we can cache git repo early
+# hadolint ignore=SC2086
 RUN VER=1.0.2 && \
     ARCH=$(dpkg --print-architecture) && \
     set -ex && \
-    wget https://github.com/bufbuild/protoc-gen-validate/releases/download/v${VER}/protoc-gen-validate_${VER}_linux_${ARCH}.tar.gz && \
+    wget --progress=dot:giga https://github.com/bufbuild/protoc-gen-validate/releases/download/v${VER}/protoc-gen-validate_${VER}_linux_${ARCH}.tar.gz && \
     tar -zxvpf protoc-gen-validate_${VER}_linux_${ARCH}.tar.gz && \
     mv protoc-gen-validate-go /usr/bin && \
     mv protoc-gen-validate /usr/bin
+# hadolint ignore=SC2086
 RUN VER=24.4 && \
     ARCH=$(dpkg --print-architecture) && \
     set -ex && \
@@ -62,7 +65,7 @@ RUN VER=24.4 && \
         NAME=protoc-${VER}-linux-aarch_64.zip \
         ;; \
     esac && \
-    wget https://github.com/protocolbuffers/protobuf/releases/download/v${VER}/${NAME} && \
+    wget --progress=dot:giga https://github.com/protocolbuffers/protobuf/releases/download/v${VER}/${NAME} && \
     unzip -o ${NAME} -d /usr/local bin/protoc && \
     unzip -o ${NAME} -d /usr/local 'include/*' && \
     go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.31.0
@@ -71,6 +74,7 @@ RUN VER=24.4 && \
 RUN pip install --no-cache-dir clang-format==17.0.6
 
 # autocorrect
+# hadolint ignore=SC2086
 RUN VER=2.11.1 && \
     ARCH=$(dpkg --print-architecture) && \
     wget --progress=dot:giga https://github.com/huacnlee/autocorrect/releases/download/v${VER}/autocorrect-linux-${ARCH}.tar.gz -O autocorrect.tar.gz && \

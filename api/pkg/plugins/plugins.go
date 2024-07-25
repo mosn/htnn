@@ -44,7 +44,7 @@ type FilterFactoryAndParser struct {
 	Factory      api.FilterFactory
 }
 
-func RegisterHttpFilterFactoryAndParser(name string, factory api.FilterFactory, parser FilterConfigParser) {
+func RegisterHTTPFilterFactoryAndParser(name string, factory api.FilterFactory, parser FilterConfigParser) {
 	if factory == nil {
 		panic("config factory should not be nil")
 	}
@@ -54,7 +54,7 @@ func RegisterHttpFilterFactoryAndParser(name string, factory api.FilterFactory, 
 	}
 }
 
-func LoadHttpFilterFactoryAndParser(name string) *FilterFactoryAndParser {
+func LoadHTTPFilterFactoryAndParser(name string) *FilterFactoryAndParser {
 	return httpFilterFactoryAndParser[name]
 }
 
@@ -95,7 +95,7 @@ func RegisterPlugin(name string, plugin Plugin) {
 		if order.Position == OrderPositionOuter || order.Position == OrderPositionInner {
 			panic(errInvalidGoPluginOrder)
 		}
-		RegisterHttpFilterFactoryAndParser(name,
+		RegisterHTTPFilterFactoryAndParser(name,
 			goPlugin.Factory(),
 			NewPluginConfigParser(goPlugin))
 	} else if _, ok := plugin.(NativePlugin); ok {
