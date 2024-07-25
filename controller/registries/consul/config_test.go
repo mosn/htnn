@@ -38,6 +38,12 @@ func TestStart(t *testing.T) {
 	err := reg.Start(config)
 	assert.NoError(t, err)
 
+	err = reg.subscribe("123")
+	assert.Nil(t, err)
+
+	err = reg.refresh()
+	assert.Nil(t, err)
+
 	err = reg.Stop()
 	assert.Nil(t, err)
 }

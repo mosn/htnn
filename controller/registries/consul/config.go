@@ -106,13 +106,13 @@ func (reg *Consul) Start(c registrytype.RegistryConfig) error {
 	}
 	reg.client = client
 
-	for key := range services {
-		err = reg.subscribe(key.ServiceName)
-		if err != nil {
-			reg.logger.Errorf("failed to subscribe service, err: %v, service: %v", err, key)
-			delete(services, key)
-		}
-	}
+	//for key := range services {
+	//	err = reg.subscribe(key.ServiceName)
+	//	if err != nil {
+	//		reg.logger.Errorf("failed to subscribe service, err: %v, service: %v", err, key)
+	//		delete(services, key)
+	//	}
+	//}
 
 	reg.watchingServices = services
 
