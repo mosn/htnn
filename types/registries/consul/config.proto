@@ -25,5 +25,5 @@ message Config {
   string server_url = 1 [(validate.rules).string = {uri: true}];
   string dataCenter = 2;
   google.protobuf.Duration service_refresh_interval = 3
-  [(validate.rules).duration = {gte {seconds: 1}}];
+      [(validate.rules).duration = {gte {seconds: 1}}];
 }
