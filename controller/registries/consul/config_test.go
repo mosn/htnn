@@ -19,6 +19,16 @@ func TestNewClient(t *testing.T) {
 
 	assert.NoError(t, err)
 	assert.NotNil(t, client)
+
+	config = &consul.Config{
+		ServerUrl:  "::::::::::::",
+		DataCenter: "test",
+	}
+
+	client, err = reg.NewClient(config)
+
+	assert.Error(t, err)
+	assert.Nil(t, client)
 }
 
 func TestStart(t *testing.T) {
@@ -39,6 +49,9 @@ func TestStart(t *testing.T) {
 	assert.NoError(t, err)
 
 	err = reg.subscribe("123")
+	assert.Nil(t, err)
+
+	err = reg.unsubscribe("123")
 	assert.Nil(t, err)
 
 	err = reg.refresh()

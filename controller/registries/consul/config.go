@@ -123,6 +123,9 @@ func (reg *Consul) Start(c registrytype.RegistryConfig) error {
 	go func() {
 		reg.logger.Infof("start refreshing services")
 		ticker := time.NewTicker(dur)
+		//q := consulapi.QueryOptions{
+		//    WaitTime: 30 * time.Second,
+		//}
 		defer ticker.Stop()
 		for {
 			select {
@@ -175,6 +178,11 @@ func (reg *Consul) fetchAllServices(client *Client) (map[consulService]bool, err
 }
 
 func (reg *Consul) subscribe(serviceName string) error {
+	fmt.Println(serviceName)
+	return nil
+}
+
+func (reg *Consul) unsubscribe(serviceName string) error {
 	fmt.Println(serviceName)
 	return nil
 }
