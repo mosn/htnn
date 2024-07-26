@@ -46,13 +46,7 @@ func init() {
 }
 
 const (
-	//defaultConsulAddress = "127.0.0.1:8500"
-	defaultDatacenter = "dc1"
-	defaultToken      = ""
-	//defaultScheme        = "http"
-	//defaultWaitTime      = 5 * time.Second
-
-	//RegistryType = "consul"
+	defaultToken = ""
 )
 
 type Consul struct {
@@ -120,14 +114,6 @@ func (reg *Consul) Start(c registrytype.RegistryConfig) error {
 	}
 	reg.client = client
 
-	//for key := range services {
-	//	err = reg.subscribe(key.ServiceName)
-	//	if err != nil {
-	//		reg.logger.Errorf("failed to subscribe service, err: %v, service: %v", err, key)
-	//		delete(services, key)
-	//	}
-	//}
-
 	reg.watchingServices = services
 
 	dur := 30 * time.Second
@@ -138,7 +124,7 @@ func (reg *Consul) Start(c registrytype.RegistryConfig) error {
 		reg.logger.Infof("start refreshing services")
 		ticker := time.NewTicker(dur)
 		//q := consulapi.QueryOptions{
-		//    WaitTime: 30 * time.Second,
+		//    WaitTime: dur,
 		//}
 		defer ticker.Stop()
 		for {
@@ -166,14 +152,6 @@ func (reg *Consul) Stop() error {
 	reg.lock.Lock()
 	defer reg.lock.Unlock()
 
-	//for key := range reg.softDeletedServices {
-	//    if _, ok := reg.watchingServices[key]; !ok {
-	//        reg.store.Delete(reg.getServiceEntryKey(key.GroupName, key.ServiceName))
-	//    }
-	//}
-	//for key := range reg.watchingServices {
-	//    reg.removeService(key)
-	//}
 	return nil
 }
 

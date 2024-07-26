@@ -55,8 +55,7 @@ func TestStart(t *testing.T) {
 		watchingServices:    map[consulService]bool{},
 	}
 	config := &consul.Config{
-		ServerUrl:  "http://127.0.0.1:8500",
-		DataCenter: defaultDatacenter,
+		ServerUrl: "http://127.0.0.1:8500",
 	}
 
 	err := reg.Start(config)
@@ -78,8 +77,7 @@ func TestStart(t *testing.T) {
 func TestReload(t *testing.T) {
 	reg := &Consul{}
 	config := &consul.Config{
-		ServerUrl:  "http://127.0.0.1:8500",
-		DataCenter: defaultDatacenter,
+		ServerUrl: "http://127.0.0.1:8500",
 	}
 
 	err := reg.Reload(config)
