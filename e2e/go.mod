@@ -22,7 +22,7 @@ require (
 	k8s.io/api v0.29.3
 	k8s.io/apimachinery v0.29.3
 	k8s.io/client-go v0.29.3
-	mosn.io/htnn/types v0.2.1
+	mosn.io/htnn/types v0.3.0
 	sigs.k8s.io/controller-runtime v0.17.2
 	sigs.k8s.io/gateway-api v1.0.0
 )

@@ -26,7 +26,6 @@ WORKDIR /workspace
 # Copy the source
 
 COPY go.* ./
-RUN sed -i 's/.\/site/.\/external\/istio/' go.work && sed -i '/.\/e2e/d' go.work && sed -i '/.\/tools/d' go.work # remove this in release
 COPY api/ api/
 COPY types/ types/
 COPY plugins/ plugins/

@@ -37,8 +37,8 @@ require (
 	golang.org/x/oauth2 v0.20.0
 	golang.org/x/time v0.5.0
 	google.golang.org/protobuf v1.34.0
-	mosn.io/htnn/api v0.2.1
-	mosn.io/htnn/types v0.2.1
+	mosn.io/htnn/api v0.3.0
+	mosn.io/htnn/types v0.3.0
 )
 
 require (

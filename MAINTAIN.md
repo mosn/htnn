@@ -4,12 +4,18 @@ This doc tracks how to maintain the source code of HTNN.
 
 To release a new version, please follow the steps below:
 
-* Create a new release branch `release/v${version}` from the main branch.
-* Create tag `api/v${version}`, then update the `go.mod` which depend on `mosn.io/htnn/api`.
-* Do the same things with `types`, `controller` and `plugins`.
-* Remove the `go.work` file.
-* Update the version in the `manifests/charts/*/Chart.yaml`.
-(TBD)
+* Create a new release branch `release/v${version}` from the main branch. Do the work below on the new branch.
+* Create tag `api/v${version}`.
+* Commit the changes below (the CI will fail at this point):
+    * Update those `go.mod` which depend on `mosn.io/htnn/api`.
+    * Remove the `go.work` file.
+* Create tag `types/v${version}` for `types` module. Then do the same with `controller` and `plugins`.
+* Commit a new commit after running `make fmt-go`. The CI should pass now.
+* Create tag `image/v${version}` to trigger image building.
+* When the image is ready, update the version in the `manifests/charts/*/Chart.yaml`, submit as a new commit.
+* The CI will create a new chart package. The artifacthub will scrape the new package and update the version later.
+* Try the quick start guide with the new version. Note that you may need to delete the installed chart before installing the new one,
+ as `helm install` will not upgrade the charts.
 
 ## Upgrade components
 
