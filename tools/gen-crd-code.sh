@@ -36,8 +36,9 @@ fi
 readonly COMMON_FLAGS="${VERIFY_FLAG:-} --go-header-file ${SCRIPT_ROOT}/hack/boilerplate.go.txt"
 
 echo "Generating clientset at ${OUTPUT_PKG}/${CLIENTSET_PKG_NAME}"
+# Increase the `-v n` to have verbose log if this cmd failed.
 # shellcheck disable=SC2086
-"${LOCALBIN}"/client-gen \
+cd "${SCRIPT_ROOT}" && "${LOCALBIN}"/client-gen \
     --clientset-name "${CLIENTSET_NAME}" \
     --input-base "" \
     --input "${APIS_PKG}/apis/v1" \

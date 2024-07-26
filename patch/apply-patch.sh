@@ -26,16 +26,6 @@ done
 pushd "$TARGET_ISTIO_DIR"
 go mod tidy
 go install golang.org/x/tools/cmd/goimports@latest # required by codegen
-if [ "$(uname -s)" = "Darwin" ]; then
-    sed -i '' -e 's/.\/site/.\/external\/istio/' ../../go.work
-else
-    sed -i -e 's/.\/site/.\/external\/istio/' ../../go.work
-fi
 # go run will fail without adding `./external/istio` to go.work
 go run pkg/config/schema/codegen/tools/collections.main.go
-if [ "$(uname -s)" = "Darwin" ]; then
-    sed -i '' -e 's/.\/external\/istio/.\/site/' ../../go.work
-else
-    sed -i -e 's/.\/external\/istio/.\/site/' ../../go.work
-fi
 popd

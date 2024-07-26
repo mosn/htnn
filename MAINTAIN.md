@@ -10,7 +10,7 @@ To release a new version, please follow the steps below:
     * Update those `go.mod` which depend on `mosn.io/htnn/api`.
     * Remove the `go.work` file.
 * Create tag `types/v${version}` for `types` module. Then do the same with `controller` and `plugins`.
-* Commit a new commit after running `make fmt-go`. The CI should pass now.
+* Running `make fmt-go`. Don't panic for "server response: not found" error. The sync of sum.golang.org might take half an hour. Try again later. Commit a new commit after the command succeed. The CI should pass now.
 * Create tag `image/v${version}` to trigger image building.
 * When the image is ready, update the version in the `manifests/charts/*/Chart.yaml`, submit as a new commit.
 * The CI will create a new chart package. The artifacthub will scrape the new package and update the version later.
