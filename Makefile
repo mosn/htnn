@@ -52,6 +52,9 @@ gen-helm-schema: $(LOCALBIN)
 		pushd ./${CHART} && $(LOCALBIN)/helm-schema -n -k additionalProperties || exit 1; popd; \
 	)
 
+.PHONY: gen-helm
+gen-helm: gen-helm-docs gen-helm-schema
+
 .PHONY: dev-tools
 dev-tools:
 	@if ! docker images ${DEV_TOOLS_IMAGE} | grep dev-tools > /dev/null; then \
