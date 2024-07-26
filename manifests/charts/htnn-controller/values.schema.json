@@ -532,8 +532,7 @@
           ]
         },
         "tag": {
-          "default": "dev",
-          "description": "FIXME: use the released image once we have a release",
+          "default": "0.3.0",
           "title": "tag",
           "type": "string"
         }

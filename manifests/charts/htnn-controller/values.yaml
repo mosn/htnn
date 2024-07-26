@@ -239,8 +239,7 @@ global:
 
   # Default hub for HTNN images.
   hub: ghcr.io/mosn
-  # FIXME: use the released image once we have a release
-  tag: dev
+  tag: 0.3.0
 
   # Specify image pull policy if default behavior isn't desired.
   # Default behavior: latest images will be Always else IfNotPresent.

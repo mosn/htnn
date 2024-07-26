@@ -1,6 +1,6 @@
 # htnn-controller
 
-![Version: 0.1.5](https://img.shields.io/badge/Version-0.1.5-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.2.1](https://img.shields.io/badge/AppVersion-0.2.1-informational?style=flat-square)
+![Version: 0.2.0](https://img.shields.io/badge/Version-0.2.0-informational?style=flat-square) ![Type: application](https://img.shields.io/badge/Type-application-informational?style=flat-square) ![AppVersion: 0.3.0](https://img.shields.io/badge/AppVersion-0.3.0-informational?style=flat-square)
 
 A Helm chart for HTNN controller
 
@@ -100,7 +100,7 @@ helm uninstall htnn-controller -n istio-system
 | global.remotePilotAddress | string | `""` |  |
 | global.sds.token.aud | string | `"istio-ca"` |  |
 | global.sts.servicePort | int | `0` |  |
-| global.tag | string | `"dev"` |  |
+| global.tag | string | `"0.3.0"` |  |
 | istio_cni.chained | bool | `true` |  |
 | istio_cni.provider | string | `"default"` |  |
 | istiodRemote.injectionCABundle | string | `""` |  |
