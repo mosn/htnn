@@ -1,4 +1,4 @@
-name: release
+name: CI triggered by release branch
 on:
   push:
     branches:
