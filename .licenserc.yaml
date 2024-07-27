@@ -51,5 +51,5 @@ dependency:
   excludes:
     - name: github.com/dgryski/trifles # the author adds MIT License later
     - name: github.com/rcrowley/go-metrics # this repo uses BSD-2-Clause-Views, which is not recognized in skywalking-eye 0.6
-    - name: github.com/kr/logfmt #use MIT License
-    - name: github.com/pascaldekloe/goe #use CC0-1.0 License
+    - name: github.com/kr/logfmt # the author adds MIT License later
+    - name: github.com/pascaldekloe/goe # use CC0-1.0 License
