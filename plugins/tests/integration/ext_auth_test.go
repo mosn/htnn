@@ -23,8 +23,8 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"mosn.io/htnn/api/pkg/filtermanager"
-	"mosn.io/htnn/api/plugins/tests/integration/control_plane"
-	"mosn.io/htnn/api/plugins/tests/integration/data_plane"
+	"mosn.io/htnn/api/plugins/tests/integration/controlplane"
+	"mosn.io/htnn/api/plugins/tests/integration/dataplane"
 )
 
 var (
@@ -33,8 +33,8 @@ var (
 )
 
 func TestExtAuth(t *testing.T) {
-	dp, err := data_plane.StartDataPlane(t, &data_plane.Option{
-		Bootstrap: data_plane.Bootstrap().AddBackendRoute(extAuthRoute),
+	dp, err := dataplane.StartDataPlane(t, &dataplane.Option{
+		Bootstrap: dataplane.Bootstrap().AddBackendRoute(extAuthRoute),
 	})
 	if err != nil {
 		t.Fatalf("failed to start data plane: %v", err)
@@ -49,7 +49,7 @@ func TestExtAuth(t *testing.T) {
 	}{
 		{
 			name: "default",
-			config: control_plane.NewSinglePluinConfig("extAuth", map[string]interface{}{
+			config: controlplane.NewSinglePluinConfig("extAuth", map[string]interface{}{
 				"httpService": map[string]interface{}{
 					"url": "http://127.0.0.1:10001/ext_auth",
 				},
@@ -68,7 +68,7 @@ func TestExtAuth(t *testing.T) {
 		},
 		{
 			name: "failed to ext auth",
-			config: control_plane.NewSinglePluinConfig("extAuth", map[string]interface{}{
+			config: controlplane.NewSinglePluinConfig("extAuth", map[string]interface{}{
 				"httpService": map[string]interface{}{
 					"url":           "http://127.0.0.1:2023/ext_auth",
 					"statusOnError": 401,
@@ -81,7 +81,7 @@ func TestExtAuth(t *testing.T) {
 		},
 		{
 			name: "allow failure mode",
-			config: control_plane.NewSinglePluinConfig("extAuth", map[string]interface{}{
+			config: controlplane.NewSinglePluinConfig("extAuth", map[string]interface{}{
 				"httpService": map[string]interface{}{
 					"url":           "http://127.0.0.1:2023/ext_auth",
 					"statusOnError": 403,
@@ -95,7 +95,7 @@ func TestExtAuth(t *testing.T) {
 		},
 		{
 			name: "with body",
-			config: control_plane.NewSinglePluinConfig("extAuth", map[string]interface{}{
+			config: controlplane.NewSinglePluinConfig("extAuth", map[string]interface{}{
 				"httpService": map[string]interface{}{
 					"url":             "http://127.0.0.1:10001/ext_auth",
 					"withRequestBody": true,

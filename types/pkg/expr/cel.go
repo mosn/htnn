@@ -214,7 +214,7 @@ func (r *request) Receive(function string, overload string, args []ref.Val) ref.
 	case "path":
 		return types.String(r.headers.Path())
 	case "url_path":
-		return types.String(r.headers.Url().Path)
+		return types.String(r.headers.URL().Path)
 	case "host":
 		return types.String(r.headers.Host())
 	case "scheme":
@@ -229,7 +229,7 @@ func (r *request) Receive(function string, overload string, args []ref.Val) ref.
 		}
 		return types.String(r.Header(name))
 	case "query_path":
-		return types.String(r.headers.Url().RawQuery)
+		return types.String(r.headers.URL().RawQuery)
 	case "query":
 		name, ok := args[0].Value().(string)
 		if !ok {
@@ -258,7 +258,7 @@ func (r *request) Header(name string) string {
 }
 
 func (r *request) Query(name string) string {
-	query := r.headers.Url().Query()
+	query := r.headers.URL().Query()
 	v := query[name]
 	n := len(v)
 	if n == 1 {

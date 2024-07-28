@@ -28,7 +28,7 @@ import (
 
 	"mosn.io/htnn/api/internal/consumer"
 	"mosn.io/htnn/api/internal/cookie"
-	"mosn.io/htnn/api/internal/plugin_state"
+	"mosn.io/htnn/api/internal/pluginstate"
 	"mosn.io/htnn/api/pkg/filtermanager/api"
 )
 
@@ -74,7 +74,7 @@ func (headers *filterManagerRequestHeaderMap) Del(key string) {
 	headers.cacheLock.Unlock()
 }
 
-func (headers *filterManagerRequestHeaderMap) Url() *url.URL {
+func (headers *filterManagerRequestHeaderMap) URL() *url.URL {
 	headers.cacheLock.Lock()
 	defer headers.cacheLock.Unlock()
 
@@ -195,7 +195,7 @@ func (cb *filterManagerCallbackHandler) SetConsumer(c api.Consumer) {
 func (cb *filterManagerCallbackHandler) PluginState() api.PluginState {
 	cb.cacheLock.Lock()
 	if cb.pluginState == nil {
-		cb.pluginState = plugin_state.NewPluginState()
+		cb.pluginState = pluginstate.NewPluginState()
 	}
 	cb.cacheLock.Unlock()
 	return cb.pluginState

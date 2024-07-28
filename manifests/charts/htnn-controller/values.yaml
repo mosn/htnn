@@ -203,6 +203,9 @@ ownerName: ""
 # See https://istio.io/docs/reference/config/istio.mesh.v1alpha1/ for all available options
 meshConfig:
   enablePrometheusMerge: true
+  defaultConfig:
+    proxyMetadata:
+      ISTIO_DELTA_XDS: "true"
 
 experimental:
   stableValidationPolicy: false

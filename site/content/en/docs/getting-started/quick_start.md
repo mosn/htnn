@@ -85,6 +85,7 @@ spec:
   filters:
     limitCountRedis:
       config:
+        prefix: gateway-default-vs
         address: "redis:6379"
         rules:
         - count: 1
@@ -168,6 +169,7 @@ spec:
   filters:
     limitCountRedis:
       config:
+        prefix: gateway-default-route
         address: "redis:6379"
         rules:
         - count: 1

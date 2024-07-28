@@ -22,12 +22,12 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"mosn.io/htnn/api/pkg/filtermanager"
-	"mosn.io/htnn/api/plugins/tests/integration/control_plane"
-	"mosn.io/htnn/api/plugins/tests/integration/data_plane"
+	"mosn.io/htnn/api/plugins/tests/integration/controlplane"
+	"mosn.io/htnn/api/plugins/tests/integration/dataplane"
 )
 
 func TestLimitReq(t *testing.T) {
-	dp, err := data_plane.StartDataPlane(t, nil)
+	dp, err := dataplane.StartDataPlane(t, nil)
 	if err != nil {
 		t.Fatalf("failed to start data plane: %v", err)
 		return
@@ -41,7 +41,7 @@ func TestLimitReq(t *testing.T) {
 	}{
 		{
 			name: "rps > 1",
-			config: control_plane.NewSinglePluinConfig("limitReq", map[string]interface{}{
+			config: controlplane.NewSinglePluinConfig("limitReq", map[string]interface{}{
 				"average": 1,
 				"period":  "0.1s",
 			}),
@@ -66,7 +66,7 @@ func TestLimitReq(t *testing.T) {
 		},
 		{
 			name: "rps <= 1",
-			config: control_plane.NewSinglePluinConfig("limitReq", map[string]interface{}{
+			config: controlplane.NewSinglePluinConfig("limitReq", map[string]interface{}{
 				"average": 1,
 				"period":  "60s",
 			}),
@@ -79,7 +79,7 @@ func TestLimitReq(t *testing.T) {
 		},
 		{
 			name: "by header, fallback to source ip",
-			config: control_plane.NewSinglePluinConfig("limitReq", map[string]interface{}{
+			config: controlplane.NewSinglePluinConfig("limitReq", map[string]interface{}{
 				"average": 1,
 				"key":     `request.header("x-key")`,
 			}),
@@ -104,7 +104,7 @@ func TestLimitReq(t *testing.T) {
 		},
 		{
 			name: "complex key",
-			config: control_plane.NewSinglePluinConfig("limitReq", map[string]interface{}{
+			config: controlplane.NewSinglePluinConfig("limitReq", map[string]interface{}{
 				"average": 1,
 				"key":     `request.header("x-key") != "" ? request.header("x-key") : source.ip()`,
 			}),

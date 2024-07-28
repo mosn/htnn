@@ -63,7 +63,7 @@ func mapStrsToMapStr(strs map[string][]string) map[string]string {
 }
 
 func (f *filter) buildInput(header api.RequestHeaderMap) map[string]interface{} {
-	uri := header.Url()
+	uri := header.URL()
 	headers := request.GetHeaders(header)
 	req := map[string]interface{}{
 		"method": header.Method(),

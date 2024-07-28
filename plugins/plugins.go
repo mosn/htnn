@@ -16,15 +16,15 @@ package plugins
 
 import (
 	_ "mosn.io/htnn/plugins/plugins/casbin"
-	_ "mosn.io/htnn/plugins/plugins/cel_script"
-	_ "mosn.io/htnn/plugins/plugins/consumer_restriction"
-	_ "mosn.io/htnn/plugins/plugins/debug_mode"
+	_ "mosn.io/htnn/plugins/plugins/celscript"
+	_ "mosn.io/htnn/plugins/plugins/consumerrestriction"
+	_ "mosn.io/htnn/plugins/plugins/debugmode"
 	_ "mosn.io/htnn/plugins/plugins/demo"
-	_ "mosn.io/htnn/plugins/plugins/ext_auth"
-	_ "mosn.io/htnn/plugins/plugins/hmac_auth"
-	_ "mosn.io/htnn/plugins/plugins/key_auth"
-	_ "mosn.io/htnn/plugins/plugins/limit_count_redis"
-	_ "mosn.io/htnn/plugins/plugins/limit_req"
+	_ "mosn.io/htnn/plugins/plugins/extauth"
+	_ "mosn.io/htnn/plugins/plugins/hmacauth"
+	_ "mosn.io/htnn/plugins/plugins/keyauth"
+	_ "mosn.io/htnn/plugins/plugins/limitcountredis"
+	_ "mosn.io/htnn/plugins/plugins/limitreq"
 	_ "mosn.io/htnn/plugins/plugins/oidc"
 	_ "mosn.io/htnn/plugins/plugins/opa"
 )

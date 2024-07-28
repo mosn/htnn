@@ -23,12 +23,12 @@ import (
 
 	"mosn.io/htnn/api/pkg/filtermanager"
 	"mosn.io/htnn/api/pkg/filtermanager/model"
-	"mosn.io/htnn/api/plugins/tests/integration/control_plane"
-	"mosn.io/htnn/api/plugins/tests/integration/data_plane"
+	"mosn.io/htnn/api/plugins/tests/integration/controlplane"
+	"mosn.io/htnn/api/plugins/tests/integration/dataplane"
 )
 
 func TestDebugModeSlowLog(t *testing.T) {
-	dp, err := data_plane.StartDataPlane(t, &data_plane.Option{
+	dp, err := dataplane.StartDataPlane(t, &dataplane.Option{
 		NoErrorLogCheck: true,
 		ExpectLogPattern: []string{
 			`slow log report:.+"executed_plugins":\[.+"name":"limitReq","per_phase_cost_seconds":\{"DecodeHeaders":.+`,
@@ -40,7 +40,7 @@ func TestDebugModeSlowLog(t *testing.T) {
 	}
 	defer dp.Stop()
 
-	config := control_plane.NewPluinConfig([]*model.FilterConfig{
+	config := controlplane.NewPluinConfig([]*model.FilterConfig{
 		{
 			Name: "debugMode",
 			Config: map[string]interface{}{
@@ -72,7 +72,7 @@ func TestDebugModeSlowLog(t *testing.T) {
 }
 
 func TestDebugModeSlowLogNoPlugin(t *testing.T) {
-	dp, err := data_plane.StartDataPlane(t, &data_plane.Option{
+	dp, err := dataplane.StartDataPlane(t, &dataplane.Option{
 		NoErrorLogCheck: true,
 		ExpectNoLogPattern: []string{
 			`slow log report:.+"executed_plugins":\[.+"name":"limitReq","per_phase_cost_seconds":\{"DecodeHeaders":.+`,
@@ -87,7 +87,7 @@ func TestDebugModeSlowLogNoPlugin(t *testing.T) {
 	}
 	defer dp.Stop()
 
-	config := control_plane.NewPluinConfig([]*model.FilterConfig{
+	config := controlplane.NewPluinConfig([]*model.FilterConfig{
 		{
 			Name: "debugMode",
 			Config: map[string]interface{}{
@@ -103,7 +103,7 @@ func TestDebugModeSlowLogNoPlugin(t *testing.T) {
 }
 
 func TestDebugModeSlowLogNoEncodeHeaders(t *testing.T) {
-	dp, err := data_plane.StartDataPlane(t, &data_plane.Option{
+	dp, err := dataplane.StartDataPlane(t, &dataplane.Option{
 		LogLevel:        "debug",
 		NoErrorLogCheck: true,
 		ExpectNoLogPattern: []string{
@@ -119,7 +119,7 @@ func TestDebugModeSlowLogNoEncodeHeaders(t *testing.T) {
 	}
 	defer dp.Stop()
 
-	config := control_plane.NewPluinConfig([]*model.FilterConfig{
+	config := controlplane.NewPluinConfig([]*model.FilterConfig{
 		{
 			Name: "debugMode",
 			Config: map[string]interface{}{
@@ -142,7 +142,7 @@ func TestDebugModeSlowLogNoEncodeHeaders(t *testing.T) {
 }
 
 func TestDebugModeSlowLogNotEmit(t *testing.T) {
-	dp, err := data_plane.StartDataPlane(t, &data_plane.Option{})
+	dp, err := dataplane.StartDataPlane(t, &dataplane.Option{})
 	if err != nil {
 		t.Fatalf("failed to start data plane: %v", err)
 		return
@@ -156,7 +156,7 @@ func TestDebugModeSlowLogNotEmit(t *testing.T) {
 	}{
 		{
 			name: "not emit",
-			config: control_plane.NewPluinConfig([]*model.FilterConfig{
+			config: controlplane.NewPluinConfig([]*model.FilterConfig{
 				{
 					Name: "debugMode",
 					Config: map[string]interface{}{
@@ -182,8 +182,8 @@ func TestDebugModeSlowLogNotEmit(t *testing.T) {
 }
 
 func TestDebugModeSlowLogWithFiltersFromConsumer(t *testing.T) {
-	dp, err := data_plane.StartDataPlane(t, &data_plane.Option{
-		Bootstrap: data_plane.Bootstrap().AddConsumer("rick", map[string]interface{}{
+	dp, err := dataplane.StartDataPlane(t, &dataplane.Option{
+		Bootstrap: dataplane.Bootstrap().AddConsumer("rick", map[string]interface{}{
 			"auth": map[string]interface{}{
 				"keyAuth": `{"key":"rick"}`,
 			},
@@ -212,7 +212,7 @@ func TestDebugModeSlowLogWithFiltersFromConsumer(t *testing.T) {
 	}{
 		{
 			name: "sanity",
-			config: control_plane.NewPluinConfig([]*model.FilterConfig{
+			config: controlplane.NewPluinConfig([]*model.FilterConfig{
 				{
 					Name: "debugMode",
 					Config: map[string]interface{}{

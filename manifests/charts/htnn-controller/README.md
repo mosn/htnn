@@ -106,6 +106,7 @@ helm uninstall htnn-controller -n istio-system
 | istiodRemote.injectionCABundle | string | `""` |  |
 | istiodRemote.injectionPath | string | `"/inject"` |  |
 | istiodRemote.injectionURL | string | `""` |  |
+| meshConfig.defaultConfig.proxyMetadata.ISTIO_DELTA_XDS | string | `"true"` |  |
 | meshConfig.enablePrometheusMerge | bool | `true` |  |
 | ownerName | string | `""` |  |
 | pilot.affinity | object | `{}` |  |

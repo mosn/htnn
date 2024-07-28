@@ -56,9 +56,8 @@ func lintSite() error {
 			if _, err := os.Stat(filepath.Join(path, "_index.md")); err != nil {
 				_, err = os.Stat(filepath.Join(path, "_index.html"))
 				if err != nil {
-					return err
+					return fmt.Errorf("directory %s is missing _index.md or _index.html as the _index file: %s", path, err)
 				}
-				return err
 			}
 			return nil
 		}
@@ -119,26 +118,25 @@ func lintSite() error {
 		}
 	}
 	for doc := range zhHansDocs {
-		if _, ok := enDocs[doc]; !ok {
-			fmt.Printf("file %s is missing in English documentation\n", doc)
-		}
-
 		zhMs, err := readDoc(filepath.Join("site", "content", "zh-hans", doc), LangZhHans)
 		if err != nil {
 			return err
 		}
 
-		enMs, err := readDoc(filepath.Join("site", "content", "en", doc), LangEn)
-		if err != nil {
-			return err
-		}
+		if _, ok := enDocs[doc]; !ok {
+			fmt.Printf("file %s is missing in English documentation\n", doc)
+		} else {
+			enMs, err := readDoc(filepath.Join("site", "content", "en", doc), LangEn)
+			if err != nil {
+				return err
+			}
 
-		if !reflect.DeepEqual(enMs, zhMs) {
-			zhMsOut, _ := json.MarshalIndent(zhMs, "", "  ")
-			enMsOut, _ := json.MarshalIndent(enMs, "", "  ")
-			fmt.Printf("mismatched fields in %s:\nSimpilified Chinese %s\nEnglish %s\n", doc, zhMsOut, enMsOut)
+			if !reflect.DeepEqual(enMs, zhMs) {
+				zhMsOut, _ := json.MarshalIndent(zhMs, "", "  ")
+				enMsOut, _ := json.MarshalIndent(enMs, "", "  ")
+				fmt.Printf("mismatched fields in %s:\nSimpilified Chinese %s\nEnglish %s\n", doc, zhMsOut, enMsOut)
+			}
 		}
-
 	}
 
 	return nil
