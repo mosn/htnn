@@ -26,6 +26,7 @@ WORKDIR /workspace
 # Copy the source
 
 COPY go.* ./
+RUN sed -i 's/.\/site/.\/external\/istio/' go.work && sed -i '/.\/e2e/d' go.work && sed -i '/.\/tools/d' go.work
 # use single layer to copy only works on files, so we have to list all the directories
 COPY api/ api/
 COPY types/ types/

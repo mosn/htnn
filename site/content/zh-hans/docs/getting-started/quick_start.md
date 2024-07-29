@@ -10,14 +10,19 @@ title: 快速上手
 
 ```shell
 helm repo add htnn https://mosn.github.io/htnn
-helm repo update
 ```
 
 ## 安装 HTNN
 
 让我们把 HTNN 安装到 `istio-system` namespace 中。为了简单起见，HTNN 和其他用于 demo 的资源都会安装到该 namespace。
 
-1. 安装控制面组件：
+1. 更新仓库信息以获取最新的版本：
+
+```shell
+helm repo update
+```
+
+2. 安装控制面组件：
 
 ```shell
 $ helm install htnn-controller htnn/htnn-controller \
@@ -32,7 +37,7 @@ REVISION: 1
 TEST SUITE: None
 ```
 
-2. 安装数据面组件：
+3. 安装数据面组件：
 
 ```shell
 $ helm install htnn-gateway htnn/htnn-gateway --namespace istio-system --create-namespace && \

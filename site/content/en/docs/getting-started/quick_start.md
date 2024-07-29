@@ -10,12 +10,17 @@ title: Quick Start
 
 ```shell
 helm repo add htnn https://mosn.github.io/htnn
-helm repo update
 ```
 
 ## Installing HTNN
 
-1. Install the control plane component:
+1. Update the repository information to get the latest version:
+
+```shell
+helm repo update
+```
+
+2. Install the control plane component:
 
 ```shell
 $ helm install htnn-controller htnn/htnn-controller --namespace istio-system --create-namespace --debug --wait
@@ -28,7 +33,7 @@ REVISION: 1
 TEST SUITE: None
 ```
 
-2. Install the data plane component:
+3. Install the data plane component:
 
 ```shell
 $ helm install htnn-gateway htnn/htnn-gateway --namespace istio-system --create-namespace && \

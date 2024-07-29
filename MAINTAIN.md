@@ -16,6 +16,7 @@ To release a new version, please follow the steps below:
 * The CI will create a new chart package. The artifacthub will scrape the new package and update the version later.
 * Try the quick start guide with the new version. Note that you may need to delete the installed chart before installing the new one,
  as `helm install` will not upgrade the charts.
+* Add the `go.work` back, and merge the release branch to the main branch.
 
 ## Upgrade components
 

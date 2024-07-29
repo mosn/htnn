@@ -236,6 +236,7 @@ jobs:
 
     - name: Example
       run: |
+        rm go.work
         pushd ./examples/dev_your_plugin
         make unit-test
         make integration-test
