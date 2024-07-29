@@ -45,6 +45,11 @@ jobs:
           helm dependency list $dir 2> /dev/null | tail +2 | head -n -1 | awk '{ print "helm repo add " $1 " " $3 }' | while read cmd; do $cmd; done
         done
 
+    - name: Smoking test
+      working-directory: ./e2e
+      run: |
+        make create-cluster deploy-istio-to-verify-helm-install
+
     - name: Run chart-releaser
       uses: helm/chart-releaser-action@v1.6.0
       with:
