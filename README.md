@@ -29,6 +29,14 @@ To know how to add plugins to this repo, you can read [Plugin Development](./sit
 
 To import HTNN to your project and add your private plugin, you can take a look at the [example](./examples/dev_your_plugin).
 
+## Community
+
+### Chinese
+
+#### 微信群
+
+![微信图片_20240729215303](https://github.com/user-attachments/assets/66a6f1f7-4870-4524-883b-566e71478f2c)
+
 ## Thanks
 
 **HTNN** would not be possible without the valuable open-source work of projects in the community. We would like to extend a special thank-you to:
