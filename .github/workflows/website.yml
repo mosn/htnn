@@ -26,7 +26,6 @@ jobs:
       with:
         # ./tmp is cached for htmltest
         path: |
-          ./site/bin
           ./site/tmp
         key: ${{ runner.os }}-${{ hashFiles('./Makefile') }}
 

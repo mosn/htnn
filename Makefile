@@ -178,8 +178,9 @@ fix-cjk: dev-tools
 .PHONY: lint-website
 lint-website: $(LOCALBIN)
 	test -x $(LOCALBIN)/htmltest || GOBIN=$(LOCALBIN) go install github.com/wjdp/htmltest@v0.17.0
-	$(LOCALBIN)/htmltest --conf ./.htmltest.yml ./public | grep  -E '(target does not exist|Non-OK status: 404)' \
-		&& exit 1 || true
+	cd ./site && $(LOCALBIN)/htmltest --conf ./.htmltest.yml ./public > /tmp/htmltest.log || true
+	@# ignore 'lookup htnn.mosn.io: no such host' error for now
+	test -f /tmp/htmltest.log && (grep -E '(target does not exist|Non-OK status: 404)' /tmp/htmltest.log && exit 1 || true)
 
 .PHONY: lint-remain
 lint-remain:
