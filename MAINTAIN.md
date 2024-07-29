@@ -12,10 +12,8 @@ To release a new version, please follow the steps below:
 * Create tag `types/v${version}` for `types` module. Then do the same with `controller` and `plugins`.
 * Running `make fmt-go`. Don't panic for "server response: not found" error. The sync of sum.golang.org might take half an hour. Try again later. Commit a new commit after the command succeed. The CI should pass now.
 * Create tag `image/v${version}` to trigger image building.
-* When the image is ready, update the version in the `manifests/charts/*/Chart.yaml`, submit as a new commit.
-* The CI will create a new chart package. The artifacthub will scrape the new package and update the version later.
-* Try the quick start guide with the new version. Note that you may need to delete the installed chart before installing the new one,
- as `helm install` will not upgrade the charts.
+* Once the image is ready, update the version in the `manifests/charts/*/Chart.yaml`, verify the helm chart locally, then submit as a new commit.
+* The CI will create a new chart package.
 * Add the `go.work` back, and merge the release branch to the main branch.
 
 ## Upgrade components
