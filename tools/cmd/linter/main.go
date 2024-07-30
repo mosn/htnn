@@ -508,6 +508,9 @@ func lintConfigurationByCategory(category string) error {
 }
 
 func main() {
+	// change to the root directory so that we don't need to worry about why this tool locates
+	os.Chdir("..")
+
 	type linter func() error
 	linters := []linter{
 		lintConfiguration,
