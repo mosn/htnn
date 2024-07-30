@@ -4,16 +4,17 @@ This doc tracks how to maintain the source code of HTNN.
 
 To release a new version, please follow the steps below:
 
-* Create a new release branch `release/v${version}` from the main branch. Do the work below on the new branch.
-* Create tag `api/v${version}`.
-* Commit the changes below (the CI will fail at this point):
+1. Create a new release branch `release/v${version}` from the main branch. Do the work below on the new branch.
+2. Create tag `api/v${version}`.
+3. Commit the changes below (the CI will fail at this point):
     * Update those `go.mod` which depend on `mosn.io/htnn/$mod`.
-* Create tag `types/v${version}` for `types` module. Then do the same with `controller` and `plugins`.
-* Running `make fmt-go`. Don't panic for "server response: not found" error. The sync of sum.golang.org might take half an hour. Try again later. Commit a new commit after the command succeed. The CI should pass now.
-* Create tag `image/v${version}` to trigger image building.
-* Once the image is ready, update the version in the `manifests/charts/*/Chart.yaml`, verify the helm chart locally, then submit as a new commit.
-* The CI will create a new chart package.
-* Add the `go.work` back, and merge the release branch to the main branch.
+4. Create tag `types/v${version}` for `types` module. Then do the same with `controller` and `plugins`. Rerun the `test` workflow to verify the changes. Don't panic for "server response: not found" error. The sync of sum.golang.org might take half an hour. Try again later.
+5. Create tag `image/v${version}` to trigger image building.
+6. Submit a new commit with the changes below:
+    * Once the image is ready, update the version in the `manifests/charts/*/Chart.yaml`.
+    * Run `make fmt-go`.
+7. The CI will create a new chart package.
+8. Merge the release branch to the main branch.
 
 ## Upgrade components
 

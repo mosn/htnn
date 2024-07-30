@@ -239,7 +239,7 @@ global:
 
   # Default hub for HTNN images.
   hub: ghcr.io/mosn
-  tag: v0.3.0
+  tag: v0.3.1
 
   # Specify image pull policy if default behavior isn't desired.
   # Default behavior: latest images will be Always else IfNotPresent.
