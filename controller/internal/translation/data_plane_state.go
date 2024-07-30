@@ -354,6 +354,7 @@ func toDataPlaneState(ctx *Ctx, state *InitState) (*FinalState, error) {
 	}
 
 	for gs, gwp := range state.GatewayPolicies {
+		gs := gs // the copied id will be referenced by address later
 		// Port with Policies should be added first
 		addServerPortToProxy(&gs, *gwp.Port, s.Proxies, gwp.Policies)
 	}
