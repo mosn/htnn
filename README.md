@@ -11,23 +11,13 @@
 
 ---
 
-HTNN is...
+HTNN (Hyper Trust-Native Network) is Ant Group's internally developed cloud-native cross-tier networking solution, based on Envoy and Istio, and support extending via Go runtime. HTNN architecturally embraces cloud-native standards, supports multi-cluster management and flexible scalability. As a result, it has an ecosystem that supports high development efficiency. By open sourcing HTNN, Ant Group hopes that the community can share its product capabilities and work together to build advanced network products.
 
-## the hub of the Envoy Go plugins.
+## Documentation
 
-First of all, go to the `./plugins` directory.
-
-### To use the Envoy Go plugins
-
-Run `make build-so`. Now the Go plugins are compiled into `libgolang.so`.
-
-To know how to use the Go plugins in a static configuration, you can read [./etc/demo.yaml](./etc/demo.yaml) and run `make run-demo`.
-
-### To develop Envoy Go plugins
-
-To know how to add plugins to this repo, you can read [Plugin Development](./site/content/en/docs/developer-guide/plugin_development.md).
-
-To import HTNN to your project and add your private plugin, you can take a look at the [example](./examples/dev_your_plugin).
+* [Introduction](https://github.com/mosn/htnn/blob/main/site/content/zh-hans/docs/getting-started/introduction.md)
+* [Quick Start](https://github.com/mosn/htnn/blob/main/site/content/en/docs/getting-started/quick_start.md)
+* [Get Involved](https://github.com/mosn/htnn/blob/main/site/content/en/docs/developer-guide/get_involved.md)
 
 ## Community
 
@@ -36,6 +26,7 @@ To import HTNN to your project and add your private plugin, you can take a look 
 #### 微信群
 
 <img src="https://private-user-images.githubusercontent.com/4161644/353108304-66a6f1f7-4870-4524-883b-566e71478f2c.jpg?jwt=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJnaXRodWIuY29tIiwiYXVkIjoicmF3LmdpdGh1YnVzZXJjb250ZW50LmNvbSIsImtleSI6ImtleTUiLCJleHAiOjE3MjIyNjMxMTQsIm5iZiI6MTcyMjI2MjgxNCwicGF0aCI6Ii80MTYxNjQ0LzM1MzEwODMwNC02NmE2ZjFmNy00ODcwLTQ1MjQtODgzYi01NjZlNzE0NzhmMmMuanBnP1gtQW16LUFsZ29yaXRobT1BV1M0LUhNQUMtU0hBMjU2JlgtQW16LUNyZWRlbnRpYWw9QUtJQVZDT0RZTFNBNTNQUUs0WkElMkYyMDI0MDcyOSUyRnVzLWVhc3QtMSUyRnMzJTJGYXdzNF9yZXF1ZXN0JlgtQW16LURhdGU9MjAyNDA3MjlUMTQyMDE0WiZYLUFtei1FeHBpcmVzPTMwMCZYLUFtei1TaWduYXR1cmU9ZTc3MjYxYzE0ZjlmNGQ0MWUyZmI5ZjBlZjliZWYzZWNhZTZkZjU1YTI5NGJjMmUyZTJjN2RjNDgwYzRmZjFlOSZYLUFtei1TaWduZWRIZWFkZXJzPWhvc3QmYWN0b3JfaWQ9MCZrZXlfaWQ9MCZyZXBvX2lkPTAifQ.v3ELHuZLKS1COUhN7tnHkKkhNjWXFNvdvkJAG7wksug" height=424 width=270 />
+（如过期请加微信：spacewander_lzx，注明“HTNN”）
 
 ## Thanks
 
