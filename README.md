@@ -11,7 +11,7 @@
 
 ---
 
-HTNN (Hyper Trust-Native Network) is Ant Group's internally developed cloud-native cross-tier networking solution, based on Envoy and Istio, and support extending via Go runtime. HTNN architecturally embraces cloud-native standards, supports multi-cluster management and flexible scalability. As a result, it has an ecosystem that supports high development efficiency. By open sourcing HTNN, Ant Group hopes that the community can share its product capabilities and work together to build advanced network products.
+HTNN (Hyper Trust-Native Network) is Ant Group's internally developed cloud-native cross-layer networking solution, based on Envoy and Istio, and support extending via Go runtime. HTNN architecturally embraces cloud-native standards, supports multi-cluster management and flexible scalability. As a result, it has an ecosystem that supports high development efficiency. By open sourcing HTNN, Ant Group hopes that the community can share its product capabilities and work together to build advanced network products.
 
 ## Documentation
 
