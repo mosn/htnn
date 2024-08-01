@@ -109,10 +109,7 @@ func (reg *Consul) Start(c registrytype.RegistryConfig) error {
 
 	reg.client = client
 
-	services, err := reg.fetchAllServices(client)
-	//if err != nil {
-	//	return fmt.Errorf("fetch all services error: %v", err)
-	//}
+	services := reg.fetchAllServices(client)
 
 	//for key := range services {
 	//	err = reg.subscribe(key.ServiceName)
@@ -171,7 +168,7 @@ func (reg *Consul) Reload(c registrytype.RegistryConfig) error {
 	return nil
 }
 
-func (reg *Consul) fetchAllServices(client *Client) (map[consulService]bool, error) {
+func (reg *Consul) fetchAllServices(client *Client) map[consulService]bool {
 	q := &consulapi.QueryOptions{}
 	q.Datacenter = client.DataCenter
 	q.Namespace = client.NameSpace
@@ -179,7 +176,8 @@ func (reg *Consul) fetchAllServices(client *Client) (map[consulService]bool, err
 	services, _, err := client.consulCatalog.Services(q)
 
 	if err != nil {
-		return nil, err
+		reg.logger.Errorf("failed to get service, err: %v", err)
+		return nil
 	}
 	serviceMap := make(map[consulService]bool)
 	for serviceName, dataCenters := range services {
@@ -191,7 +189,7 @@ func (reg *Consul) fetchAllServices(client *Client) (map[consulService]bool, err
 			serviceMap[service] = true
 		}
 	}
-	return serviceMap, nil
+	return serviceMap
 }
 
 func (reg *Consul) subscribe(serviceName string) error {
