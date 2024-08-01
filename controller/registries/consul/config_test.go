@@ -67,9 +67,6 @@ func TestStart(t *testing.T) {
 	err = reg.unsubscribe("123")
 	assert.Nil(t, err)
 
-	err = reg.refresh()
-	assert.Nil(t, err)
-
 	err = reg.Stop()
 	assert.Nil(t, err)
 }
@@ -82,4 +79,51 @@ func TestReload(t *testing.T) {
 
 	err := reg.Reload(config)
 	assert.NoError(t, err)
+}
+
+func TestRefresh(t *testing.T) {
+	reg := &Consul{
+		logger: log.NewLogger(&log.RegistryLoggerOptions{
+			Name: "test",
+		}),
+		softDeletedServices: map[consulService]bool{},
+		done:                make(chan struct{}),
+		watchingServices:    map[consulService]bool{},
+	}
+
+	config := &consul.Config{
+		ServerUrl: "http://127.0.0.1:8500",
+	}
+	client, _ := reg.NewClient(config)
+	reg.client = client
+	services := map[string][]string{
+		"service1": {"dc1", "dc2"},
+		"service2": {"dc1"},
+	}
+
+	reg.refresh(services)
+
+	assert.Len(t, reg.watchingServices, 3)
+	assert.Contains(t, reg.watchingServices, consulService{ServiceName: "service1", DataCenter: "dc1"})
+	assert.Contains(t, reg.watchingServices, consulService{ServiceName: "service1", DataCenter: "dc2"})
+	assert.Contains(t, reg.watchingServices, consulService{ServiceName: "service2", DataCenter: "dc1"})
+	assert.Empty(t, reg.softDeletedServices)
+
+	reg = &Consul{
+		logger: log.NewLogger(&log.RegistryLoggerOptions{
+			Name: "test",
+		}),
+		softDeletedServices: map[consulService]bool{},
+		watchingServices: map[consulService]bool{
+			{ServiceName: "service1", DataCenter: "dc1"}: true,
+		},
+	}
+
+	services = map[string][]string{}
+
+	reg.refresh(services)
+
+	assert.Len(t, reg.watchingServices, 0)
+	assert.Len(t, reg.softDeletedServices, 1)
+
 }

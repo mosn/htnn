@@ -70,6 +70,7 @@ type Client struct {
 
 	DataCenter string
 	NameSpace  string
+	Token      string
 }
 
 type consulService struct {
@@ -97,6 +98,8 @@ func (reg *Consul) NewClient(config *consul.Config) (*Client, error) {
 		consulClient:  client,
 		consulCatalog: client.Catalog(),
 		DataCenter:    config.DataCenter,
+		NameSpace:     config.Namespace,
+		Token:         config.Token,
 	}, nil
 }
 
@@ -108,11 +111,21 @@ func (reg *Consul) Start(c registrytype.RegistryConfig) error {
 		return err
 	}
 
+	reg.client = client
+
 	services, err := reg.fetchAllServices(client)
 	if err != nil {
 		return fmt.Errorf("fetch all services error: %v", err)
 	}
-	reg.client = client
+
+	//for key := range services {
+	//	err = reg.subscribe(key.ServiceName)
+	//	if err != nil {
+	//		reg.logger.Errorf("failed to subscribe service, err: %v, service: %v", err, key)
+	//
+	//		delete(services, key)
+	//	}
+	//}
 
 	reg.watchingServices = services
 
@@ -122,22 +135,24 @@ func (reg *Consul) Start(c registrytype.RegistryConfig) error {
 	}
 	go func() {
 		reg.logger.Infof("start refreshing services")
-		ticker := time.NewTicker(dur)
-		//q := consulapi.QueryOptions{
-		//    WaitTime: dur,
-		//}
-		defer ticker.Stop()
+		q := &consulapi.QueryOptions{
+			WaitTime: dur,
+		}
 		for {
 			select {
-			case <-ticker.C:
-				err := reg.refresh()
-				if err != nil {
-					reg.logger.Errorf("failed to refresh services, err: %v", err)
-				}
 			case <-reg.done:
 				reg.logger.Infof("stop refreshing services")
 				return
+
+			default:
 			}
+			services, meta, err := reg.client.consulCatalog.Services(q)
+			if err != nil {
+				reg.logger.Errorf("failed to get services, err: %v", err)
+			}
+			reg.refresh(services)
+
+			q.WaitIndex = meta.LastIndex
 		}
 	}()
 
@@ -160,13 +175,27 @@ func (reg *Consul) Reload(c registrytype.RegistryConfig) error {
 	return nil
 }
 
-func (reg *Consul) refresh() error {
-	return nil
-}
-
 func (reg *Consul) fetchAllServices(client *Client) (map[consulService]bool, error) {
-	fmt.Println(client)
-	return nil, nil
+	q := &consulapi.QueryOptions{}
+	q.Datacenter = client.DataCenter
+	q.Namespace = client.NameSpace
+	q.Token = client.Token
+	services, _, err := client.consulCatalog.Services(q)
+
+	if err != nil {
+		return nil, err
+	}
+	serviceMap := make(map[consulService]bool)
+	for serviceName, dataCenters := range services {
+		for _, dc := range dataCenters {
+			service := consulService{
+				DataCenter:  dc,
+				ServiceName: serviceName,
+			}
+			serviceMap[service] = true
+		}
+	}
+	return serviceMap, nil
 }
 
 func (reg *Consul) subscribe(serviceName string) error {
@@ -177,4 +206,39 @@ func (reg *Consul) subscribe(serviceName string) error {
 func (reg *Consul) unsubscribe(serviceName string) error {
 	fmt.Println(serviceName)
 	return nil
+}
+
+func (reg *Consul) refresh(services map[string][]string) {
+
+	serviceMap := make(map[consulService]bool)
+	for serviceName, dataCenters := range services {
+		for _, dc := range dataCenters {
+			service := consulService{
+				DataCenter:  dc,
+				ServiceName: serviceName,
+			}
+			serviceMap[service] = true
+			if _, ok := reg.watchingServices[service]; !ok {
+				err := reg.subscribe(serviceName)
+				if err != nil {
+					reg.logger.Errorf("failed to subscribe service, err: %v, service: %v", err, serviceName)
+					delete(serviceMap, service)
+				}
+			}
+		}
+	}
+
+	prevFetchServices := reg.watchingServices
+	reg.watchingServices = serviceMap
+
+	for key := range prevFetchServices {
+		if _, ok := serviceMap[key]; !ok {
+			err := reg.unsubscribe(key.ServiceName)
+			if err != nil {
+				reg.logger.Errorf("failed to unsubscribe service, err: %v, service: %v", err, key)
+			}
+			reg.softDeletedServices[key] = true
+		}
+	}
+
 }
