@@ -45,10 +45,6 @@ func init() {
 	})
 }
 
-const (
-	defaultToken = ""
-)
-
 type Consul struct {
 	consul.RegistryType
 	logger log.RegistryLogger
@@ -86,7 +82,7 @@ func (reg *Consul) NewClient(config *consul.Config) (*Client, error) {
 	clientConfig := consulapi.DefaultConfig()
 	clientConfig.Address = uri.Host
 	clientConfig.Scheme = uri.Scheme
-	clientConfig.Token = defaultToken
+	clientConfig.Token = config.Token
 	clientConfig.Datacenter = config.DataCenter
 
 	client, err := consulapi.NewClient(clientConfig)
@@ -114,9 +110,9 @@ func (reg *Consul) Start(c registrytype.RegistryConfig) error {
 	reg.client = client
 
 	services, err := reg.fetchAllServices(client)
-	if err != nil {
-		return fmt.Errorf("fetch all services error: %v", err)
-	}
+	//if err != nil {
+	//	return fmt.Errorf("fetch all services error: %v", err)
+	//}
 
 	//for key := range services {
 	//	err = reg.subscribe(key.ServiceName)
@@ -209,7 +205,6 @@ func (reg *Consul) unsubscribe(serviceName string) error {
 }
 
 func (reg *Consul) refresh(services map[string][]string) {
-
 	serviceMap := make(map[consulService]bool)
 	for serviceName, dataCenters := range services {
 		for _, dc := range dataCenters {
