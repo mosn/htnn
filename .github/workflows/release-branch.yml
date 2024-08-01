@@ -1,4 +1,4 @@
-name: release
+name: CI triggered by release branch
 on:
   push:
     branches:
@@ -21,11 +21,11 @@ jobs:
       with:
         go-version: '1.21'
         cache-dependency-path: "**/*.sum"
-    - name: Check helm docs
+    - name: Check helm files
       run: |
-        make gen-helm-docs
+        make gen-helm
         if ! git diff --exit-code; then
-          echo "Generated files are not up-to-date. Please run 'make gen-helm-docs' and commit changes."
+          echo "Generated files are not up-to-date. Please run 'make gen-helm' and commit changes."
           exit 1
         fi
 
@@ -44,6 +44,11 @@ jobs:
         for dir in $(ls -d ./manifests/charts/*/); do
           helm dependency list $dir 2> /dev/null | tail +2 | head -n -1 | awk '{ print "helm repo add " $1 " " $3 }' | while read cmd; do $cmd; done
         done
+
+    - name: Smoking test
+      working-directory: ./e2e
+      run: |
+        make create-cluster deploy-istio-to-verify-helm-install
 
     - name: Run chart-releaser
       uses: helm/chart-releaser-action@v1.6.0

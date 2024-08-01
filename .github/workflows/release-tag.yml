@@ -1,11 +1,8 @@
-name: build and publish dev image
+name: CI triggered by release tag
 on:
   push:
-    branches:
-    # this workflow create dev-only image for every push to the main branch
-    - main
-
-# unlike other workflow, we don't cancel in progress jobs of this workflow if multiple push events happen
+    tags:
+      - "image/*"
 
 env:
   REGISTRY: ghcr.io
@@ -14,7 +11,6 @@ env:
 
 jobs:
   build-and-push-image:
-    if: github.repository == 'mosn/htnn'
     runs-on: ubuntu-latest
 
     permissions:
@@ -32,6 +28,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Extract tag version
+        shell: bash
+        run: |
+          echo "TAG_VERSION=${GITHUB_REF##*/}" >> "$GITHUB_ENV"
+
       # for the go commands in `make prebuild`
       - name: Set up Go
         uses: actions/setup-go@v5
@@ -46,17 +47,9 @@ jobs:
         run: |
           make prebuild
           cd ./manifests
-          # push image with the dev tag
-          export PROXY_IMAGE=${{ env.PROXY_IMAGE_NAME }}:dev
-          export CONTROLLER_IMAGE=${{ env.CONTROLLER_IMAGE_NAME }}:dev
+          # push image with the tag
+          export PROXY_IMAGE=${{ env.PROXY_IMAGE_NAME }}:${{ env.TAG_VERSION }}
+          export CONTROLLER_IMAGE=${{ env.CONTROLLER_IMAGE_NAME }}:${{ env.TAG_VERSION }}
           make build-proxy-image
           make build-controller-image
-          make push-image
-          # push image with unique tag
-          SHA=$(git rev-parse HEAD)
-          UNIQUE_TAG=dev-${SHA}
-          docker tag ${{ env.PROXY_IMAGE_NAME }}:dev ${{ env.PROXY_IMAGE_NAME }}:$UNIQUE_TAG
-          docker tag ${{ env.CONTROLLER_IMAGE_NAME }}:dev ${{ env.CONTROLLER_IMAGE_NAME }}:$UNIQUE_TAG
-          export PROXY_IMAGE=${{ env.PROXY_IMAGE_NAME }}:$UNIQUE_TAG
-          export CONTROLLER_IMAGE=${{ env.CONTROLLER_IMAGE_NAME }}:$UNIQUE_TAG
           make push-image

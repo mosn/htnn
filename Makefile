@@ -52,6 +52,9 @@ gen-helm-schema: $(LOCALBIN)
 		pushd ./${CHART} && $(LOCALBIN)/helm-schema -n -k additionalProperties || exit 1; popd; \
 	)
 
+.PHONY: gen-helm
+gen-helm: gen-helm-docs gen-helm-schema
+
 .PHONY: dev-tools
 dev-tools:
 	@if ! docker images ${DEV_TOOLS_IMAGE} | grep dev-tools > /dev/null; then \
@@ -175,13 +178,14 @@ fix-cjk: dev-tools
 .PHONY: lint-website
 lint-website: $(LOCALBIN)
 	test -x $(LOCALBIN)/htmltest || GOBIN=$(LOCALBIN) go install github.com/wjdp/htmltest@v0.17.0
-	$(LOCALBIN)/htmltest --conf ./.htmltest.yml ./public | grep  -E '(target does not exist|Non-OK status: 404)' \
-		&& exit 1 || true
+	cd ./site && $(LOCALBIN)/htmltest --conf ./.htmltest.yml ./public > /tmp/htmltest.log || true
+	@# ignore 'lookup htnn.mosn.io: no such host' error for now
+	test -f /tmp/htmltest.log && (grep -E '(target does not exist|Non-OK status: 404)' /tmp/htmltest.log && exit 1 || true)
 
 .PHONY: lint-remain
 lint-remain:
 	grep '>>>>>>' $(shell git ls-files .) | grep -v 'Makefile:' && exit 1 || true
-	go run tools/cmd/linter/main.go
+	cd tools && go run cmd/linter/main.go
 
 .PHONY: lint
 lint: lint-go lint-proto lint-license lint-spell lint-editorconfig lint-cjk lint-remain

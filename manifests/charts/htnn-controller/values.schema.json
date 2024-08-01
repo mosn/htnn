@@ -532,8 +532,7 @@
           ]
         },
         "tag": {
-          "default": "dev",
-          "description": "FIXME: use the released image once we have a release",
+          "default": "v0.3.1",
           "title": "tag",
           "type": "string"
         }
@@ -627,6 +626,29 @@
     },
     "meshConfig": {
       "properties": {
+        "defaultConfig": {
+          "properties": {
+            "proxyMetadata": {
+              "properties": {
+                "ISTIO_DELTA_XDS": {
+                  "default": "true",
+                  "title": "ISTIO_DELTA_XDS",
+                  "type": "string"
+                }
+              },
+              "title": "proxyMetadata",
+              "type": "object",
+              "required": [
+                "ISTIO_DELTA_XDS"
+              ]
+            }
+          },
+          "title": "defaultConfig",
+          "type": "object",
+          "required": [
+            "proxyMetadata"
+          ]
+        },
         "enablePrometheusMerge": {
           "default": "true",
           "title": "enablePrometheusMerge",
@@ -637,7 +659,8 @@
       "title": "meshConfig",
       "type": "object",
       "required": [
-        "enablePrometheusMerge"
+        "enablePrometheusMerge",
+        "defaultConfig"
       ]
     },
     "ownerName": {

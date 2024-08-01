@@ -21,6 +21,8 @@ HELM="${LOCALBIN}/helm"
 E2E_DIR="$(pwd)"
 
 install() {
+    OPTIONS_DISABLED="$1"
+
     pushd ../manifests/charts
 
     $HELM dependency update htnn-controller
@@ -28,15 +30,28 @@ install() {
     $HELM package htnn-controller htnn-controller
     $HELM package htnn-gateway htnn-gateway
 
-    $HELM install htnn-controller htnn-controller --namespace istio-system --create-namespace --wait -f "$E2E_DIR/htnn_controller_values.yaml" \
+    CONTROLLER_VALUES_OPT="-f $E2E_DIR/htnn_controller_values.yaml"
+    GATEWAY_VALUES_OPT="-f $E2E_DIR/htnn_gateway_values.yaml"
+    if [ -n "$OPTIONS_DISABLED" ]; then
+        CONTROLLER_VALUES_OPT=
+        GATEWAY_VALUES_OPT=
+    fi
+
+    # shellcheck disable=SC2086
+    $HELM install htnn-controller htnn-controller --namespace istio-system --create-namespace --wait $CONTROLLER_VALUES_OPT \
         || exitWithAnalysis
 
-    $HELM install htnn-gateway htnn-gateway --namespace istio-system --create-namespace -f "$E2E_DIR/htnn_gateway_values.yaml" \
+    # shellcheck disable=SC2086
+    $HELM install htnn-gateway htnn-gateway --namespace istio-system --create-namespace $GATEWAY_VALUES_OPT \
         && \
         (kubectl wait --timeout=5m -n istio-system deployment/istio-ingressgateway --for=condition=Available \
         || exitWithAnalysis)
 
     popd
+}
+
+installWithoutOptions() {
+    install WithoutOptions
 }
 
 exitWithAnalysis() {

@@ -2,7 +2,7 @@ diff --git a/go.mod b/go.mod
 index e7f308e890..def9507093 100644
 --- a/go.mod
 +++ b/go.mod
-@@ -5,6 +5,22 @@ go 1.21
+@@ -5,6 +5,28 @@ go 1.21
  // Client-go does not handle different versions of mergo due to some breaking changes - use the matching version
  replace github.com/imdario/mergo => github.com/imdario/mergo v0.3.5
 
@@ -20,7 +20,13 @@ index e7f308e890..def9507093 100644
 +// Downgrade some deps to match the one used in istio
 +replace (
 +	github.com/prometheus/common => github.com/prometheus/common v0.45.0
++	github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.18.0
 +)
++
++// The break change https://github.com/google/cel-go/commit/04536922515e3de9de498f689b40f70d170b518b
++// added in v0.18.0 causes `go test istio.io/istio/pkg/config/crd` to fail because of compilation error.
++// We can't update the test to solve the error because it's indirect depended by k8s/apiserver.
++replace github.com/google/cel-go => github.com/google/cel-go v0.17.8
 +
  require (
  	cloud.google.com/go/compute/metadata v0.2.3

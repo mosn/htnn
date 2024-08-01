@@ -58,6 +58,10 @@ e2e-prepare-data-plane-image: kind
 deploy-istio: helm
 	ISTIO_VERSION=$(ISTIO_VERSION) LOCALBIN=$(LOCALBIN) ./istio.sh install
 
+.PHONY: deploy-istio-to-verify-helm-install
+deploy-istio-to-verify-helm-install: helm
+	ISTIO_VERSION=$(ISTIO_VERSION) LOCALBIN=$(LOCALBIN) ./istio.sh installWithoutOptions
+
 .PHONY: run-e2e
 run-e2e:
 	PATH=$(LOCALBIN):"$(PATH)" go test -v ./... || (bash -x ./collect_e2e_logs.sh; exit -1)
