@@ -11,23 +11,22 @@
 
 ---
 
-HTNN is...
+HTNN (Hyper Trust-Native Network) is Ant Group's internally developed cloud-native cross-layer networking solution, based on Envoy and Istio, and support extending via Go runtime. HTNN architecturally embraces cloud-native standards, supports multi-cluster management and flexible scalability. As a result, it has an ecosystem that supports high development efficiency. By open sourcing HTNN, Ant Group hopes that the community can share its product capabilities and work together to build advanced network products.
 
-## the hub of the Envoy Go plugins.
+## Documentation
 
-First of all, go to the `./plugins` directory.
+* [Introduction](https://github.com/mosn/htnn/blob/main/site/content/zh-hans/docs/getting-started/introduction.md)
+* [Quick Start](https://github.com/mosn/htnn/blob/main/site/content/en/docs/getting-started/quick_start.md)
+* [Get Involved](https://github.com/mosn/htnn/blob/main/site/content/en/docs/developer-guide/get_involved.md)
 
-### To use the Envoy Go plugins
+## Community
 
-Run `make build-so`. Now the Go plugins are compiled into `libgolang.so`.
+### Chinese
 
-To know how to use the Go plugins in a static configuration, you can read [./etc/demo.yaml](./etc/demo.yaml) and run `make run-demo`.
+#### 微信群
 
-### To develop Envoy Go plugins
-
-To know how to add plugins to this repo, you can read [Plugin Development](./site/content/en/docs/developer-guide/plugin_development.md).
-
-To import HTNN to your project and add your private plugin, you can take a look at the [example](./examples/dev_your_plugin).
+<img src="./site/static/images/wechat_group.png" height=424 width=270 />
+（如过期请加微信：spacewander_lzx，注明“HTNN”）
 
 ## Thanks
 
