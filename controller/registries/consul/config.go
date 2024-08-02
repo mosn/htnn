@@ -22,6 +22,8 @@ import (
 	"time"
 
 	consulapi "github.com/hashicorp/consul/api"
+	"github.com/nacos-group/nacos-sdk-go/model"
+	istioapi "istio.io/api/networking/v1alpha3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"mosn.io/htnn/controller/pkg/registry"
@@ -45,6 +47,23 @@ func init() {
 	})
 }
 
+var (
+	SleepTime    = 120 * time.Second
+	RegistryType = "consul"
+)
+
+type consulCatalog interface {
+	Services(q *consulapi.QueryOptions) (map[string][]string, *consulapi.QueryMeta, error)
+}
+
+type ConsulAPI struct {
+	client *consulapi.Client
+}
+
+func (c *ConsulAPI) Services(q *consulapi.QueryOptions) (map[string][]string, *consulapi.QueryMeta, error) {
+	return c.client.Catalog().Services(q)
+}
+
 type Consul struct {
 	consul.RegistryType
 	logger log.RegistryLogger
@@ -62,7 +81,7 @@ type Consul struct {
 
 type Client struct {
 	consulClient  *consulapi.Client
-	consulCatalog *consulapi.Catalog
+	consulCatalog consulCatalog
 
 	DataCenter string
 	NameSpace  string
@@ -102,15 +121,20 @@ func (reg *Consul) NewClient(config *consul.Config) (*Client, error) {
 func (reg *Consul) Start(c registrytype.RegistryConfig) error {
 	config := c.(*consul.Config)
 
-	client, err := reg.NewClient(config)
+	if reg.client == nil {
+
+		client, err := reg.NewClient(config)
+		if err != nil {
+			return err
+		}
+
+		reg.client = client
+	}
+	services, err := reg.fetchAllServices(reg.client)
+
 	if err != nil {
 		return err
 	}
-
-	reg.client = client
-
-	services := reg.fetchAllServices(client)
-
 	//for key := range services {
 	//	err = reg.subscribe(key.ServiceName)
 	//	if err != nil {
@@ -129,14 +153,18 @@ func (reg *Consul) Start(c registrytype.RegistryConfig) error {
 	go func() {
 		reg.logger.Infof("start refreshing services")
 		q := &consulapi.QueryOptions{
-			WaitTime: dur,
+			WaitTime:   dur,
+			Namespace:  config.Namespace,
+			Datacenter: config.DataCenter,
+			Token:      config.Token,
 		}
 		for {
+
 			select {
 			case <-reg.done:
 				reg.logger.Infof("stop refreshing services")
-				return
-
+				//wait to retry
+				time.Sleep(SleepTime)
 			default:
 			}
 			services, meta, err := reg.client.consulCatalog.Services(q)
@@ -168,7 +196,7 @@ func (reg *Consul) Reload(c registrytype.RegistryConfig) error {
 	return nil
 }
 
-func (reg *Consul) fetchAllServices(client *Client) map[consulService]bool {
+func (reg *Consul) fetchAllServices(client *Client) (map[consulService]bool, error) {
 	q := &consulapi.QueryOptions{}
 	q.Datacenter = client.DataCenter
 	q.Namespace = client.NameSpace
@@ -177,7 +205,7 @@ func (reg *Consul) fetchAllServices(client *Client) map[consulService]bool {
 
 	if err != nil {
 		reg.logger.Errorf("failed to get service, err: %v", err)
-		return nil
+		return nil, err
 	}
 	serviceMap := make(map[consulService]bool)
 	for serviceName, dataCenters := range services {
@@ -189,7 +217,7 @@ func (reg *Consul) fetchAllServices(client *Client) map[consulService]bool {
 			serviceMap[service] = true
 		}
 	}
-	return serviceMap
+	return serviceMap, nil
 }
 
 func (reg *Consul) subscribe(serviceName string) error {
@@ -234,4 +262,47 @@ func (reg *Consul) refresh(services map[string][]string) {
 		}
 	}
 
+}
+
+func (reg *Consul) generateServiceEntry(host string, services []model.SubscribeService) *registry.ServiceEntryWrapper {
+	portList := make([]*istioapi.ServicePort, 0, 1)
+	endpoints := make([]*istioapi.WorkloadEntry, 0, len(services))
+
+	for _, service := range services {
+		protocol := registry.HTTP
+		if service.Metadata == nil {
+			service.Metadata = make(map[string]string)
+		}
+
+		if service.Metadata["protocol"] != "" {
+			protocol = registry.ParseProtocol(service.Metadata["protocol"])
+		}
+
+		port := &istioapi.ServicePort{
+			Name:     string(protocol),
+			Number:   uint32(service.Port),
+			Protocol: string(protocol),
+		}
+		if len(portList) == 0 {
+			portList = append(portList, port)
+		}
+
+		endpoint := istioapi.WorkloadEntry{
+			Address: service.Ip,
+			Ports:   map[string]uint32{port.Protocol: port.Number},
+			Labels:  service.Metadata,
+		}
+		endpoints = append(endpoints, &endpoint)
+	}
+
+	return &registry.ServiceEntryWrapper{
+		ServiceEntry: istioapi.ServiceEntry{
+			Hosts:      []string{host},
+			Ports:      portList,
+			Location:   istioapi.ServiceEntry_MESH_INTERNAL,
+			Resolution: istioapi.ServiceEntry_STATIC,
+			Endpoints:  endpoints,
+		},
+		Source: RegistryType,
+	}
 }
