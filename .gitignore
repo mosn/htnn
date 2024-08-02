@@ -22,6 +22,7 @@ test-envoy/
 # website
 site/public/
 site/resources/
+site/static/images
 site/.hugo_build.lock
 site/tmp
 # dev files

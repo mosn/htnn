@@ -4,7 +4,7 @@ title: FilterPolicy
 
 绝大部分网关和 service mesh 上的业务需求，都是围绕着网络协议做一些事情，如认证鉴权、限流限速、请求改写等等。HTNN 把这部分的需求都抽象出来，使用 FilterPolicy 来表达具体的配置规则。
 
-和一些同类产品不同，HTNN 并没有为不同的业务分类使用不同的 CRD，而是统一使用 FilterPolicy 一个 CRD 来解决所有的策略层面上的业务需求。这是因为我们觉得多 CRD 的成本太大了。我们甚至引入 `0 CRD` 的 [embedded mode](../embedded_mode)，来减低接入和维护成本。
+和一些同类产品不同，HTNN 并没有为不同的业务分类使用不同的 CRD，而是统一使用 FilterPolicy 一个 CRD 来解决所有的策略层面上的业务需求。这是因为我们觉得多 CRD 的成本太大了。我们甚至引入 `0 CRD` 的 [embedded mode](./embedded_mode.md)，来减低接入和维护成本。
 
 ## FilterPolicy 的结构说明
 
@@ -61,7 +61,7 @@ status:
 
 目前 FilterPolicy 只能作用于同 namespace 的路由资源，而且目标资源所在的 Gateway 需要和该资源位于同一个 namespace。
 
-这个 FilterPolicy 还有一个 `filters`。`filters` 里面可以配置多个插件，如示例中的 `animal` 和 `plant`。每个插件的执行顺序，由注册插件时[指定的顺序](../../developer-guide/plugin_development#插件顺序)决定。每个插件的具体配置，配置在该插件名下面的 `config` 字段里面。
+这个 FilterPolicy 还有一个 `filters`。`filters` 里面可以配置多个插件，如示例中的 `animal` 和 `plant`。每个插件的执行顺序，由注册插件时[指定的顺序](../developer-guide/plugin_development.md#插件顺序)决定。每个插件的具体配置，配置在该插件名下面的 `config` 字段里面。
 
 和其他 k8s 资源一样，HTNN 控制面也会修改 FilterPolicy 的 `status` 字段，来报告这个 FilterPolicy 的状态。目前 `status` 字段下的 `reason` 为以下值之一：
 

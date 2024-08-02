@@ -38,7 +38,7 @@ HTNN places data plane-running Go Plugins and their shared pkg libraries in the 
 
 If you want to write a Go Plugin in a third-party repository, you can refer to this example: https://github.com/mosn/htnn/tree/main/examples/dev_your_plugin. Go Plugins are compiled into shared libraries and deployed to the data plane. When you want to integrate a Go Plugin into the data plane, this file can serve as a template: https://github.com/mosn/htnn/blob/main/examples/dev_your_plugin/cmd/libgolang/main.go.
 
-It is recommended to read the existing plugins' code before developing your own plugin, especially plugins that are similar to the one you're developing – at the very least, you should look at the [demo](https://github.com/mosn/htnn/tree/main/plugins/plugins/demo) plugin. Plugin code is located in the `plugins/` directory. For more information on plugin development, please refer to the [Plugin Development](./plugin_development) documentation.
+It is recommended to read the existing plugins' code before developing your own plugin, especially plugins that are similar to the one you're developing – at the very least, you should look at the [demo](https://github.com/mosn/htnn/tree/main/plugins/plugins/demo) plugin. Plugin code is located in the `plugins/` directory. For more information on plugin development, please refer to the [Plugin Development](./plugin_development.md) documentation.
 
 HTNN provides a [Plugin Integration Test Framework](./plugin_integration_test_framework) that allows the testing of Go Plugin logic to run with only the data plane running. The `dev_your_plugin` example also demonstrates how to run the integration test framework in a third-party repository.
 
