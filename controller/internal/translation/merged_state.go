@@ -50,8 +50,8 @@ type mergedHostPolicy struct {
 }
 
 type mergedGatewayPolicy struct {
-	Gateay *model.Gateway
-	Policy *mergedPolicy
+	Gateway *model.Gateway
+	Policy  *mergedPolicy
 }
 
 type mergedPolicy struct {
@@ -381,7 +381,7 @@ func toMergedState(ctx *Ctx, state *dataPlaneState) (*FinalState, error) {
 		mergedGateways := make(map[string]*mergedGatewayPolicy)
 		for name, gateway := range cfg.Gateways {
 			mg := &mergedGatewayPolicy{
-				Gateay: gateway.Gateway,
+				Gateway: gateway.Gateway,
 			}
 			if len(gateway.Policies) > 0 {
 				mg.Policy = toMergedPolicy(&gateway.Gateway.GatewaySection.NsName, gateway.Policies, PolicyKindECDS, nil)
