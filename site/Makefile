@@ -16,15 +16,15 @@ include ../common.mk
 
 .PHONY: build
 build:
-	docker-compose build
+	docker compose build
 
 .PHONY: up
 up:
-	docker-compose up
+	docker compose up
 
 .PHONY: clean
 clean:
-	docker-compose rm
+	docker compose rm
 
 .PHONY: publish
 # The generated files will be under ./public
