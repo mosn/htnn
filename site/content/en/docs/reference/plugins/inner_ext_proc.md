@@ -16,7 +16,7 @@ As Envoy uses an onion model to proxy requests, the execution order is:
 6. Run other plugins to process the response
 7. Request ends
 
-Please refer to the [outerExtProc](../outer_ext_proc) plugin documentation to learn how to use it. Do not forget to replace `outerExtProc` with `innerExtProc` when testing examples.
+Please refer to the [outerExtProc](./outer_ext_proc.md) plugin documentation to learn how to use it. Do not forget to replace `outerExtProc` with `innerExtProc` when testing examples.
 
 ## Attribute
 

@@ -26,24 +26,24 @@ The `extAuth` plugin sends an authorization request to an authorization service 
 | Name                  | Type                                | Required | Validation        | Description                                                                                                                                               |
 | --------------------- | ----------------------------------- | -------- | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | url                   | string                              | True     | must be valid URI | The uri to the external service, like `http://ext_auth/prefix`. The path given by the uri will be used as the prefix of the authorization request's path. |
-| timeout               | [Duration](../../type#duration)     | False    | > 0s              | The timeout duration. For example, `10s` means the timeout is 10 seconds. Default to 0.2s.                                                                |
+| timeout               | [Duration](../type.md#duration)     | False    | > 0s              | The timeout duration. For example, `10s` means the timeout is 10 seconds. Default to 0.2s.                                                                |
 | authorizationRequest  | AuthorizationRequest                | False    |                   |                                                                                                                                                           |
 | authorizationResponse | AuthorizationResponse               | False    |                   |                                                                                                                                                           |
-| statusOnError         | [StatusCode](../../type#statuscode) | False    |                   | Sets the HTTP status that is returned to the client when the authorization server returns an error or cannot be reached. The default status is `401`.     |
+| statusOnError         | [StatusCode](../type.md#statuscode) | False    |                   | Sets the HTTP status that is returned to the client when the authorization server returns an error or cannot be reached. The default status is `401`.     |
 | withRequestBody       | bool                                | False    |                   | Buffer the client request body and send it within the authorization request.                                                                              |
 
 ### AuthorizationRequest
 
 | Name         | Type                                    | Required | Validation   | Description                                                                                                                                               |
 | ------------ | --------------------------------------- | -------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| headersToAdd | [HeaderValue[]](../../type#headervalue) | False    | min_items: 1 | Sets a list of headers that will be included in the request to authorization service. Note that client request header of the same key will be overridden. |
+| headersToAdd | [HeaderValue[]](../type.md#headervalue) | False    | min_items: 1 | Sets a list of headers that will be included in the request to authorization service. Note that client request header of the same key will be overridden. |
 
 ### AuthorizationResponse
 
 | Name                   | Type                                           | Required | Validation   | Description                                                                                                                                                                     |
 | ---------------------- | ---------------------------------------------- | -------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| allowedUpstreamHeaders | [StringMatcher[]](../../type#stringmatcher) | False    | min_items: 1 | When this is set, authorization response headers that have a correspondent match will be added to the original client request. Note that coexistent headers will be overridden. |
-| allowedClientHeaders   | [StringMatcher[]](../../type#stringmatcher)    | False    | min_items: 1 | When this is set, authorization response headers that have a correspondent match will be added to the client's response when the request is rejected.                           |
+| allowedUpstreamHeaders | [StringMatcher[]](../type.md#stringmatcher) | False    | min_items: 1 | When this is set, authorization response headers that have a correspondent match will be added to the original client request. Note that coexistent headers will be overridden. |
+| allowedClientHeaders   | [StringMatcher[]](../type.md#stringmatcher)    | False    | min_items: 1 | When this is set, authorization response headers that have a correspondent match will be added to the client's response when the request is rejected.                           |
 
 ## Usage
 

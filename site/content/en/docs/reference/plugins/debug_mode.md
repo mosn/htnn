@@ -23,7 +23,7 @@ The `debugMode` plugin is used to enable debug mode on the targeted Route.
 
 | Name      | Type                            | Required | Validation | Description                                                                 |
 |-----------|---------------------------------|----------|------------|-----------------------------------------------------------------------------|
-| threshold | [Duration](../../type#duration) | True     | > 0s       | If the request takes longer than this time, print an error log as shown below. |
+| threshold | [Duration](../type.md#duration) | True     | > 0s       | If the request takes longer than this time, print an error log as shown below. |
 
 ## Usage
 

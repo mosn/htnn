@@ -26,24 +26,24 @@ title: Ext Auth
 | 名称                  | 类型                                       | 必选 | 校验规则           | 说明                                                                                                                                                  |
 |---------------------|--------------------------------------------|------|--------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------|
 | url                   | string                                     | 是   | must be valid URI    | 外部服务的 uri，如 `http://ext_auth/prefix`。uri 的路径将作为鉴权请求路径的前缀。                                                                    |
-| timeout               | [Duration](../../type#duration)             | 否   | > 0s                 | 超时时长。例如，`10s` 表示超时时间为 10 秒。默认值为 0.2s。                                                                                             |
+| timeout               | [Duration](../type.md#duration)             | 否   | > 0s                 | 超时时长。例如，`10s` 表示超时时间为 10 秒。默认值为 0.2s。                                                                                             |
 | authorizationRequest  | AuthorizationRequest                        | 否   |                      |                                                                                                                                                        |
 | authorizationResponse | AuthorizationResponse                       | 否   |                      |                                                                                                                                                        |
-| statusOnError         | [StatusCode](../../type#statuscode)         | 否   |                      | 当鉴权服务器返回错误或无法访问时，设置返回给客户端的 HTTP 状态码。默认状态码是 `401`。                                                                   |
+| statusOnError         | [StatusCode](../type.md#statuscode)         | 否   |                      | 当鉴权服务器返回错误或无法访问时，设置返回给客户端的 HTTP 状态码。默认状态码是 `401`。                                                                   |
 | withRequestBody       | bool                                       | 否   |                      | 缓冲客户端请求体，并将其发送至鉴权请求中。                                                                                                          |
 
 ### AuthorizationRequest
 
 | 名称        | 类型                                             | 必选 | 校验规则           | 说明                                                                                                                                                        |
 |------------|--------------------------------------------------|------|--------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| headersToAdd | [HeaderValue[]](../../type#headervalue)           | 否   | min_items: 1       | 设置将包含在鉴权服务请求中的请求头列表。请注意，同名的客户端请求头将被覆盖。                                                                           |
+| headersToAdd | [HeaderValue[]](../type.md#headervalue)           | 否   | min_items: 1       | 设置将包含在鉴权服务请求中的请求头列表。请注意，同名的客户端请求头将被覆盖。                                                                           |
 
 ### AuthorizationResponse
 
 | 名称                   | 类型                                                   | 必选 | 校验规则           | 说明                                                                                                                                                                        |
 |----------------------|-------------------------------------------------------|------|--------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| allowedUpstreamHeaders | [StringMatcher[]](../../type#stringmatcher) | 否   | min_items: 1       | 当设置后，具有相应匹配项的鉴权请求的响应头将添加到原始的客户端请求头中。请注意，同名的请求头将被覆盖。                                                                                    |
-| allowedClientHeaders   | [StringMatcher[]](../../type#stringmatcher) | 否   | min_items: 1       | 当设置后，在请求被拒绝时，具有相应匹配项的鉴权请求的响应头将添加到客户端的响应头中。                                                                                                 |
+| allowedUpstreamHeaders | [StringMatcher[]](../type.md#stringmatcher) | 否   | min_items: 1       | 当设置后，具有相应匹配项的鉴权请求的响应头将添加到原始的客户端请求头中。请注意，同名的请求头将被覆盖。                                                                                    |
+| allowedClientHeaders   | [StringMatcher[]](../type.md#stringmatcher) | 否   | min_items: 1       | 当设置后，在请求被拒绝时，具有相应匹配项的鉴权请求的响应头将添加到客户端的响应头中。                                                                                                 |
 
 ## 用法
 

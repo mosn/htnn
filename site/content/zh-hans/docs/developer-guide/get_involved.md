@@ -38,9 +38,9 @@ HTNN 在 `plugins/` 模块下放置在数据面上运行的 Go Plugin 以及它�
 
 如果你想要在第三方仓库编写 Go Plugin，可以参考 https://github.com/mosn/htnn/tree/main/examples/dev_your_plugin 这个范例。Go Plugin 在数据面上是编译成 shared library 来部署到。当你想要集成 Go Plugin 到数据面时，https://github.com/mosn/htnn/blob/main/examples/dev_your_plugin/cmd/libgolang/main.go 这个文件可以作为模版。
 
-在开发自己的插件之前建议读一下现有插件的代码，尤其是和你开发的功能相似的插件，至少应该看看 [demo](https://github.com/mosn/htnn/tree/main/plugins/plugins/demo) 插件。插件代码位于 `plugins/` 目录下面。关于插件开发的更多信息，请参考[插件开发](./plugin_development)文档。
+在开发自己的插件之前建议读一下现有插件的代码，尤其是和你开发的功能相似的插件，至少应该看看 [demo](https://github.com/mosn/htnn/tree/main/plugins/plugins/demo) 插件。插件代码位于 `plugins/` 目录下面。关于插件开发的更多信息，请参考[插件开发](./plugin_development.md)文档。
 
-HTNN 提供了一个[插件集成测试框架](./plugin_integration_test_framework)，允许在只运行数据面的情况下测试 Go Plugin 的逻辑。在 `dev_your_plugin` 这个范例里也展示了如何在第三方仓库中运行集成测试框架。
+HTNN 提供了一个[插件集成测试框架](./plugin_integration_test_framework.md)，允许在只运行数据面的情况下测试 Go Plugin 的逻辑。在 `dev_your_plugin` 这个范例里也展示了如何在第三方仓库中运行集成测试框架。
 
 每个插件都包含两类对象：`config` 和 `filter`。其中 `config` 负责配置管理，`filter` 负责执行请求级别的逻辑。
 
