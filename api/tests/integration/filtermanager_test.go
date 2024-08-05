@@ -912,9 +912,13 @@ func TestFilterManagerIgnoreUnknownFields(t *testing.T) {
 
 func TestFilterManagerPluginReturnsErrorInParse(t *testing.T) {
 	dp, err := dataplane.StartDataPlane(t, &dataplane.Option{
+		Bootstrap: dataplane.Bootstrap().SetAccessLogFormat(
+			`access_log: %RESPONSE_CODE% plugin: %DYNAMIC_METADATA(htnn:local_reply_plugin_name)%`,
+		),
 		NoErrorLogCheck: true,
 		ExpectLogPattern: []string{
 			`error in plugin buffer: `,
+			`access_log: 500 plugin: buffer`,
 		},
 	})
 	if err != nil {
@@ -934,9 +938,13 @@ func TestFilterManagerPluginReturnsErrorInParse(t *testing.T) {
 
 func TestFilterManagerPluginReturnsErrorInInit(t *testing.T) {
 	dp, err := dataplane.StartDataPlane(t, &dataplane.Option{
+		Bootstrap: dataplane.Bootstrap().SetAccessLogFormat(
+			`access_log: %RESPONSE_CODE% plugin: %DYNAMIC_METADATA(htnn:local_reply_plugin_name)%`,
+		),
 		NoErrorLogCheck: true,
 		ExpectLogPattern: []string{
 			`error in plugin bad: ouch`,
+			`access_log: 500 plugin: bad`,
 		},
 	})
 	if err != nil {
@@ -1068,4 +1076,29 @@ func TestFilterManagerPluginIncorrectMethodDefinition(t *testing.T) {
 	resp, err := dp.Get("/echo", nil)
 	require.Nil(t, err)
 	assert.Equal(t, 200, resp.StatusCode, resp)
+}
+
+func TestFilterManagerRecordLocalReplyPlugin(t *testing.T) {
+	dp, err := dataplane.StartDataPlane(t, &dataplane.Option{
+		Bootstrap: dataplane.Bootstrap().SetAccessLogFormat(
+			`access_log: %RESPONSE_CODE% plugin: %DYNAMIC_METADATA(htnn:local_reply_plugin_name)%`,
+		),
+		ExpectLogPattern: []string{
+			`access_log: 206 plugin: localReply`,
+		},
+	})
+	if err != nil {
+		t.Fatalf("failed to start data plane: %v", err)
+		return
+	}
+	defer dp.Stop()
+
+	config := controlplane.NewSinglePluinConfig("localReply", map[string]interface{}{
+		"decode":  true,
+		"headers": true,
+	})
+	controlPlane.UseGoPluginConfig(t, config, dp)
+	resp, err := dp.Get("/echo", nil)
+	require.Nil(t, err)
+	assert.Equal(t, 206, resp.StatusCode, resp)
 }
