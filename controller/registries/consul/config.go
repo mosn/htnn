@@ -40,36 +40,17 @@ func init() {
 			name:                om.Name,
 			softDeletedServices: map[consulService]bool{},
 			done:                make(chan struct{}),
-			clientFactory:       factory,
 		}
 		return reg, nil
 	})
 }
 
-var (
-	//RegistryType               = "consul"
-	factory ClientFactory = &DefaultClientFactory{}
-)
-
-type consulCatalog interface {
-	Services(q *consulapi.QueryOptions) (map[string][]string, *consulapi.QueryMeta, error)
-}
-
-type ConsulAPI struct {
-	client *consulapi.Client
-}
-
-func (c *ConsulAPI) Services(q *consulapi.QueryOptions) (map[string][]string, *consulapi.QueryMeta, error) {
-	return c.client.Catalog().Services(q)
-}
-
 type Consul struct {
 	consul.RegistryType
-	logger        log.RegistryLogger
-	store         registry.ServiceEntryStore
-	name          string
-	client        *Client
-	clientFactory ClientFactory
+	logger log.RegistryLogger
+	store  registry.ServiceEntryStore
+	name   string
+	client *Client
 
 	lock                sync.RWMutex
 	watchingServices    map[consulService]bool
@@ -81,20 +62,14 @@ type Consul struct {
 
 type Client struct {
 	consulClient  *consulapi.Client
-	consulCatalog consulCatalog
+	consulCatalog *consulapi.Catalog
 
 	DataCenter string
 	NameSpace  string
 	Token      string
 }
 
-type ClientFactory interface {
-	NewClient(config *consul.Config) (*Client, error)
-}
-
-type DefaultClientFactory struct{}
-
-func (f *DefaultClientFactory) NewClient(config *consul.Config) (*Client, error) {
+func (reg *Consul) NewClient(config *consul.Config) (*Client, error) {
 	uri, err := url.Parse(config.ServerUrl)
 	if err != nil {
 		return nil, fmt.Errorf("invalid server url: %s", config.ServerUrl)
@@ -120,21 +95,21 @@ func (f *DefaultClientFactory) NewClient(config *consul.Config) (*Client, error)
 }
 
 type consulService struct {
-	DataCenter  string
+	Tag         string
 	ServiceName string
 }
 
 func (reg *Consul) Start(c registrytype.RegistryConfig) error {
 	config := c.(*consul.Config)
 
-	client, err := reg.clientFactory.NewClient(config)
+	client, err := reg.NewClient(config)
 	if err != nil {
 		return err
 	}
 
 	reg.client = client
 
-	services, err := reg.fetchAllServices(reg.client)
+	services, err := reg.FetchAllServices(reg.client)
 
 	if err != nil {
 		return err
@@ -193,7 +168,7 @@ func (reg *Consul) Reload(c registrytype.RegistryConfig) error {
 	return nil
 }
 
-func (reg *Consul) fetchAllServices(client *Client) (map[consulService]bool, error) {
+func (reg *Consul) FetchAllServices(client *Client) (map[consulService]bool, error) {
 	q := &consulapi.QueryOptions{}
 	q.Datacenter = client.DataCenter
 	q.Namespace = client.NameSpace
@@ -205,10 +180,10 @@ func (reg *Consul) fetchAllServices(client *Client) (map[consulService]bool, err
 		return nil, err
 	}
 	serviceMap := make(map[consulService]bool)
-	for serviceName, dataCenters := range services {
-		for _, dc := range dataCenters {
+	for serviceName, tags := range services {
+		for _, tag := range tags {
 			service := consulService{
-				DataCenter:  dc,
+				Tag:         tag,
 				ServiceName: serviceName,
 			}
 			serviceMap[service] = true
@@ -229,10 +204,10 @@ func (reg *Consul) unsubscribe(serviceName string) error {
 
 func (reg *Consul) refresh(services map[string][]string) {
 	serviceMap := make(map[consulService]bool)
-	for serviceName, dataCenters := range services {
-		for _, dc := range dataCenters {
+	for serviceName, tags := range services {
+		for _, tag := range tags {
 			service := consulService{
-				DataCenter:  dc,
+				Tag:         tag,
 				ServiceName: serviceName,
 			}
 			serviceMap[service] = true
