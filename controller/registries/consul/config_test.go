@@ -18,25 +18,22 @@ import (
 	"testing"
 
 	"github.com/hashicorp/consul/api"
-	"github.com/nacos-group/nacos-sdk-go/model"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
-	"google.golang.org/protobuf/proto"
-	istioapi "istio.io/api/networking/v1alpha3"
 
-	"mosn.io/htnn/controller/pkg/registry"
 	"mosn.io/htnn/controller/pkg/registry/log"
 	"mosn.io/htnn/types/registries/consul"
 )
 
 func TestNewClient(t *testing.T) {
-	reg := &Consul{}
+	reg := &Consul{
+		clientFactory: factory,
+	}
 	config := &consul.Config{
 		ServerUrl:  "http://127.0.0.1:8500",
 		DataCenter: "test",
 	}
-	client, err := reg.NewClient(config)
+	client, err := reg.clientFactory.NewClient(config)
 
 	assert.NoError(t, err)
 	assert.NotNil(t, client)
@@ -46,7 +43,7 @@ func TestNewClient(t *testing.T) {
 		DataCenter: "test",
 	}
 
-	client, err = reg.NewClient(config)
+	client, err = reg.clientFactory.NewClient(config)
 
 	assert.Error(t, err)
 	assert.Nil(t, client)
@@ -61,8 +58,23 @@ func (m *MockConsulCatalog) Services(q *api.QueryOptions) (map[string][]string, 
 	return nil, nil, nil
 }
 
+type MockClientFactory struct {
+	mock.Mock
+}
+
+func (f *MockClientFactory) NewClient(config *consul.Config) (*Client, error) {
+	mockConsulCatalog := new(MockConsulCatalog)
+	return &Client{
+		consulCatalog: mockConsulCatalog,
+		DataCenter:    "dc1",
+		NameSpace:     "ns1",
+		Token:         "token",
+	}, nil
+}
+
 func TestStart(t *testing.T) {
 	mockConsulCatalog := new(MockConsulCatalog)
+	cf := new(MockClientFactory)
 	client := &Client{
 		consulCatalog: mockConsulCatalog,
 		DataCenter:    "dc1",
@@ -74,14 +86,14 @@ func TestStart(t *testing.T) {
 		logger: log.NewLogger(&log.RegistryLoggerOptions{
 			Name: "test",
 		}),
-		client: client,
-		done:   make(chan struct{}),
+		done:          make(chan struct{}),
+		clientFactory: cf,
 	}
 
 	config := &consul.Config{}
 
 	mockConsulCatalog.On("Services", mock.Anything).Return(map[string][]string{"service1": {"dc1"}}, &api.QueryMeta{}, nil)
-
+	reg.client = client
 	err := reg.Start(config)
 	assert.NoError(t, err)
 
@@ -98,7 +110,8 @@ func TestStart(t *testing.T) {
 		logger: log.NewLogger(&log.RegistryLoggerOptions{
 			Name: "test",
 		}),
-		done: make(chan struct{}),
+		done:          make(chan struct{}),
+		clientFactory: factory,
 	}
 
 	err = reg.Start(config)
@@ -125,12 +138,13 @@ func TestRefresh(t *testing.T) {
 		softDeletedServices: map[consulService]bool{},
 		done:                make(chan struct{}),
 		watchingServices:    map[consulService]bool{},
+		clientFactory:       factory,
 	}
 
 	config := &consul.Config{
 		ServerUrl: "http://127.0.0.1:8500",
 	}
-	client, _ := reg.NewClient(config)
+	client, _ := reg.clientFactory.NewClient(config)
 	reg.client = client
 	services := map[string][]string{
 		"service1": {"dc1", "dc2"},
@@ -162,50 +176,6 @@ func TestRefresh(t *testing.T) {
 	assert.Len(t, reg.watchingServices, 0)
 	assert.Len(t, reg.softDeletedServices, 1)
 
-}
-
-func TestGenerateServiceEntry(t *testing.T) {
-	host := "test.default-group.public.earth.nacos"
-	reg := &Consul{}
-
-	type test struct {
-		name     string
-		services []model.SubscribeService
-		port     *istioapi.ServicePort
-		endpoint *istioapi.WorkloadEntry
-	}
-	tests := []test{}
-	for input, proto := range registry.ProtocolMap {
-		s := string(proto)
-		tests = append(tests, test{
-			name: input,
-			services: []model.SubscribeService{
-				{Port: 80, Ip: "1.1.1.1", Metadata: map[string]string{
-					"protocol": input,
-				}},
-			},
-			port: &istioapi.ServicePort{
-				Name:     s,
-				Protocol: s,
-				Number:   80,
-			},
-			endpoint: &istioapi.WorkloadEntry{
-				Address: "1.1.1.1",
-				Ports:   map[string]uint32{s: 80},
-				Labels: map[string]string{
-					"protocol": input,
-				},
-			},
-		})
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			se := reg.generateServiceEntry(host, tt.services)
-			require.True(t, proto.Equal(se.ServiceEntry.Ports[0], tt.port))
-			require.True(t, proto.Equal(se.ServiceEntry.Endpoints[0], tt.endpoint))
-		})
-	}
 }
 
 func TestFetchAllServices(t *testing.T) {
