@@ -22,11 +22,11 @@ import (
 )
 
 const (
-	Name = "your_plugin"
+	Name = "yourPlugin"
 )
 
 func init() {
-	plugins.RegisterHttpPlugin(Name, &plugin{})
+	plugins.RegisterPlugin(Name, &plugin{})
 }
 
 type plugin struct {

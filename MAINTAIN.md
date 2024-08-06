@@ -13,6 +13,7 @@ To release a new version, please follow the steps below:
 6. Submit a new commit with the changes below:
     * Once the image is ready, update the version in the `manifests/charts/*/Chart.yaml`.
     * Run `make fmt-go`.
+    * Update the `./examples/dev_your_plugin` to use the released version.
 7. The CI will create a new chart package.
 8. Merge the release branch to the main branch.
 
