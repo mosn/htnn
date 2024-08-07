@@ -109,7 +109,7 @@ func (reg *Consul) Start(c registrytype.RegistryConfig) error {
 
 	reg.client = client
 
-	services, err := reg.FetchAllServices(reg.client)
+	services, err := reg.fetchAllServices(reg.client)
 
 	if err != nil {
 		return err
@@ -168,7 +168,7 @@ func (reg *Consul) Reload(c registrytype.RegistryConfig) error {
 	return nil
 }
 
-func (reg *Consul) FetchAllServices(client *Client) (map[consulService]bool, error) {
+func (reg *Consul) fetchAllServices(client *Client) (map[consulService]bool, error) {
 	q := &consulapi.QueryOptions{}
 	q.Datacenter = client.DataCenter
 	q.Namespace = client.NameSpace

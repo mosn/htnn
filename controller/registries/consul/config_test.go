@@ -21,7 +21,6 @@ import (
 
 	"github.com/agiledragon/gomonkey/v2"
 	"github.com/hashicorp/consul/api"
-	. "github.com/smartystreets/goconvey/convey"
 	"github.com/stretchr/testify/assert"
 
 	"mosn.io/htnn/controller/pkg/registry/log"
@@ -58,30 +57,27 @@ func TestStart(t *testing.T) {
 		done: make(chan struct{}),
 	}
 
-	Convey("Test Start method", t, func() {
-
-		patches := gomonkey.ApplyMethod(reflect.TypeOf(reg), "FetchAllServices", func(_ *Consul, client *Client) (map[consulService]bool, error) {
-			return map[consulService]bool{
-				{ServiceName: "service1", Tag: "tag1"}: true,
-				{ServiceName: "service2", Tag: "tag2"}: true,
-			}, nil
-		})
-		defer patches.Reset()
-		config := &consul.Config{}
-		err := reg.Start(config)
-		So(err, ShouldBeNil)
-		err = reg.subscribe("123")
-		So(err, ShouldBeNil)
-
-		err = reg.unsubscribe("123")
-		So(err, ShouldBeNil)
-
-		err = reg.Stop()
-		So(err, ShouldBeNil)
-
+	patches := gomonkey.ApplyPrivateMethod(reflect.TypeOf(reg), "fetchAllServices", func(_ *Consul, client *Client) (map[consulService]bool, error) {
+		return map[consulService]bool{
+			{ServiceName: "service1", Tag: "tag1"}: true,
+			{ServiceName: "service2", Tag: "tag2"}: true,
+		}, nil
 	})
-
 	config := &consul.Config{}
+	err := reg.Start(config)
+	assert.Nil(t, err)
+	err = reg.subscribe("123")
+	assert.Nil(t, err)
+
+	err = reg.unsubscribe("123")
+	assert.Nil(t, err)
+
+	err = reg.Stop()
+	assert.Nil(t, err)
+
+	patches.Reset()
+
+	config = &consul.Config{}
 
 	reg = &Consul{
 		logger: log.NewLogger(&log.RegistryLoggerOptions{
@@ -90,7 +86,7 @@ func TestStart(t *testing.T) {
 		done: make(chan struct{}),
 	}
 
-	err := reg.Start(config)
+	err = reg.Start(config)
 	assert.Error(t, err)
 
 	close(reg.done)
@@ -154,7 +150,7 @@ func TestRefresh(t *testing.T) {
 }
 
 func TestFetchAllServices(t *testing.T) {
-	Convey("Test FetchAllServices method", t, func() {
+	t.Run("Test fetchAllServices method", func(t *testing.T) {
 		reg := &Consul{
 			logger: log.NewLogger(&log.RegistryLoggerOptions{
 				Name: "test",
@@ -175,15 +171,15 @@ func TestFetchAllServices(t *testing.T) {
 		})
 		defer patches.Reset()
 
-		services, err := reg.FetchAllServices(client)
-		So(err, ShouldBeNil)
-		So(services, ShouldNotBeNil)
-		So(services[consulService{ServiceName: "service1", Tag: "tag1"}], ShouldBeTrue)
-		So(services[consulService{ServiceName: "service1", Tag: "tag2"}], ShouldBeTrue)
-		So(services[consulService{ServiceName: "service2", Tag: "tag3"}], ShouldBeTrue)
+		services, err := reg.fetchAllServices(client)
+		assert.NoError(t, err)
+		assert.NotNil(t, services)
+		assert.True(t, services[consulService{ServiceName: "service1", Tag: "tag1"}])
+		assert.True(t, services[consulService{ServiceName: "service1", Tag: "tag2"}])
+		assert.True(t, services[consulService{ServiceName: "service2", Tag: "tag3"}])
 	})
 
-	Convey("Test FetchAllServices method with error", t, func() {
+	t.Run("Test fetchAllServices method with error", func(t *testing.T) {
 		reg := &Consul{
 			logger: log.NewLogger(&log.RegistryLoggerOptions{
 				Name: "test",
@@ -201,9 +197,9 @@ func TestFetchAllServices(t *testing.T) {
 		})
 		defer patches.Reset()
 
-		services, err := reg.FetchAllServices(client)
-		So(err, ShouldNotBeNil)
-		So(err.Error(), ShouldEqual, "mock error")
-		So(services, ShouldBeNil)
+		services, err := reg.fetchAllServices(client)
+		assert.Error(t, err)
+		assert.Equal(t, "mock error", err.Error())
+		assert.Nil(t, services)
 	})
 }
