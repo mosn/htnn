@@ -88,8 +88,8 @@ lint-go:
 .PHONY: fmt-go
 fmt-go: install-go-fmtter
 # go mod tidy doesn't recognize the go.work file, see https://github.com/golang/go/issues/50750.
-# It will report 'missing directory' error if the 'missing directory' is added in the other module.
-# Even running `go work sync` first doesn't solve the problem, if the 'missing directory' is not released.
+# It will report 'missing directory' error even if the 'missing directory' is already added in the other module.
+# Running `go work sync` first doesn't solve the problem, if the 'missing directory' is not released.
 # So we add `-e` to attempt to proceed despite errors encountered while loading packages.
 	$(foreach PKG, $(GO_MODULES_EXCLUDE_SITE), \
 		pushd ./${PKG} && \

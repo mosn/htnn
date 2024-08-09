@@ -6,8 +6,8 @@ github.com/cncf/xds/go v0.0.0-20231128003011-0fa0005c9caa h1:jQCWAUqqlij9Pgj2i/P
 github.com/cncf/xds/go v0.0.0-20231128003011-0fa0005c9caa/go.mod h1:x/1Gn8zydmfq8dk6e9PdstVsDgu9RuyIIJqAaF//0IM=
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc h1:U9qPSI2PIWSS1VwoXQT9A3Wy9MM3WgvqSxFWenqJduM=
 github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/envoyproxy/envoy v1.29.2 h1:VhXwGhSt1whNoYZzErcfY3OabVOYoSSDCrln87GcgGA=
-github.com/envoyproxy/envoy v1.29.2/go.mod h1:c2OGLXJVY9BaTYPiWFRz6eUNaC+3TfqFKmkWS9brdKo=
+github.com/envoyproxy/envoy v1.29.4 h1:1c52LYxzA6arnSjpTfDyxCSrtztwVAnzekcGHirvq8Y=
+github.com/envoyproxy/envoy v1.29.4/go.mod h1:c2OGLXJVY9BaTYPiWFRz6eUNaC+3TfqFKmkWS9brdKo=
 github.com/envoyproxy/go-control-plane v0.12.1-0.20240117015050-472addddff92 h1:/3bsjkhOTh0swUKDBxL1+3MrXCxrf/sEEMseiIEJg00=
 github.com/envoyproxy/go-control-plane v0.12.1-0.20240117015050-472addddff92/go.mod h1:ZBTaoJ23lqITozF0M6G4/IragXCQKCnYbmlmtHvwRG0=
 github.com/envoyproxy/protoc-gen-validate v1.0.4 h1:gVPz/FMfvh57HdSJQyvBtF00j8JU4zdyUgIUNhlgg0A=
@@ -48,8 +48,8 @@ google.golang.org/genproto/googleapis/api v0.0.0-20240227224415-6ceb2ff114de h1:
 google.golang.org/genproto/googleapis/api v0.0.0-20240227224415-6ceb2ff114de/go.mod h1:5iCWqnniDlqZHrd3neWVTOwvh/v6s3232omMecelax8=
 google.golang.org/genproto/googleapis/rpc v0.0.0-20240227224415-6ceb2ff114de h1:cZGRis4/ot9uVm639a+rHCUaG0JJHEsdyzSQTMX+suY=
 google.golang.org/genproto/googleapis/rpc v0.0.0-20240227224415-6ceb2ff114de/go.mod h1:H4O17MA/PE9BsGx3w+a+W2VOLLD1Qf7oJneAoU6WktY=
-google.golang.org/grpc v1.63.0 h1:WjKe+dnvABXyPJMD7KDNLxtoGk5tgk+YFWN6cBWjZE8=
-google.golang.org/grpc v1.63.0/go.mod h1:WAX/8DgncnokcFUldAxq7GeB5DXHDbMF+lLvDomNkRA=
+google.golang.org/grpc v1.63.2 h1:MUeiw1B2maTVZthpU5xvASfTh3LDbxHd6IJ6QQVU+xM=
+google.golang.org/grpc v1.63.2/go.mod h1:WAX/8DgncnokcFUldAxq7GeB5DXHDbMF+lLvDomNkRA=
 google.golang.org/protobuf v1.33.0 h1:uNO2rsAINq/JlFpSdYEKIZ0uKD/R9cpdv0T+yoGwGmI=
 google.golang.org/protobuf v1.33.0/go.mod h1:c6P6GXX6sHbq/GpV6MGZEdwhWPcYBgnhAHhKbcUYpos=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
@@ -57,5 +57,5 @@ gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c h1:Hei/4ADfdWqJk1ZMxUNpqntN
 gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c/go.mod h1:JHkPIbrfpd72SG/EVd6muEfDQjcINNoR0C8j2r3qZ4Q=
 gopkg.in/yaml.v3 v3.0.1 h1:fxVm/GzAzEWqLHuvctI91KS9hhNmmWOoWu0XTYJS7CA=
 gopkg.in/yaml.v3 v3.0.1/go.mod h1:K4uyk7z7BCEPqu6E+C64Yfv1cQ7kz7rIZviUmN+EgEM=
-mosn.io/htnn/api v0.2.2-0.20240411084247-3ed33295ba57 h1:BR/NFsFA0iK+QD3YmNFdqiwG/nBiRjVZDj2IHyKTqiA=
-mosn.io/htnn/api v0.2.2-0.20240411084247-3ed33295ba57/go.mod h1:ZAHgwF2BbyiWqGCHJgqf7enDGqp00arh1SeQmR1yZRQ=
+mosn.io/htnn/api v0.3.1 h1:vQMJI1XCgrWb3PdK7/T9ygdytl1Fps43Ekj36OY1vRk=
+mosn.io/htnn/api v0.3.1/go.mod h1:DumqbmMou8J1/DzEDaRIZWpan82bOqxGceWxTju7WkU=

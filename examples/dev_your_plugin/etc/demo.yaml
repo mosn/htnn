@@ -29,7 +29,7 @@ static_resources:
                             - name: demo
                               config:
                                 host_name: Jack
-                            - name: your_plugin
+                            - name: yourPlugin
                   - name: envoy.filters.http.router
                     typed_config:
                       "@type": type.googleapis.com/envoy.extensions.filters.http.router.v3.Router

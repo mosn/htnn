@@ -28,7 +28,7 @@ Traditionally, there are two ways to alter the behavior of Istio:
 
 HTNN does not use the methods above but instead modifies Istio to embed its own process into Istio. The specific changes can be referred to in the `patch/istio` directory's patch files. The reason for not using method 1 is that writing stateful EnvoyFilter leads to observability and high availability becoming more challenging and prone to problems. Method 2 is not used because to ensure the consistency of network policy and network routing, the network routing part also needs to be integrated into the MCP server, otherwise, there will be a situation where the policy is still reconciling and the routing has been published online. Providing network routing configurations in MCP server would undoubtedly be a significant workload.
 
-If you develop your own Native Plugin or Service Registry in a third-party repository and want to use it in HTNN, you can use a patch to introduce that repository into Istio. For details, refer to this patch: https://github.com/mosn/htnn/blob/main/patch/istio/1.21/20240410-htnn-go-mod.patch. When importing the repository, make sure to place it after the HTNN official plugin package to avoid being overwritten by plugins with the same name.
+If you develop your own Native Plugin or Service Registry in a third-party repository and want to use it in HTNN, you can use a patch to introduce that repository into Istio. For details, refer to this patch: https://github.com/mosn/htnn/blob/main/patch/istio/1.21/20240410-htnn-go-mod.patch.
 
 If you want to run the HTNN control plane, you can refer to the implementation of `make e2e-prepare-controller-image` in the `e2e/` directory to see how to package the Istio embedded with HTNN into an image.
 

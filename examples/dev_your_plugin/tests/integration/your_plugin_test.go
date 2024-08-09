@@ -22,12 +22,12 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"mosn.io/htnn/api/pkg/filtermanager"
-	"mosn.io/htnn/api/plugins/tests/integration/control_plane"
-	"mosn.io/htnn/api/plugins/tests/integration/data_plane"
+	"mosn.io/htnn/api/plugins/tests/integration/controlplane"
+	"mosn.io/htnn/api/plugins/tests/integration/dataplane"
 )
 
 func TestYourPlugin(t *testing.T) {
-	dp, err := data_plane.StartDataPlane(t, nil)
+	dp, err := dataplane.StartDataPlane(t, nil)
 	if err != nil {
 		t.Fatalf("failed to start data plane: %v", err)
 		return
@@ -41,7 +41,7 @@ func TestYourPlugin(t *testing.T) {
 	}{
 		{
 			name:   "happy path",
-			config: control_plane.NewSinglePluinConfig("your_plugin", map[string]interface{}{}),
+			config: controlplane.NewSinglePluinConfig("yourPlugin", map[string]interface{}{}),
 			expect: func(t *testing.T, resp *http.Response) {
 				assert.Equal(t, "text/plain", resp.Header.Get("content-type"), resp)
 			},
