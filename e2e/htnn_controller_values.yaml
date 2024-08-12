@@ -22,6 +22,7 @@ pilot:
 global:
   proxy:
     image: "htnn/gateway:e2e"
+    componentLogLevel: "config:debug,golang:debug"
   imagePullPolicy: IfNotPresent
   logging:
     level: "htnn:debug"
