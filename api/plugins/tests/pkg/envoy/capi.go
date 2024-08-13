@@ -518,6 +518,40 @@ func (i *filterCallbackHandler) PluginState() api.PluginState {
 	return i.pluginState
 }
 
+func (i *filterCallbackHandler) WithLogArg(key string, value any) api.FilterCallbackHandler {
+	return i
+}
+
+func (i *filterCallbackHandler) LogTracef(format string, v ...any) {
+}
+
+func (i *filterCallbackHandler) LogTrace(message string) {
+}
+
+func (i *filterCallbackHandler) LogDebugf(format string, v ...any) {
+}
+
+func (i *filterCallbackHandler) LogDebug(message string) {
+}
+
+func (i *filterCallbackHandler) LogInfof(format string, v ...any) {
+}
+
+func (i *filterCallbackHandler) LogInfo(message string) {
+}
+
+func (i *filterCallbackHandler) LogWarnf(format string, v ...any) {
+}
+
+func (i *filterCallbackHandler) LogWarn(message string) {
+}
+
+func (i *filterCallbackHandler) LogErrorf(format string, v ...any) {
+}
+
+func (i *filterCallbackHandler) LogError(message string) {
+}
+
 var _ api.FilterCallbackHandler = (*filterCallbackHandler)(nil)
 
 type capiFilterCallbackHandler struct {

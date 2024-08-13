@@ -17,9 +17,11 @@ package filtermanager
 import (
 	"fmt"
 	"net/http"
+	"strings"
 	"sync"
 	"testing"
 
+	"github.com/agiledragon/gomonkey/v2"
 	"github.com/stretchr/testify/assert"
 
 	"mosn.io/htnn/api/pkg/filtermanager/api"
@@ -149,4 +151,85 @@ func TestAccessCacheFieldsConcurrently(t *testing.T) {
 		}(i)
 	}
 	wg.Wait()
+}
+
+func testLogFilterFactory(c interface{}, callbacks api.FilterCallbackHandler) api.Filter {
+	return &testLogFilter{
+		callbacks: callbacks,
+	}
+}
+
+type testLogFilter struct {
+	api.PassThroughFilter
+	callbacks api.FilterCallbackHandler
+}
+
+func (f *testLogFilter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {
+	cb := f.callbacks.WithLogArg("k1", 1)
+	for _, fu := range []func(string){
+		f.callbacks.LogTrace, f.callbacks.LogDebug, f.callbacks.LogInfo, f.callbacks.LogWarn, f.callbacks.LogError,
+	} {
+		fu("testLog: msg")
+	}
+	cb.WithLogArg("k2", 2)
+	for _, fu := range []func(string, ...any){
+		f.callbacks.LogTracef, f.callbacks.LogDebugf, f.callbacks.LogInfof, f.callbacks.LogWarnf, f.callbacks.LogErrorf,
+	} {
+		fu("testLog: out: %s", 0)
+	}
+	return api.Continue
+}
+
+func TestLogWithArgs(t *testing.T) {
+	fmtStr := map[string]string{}
+	fmtArgs := map[string][]any{}
+
+	patch := gomonkey.NewPatches()
+	for _, s := range []struct {
+		level string
+		logf  func(string, ...any)
+		log   func(string)
+	}{
+		{"Trace", api.LogTracef, api.LogTrace},
+		{"Debug", api.LogDebugf, api.LogDebug},
+		{"Info", api.LogInfof, api.LogInfo},
+		{"Warn", api.LogWarnf, api.LogWarn},
+		{"Error", api.LogErrorf, api.LogError},
+	} {
+		level := s.level
+
+		patch.ApplyFunc(s.logf, func(format string, args ...any) {
+			if !strings.HasPrefix(format, "testLog: ") {
+				return
+			}
+			fmtStr[level+"f"] = strings.Clone(format)
+			fmtArgs[level+"f"] = args
+		})
+		patch.ApplyFunc(s.log, func(msg string) {
+			if !strings.HasPrefix(msg, "testLog: ") {
+				return
+			}
+			fmtStr[level] = strings.Clone(msg)
+		})
+	}
+	defer patch.Reset()
+
+	cb := envoy.NewCAPIFilterCallbackHandler()
+	config := initFilterManagerConfig("ns")
+	config.parsed = []*model.ParsedFilterConfig{
+		{
+			Name:    "log",
+			Factory: testLogFilterFactory,
+		},
+	}
+	m := FilterManagerFactory(config)(cb).(*filterManager)
+	h := http.Header{}
+	hdr := envoy.NewRequestHeaderMap(h)
+	m.DecodeHeaders(hdr, true)
+	cb.WaitContinued()
+	for _, level := range []string{"Trace", "Debug", "Info", "Warn", "Error"} {
+		assert.Equal(t, "testLog: msg, k1: 1", fmtStr[level])
+		assert.Equal(t, "testLog: out: %s, k1: %v, k2: %v", fmtStr[level+"f"])
+		assert.Equal(t, []any{0, 1, 2}, fmtArgs[level+"f"])
+	}
 }
