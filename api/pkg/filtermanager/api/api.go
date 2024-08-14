@@ -225,6 +225,21 @@ type FilterCallbackHandler interface {
 
 	// PluginState returns the PluginState associated to this request.
 	PluginState() PluginState
+
+	// WithLogArg injectes `key: value` as the suffix of application log created by this
+	// callback's Log* methods. The injected log arguments are only valid in the current request.
+	// This method can be used to inject IDs or other context information into the logs.
+	WithLogArg(key string, value any) FilterCallbackHandler
+	LogTracef(format string, v ...any)
+	LogTrace(message string)
+	LogDebugf(format string, v ...any)
+	LogDebug(message string)
+	LogInfof(format string, v ...any)
+	LogInfo(message string)
+	LogWarnf(format string, v ...any)
+	LogWarn(message string)
+	LogErrorf(format string, v ...any)
+	LogError(message string)
 }
 
 // FilterFactory returns a per-request Filter which has configuration bound to it.

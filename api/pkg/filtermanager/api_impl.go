@@ -148,6 +148,9 @@ type filterManagerCallbackHandler struct {
 	pluginState api.PluginState
 
 	streamInfo *filterManagerStreamInfo
+
+	logArgNames string
+	logArgs     []any
 }
 
 func (cb *filterManagerCallbackHandler) Reset() {
@@ -199,4 +202,53 @@ func (cb *filterManagerCallbackHandler) PluginState() api.PluginState {
 	}
 	cb.cacheLock.Unlock()
 	return cb.pluginState
+}
+
+func (cb *filterManagerCallbackHandler) WithLogArg(key string, value any) api.FilterCallbackHandler {
+	// As the log is embedded into the Envoy's log, it's not so necessary to use structural logging
+	// here. So far the value is just an ID string, introduce complex processions like quoting is
+	// overkill.
+	cb.logArgNames = cb.logArgNames + fmt.Sprintf(", %s: %%v", key)
+	cb.logArgs = append(cb.logArgs, value)
+	return cb
+}
+
+func (cb *filterManagerCallbackHandler) LogTracef(format string, v ...any) {
+	api.LogTracef(format+cb.logArgNames, append(v, cb.logArgs...)...)
+}
+
+func (cb *filterManagerCallbackHandler) LogDebugf(format string, v ...any) {
+	api.LogDebugf(format+cb.logArgNames, append(v, cb.logArgs...)...)
+}
+
+func (cb *filterManagerCallbackHandler) LogInfof(format string, v ...any) {
+	api.LogInfof(format+cb.logArgNames, append(v, cb.logArgs...)...)
+}
+
+func (cb *filterManagerCallbackHandler) LogWarnf(format string, v ...any) {
+	api.LogWarnf(format+cb.logArgNames, append(v, cb.logArgs...)...)
+}
+
+func (cb *filterManagerCallbackHandler) LogErrorf(format string, v ...any) {
+	api.LogErrorf(format+cb.logArgNames, append(v, cb.logArgs...)...)
+}
+
+func (cb *filterManagerCallbackHandler) LogTrace(message string) {
+	api.LogTrace(message + fmt.Sprintf(cb.logArgNames, cb.logArgs...))
+}
+
+func (cb *filterManagerCallbackHandler) LogDebug(message string) {
+	api.LogDebug(message + fmt.Sprintf(cb.logArgNames, cb.logArgs...))
+}
+
+func (cb *filterManagerCallbackHandler) LogInfo(message string) {
+	api.LogInfo(message + fmt.Sprintf(cb.logArgNames, cb.logArgs...))
+}
+
+func (cb *filterManagerCallbackHandler) LogWarn(message string) {
+	api.LogWarn(message + fmt.Sprintf(cb.logArgNames, cb.logArgs...))
+}
+
+func (cb *filterManagerCallbackHandler) LogError(message string) {
+	api.LogError(message + fmt.Sprintf(cb.logArgNames, cb.logArgs...))
 }
