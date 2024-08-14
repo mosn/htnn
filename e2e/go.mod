@@ -22,8 +22,8 @@ require (
 	k8s.io/api v0.29.3
 	k8s.io/apimachinery v0.29.3
 	k8s.io/client-go v0.29.3
-	mosn.io/htnn/controller v0.3.1
-	mosn.io/htnn/types v0.3.1
+	mosn.io/htnn/controller v0.3.2
+	mosn.io/htnn/types v0.3.2
 	sigs.k8s.io/controller-runtime v0.17.3
 	sigs.k8s.io/gateway-api v1.0.0
 )

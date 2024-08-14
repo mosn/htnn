@@ -4,18 +4,16 @@ This doc tracks how to maintain the source code of HTNN.
 
 To release a new version, please follow the steps below:
 
-1. Create a new release branch `release/v${version}` from the main branch. Do the work below on the new branch.
-2. Create tag `api/v${version}`.
-3. Commit the changes below (the CI will fail at this point):
+1. Create tag `api/v${version}`.
+2. Commit the changes below to the main branch (the CI will fail at this point):
     * Update those `go.mod` which depend on `mosn.io/htnn/$mod`.
-4. Create tag `types/v${version}` for `types` module. Then do the same with `controller` and `plugins`. Rerun the `test` workflow to verify the changes. Don't panic for "server response: not found" error. The sync of sum.golang.org might take half an hour. Try again later.
-5. Create tag `image/v${version}` to trigger image building.
-6. Submit a new commit with the changes below:
+3. Create tag `types/v${version}` for `types` module. Then do the same with `controller` and `plugins`. Rerun the `test` workflow to verify the changes. Don't panic for "server response: not found" error. The sync of sum.golang.org might take half an hour. Try again later.
+4. Create tag `image/v${version}` to trigger image building.
+5. Submit a new commit with the changes below (ensure the CI passes):
     * Once the image is ready, update the version in the `manifests/charts/*/Chart.yaml`.
     * Run `make fmt-go`.
     * Update the `./examples/dev_your_plugin` to use the released version.
-7. The CI will create a new chart package.
-8. Merge the release branch to the main branch.
+6. The CI will create a new chart package.
 
 ## Upgrade components
 
