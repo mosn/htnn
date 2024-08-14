@@ -73,8 +73,6 @@ build-dev-tools:
 build-dev-tools-local:
 	docker build --network=host --build-arg GOPROXY=${GOPROXY} -t ${DEV_TOOLS_IMAGE} -f tools/Dockerfile.dev ./tools
 
-# For lint-go/fmt-go: we don't cover examples/dev_your_plugin which is just an example
-
 GOLANGCI_LINT_VERSION = 1.56.1
 .PHONY: lint-go
 lint-go:

@@ -22,16 +22,7 @@ import (
 	"github.com/envoyproxy/envoy/contrib/golang/filters/http/source/go/pkg/http"
 
 	"mosn.io/htnn/api/pkg/filtermanager"
-	// For utility plugins provided in the test framework.
-	// don't import this if you want to produce the shared library for product environment.
 	_ "mosn.io/htnn/api/plugins/tests/integration/dataplane"
-
-	// If you want to use the built-in plugins, you can import them here:
-	// _ "mosn.io/htnn/plugins/plugins"
-	//
-	// Note that because we only update the module dependency in the release, if you use
-	// a non-release version of mosn.io/htnn/plugins module, you may need to manually update the
-	// dependency yourself, such as using replace in go.mod
 	_ "mosn.io/htnn/dev_your_plugin/plugins"
 )
 
