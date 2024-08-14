@@ -11,9 +11,9 @@ To release a new version, please follow the steps below:
 4. Create tag `image/v${version}` to trigger image building.
 5. Submit a new commit with the changes below (ensure the CI passes):
     * Once the image is ready, update the version in the `manifests/charts/*/Chart.yaml`.
-    * Run `make fmt-go`.
     * Update the `./examples/dev_your_plugin` to use the released version.
-6. The CI will create a new chart package.
+    * Run `make fmt-go`.
+6. Create a release branch `release/v${version}` from the main branch, like `release/v0.3.2`. The CI will create a new chart package.
 
 ## Upgrade components
 
