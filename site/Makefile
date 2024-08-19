@@ -16,18 +16,20 @@ include ../common.mk
 
 .PHONY: build
 build:
-	docker-compose build
+	docker compose build
 
 .PHONY: up
 up:
-	docker-compose up
+	docker compose up
 
 .PHONY: clean
 clean:
-	docker-compose rm
+	docker compose rm
 
 .PHONY: publish
 # The generated files will be under ./public
 publish:
+	test -d static || mkdir -p static
+	rm -rf static/images && cp -r ../images static/
 	# FIXME: change baseURL to real link
 	docker run --rm -v $(PWD):/src --name docsy htnn-docsy -- hugo --minify --gc --baseURL https://mosn.io/

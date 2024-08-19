@@ -44,11 +44,11 @@ build-test-so:
 
 .PHONY: start-service
 start-service:
-	cd ./tests/integration/testdata/services && docker-compose up -d --build
+	cd ./tests/integration/testdata/services && docker compose up -d --build
 
 .PHONY: stop-service
 stop-service:
-	cd ./tests/integration/testdata/services && docker-compose down
+	cd ./tests/integration/testdata/services && docker compose down
 
 # The data plane image used in the integration test can be controlled via env var PROXY_IMAGE
 .PHONY: integration-test

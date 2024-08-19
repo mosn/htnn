@@ -17,7 +17,7 @@ title: Nacos
 | serverUrl                | string                          | 是   | must be valid URI | Nacos URL                                    |
 | namespace                | string                          | 否   |                   | Nacos namespace。默认为 "public"。           |
 | groups                   | string[]                        | 否   | min_len = 1       | Nacos group 列表。默认为 ["DEFAULT_GROUP"]。 |
-| serviceRefreshInterval   | [Duration](../../type#duration) | 否   | gte: 1s           | 轮询服务列表的间隔。默认为 30s。             |
+| serviceRefreshInterval   | [Duration](../type.md#duration) | 否   | gte: 1s           | 轮询服务列表的间隔。默认为 30s。             |
 
 Nacos 1.x 没有提供订阅当前服务列表的接口，所以只能通过轮询来获取服务列表。配置一个较小的值可以更快得知服务被删除，但是会给 Nacos 带来更大的压力。
 

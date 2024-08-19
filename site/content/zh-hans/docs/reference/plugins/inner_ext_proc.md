@@ -16,7 +16,7 @@ title: Inner Ext Proc
 6. 运行其他插件处理响应
 7. 请求结束
 
-请参考 [outerExtProc](../outer_ext_proc) 插件文档了解如何使用它。测试示例时不要忘记将 `outerExtProc` 替换为 `innerExtProc`。
+请参考 [outerExtProc](./outer_ext_proc.md) 插件文档了解如何使用它。测试示例时不要忘记将 `outerExtProc` 替换为 `innerExtProc`。
 
 ## 属性
 

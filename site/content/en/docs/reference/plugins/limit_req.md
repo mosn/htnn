@@ -17,9 +17,9 @@ The `limitReq` plugin limits the number of requests per second to this proxy. Th
 | Name    | Type                            | Required | Validation | Description                                                                                        |
 |---------|---------------------------------|----------|------------|----------------------------------------------------------------------------------------------------|
 | average | uint32                          | True     | > 0        | The threshold value, by default calculated as the number of requests per second.                   |
-| period  | [Duration](../../type#duration) | False    |            | The time unit for the rate. The rate limit is defined as `average / period`. Defaults to 1 second. |
+| period  | [Duration](../type.md#duration) | False    |            | The time unit for the rate. The rate limit is defined as `average / period`. Defaults to 1 second. |
 | burst   | uint32                          | False    |            | The number of requests allowed to exceed the rate. Defaults to 1.                                  |
-| key     | string                          | False    |            | The key used for rate limiting. Defaults to client IP. Supports [CEL expressions](../../expr).        |
+| key     | string                          | False    |            | The key used for rate limiting. Defaults to client IP. Supports [CEL expressions](../expr.md).        |
 
 When the request rate exceeds `average / period` and the number of excess requests is over `burst`, we calculate the delay time needed to reduce the rate to the expected level. If the required delay time does not exceed the maximum delay, the request will be delayed. If the required delay time is greater than the maximum delay, the request will be dropped with a `429` HTTP status code. By default, the maximum delay is half of the rate (`1 / 2 * average / period`). If `average / period` is less than 1, it defaults to 500 milliseconds.
 

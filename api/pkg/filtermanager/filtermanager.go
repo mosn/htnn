@@ -227,7 +227,16 @@ func FilterManagerFactory(c interface{}) capi.StreamFilterFactory {
 	}
 }
 
-func (m *filterManager) handleAction(res api.ResultAction, phase phase) (needReturn bool) {
+func (m *filterManager) recordLocalReplyPluginName(name string) {
+	// We can get the plugin name which returns the local response from the dynamic metadata.
+	// For example, use %DYNAMIC_METADATA(htnn:local_reply_plugin_name)% in the access log format.
+	m.callbacks.StreamInfo().DynamicMetadata().Set("htnn", "local_reply_plugin_name", name)
+	// For now, we don't record when the local reply is caused by panic. As we can't always get
+	// the name of plugin which is the root of the panic correctly. For example, consider a plugin kicks
+	// off a goroutine and the goroutine panics.
+}
+
+func (m *filterManager) handleAction(res api.ResultAction, phase phase, filter *model.FilterWrapper) (needReturn bool) {
 	if res == api.Continue {
 		return false
 	}
@@ -244,6 +253,7 @@ func (m *filterManager) handleAction(res api.ResultAction, phase phase) (needRet
 
 	switch v := res.(type) {
 	case *api.LocalResponse:
+		m.recordLocalReplyPluginName(filter.Name)
 		m.localReply(v)
 		return true
 	default:
@@ -328,6 +338,7 @@ func (m *filterManager) DecodeHeaders(headers capi.RequestHeaderMap, endStream b
 		m.config.InitOnce()
 		if m.config.initFailed {
 			api.LogErrorf("error in plugin %s: %s", m.config.initFailedPluginName, m.config.initFailure)
+			m.recordLocalReplyPluginName(m.config.initFailedPluginName)
 			m.localReply(&api.LocalResponse{
 				Code: 500,
 			})
@@ -346,7 +357,7 @@ func (m *filterManager) DecodeHeaders(headers capi.RequestHeaderMap, endStream b
 				f := m.filters[i]
 				// We don't support DecodeRequest for now
 				res = f.DecodeHeaders(m.reqHdr, endStream)
-				if m.handleAction(res, phaseDecodeHeaders) {
+				if m.handleAction(res, phaseDecodeHeaders, f) {
 					return
 				}
 			}
@@ -463,7 +474,7 @@ func (m *filterManager) DecodeHeaders(headers capi.RequestHeaderMap, endStream b
 		for i := m.config.consumerFiltersEndAt; i < len(m.filters); i++ {
 			f := m.filters[i]
 			res = f.DecodeHeaders(m.reqHdr, endStream)
-			if m.handleAction(res, phaseDecodeHeaders) {
+			if m.handleAction(res, phaseDecodeHeaders, f) {
 				return
 			}
 
@@ -479,7 +490,7 @@ func (m *filterManager) DecodeHeaders(headers capi.RequestHeaderMap, endStream b
 
 				// no body
 				res = f.DecodeRequest(m.reqHdr, nil, nil)
-				if m.handleAction(res, phaseDecodeRequest) {
+				if m.handleAction(res, phaseDecodeRequest, f) {
 					return
 				}
 			}
@@ -522,7 +533,7 @@ func (m *filterManager) DecodeData(buf capi.BufferInstance, endStream bool) capi
 			for i := 0; i < n; i++ {
 				f := m.filters[i]
 				res = f.DecodeData(buf, endStream)
-				if m.handleAction(res, phaseDecodeData) {
+				if m.handleAction(res, phaseDecodeData, f) {
 					return
 				}
 			}
@@ -532,14 +543,14 @@ func (m *filterManager) DecodeData(buf capi.BufferInstance, endStream bool) capi
 			for i := 0; i < m.decodeIdx; i++ {
 				f := m.filters[i]
 				res = f.DecodeData(buf, endStream)
-				if m.handleAction(res, phaseDecodeData) {
+				if m.handleAction(res, phaseDecodeData, f) {
 					return
 				}
 			}
 
 			f := m.filters[m.decodeIdx]
 			res = f.DecodeRequest(m.reqHdr, buf, nil)
-			if m.handleAction(res, phaseDecodeRequest) {
+			if m.handleAction(res, phaseDecodeRequest, f) {
 				return
 			}
 
@@ -550,7 +561,7 @@ func (m *filterManager) DecodeData(buf capi.BufferInstance, endStream bool) capi
 					// The endStream in DecodeHeaders indicates whether there is a body.
 					// The body always exists when we hit this path.
 					res = f.DecodeHeaders(m.reqHdr, false)
-					if m.handleAction(res, phaseDecodeHeaders) {
+					if m.handleAction(res, phaseDecodeHeaders, f) {
 						return
 					}
 					if m.decodeRequestNeeded {
@@ -564,7 +575,7 @@ func (m *filterManager) DecodeData(buf capi.BufferInstance, endStream bool) capi
 				for j := m.decodeIdx + 1; j < i; j++ {
 					f := m.filters[j]
 					res = f.DecodeData(buf, endStream)
-					if m.handleAction(res, phaseDecodeData) {
+					if m.handleAction(res, phaseDecodeData, f) {
 						return
 					}
 				}
@@ -574,7 +585,7 @@ func (m *filterManager) DecodeData(buf capi.BufferInstance, endStream bool) capi
 					m.decodeIdx = i
 					f := m.filters[m.decodeIdx]
 					res = f.DecodeRequest(m.reqHdr, buf, nil)
-					if m.handleAction(res, phaseDecodeRequest) {
+					if m.handleAction(res, phaseDecodeRequest, f) {
 						return
 					}
 					i++
@@ -614,7 +625,7 @@ func (m *filterManager) EncodeHeaders(headers capi.ResponseHeaderMap, endStream 
 		for i := n - 1; i >= 0; i-- {
 			f := m.filters[i]
 			res = f.EncodeHeaders(headers, endStream)
-			if m.handleAction(res, phaseEncodeHeaders) {
+			if m.handleAction(res, phaseEncodeHeaders, f) {
 				return
 			}
 
@@ -628,7 +639,7 @@ func (m *filterManager) EncodeHeaders(headers capi.ResponseHeaderMap, endStream 
 
 				// no body
 				res = f.EncodeResponse(headers, nil, nil)
-				if m.handleAction(res, phaseEncodeResponse) {
+				if m.handleAction(res, phaseEncodeResponse, f) {
 					return
 				}
 			}
@@ -658,7 +669,7 @@ func (m *filterManager) EncodeData(buf capi.BufferInstance, endStream bool) capi
 			for i := n - 1; i >= 0; i-- {
 				f := m.filters[i]
 				res = f.EncodeData(buf, endStream)
-				if m.handleAction(res, phaseEncodeData) {
+				if m.handleAction(res, phaseEncodeData, f) {
 					return
 				}
 			}
@@ -668,14 +679,14 @@ func (m *filterManager) EncodeData(buf capi.BufferInstance, endStream bool) capi
 			for i := n - 1; i > m.encodeIdx; i-- {
 				f := m.filters[i]
 				res = f.EncodeData(buf, endStream)
-				if m.handleAction(res, phaseEncodeData) {
+				if m.handleAction(res, phaseEncodeData, f) {
 					return
 				}
 			}
 
 			f := m.filters[m.encodeIdx]
 			res = f.EncodeResponse(m.rspHdr, buf, nil)
-			if m.handleAction(res, phaseEncodeResponse) {
+			if m.handleAction(res, phaseEncodeResponse, f) {
 				return
 			}
 
@@ -684,7 +695,7 @@ func (m *filterManager) EncodeData(buf capi.BufferInstance, endStream bool) capi
 				for ; i >= 0; i-- {
 					f := m.filters[i]
 					res = f.EncodeHeaders(m.rspHdr, false)
-					if m.handleAction(res, phaseEncodeHeaders) {
+					if m.handleAction(res, phaseEncodeHeaders, f) {
 						return
 					}
 					if m.encodeResponseNeeded {
@@ -696,7 +707,7 @@ func (m *filterManager) EncodeData(buf capi.BufferInstance, endStream bool) capi
 				for j := m.encodeIdx - 1; j > i; j-- {
 					f := m.filters[j]
 					res = f.EncodeData(buf, endStream)
-					if m.handleAction(res, phaseEncodeData) {
+					if m.handleAction(res, phaseEncodeData, f) {
 						return
 					}
 				}
@@ -706,7 +717,7 @@ func (m *filterManager) EncodeData(buf capi.BufferInstance, endStream bool) capi
 					m.encodeIdx = i
 					f := m.filters[m.encodeIdx]
 					res = f.EncodeResponse(m.rspHdr, buf, nil)
-					if m.handleAction(res, phaseEncodeResponse) {
+					if m.handleAction(res, phaseEncodeResponse, f) {
 						return
 					}
 					i--

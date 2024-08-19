@@ -96,9 +96,13 @@ HTNN 是全栈开源的完整产品，从数据面，到控制面，到 console 
 
   在云原生高度普及的今天，拥有多集群已然是常态，HTNN 内置了多集群管理机制，可以轻松管理多套集群。
 
+* 高效防攻击
+
+  利用 xdp 的高效处理机制，应对更大规模的攻击，并且可以 4&7 层联动，构建高效的拦截机制。
+
 ## 快速上手
 
-等不及了？[欢迎快速上手体验](./quick_start)
+等不及了？[欢迎快速上手体验](./quick_start.md)
 
 ## FAQ
 
@@ -117,3 +121,15 @@ HTNN 是全栈开源的完整产品，从数据面，到控制面，到 console 
    MOSN 是 Golang 实现的数据面，借助于 MoE 架构，MOSN 与 Envoy 优势互补构建了 HTNN 的数据面。
 
    基于这样的继承演进关系，HTNN 也是 MOSN 社区孵化出来的新产品。
+
+## 社区交流
+
+### 微信群
+
+<img src="/images/wechat_group.png" height=424 width=270 />
+
+（如过期请加微信：spacewander_lzx，注明“HTNN”）
+
+### 钉钉群
+
+<img src="/images/dingding_group.png" height=492 width=483 />

@@ -23,9 +23,9 @@ title: OIDC
 | redirectUrl               | string                                      | 是   | must be valid URI | OIDC 认证过程中重定向用户的 URL。该 URL 需要满足两个条件：1. 事先已经在 OIDC Provider 中注册。2. 该 URL 和用户访问的 URL 使用同样的 OIDC 插件配置。   |
 | scopes                    | string[]                                    | 否   |                   | 该参数可以要求 OIDC Provider 返回经过身份验证的用户的更多信息。具体可以参考 https://openid.net/specs/openid-connect-core-1_0.html#ScopeClaims 和所用的 Provider 自身的文档。 |
 | idTokenHeader             | string                                      | 否   |                   | OIDC Provider 返回的 ID Token 将通过该 header 传给上游。默认为 `X-ID-Token`。                                                                            |
-| timeout                   | [Duration](../../type#duration)             | 否   | > 0s              | 超时时长。例如，`10s` 表示超时时间为 10 秒。默认值为 3s。                                                                                              |
+| timeout                   | [Duration](../type.md#duration)             | 否   | > 0s              | 超时时长。例如，`10s` 表示超时时间为 10 秒。默认值为 3s。                                                                                              |
 | disableAccessTokenRefresh | bool                                        | 否   |                   | 是否禁止自动刷新 Access Token。                                                                                                                        |
-| accessTokenRefreshLeeway  | [Duration](../../type#duration)             | 否   | >= 0s             | 决定判断是否需要刷新过期令牌时，令牌过期的时间比实际过期时间早多少。它用于避免因客户端与服务器时间不匹配而导致自动刷新失败。默认为 10 秒。           |
+| accessTokenRefreshLeeway  | [Duration](../type.md#duration)             | 否   | >= 0s             | 决定判断是否需要刷新过期令牌时，令牌过期的时间比实际过期时间早多少。它用于避免因客户端与服务器时间不匹配而导致自动刷新失败。默认为 10 秒。           |
 
 ## 用法
 

@@ -79,6 +79,10 @@ func (m *Config) validate(all bool) error {
 
 	// no validation rules for DataCenter
 
+	// no validation rules for Namespace
+
+	// no validation rules for Token
+
 	if d := m.GetServiceRefreshInterval(); d != nil {
 		dur, err := d.AsDuration(), d.CheckValid()
 		if err != nil {

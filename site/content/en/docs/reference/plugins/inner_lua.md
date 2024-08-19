@@ -16,7 +16,7 @@ Because Envoy uses the onion model to proxy requests, the execution order is:
 6. running other plugins with the response
 7. request ends
 
-Please refer to [outerLua](../outer_lua) plugin documentation to know how to use it. Don't forget to replace `outerLua` with `innerLua` when testing the example.
+Please refer to [outerLua](./outer_lua.md) plugin documentation to know how to use it. Don't forget to replace `outerLua` with `innerLua` when testing the example.
 
 ## Attribute
 
