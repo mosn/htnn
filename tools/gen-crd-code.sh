@@ -37,8 +37,11 @@ readonly COMMON_FLAGS="${VERIFY_FLAG:-} --go-header-file ${SCRIPT_ROOT}/hack/boi
 
 echo "Generating clientset at ${OUTPUT_PKG}/${CLIENTSET_PKG_NAME}"
 # Increase the `-v n` to have verbose log if this cmd failed.
+# We pass the `GOROOT` env so that the client-go will use the latest GOROOT, not the (stale) GOROOT
+# that the `client-gen` binary was built with.
+#
 # shellcheck disable=SC2086
-cd "${SCRIPT_ROOT}" && "${LOCALBIN}"/client-gen \
+cd "${SCRIPT_ROOT}" && GOROOT=$(go env GOROOT) "${LOCALBIN}"/client-gen \
     --clientset-name "${CLIENTSET_NAME}" \
     --input-base "" \
     --input "${APIS_PKG}/apis/v1" \
