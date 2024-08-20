@@ -40,6 +40,10 @@ gen-crd-code: $(LOCALBIN) install-go-fmtter
 	LOCALBIN=$(LOCALBIN) tools/gen-crd-code.sh
 	$(LOCALBIN)/gosimports -w -local ${PROJECT_NAME} ./types/pkg/client
 
+.PHONY: gen-manifests
+gen-manifests:
+	cd controller/ && make manifests generate
+
 .PHONY: gen-helm-docs
 gen-helm-docs: $(LOCALBIN)
 	test -x $(LOCALBIN)/helm-docs || GOBIN=$(LOCALBIN) go install github.com/norwoodj/helm-docs/cmd/helm-docs@v1.13.1

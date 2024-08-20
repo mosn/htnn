@@ -57,13 +57,11 @@ jobs:
           echo "Generated files are not up-to-date. Please run 'make gen-crd-code' and commit changes."
           exit 1
         fi
-        pushd controller/
-        make manifests generate
+        make gen-manifests
         if ! git diff --exit-code; then
-          echo "Generated files are not up-to-date. Please run 'make manifests generate' under controller/ and commit changes."
+          echo "Generated files are not up-to-date. Please run 'make gen-manifests' and commit changes."
           exit 1
         fi
-        popd
         make gen-helm
         if ! git diff --exit-code; then
           echo "Generated files are not up-to-date. Please run 'make gen-helm' and commit changes."
