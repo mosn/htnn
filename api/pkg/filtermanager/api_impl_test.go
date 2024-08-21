@@ -24,6 +24,7 @@ import (
 	"github.com/agiledragon/gomonkey/v2"
 	"github.com/stretchr/testify/assert"
 
+	"mosn.io/htnn/api/internal/consumer"
 	"mosn.io/htnn/api/pkg/filtermanager/api"
 	"mosn.io/htnn/api/pkg/filtermanager/model"
 	"mosn.io/htnn/api/plugins/tests/pkg/envoy"
@@ -232,4 +233,27 @@ func TestLogWithArgs(t *testing.T) {
 		assert.Equal(t, "testLog: out: %s, k1: %v, k2: %v", fmtStr[level+"f"])
 		assert.Equal(t, []any{0, 1, 2}, fmtArgs[level+"f"])
 	}
+}
+
+func TestReset(t *testing.T) {
+	cb := &filterManagerCallbackHandler{
+		FilterCallbackHandler: envoy.NewCAPIFilterCallbackHandler(),
+	}
+	cb.SetConsumer(&consumer.MockConsumer{})
+	cb.PluginState()
+	cb.StreamInfo()
+	cb.WithLogArg("k", "v")
+
+	assert.NotNil(t, cb.consumer)
+	assert.NotNil(t, cb.pluginState)
+	assert.NotNil(t, cb.streamInfo)
+	assert.NotEqual(t, "", cb.logArgNames)
+	assert.NotNil(t, cb.logArgs)
+
+	cb.Reset()
+	assert.Nil(t, cb.consumer)
+	assert.Nil(t, cb.pluginState)
+	assert.Nil(t, cb.streamInfo)
+	assert.Equal(t, "", cb.logArgNames)
+	assert.Nil(t, cb.logArgs)
 }

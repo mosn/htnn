@@ -74,3 +74,14 @@ func (p *filterPlugin) Factory() api.FilterFactory {
 func (p *filterPlugin) Config() api.PluginConfig {
 	return &Config{}
 }
+
+type MockConsumer struct {
+}
+
+func (c *MockConsumer) Name() string {
+	return "mock"
+}
+
+func (c *MockConsumer) PluginConfig(_ string) api.PluginConsumerConfig {
+	return &ConsumerConfig{}
+}
