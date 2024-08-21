@@ -17,6 +17,27 @@ services:
       - "8849:8848"
     networks:
       service:
+  consul:
+    image: docker.m.daocloud.io/library/consul:1.10.8
+    ports:
+      - "8500:8500"
+      - "8600:8600"
+    environment:
+      - CONSUL_BIND_INTERFACE=eth0
+    command: agent -server -bootstrap -ui -client=0.0.0.0
+    networks:
+      service:
+  consul1:
+    image: docker.m.daocloud.io/library/consul:1.10.8
+    ports:
+      - "8501:8500"
+      - "8601:8600"
+    environment:
+      - CONSUL_BIND_INTERFACE=eth0
+    command: agent -server -bootstrap -ui -client=0.0.0.0
+    networks:
+      service:
+
 
 
 networks:

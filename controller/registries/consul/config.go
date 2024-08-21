@@ -16,7 +16,10 @@ package consul
 
 import (
 	"fmt"
+	"github.com/hashicorp/consul/api/watch"
+	istioapi "istio.io/api/networking/v1alpha3"
 	"net/url"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -54,6 +57,7 @@ type Consul struct {
 
 	lock                sync.RWMutex
 	watchingServices    map[consulService]bool
+	subscriptions       map[string]*watch.Plan
 	softDeletedServices map[consulService]bool
 
 	done    chan struct{}
@@ -67,7 +71,12 @@ type Client struct {
 	DataCenter string
 	NameSpace  string
 	Token      string
+	Address    string
 }
+
+var (
+	RegistryType = "consul"
+)
 
 func (reg *Consul) NewClient(config *consul.Config) (*Client, error) {
 	uri, err := url.Parse(config.ServerUrl)
@@ -91,6 +100,7 @@ func (reg *Consul) NewClient(config *consul.Config) (*Client, error) {
 		DataCenter:    config.DataCenter,
 		NameSpace:     config.Namespace,
 		Token:         config.Token,
+		Address:       clientConfig.Address,
 	}, nil
 }
 
@@ -110,6 +120,15 @@ func (reg *Consul) Start(c registrytype.RegistryConfig) error {
 	reg.client = client
 
 	services, err := reg.fetchAllServices(reg.client)
+
+	for key := range services {
+		err = reg.subscribe(key.ServiceName)
+		if err != nil {
+			reg.logger.Errorf("failed to subscribe service, err: %v, service: %v", err, key)
+			// the service will be resubscribed after refresh interval
+			delete(services, key)
+		}
+	}
 
 	if err != nil {
 		return err
@@ -164,8 +183,60 @@ func (reg *Consul) Stop() error {
 }
 
 func (reg *Consul) Reload(c registrytype.RegistryConfig) error {
-	fmt.Println(c)
+	config := c.(*consul.Config)
+
+	client, err := reg.NewClient(config)
+	if err != nil {
+		return err
+	}
+
+	reg.lock.Lock()
+	defer reg.lock.Unlock()
+
+	fetchedServices, err := reg.fetchAllServices(client)
+	if err != nil {
+		return fmt.Errorf("fetch all services error: %v", err)
+	}
+
+	for key := range reg.softDeletedServices {
+		if _, ok := fetchedServices[key]; !ok {
+			reg.store.Delete(reg.getServiceEntryKey(key.ServiceName))
+		}
+	}
+	reg.softDeletedServices = map[consulService]bool{}
+
+	for key := range reg.watchingServices {
+		// unsubscribe with the previous client
+		if _, ok := fetchedServices[key]; !ok {
+			reg.removeService(key)
+		} else {
+			err = reg.unsubscribe(key.ServiceName)
+			if err != nil {
+				reg.logger.Errorf("failed to unsubscribe service, err: %v, service: %v", err, key)
+			}
+		}
+	}
+
+	reg.client = client
+
+	for key := range fetchedServices {
+		err = reg.subscribe(key.ServiceName)
+		if err != nil {
+			reg.logger.Errorf("failed to subscribe service, err: %v, service: %v", err, key)
+		}
+	}
+	reg.watchingServices = fetchedServices
+
 	return nil
+}
+
+func (reg *Consul) removeService(key consulService) {
+	err := reg.unsubscribe(key.ServiceName)
+	if err != nil {
+		reg.logger.Errorf("failed to unsubscribe service, err: %v, service: %v", err, key)
+		// the upcoming event will be thrown away
+	}
+	reg.store.Delete(reg.getServiceEntryKey(key.ServiceName))
 }
 
 func (reg *Consul) fetchAllServices(client *Client) (map[consulService]bool, error) {
@@ -192,13 +263,102 @@ func (reg *Consul) fetchAllServices(client *Client) (map[consulService]bool, err
 	return serviceMap, nil
 }
 
+func (reg *Consul) getServiceEntryKey(serviceName string) string {
+	suffix := strings.Join([]string{reg.client.DataCenter, reg.name, RegistryType}, ".")
+	suffix = strings.ReplaceAll(suffix, "_", "-")
+	host := strings.Join([]string{serviceName, suffix}, ".")
+	return strings.ToLower(host)
+}
+
+func (reg *Consul) generateServiceEntry(host string, services []*consulapi.ServiceEntry) *registry.ServiceEntryWrapper {
+	portList := make([]*istioapi.ServicePort, 0, 1)
+	endpoints := make([]*istioapi.WorkloadEntry, 0, len(services))
+
+	for _, service := range services {
+		protocol := registry.HTTP
+		if service.Service.Meta == nil {
+			service.Service.Meta = make(map[string]string)
+		}
+
+		if service.Service.Meta["protocol"] != "" {
+			protocol = registry.ParseProtocol(service.Service.Meta["protocol"])
+		}
+
+		port := &istioapi.ServicePort{
+			Name:     string(protocol),
+			Number:   uint32(service.Service.Port),
+			Protocol: string(protocol),
+		}
+		if len(portList) == 0 {
+			portList = append(portList, port)
+		}
+
+		endpoint := istioapi.WorkloadEntry{
+			Address: service.Service.Address,
+			Ports:   map[string]uint32{port.Protocol: port.Number},
+			Labels:  service.Service.Meta,
+		}
+		endpoints = append(endpoints, &endpoint)
+	}
+
+	return &registry.ServiceEntryWrapper{
+		ServiceEntry: istioapi.ServiceEntry{
+			Hosts:      []string{host},
+			Ports:      portList,
+			Location:   istioapi.ServiceEntry_MESH_INTERNAL,
+			Resolution: istioapi.ServiceEntry_STATIC,
+			Endpoints:  endpoints,
+		},
+		Source: RegistryType,
+	}
+}
+
 func (reg *Consul) subscribe(serviceName string) error {
-	fmt.Println(serviceName)
+	plan, err := watch.Parse(map[string]interface{}{
+		"type":    "service",
+		"service": serviceName,
+	})
+	if err != nil {
+		return err
+	}
+
+	plan.Handler = reg.getSubscribeCallback(serviceName)
+	plan.Token = reg.client.Token
+	plan.Datacenter = reg.client.DataCenter
+	reg.subscriptions[serviceName] = plan
+
+	err = plan.Run(reg.client.Address)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
+func (reg *Consul) getSubscribeCallback(serviceName string) func(idx uint64, data interface{}) {
+	host := reg.getServiceEntryKey(serviceName)
+	return func(idx uint64, data interface{}) {
+		services, ok := data.([]*consulapi.ServiceEntry)
+		if !ok {
+			reg.logger.Infof("Unexpected type for data in callback: %t", data)
+			return
+		}
+		if reg.stopped.Load() {
+			return
+		}
+		reg.store.Update(host, reg.generateServiceEntry(host, services))
+	}
+
+}
+
 func (reg *Consul) unsubscribe(serviceName string) error {
-	fmt.Println(serviceName)
+	plan, exists := reg.subscriptions[serviceName]
+	if !exists {
+		return fmt.Errorf("no subscription found for service %s", serviceName)
+	}
+
+	plan.Stop()
+	delete(reg.subscriptions, serviceName)
 	return nil
 }
 
