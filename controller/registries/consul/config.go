@@ -17,6 +17,7 @@ package consul
 import (
 	"fmt"
 	"net/url"
+	"regexp"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -42,6 +43,7 @@ func init() {
 			store:               store,
 			name:                om.Name,
 			softDeletedServices: map[consulService]bool{},
+			subscriptions:       make(map[string]*watch.Plan),
 			done:                make(chan struct{}),
 		}
 		return reg, nil
@@ -122,7 +124,7 @@ func (reg *Consul) Start(c registrytype.RegistryConfig) error {
 	services, err := reg.fetchAllServices(reg.client)
 
 	for key := range services {
-		err = reg.subscribe(key.ServiceName)
+		err = reg.subscribe(key.Tag, key.ServiceName)
 		if err != nil {
 			reg.logger.Errorf("failed to subscribe service, err: %v, service: %v", err, key)
 			// the service will be resubscribed after refresh interval
@@ -178,6 +180,14 @@ func (reg *Consul) Stop() error {
 
 	reg.lock.Lock()
 	defer reg.lock.Unlock()
+	for key := range reg.softDeletedServices {
+		if _, ok := reg.watchingServices[key]; !ok {
+			reg.store.Delete(reg.getServiceEntryKey(key.Tag, key.ServiceName))
+		}
+	}
+	for key := range reg.watchingServices {
+		reg.removeService(key)
+	}
 
 	return nil
 }
@@ -190,8 +200,7 @@ func (reg *Consul) Reload(c registrytype.RegistryConfig) error {
 		return err
 	}
 
-	reg.lock.Lock()
-	defer reg.lock.Unlock()
+	reg.client = client
 
 	fetchedServices, err := reg.fetchAllServices(client)
 	if err != nil {
@@ -200,7 +209,7 @@ func (reg *Consul) Reload(c registrytype.RegistryConfig) error {
 
 	for key := range reg.softDeletedServices {
 		if _, ok := fetchedServices[key]; !ok {
-			reg.store.Delete(reg.getServiceEntryKey(key.ServiceName))
+			reg.store.Delete(reg.getServiceEntryKey(key.Tag, key.ServiceName))
 		}
 	}
 	reg.softDeletedServices = map[consulService]bool{}
@@ -217,10 +226,8 @@ func (reg *Consul) Reload(c registrytype.RegistryConfig) error {
 		}
 	}
 
-	reg.client = client
-
 	for key := range fetchedServices {
-		err = reg.subscribe(key.ServiceName)
+		err = reg.subscribe(key.Tag, key.ServiceName)
 		if err != nil {
 			reg.logger.Errorf("failed to subscribe service, err: %v, service: %v", err, key)
 		}
@@ -234,9 +241,8 @@ func (reg *Consul) removeService(key consulService) {
 	err := reg.unsubscribe(key.ServiceName)
 	if err != nil {
 		reg.logger.Errorf("failed to unsubscribe service, err: %v, service: %v", err, key)
-		// the upcoming event will be thrown away
 	}
-	reg.store.Delete(reg.getServiceEntryKey(key.ServiceName))
+	reg.store.Delete(reg.getServiceEntryKey(key.Tag, key.ServiceName))
 }
 
 func (reg *Consul) fetchAllServices(client *Client) (map[consulService]bool, error) {
@@ -252,22 +258,29 @@ func (reg *Consul) fetchAllServices(client *Client) (map[consulService]bool, err
 	}
 	serviceMap := make(map[consulService]bool)
 	for serviceName, tags := range services {
-		for _, tag := range tags {
-			service := consulService{
-				Tag:         tag,
-				ServiceName: serviceName,
-			}
-			serviceMap[service] = true
+		tag := strings.Join(tags, "-")
+		service := consulService{
+			Tag:         tag,
+			ServiceName: serviceName,
 		}
+		serviceMap[service] = true
 	}
+
 	return serviceMap, nil
 }
 
-func (reg *Consul) getServiceEntryKey(serviceName string) string {
-	suffix := strings.Join([]string{reg.client.DataCenter, reg.name, RegistryType}, ".")
+func (reg *Consul) getServiceEntryKey(tag, serviceName string) string {
+	var host string
+	suffix := strings.Join([]string{reg.client.NameSpace, reg.client.DataCenter, reg.name, RegistryType}, ".")
 	suffix = strings.ReplaceAll(suffix, "_", "-")
-	host := strings.Join([]string{serviceName, suffix}, ".")
-	return strings.ToLower(host)
+	if len(tag) > 0 {
+		host = strings.Join([]string{tag, serviceName, suffix}, ".")
+	} else {
+		host = strings.Join([]string{serviceName, suffix}, ".")
+	}
+	re := regexp.MustCompile(`\.+`)
+	h := re.ReplaceAllString(host, ".")
+	return strings.ToLower(h)
 }
 
 func (reg *Consul) generateServiceEntry(host string, services []*consulapi.ServiceEntry) *registry.ServiceEntryWrapper {
@@ -313,7 +326,7 @@ func (reg *Consul) generateServiceEntry(host string, services []*consulapi.Servi
 	}
 }
 
-func (reg *Consul) subscribe(serviceName string) error {
+func (reg *Consul) subscribe(tag, serviceName string) error {
 	plan, err := watch.Parse(map[string]interface{}{
 		"type":    "service",
 		"service": serviceName,
@@ -322,21 +335,23 @@ func (reg *Consul) subscribe(serviceName string) error {
 		return err
 	}
 
-	plan.Handler = reg.getSubscribeCallback(serviceName)
+	plan.Handler = reg.getSubscribeCallback(tag, serviceName)
 	plan.Token = reg.client.Token
 	plan.Datacenter = reg.client.DataCenter
 	reg.subscriptions[serviceName] = plan
 
-	err = plan.Run(reg.client.Address)
-	if err != nil {
-		return err
-	}
+	go func() {
+		err := plan.Run(reg.client.Address)
+		if err != nil {
+			reg.logger.Errorf("failed to subscribe ,err=%v", err)
+		}
+	}()
 
 	return nil
 }
 
-func (reg *Consul) getSubscribeCallback(serviceName string) func(idx uint64, data interface{}) {
-	host := reg.getServiceEntryKey(serviceName)
+func (reg *Consul) getSubscribeCallback(tag, serviceName string) func(idx uint64, data interface{}) {
+	host := reg.getServiceEntryKey(tag, serviceName)
 	return func(idx uint64, data interface{}) {
 		services, ok := data.([]*consulapi.ServiceEntry)
 		if !ok {
@@ -363,24 +378,25 @@ func (reg *Consul) unsubscribe(serviceName string) error {
 }
 
 func (reg *Consul) refresh(services map[string][]string) {
+
 	serviceMap := make(map[consulService]bool)
+
 	for serviceName, tags := range services {
-		for _, tag := range tags {
-			service := consulService{
-				Tag:         tag,
-				ServiceName: serviceName,
-			}
-			serviceMap[service] = true
-			if _, ok := reg.watchingServices[service]; !ok {
-				err := reg.subscribe(serviceName)
-				if err != nil {
-					reg.logger.Errorf("failed to subscribe service, err: %v, service: %v", err, serviceName)
-					delete(serviceMap, service)
-				}
+		tag := strings.Join(tags, "-")
+		service := consulService{
+			Tag:         tag,
+			ServiceName: serviceName,
+		}
+		serviceMap[service] = true
+		if _, ok := reg.watchingServices[service]; !ok {
+			err := reg.subscribe("", service.ServiceName)
+			if err != nil {
+				reg.logger.Errorf("failed to subscribe service, err: %v, service: %v", err, service.ServiceName)
+				delete(serviceMap, service)
+				delete(reg.watchingServices, service)
 			}
 		}
 	}
-
 	prevFetchServices := reg.watchingServices
 	reg.watchingServices = serviceMap
 

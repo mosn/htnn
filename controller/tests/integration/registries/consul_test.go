@@ -1,12 +1,26 @@
+// Copyright The HTNN Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package registries
 
 import (
+	"bytes"
 	"context"
-	"fmt"
+	"encoding/json"
 	"net/http"
-	"net/url"
 	"path/filepath"
-	"strings"
+	"strconv"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -26,7 +40,7 @@ var (
 )
 
 func enableConsul(consulInstance string) {
-	input := []map[string]interface{}{}
+	var input []map[string]interface{}
 	fn := filepath.Join("testdata", "consul", consulInstance+".yml")
 	helper.MustReadInput(fn, &input)
 	for _, in := range input {
@@ -56,51 +70,68 @@ func listConsulServiceEntries() []*istiov1a3.ServiceEntry {
 func registerConsulInstance(consulPort string, name string, ip string, port string, metadata map[string]any) {
 	consulServerURL := "http://0.0.0.0:" + consulPort
 
-	params := url.Values{}
-	params.Set("ID", name)
-	params.Set("Name", name)
-	params.Set("Address", ip)
-	params.Set("Port", port)
+	portInt, err := strconv.Atoi(port)
+	Expect(err).To(BeNil())
 
-	if metadata != nil {
-		for key, value := range metadata {
-			params.Set("Meta."+key, fmt.Sprintf("%v", value))
-		}
+	service := map[string]any{
+		"Node":    "node1", // 指定节点名称
+		"Address": ip,      // 节点IP地址
+		"Service": map[string]any{
+			"ID":      name + ip + port,
+			"Service": name,
+			"Address": ip,
+			"Port":    portInt,
+		},
 	}
 
-	fullURL := consulServerURL + "/v1/agent/service/register"
+	if metadata != nil {
+		service["Service"].(map[string]any)["Meta"] = metadata
+	}
 
-	body := fmt.Sprintf(`{
-		"ID": "%s",
-		"Name": "%s",
-		"Address": "%s",
-		"Port": %s,
-		"Meta": %v
-	}`, name, name, ip, port, metadata)
-
-	req, err := http.NewRequest("PUT", fullURL, strings.NewReader(body))
+	body, err := json.Marshal(service)
 	Expect(err).To(BeNil())
+
+	fullURL := consulServerURL + "/v1/catalog/register"
+
+	req, err := http.NewRequest("PUT", fullURL, bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	Expect(err).To(BeNil())
+
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	Expect(err).To(BeNil())
+
+	defer resp.Body.Close()
+
 	Expect(resp.StatusCode).To(Equal(200))
 }
 
-func deregisterConsulInstance(consulPort string, name string) {
+func deregisterConsulInstance(consulPort string, name string, ip string, port string) {
 	consulServerURL := "http://0.0.0.0:" + consulPort
 
-	fullURL := consulServerURL + "/v1/agent/service/deregister/" + name
+	serviceID := name + ip + port
+	body := map[string]any{
+		"Node":      "node1", // 指定节点名称
+		"ServiceID": serviceID,
+	}
 
-	req, err := http.NewRequest("PUT", fullURL, nil)
+	bodyJSON, err := json.Marshal(body)
 	Expect(err).To(BeNil())
+
+	fullURL := consulServerURL + "/v1/catalog/deregister"
+
+	req, err := http.NewRequest("PUT", fullURL, bytes.NewBuffer(bodyJSON))
+	req.Header.Set("Content-Type", "application/json")
+	Expect(err).To(BeNil())
+
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	Expect(err).To(BeNil())
 	Expect(resp.StatusCode).To(Equal(200))
 }
 
-func deleteConsulService(consulPort string, name string) {
-	deregisterConsulInstance(consulPort, name)
+func deleteConsulService(consulPort string, name string, ip string, port string) {
+	deregisterConsulInstance(consulPort, name, ip, port)
 }
 
 var _ = Describe("Consul", func() {
@@ -121,7 +152,7 @@ var _ = Describe("Consul", func() {
 		}
 
 		Eventually(func() bool {
-			entries := listServiceEntries()
+			entries := listConsulServiceEntries()
 			return len(entries) == 0
 		}, timeout, interval).Should(BeTrue())
 	})
@@ -133,35 +164,35 @@ var _ = Describe("Consul", func() {
 
 		var entries []*istiov1a3.ServiceEntry
 		Eventually(func() bool {
-			entries = listServiceEntries()
-			return len(entries) == 1
+			entries = listConsulServiceEntries()
+			return len(entries) == 2
 		}, timeout, interval).Should(BeTrue())
 
-		//Expect(entries[0].Name).To(Equal("test.default-group.public.default.consul"))
-		//Expect(entries[0].Spec.GetHosts()).To(Equal([]string{"test.default-group.public.default.consul"}))
-		Expect(entries[0].Spec.Location).To(Equal(istioapi.ServiceEntry_MESH_INTERNAL))
-		Expect(entries[0].Spec.Resolution).To(Equal(istioapi.ServiceEntry_STATIC))
-		Expect(len(entries[0].Spec.Endpoints)).To(Equal(1))
-		Expect(entries[0].Spec.Endpoints[0].Address).To(Equal("1.2.3.4"))
-		Expect(entries[0].Spec.Endpoints[0].Ports).To(Equal(map[string]uint32{
+		Expect(entries[1].Name).To(Equal("test.default.consul"))
+		Expect(entries[1].Spec.GetHosts()).To(Equal([]string{"test.default.consul"}))
+		Expect(entries[1].Spec.Location).To(Equal(istioapi.ServiceEntry_MESH_INTERNAL))
+		Expect(entries[1].Spec.Resolution).To(Equal(istioapi.ServiceEntry_STATIC))
+		Expect(len(entries[1].Spec.Endpoints)).To(Equal(1))
+		Expect(entries[1].Spec.Endpoints[0].Address).To(Equal("1.2.3.4"))
+		Expect(entries[1].Spec.Endpoints[0].Ports).To(Equal(map[string]uint32{
 			"HTTP": 8080,
 		}))
 
 		registerConsulInstance("8500", "test", "1.2.3.5", "8080", nil)
 
 		Eventually(func() bool {
-			entries = listServiceEntries()
-			return len(entries[0].Spec.Endpoints) == 2
+			entries = listConsulServiceEntries()
+			return len(entries[1].Spec.Endpoints) == 2
 		}, timeout, interval).Should(BeTrue())
 
-		deregisterConsulInstance("8500", "test")
+		deregisterConsulInstance("8500", "test", "1.2.3.4", "8080")
 
 		Eventually(func() bool {
-			entries = listServiceEntries()
-			return len(entries[0].Spec.Endpoints) == 1
+			entries = listConsulServiceEntries()
+			return len(entries[1].Spec.Endpoints) == 1
 		}, timeout, interval).Should(BeTrue())
 
-		deleteService("8500", "test")
+		deleteConsulService("8500", "test", "1.2.3.5", "8080")
 	})
 
 	It("stop consul should remove service entries", func() {
@@ -169,18 +200,18 @@ var _ = Describe("Consul", func() {
 		enableConsul("default")
 
 		Eventually(func() bool {
-			entries := listServiceEntries()
-			return len(entries) == 1
+			entries := listConsulServiceEntries()
+			return len(entries) == 2
 		}, timeout, interval).Should(BeTrue())
 
 		disableConsul("default")
 
 		Eventually(func() bool {
-			entries := listServiceEntries()
+			entries := listConsulServiceEntries()
 			return len(entries) == 0
 		}, timeout, interval).Should(BeTrue())
 
-		deleteConsulService("8500", "test")
+		deleteConsulService("8500", "test", "1.2.3.4", "8080")
 	})
 
 	It("reload", func() {
@@ -194,10 +225,10 @@ var _ = Describe("Consul", func() {
 		enableConsul("default")
 		var entries []*istiov1a3.ServiceEntry
 		Eventually(func() bool {
-			entries = listServiceEntries()
-			return len(entries) == 3
+			entries = listConsulServiceEntries()
+			return len(entries) == 4
 		}, timeout, interval).Should(BeTrue())
-		Expect(entries[0].Spec.Endpoints[0].Address).To(Equal("1.2.3.4"))
+		Expect(entries[1].Spec.Endpoints[0].Address).To(Equal("1.2.3.4"))
 
 		// new
 		base := client.MergeFrom(currConsul.DeepCopy())
@@ -205,30 +236,32 @@ var _ = Describe("Consul", func() {
 		Expect(k8sClient.Patch(ctx, currConsul, base)).Should(Succeed())
 		Eventually(func() bool {
 			entries = listConsulServiceEntries()
-			return len(entries) == 2 && entries[0].Spec.Endpoints[0].Address == "1.2.3.5"
+
+			return len(entries) == 3 && entries[1].Spec.Endpoints[0].Address == "1.2.3.5"
 		}, timeout, interval).Should(BeTrue())
 
 		// refresh & unsubscribe
-		deleteConsulService("8501", "test3")
+		deleteConsulService("8501", "test3", "1.2.3.5", "8080")
 		time.Sleep(1 * time.Second)
 		entries = listConsulServiceEntries()
-		Expect(len(entries)).To(Equal(2))
+
+		Expect(len(entries)).To(Equal(5))
 
 		// ServiceEntry is removed only when the configuration changed
 		base = client.MergeFrom(currConsul.DeepCopy())
 		currConsul.Spec.Config.Raw = []byte(`{"serviceRefreshInterval":"2s", "serverUrl":"http://127.0.0.1:8501"}`)
 		Expect(k8sClient.Patch(ctx, currConsul, base)).Should(Succeed())
 		Eventually(func() bool {
-			entries = listServiceEntries()
-			return len(entries) == 1
+			entries = listConsulServiceEntries()
+			return len(entries) == 2
 		}, timeout, interval).Should(BeTrue())
 
 		// subscribe change
 		registerConsulInstance("8501", "test", "1.2.4.5", "8080", nil)
-		deleteConsulService("8500", "test") // should be ignored
+		deleteConsulService("8500", "test", "1.2.3.4", "8080") // should be ignored
 		Eventually(func() bool {
 			entries = listConsulServiceEntries()
-			return len(entries[0].Spec.Endpoints) == 2
+			return len(entries[1].Spec.Endpoints) == 2
 		}, timeout, interval).Should(BeTrue())
 
 		// unsubscribe
@@ -237,8 +270,8 @@ var _ = Describe("Consul", func() {
 			entries := listConsulServiceEntries()
 			return len(entries) == 0
 		}, timeout, interval).Should(BeTrue())
-		deleteConsulService("8848", "test1")
-		deleteConsulService("8848", "test2")
-		deleteConsulService("8849", "test")
+		deleteConsulService("8500", "test1", "1.2.3.4", "8080")
+		deleteConsulService("8500", "test2", "1.2.3.4", "8080")
+		deleteConsulService("8501", "test", "1.2.4.5", "8080")
 	})
 })

@@ -4,7 +4,7 @@
     name: default
     namespace: default
   spec:
-    type: nacos
+    type: consul
     config:
       serverUrl: http://127.0.0.1:8500
       serviceRefreshInterval: 1s

@@ -22,9 +22,7 @@ services:
     ports:
       - "8500:8500"
       - "8600:8600"
-    environment:
-      - CONSUL_BIND_INTERFACE=eth0
-    command: agent -server -bootstrap -ui -client=0.0.0.0
+    command: agent -server -bootstrap -client=0.0.0.0
     networks:
       service:
   consul1:
@@ -32,9 +30,7 @@ services:
     ports:
       - "8501:8500"
       - "8601:8600"
-    environment:
-      - CONSUL_BIND_INTERFACE=eth0
-    command: agent -server -bootstrap -ui -client=0.0.0.0
+    command: agent -server -bootstrap -client=0.0.0.0
     networks:
       service:
 
