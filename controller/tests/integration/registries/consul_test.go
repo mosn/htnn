@@ -3,21 +3,22 @@ package registries
 import (
 	"context"
 	"fmt"
-	istioapi "istio.io/api/networking/v1alpha3"
-	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
-	"mosn.io/htnn/controller/pkg/constant"
-	"mosn.io/htnn/controller/tests/integration/helper"
-	"mosn.io/htnn/controller/tests/pkg"
-	mosniov1 "mosn.io/htnn/types/apis/v1"
 	"net/http"
 	"net/url"
 	"path/filepath"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	istioapi "istio.io/api/networking/v1alpha3"
+	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
+	"mosn.io/htnn/controller/pkg/constant"
+	"mosn.io/htnn/controller/tests/integration/helper"
+	"mosn.io/htnn/controller/tests/pkg"
+	mosniov1 "mosn.io/htnn/types/apis/v1"
 )
 
 var (

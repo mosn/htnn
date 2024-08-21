@@ -16,8 +16,6 @@ package consul
 
 import (
 	"fmt"
-	"github.com/hashicorp/consul/api/watch"
-	istioapi "istio.io/api/networking/v1alpha3"
 	"net/url"
 	"strings"
 	"sync"
@@ -25,6 +23,8 @@ import (
 	"time"
 
 	consulapi "github.com/hashicorp/consul/api"
+	"github.com/hashicorp/consul/api/watch"
+	istioapi "istio.io/api/networking/v1alpha3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"mosn.io/htnn/controller/pkg/registry"
