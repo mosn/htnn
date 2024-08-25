@@ -93,8 +93,6 @@ func TestStart(t *testing.T) {
 
 	patches.Reset()
 
-	config = &consul.Config{}
-
 	reg = &Consul{
 		logger: log.NewLogger(&log.RegistryLoggerOptions{
 			Name: "test",
@@ -126,7 +124,7 @@ func TestRefresh(t *testing.T) {
 	}
 
 	config := &consul.Config{
-		ServerUrl: "http://127.0.0.1:8500",
+		ServerUrl: "::::::::::::::::::",
 	}
 	e := reg.Start(config)
 	assert.Error(t, e)
