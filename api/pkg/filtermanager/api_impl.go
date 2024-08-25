@@ -160,7 +160,10 @@ func (cb *filterManagerCallbackHandler) Reset() {
 	// We don't reset namespace, as filterManager will only be reused in the same route,
 	// which must have the same namespace.
 	cb.consumer = nil
+	cb.pluginState = nil
 	cb.streamInfo = nil
+	cb.logArgNames = ""
+	cb.logArgs = nil
 
 	cb.cacheLock.Unlock()
 }
