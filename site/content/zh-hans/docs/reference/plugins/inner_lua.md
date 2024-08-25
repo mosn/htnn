@@ -16,7 +16,7 @@ title: Inner Lua
 6. 运行其他插件处理响应
 7. 请求结束
 
-请参考 [outerLua](../outer_lua) 插件文档了解如何使用它。测试示例时不要忘记将 `outerLua` 替换为 `innerLua`。
+请参考 [outerLua](./outer_lua.md) 插件文档了解如何使用它。测试示例时不要忘记将 `outerLua` 替换为 `innerLua`。
 
 ## 属性
 

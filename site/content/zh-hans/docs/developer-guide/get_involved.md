@@ -28,7 +28,7 @@ HTNN 在 `controller/` 模块主要做了下面的事：
 
 HTNN 没有用上述方法，而是通过修改 istio，把自己的流程嵌入到 istio 当中。具体的改动可参考 `patch/istio` 目录下的 patch 文件。之所以不用方法 1，是因为写入带状态的 EnvoyFilter 会导致可观测性和高可用变得更加困难，容易出问题。不用方法 2 的原因在于要想保证策略和路由的一致性，需要将路由也接入到 MCP server 中，否则会出现策略还在调和过程中，路由已经发布上线的情况。将路由也一并在 MCP server 里处理，无疑会是很大的工作量。
 
-如果你在第三方仓库下开发了自己的 Native Plugin 或 Service Registry，想要在 HTNN 中使用，可以通过 patch 的方式将该仓库引入到 istio 当中来。具体参考 https://github.com/mosn/htnn/blob/main/patch/istio/1.21/20240410-htnn-go-mod.patch 这个 patch。注意 import 该仓库时需要把它放到 HTNN 官方插件 package 的后面，这样才能避免被同名的插件覆盖掉。
+如果你在第三方仓库下开发了自己的 Native Plugin 或 Service Registry，想要在 HTNN 中使用，可以通过 patch 的方式将该仓库引入到 istio 当中来。具体参考 https://github.com/mosn/htnn/blob/main/patch/istio/1.21/20240410-htnn-go-mod.patch 这个 patch。
 
 如果要想运行 HTNN 的控制面，可以参考 `e2e/` 目录下 `make e2e-prepare-controller-image` 的实现，看看如何将嵌入了 HTNN 的 istio 打包成镜像。
 
@@ -38,9 +38,9 @@ HTNN 在 `plugins/` 模块下放置在数据面上运行的 Go Plugin 以及它�
 
 如果你想要在第三方仓库编写 Go Plugin，可以参考 https://github.com/mosn/htnn/tree/main/examples/dev_your_plugin 这个范例。Go Plugin 在数据面上是编译成 shared library 来部署到。当你想要集成 Go Plugin 到数据面时，https://github.com/mosn/htnn/blob/main/examples/dev_your_plugin/cmd/libgolang/main.go 这个文件可以作为模版。
 
-在开发自己的插件之前建议读一下现有插件的代码，尤其是和你开发的功能相似的插件，至少应该看看 [demo](https://github.com/mosn/htnn/tree/main/plugins/plugins/demo) 插件。插件代码位于 `plugins/` 目录下面。关于插件开发的更多信息，请参考[插件开发](./plugin_development)文档。
+在开发自己的插件之前建议读一下现有插件的代码，尤其是和你开发的功能相似的插件，至少应该看看 [demo](https://github.com/mosn/htnn/tree/main/plugins/plugins/demo) 插件。插件代码位于 `plugins/` 目录下面。关于插件开发的更多信息，请参考[插件开发](./plugin_development.md)文档。
 
-HTNN 提供了一个[插件集成测试框架](./plugin_integration_test_framework)，允许在只运行数据面的情况下测试 Go Plugin 的逻辑。在 `dev_your_plugin` 这个范例里也展示了如何在第三方仓库中运行集成测试框架。
+HTNN 提供了一个[插件集成测试框架](./plugin_integration_test_framework.md)，允许在只运行数据面的情况下测试 Go Plugin 的逻辑。在 `dev_your_plugin` 这个范例里也展示了如何在第三方仓库中运行集成测试框架。
 
 每个插件都包含两类对象：`config` 和 `filter`。其中 `config` 负责配置管理，`filter` 负责执行请求级别的逻辑。
 

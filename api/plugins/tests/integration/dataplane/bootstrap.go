@@ -32,6 +32,7 @@ type bootstrap struct {
 	backendRoutes    []map[string]interface{}
 	consumers        map[string]map[string]interface{}
 	httpFilterGolang map[string]interface{}
+	accessLogFormat  string
 }
 
 func Bootstrap() *bootstrap {
@@ -75,6 +76,11 @@ func (b *bootstrap) SetFilterGolang(cfg map[string]interface{}) *bootstrap {
 	return b
 }
 
+func (b *bootstrap) SetAccessLogFormat(fmt string) *bootstrap {
+	b.accessLogFormat = fmt
+	return b
+}
+
 func (b *bootstrap) WriteTo(cfgFile *os.File) error {
 	var root map[string]interface{}
 	// check if the input is valid yaml
@@ -84,14 +90,16 @@ func (b *bootstrap) WriteTo(cfgFile *os.File) error {
 	}
 
 	// TODO: simplify it with some third party lib if possible
-	vh := root["static_resources"].(map[string]interface{})["listeners"].([]interface{})[1].(map[string]interface{})["filter_chains"].([]interface{})[0].(map[string]interface{})["filters"].([]interface{})[0].(map[string]interface{})["typed_config"].(map[string]interface{})["route_config"].(map[string]interface{})["virtual_hosts"].([]interface{})[0].(map[string]interface{})
+	backendHCM := root["static_resources"].(map[string]interface{})["listeners"].([]interface{})[1].(map[string]interface{})["filter_chains"].([]interface{})[0].(map[string]interface{})["filters"].([]interface{})[0].(map[string]interface{})["typed_config"].(map[string]interface{})
+	vh := backendHCM["route_config"].(map[string]interface{})["virtual_hosts"].([]interface{})[0].(map[string]interface{})
 	routes := vh["routes"].([]interface{})
 	for _, backendRoute := range b.backendRoutes {
 		routes = append(routes, backendRoute)
 	}
 	vh["routes"] = routes
 
-	httpFilters := root["static_resources"].(map[string]interface{})["listeners"].([]interface{})[0].(map[string]interface{})["filter_chains"].([]interface{})[0].(map[string]interface{})["filters"].([]interface{})[0].(map[string]interface{})["typed_config"].(map[string]interface{})["http_filters"].([]interface{})
+	hcm := root["static_resources"].(map[string]interface{})["listeners"].([]interface{})[0].(map[string]interface{})["filter_chains"].([]interface{})[0].(map[string]interface{})["filters"].([]interface{})[0].(map[string]interface{})["typed_config"].(map[string]interface{})
+	httpFilters := hcm["http_filters"].([]interface{})
 
 	var cf map[string]interface{}
 	for _, hf := range httpFilters {
@@ -115,6 +123,15 @@ func (b *bootstrap) WriteTo(cfgFile *os.File) error {
 				hf.(map[string]interface{})["disabled"] = false
 				hf.(map[string]interface{})["typed_config"].(map[string]interface{})["plugin_config"] = wrapper
 			}
+		}
+	}
+
+	if b.accessLogFormat != "" {
+		accessLog := hcm["access_log"].([]interface{})[0].(map[string]interface{})["typed_config"].(map[string]interface{})
+		accessLog["log_format"] = map[string]interface{}{
+			"text_format_source": map[string]interface{}{
+				"inline_string": b.accessLogFormat + "\n",
+			},
 		}
 	}
 

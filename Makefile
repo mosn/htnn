@@ -40,6 +40,10 @@ gen-crd-code: $(LOCALBIN) install-go-fmtter
 	LOCALBIN=$(LOCALBIN) tools/gen-crd-code.sh
 	$(LOCALBIN)/gosimports -w -local ${PROJECT_NAME} ./types/pkg/client
 
+.PHONY: gen-manifests
+gen-manifests:
+	cd controller/ && make manifests generate
+
 .PHONY: gen-helm-docs
 gen-helm-docs: $(LOCALBIN)
 	test -x $(LOCALBIN)/helm-docs || GOBIN=$(LOCALBIN) go install github.com/norwoodj/helm-docs/cmd/helm-docs@v1.13.1
@@ -73,8 +77,6 @@ build-dev-tools:
 build-dev-tools-local:
 	docker build --network=host --build-arg GOPROXY=${GOPROXY} -t ${DEV_TOOLS_IMAGE} -f tools/Dockerfile.dev ./tools
 
-# For lint-go/fmt-go: we don't cover examples/dev_your_plugin which is just an example
-
 GOLANGCI_LINT_VERSION = 1.56.1
 .PHONY: lint-go
 lint-go:
@@ -88,8 +90,8 @@ lint-go:
 .PHONY: fmt-go
 fmt-go: install-go-fmtter
 # go mod tidy doesn't recognize the go.work file, see https://github.com/golang/go/issues/50750.
-# It will report 'missing directory' error if the 'missing directory' is added in the other module.
-# Even running `go work sync` first doesn't solve the problem, if the 'missing directory' is not released.
+# It will report 'missing directory' error even if the 'missing directory' is already added in the other module.
+# Running `go work sync` first doesn't solve the problem, if the 'missing directory' is not released.
 # So we add `-e` to attempt to proceed despite errors encountered while loading packages.
 	$(foreach PKG, $(GO_MODULES_EXCLUDE_SITE), \
 		pushd ./${PKG} && \

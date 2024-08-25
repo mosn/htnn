@@ -28,7 +28,7 @@ Traditionally, there are two ways to alter the behavior of Istio:
 
 HTNN does not use the methods above but instead modifies Istio to embed its own process into Istio. The specific changes can be referred to in the `patch/istio` directory's patch files. The reason for not using method 1 is that writing stateful EnvoyFilter leads to observability and high availability becoming more challenging and prone to problems. Method 2 is not used because to ensure the consistency of network policy and network routing, the network routing part also needs to be integrated into the MCP server, otherwise, there will be a situation where the policy is still reconciling and the routing has been published online. Providing network routing configurations in MCP server would undoubtedly be a significant workload.
 
-If you develop your own Native Plugin or Service Registry in a third-party repository and want to use it in HTNN, you can use a patch to introduce that repository into Istio. For details, refer to this patch: https://github.com/mosn/htnn/blob/main/patch/istio/1.21/20240410-htnn-go-mod.patch. When importing the repository, make sure to place it after the HTNN official plugin package to avoid being overwritten by plugins with the same name.
+If you develop your own Native Plugin or Service Registry in a third-party repository and want to use it in HTNN, you can use a patch to introduce that repository into Istio. For details, refer to this patch: https://github.com/mosn/htnn/blob/main/patch/istio/1.21/20240410-htnn-go-mod.patch.
 
 If you want to run the HTNN control plane, you can refer to the implementation of `make e2e-prepare-controller-image` in the `e2e/` directory to see how to package the Istio embedded with HTNN into an image.
 
@@ -38,7 +38,7 @@ HTNN places data plane-running Go Plugins and their shared pkg libraries in the 
 
 If you want to write a Go Plugin in a third-party repository, you can refer to this example: https://github.com/mosn/htnn/tree/main/examples/dev_your_plugin. Go Plugins are compiled into shared libraries and deployed to the data plane. When you want to integrate a Go Plugin into the data plane, this file can serve as a template: https://github.com/mosn/htnn/blob/main/examples/dev_your_plugin/cmd/libgolang/main.go.
 
-It is recommended to read the existing plugins' code before developing your own plugin, especially plugins that are similar to the one you're developing – at the very least, you should look at the [demo](https://github.com/mosn/htnn/tree/main/plugins/plugins/demo) plugin. Plugin code is located in the `plugins/` directory. For more information on plugin development, please refer to the [Plugin Development](./plugin_development) documentation.
+It is recommended to read the existing plugins' code before developing your own plugin, especially plugins that are similar to the one you're developing – at the very least, you should look at the [demo](https://github.com/mosn/htnn/tree/main/plugins/plugins/demo) plugin. Plugin code is located in the `plugins/` directory. For more information on plugin development, please refer to the [Plugin Development](./plugin_development.md) documentation.
 
 HTNN provides a [Plugin Integration Test Framework](./plugin_integration_test_framework) that allows the testing of Go Plugin logic to run with only the data plane running. The `dev_your_plugin` example also demonstrates how to run the integration test framework in a third-party repository.
 

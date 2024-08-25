@@ -110,8 +110,8 @@ $(ENVTEST): $(LOCALBIN)
 
 .PHONY: start-controller-service
 start-controller-service:
-	cd ./tests/testdata/services && docker-compose up -d
+	cd ./tests/testdata/services && docker compose up -d
 
 .PHONY: stop-controller-service
 stop-controller-service:
-	cd ./tests/testdata/services && docker-compose down
+	cd ./tests/testdata/services && docker compose down

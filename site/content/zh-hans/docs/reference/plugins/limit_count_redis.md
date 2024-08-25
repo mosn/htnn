@@ -27,8 +27,8 @@ title: Limit Count Redis
 | password                | string                              | 否   |                            | 用于访问 Redis 的密码                                                                                                                                                                                                                                                                |
 | tls                     | bool                                | 否   |                            | 是否通过 TLS 访问 Redis                                                                                                                                                                                                                                                              |
 | tlsSkipVerify           | bool                                | 否   |                            | 通过 TLS 访问 Redis 时是否跳过验证                                                                                                                                                                                                                                                   |
-| statusOnError           | [StatusCode](../../type#statuscode) | 否   |                            | 当无法访问 Redis 且 `failureModeDeny` 为 true 时，拒绝请求使用的状态码。默认为 500.                                                                                                                                                                                                  |
-| rateLimitedStatus       | [StatusCode](../../type#statuscode) | 否   |                            | 因限流产生的拒绝响应的状态码。默认为 429. 该配置仅在不小于 400 时生效。                                                                                                                                                                                                              |
+| statusOnError           | [StatusCode](../type.md#statuscode) | 否   |                            | 当无法访问 Redis 且 `failureModeDeny` 为 true 时，拒绝请求使用的状态码。默认为 500.                                                                                                                                                                                                  |
+| rateLimitedStatus       | [StatusCode](../type.md#statuscode) | 否   |                            | 因限流产生的拒绝响应的状态码。默认为 429. 该配置仅在不小于 400 时生效。                                                                                                                                                                                                              |
 
 每个规则的统计是独立的。当任一规则的额度用完后，就会触发限流操作。因限流产生的拒绝的响应中会包含 header `x-envoy-ratelimited: true`。如果配置了 `enableLimitQuotaHeaders` 为 `true` 且访问 Redis 成功，所有响应中都会包括下面三个头：
 
@@ -46,9 +46,9 @@ title: Limit Count Redis
 
 | 名称       | 类型                            | 必选 | 校验规则 | 说明                                                                          |
 | ---------- | ------------------------------- | ---- | -------- | ----------------------------------------------------------------------------- |
-| timeWindow | [Duration](../../type#duration) | 是   | >= 1s    | 时间窗口                                                                      |
+| timeWindow | [Duration](../type.md#duration) | 是   | >= 1s    | 时间窗口                                                                      |
 | count      | uint32                          | 是   | >= 1     | 次数                                                                          |
-| key        | string                          | 否   |          | 用来作为限流的 key。默认是客户端 IP。这里可以使用 [CEL 表达式](../../expr) 。 |
+| key        | string                          | 否   |          | 用来作为限流的 key。默认是客户端 IP。这里可以使用 [CEL 表达式](../expr.md) 。 |
 
 请求数默认按客户端 IP 计数。你也可以通过配置 `key` 来使用别的字段。`key` 里面的配置会被作为 CEL 表达式解析。比如 `key: request.header("x-key")` 表示使用请求头 `x-key` 作为限流的维度。如果 `key` 对应值为空，则回退到使用客户端 IP 计数。
 

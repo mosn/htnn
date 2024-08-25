@@ -1,0 +1,108 @@
+- metadata:
+    annotations:
+      htnn.mosn.io/info: '{"filterpolicies":["default/policy"]}'
+    creationTimestamp: null
+    labels:
+      htnn.mosn.io/created-by: FilterPolicy
+    name: htnn-lds-0.0.0.0-80
+    namespace: default
+  spec:
+    configPatches:
+    - applyTo: HTTP_FILTER
+      match:
+        listener:
+          filterChain:
+            filter:
+              name: envoy.filters.network.http_connection_manager
+              subFilter:
+                name: htnn.filters.http.golang
+          name: 0.0.0.0_80
+      patch:
+        operation: INSERT_BEFORE
+        value:
+          config_discovery:
+            apply_default_config_without_warming: true
+            config_source:
+              ads: {}
+            default_config:
+              '@type': type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.Config
+              library_id: fm
+              library_path: /etc/libgolang.so
+              plugin_name: fm
+            type_urls:
+            - type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.Config
+          name: htnn-default-0.0.0.0_80-golang-filter
+    - applyTo: EXTENSION_CONFIG
+      patch:
+        operation: ADD
+        value:
+          name: htnn-default-0.0.0.0_80-golang-filter
+          typed_config:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.Config
+            library_id: fm
+            library_path: /etc/libgolang.so
+            plugin_config:
+              '@type': type.googleapis.com/xds.type.v3.TypedStruct
+              value:
+                namespace: default
+                plugins:
+                - config:
+                    keys:
+                    - name: apikey
+                  name: keyAuth
+            plugin_name: fm
+  status: {}
+- metadata:
+    annotations:
+      htnn.mosn.io/info: '{"filterpolicies":["default2/policy"]}'
+    creationTimestamp: null
+    labels:
+      htnn.mosn.io/created-by: FilterPolicy
+    name: htnn-lds-0.0.0.0-80
+    namespace: default2
+  spec:
+    configPatches:
+    - applyTo: HTTP_FILTER
+      match:
+        listener:
+          filterChain:
+            filter:
+              name: envoy.filters.network.http_connection_manager
+              subFilter:
+                name: htnn.filters.http.golang
+          name: 0.0.0.0_80
+      patch:
+        operation: INSERT_BEFORE
+        value:
+          config_discovery:
+            apply_default_config_without_warming: true
+            config_source:
+              ads: {}
+            default_config:
+              '@type': type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.Config
+              library_id: fm
+              library_path: /etc/libgolang.so
+              plugin_name: fm
+            type_urls:
+            - type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.Config
+          name: htnn-default2-0.0.0.0_80-golang-filter
+    - applyTo: EXTENSION_CONFIG
+      patch:
+        operation: ADD
+        value:
+          name: htnn-default2-0.0.0.0_80-golang-filter
+          typed_config:
+            '@type': type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.Config
+            library_id: fm
+            library_path: /etc/libgolang.so
+            plugin_config:
+              '@type': type.googleapis.com/xds.type.v3.TypedStruct
+              value:
+                namespace: default2
+                plugins:
+                - config:
+                    keys:
+                    - name: apikey2
+                  name: keyAuth
+            plugin_name: fm
+  status: {}

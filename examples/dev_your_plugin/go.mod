@@ -17,10 +17,10 @@ module mosn.io/htnn/dev_your_plugin
 go 1.21
 
 require (
-	github.com/envoyproxy/envoy v1.29.2
+	github.com/envoyproxy/envoy v1.29.4
 	github.com/stretchr/testify v1.9.0
 	google.golang.org/protobuf v1.33.0
-	mosn.io/htnn/api v0.2.2-0.20240411084247-3ed33295ba57
+	mosn.io/htnn/api v0.3.2
 )
 
 require (
@@ -41,6 +41,6 @@ require (
 	google.golang.org/genproto v0.0.0-20240227224415-6ceb2ff114de // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240227224415-6ceb2ff114de // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20240227224415-6ceb2ff114de // indirect
-	google.golang.org/grpc v1.63.0 // indirect
+	google.golang.org/grpc v1.63.2 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

@@ -4,7 +4,7 @@ title: CEL Script
 
 ## Description
 
-The `celScript` plugin determines whether the current request can access the upstream by executing the user-configured [CEL expressions](../../expr). Compared to static Go code, CEL expressions allow dynamic runtime configuration. Compared to complex rule files, CEL expressions execute faster. Compared to Lua scripts, CEL expressions run in a sandboxed environment, which is more secure.
+The `celScript` plugin determines whether the current request can access the upstream by executing the user-configured [CEL expressions](../expr.md). Compared to static Go code, CEL expressions allow dynamic runtime configuration. Compared to complex rule files, CEL expressions execute faster. Compared to Lua scripts, CEL expressions run in a sandboxed environment, which is more secure.
 
 ## Attribute
 

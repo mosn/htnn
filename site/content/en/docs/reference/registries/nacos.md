@@ -17,7 +17,7 @@ The `nacos` registry interfaces with [Nacos](https://nacos.io/) service discover
 | serverUrl                | string                          | True     | must be valid URI | Nacos URL                                              |
 | namespace                | string                          | False    |                   | Nacos namespace. Default is "public".                  |
 | groups                   | string[]                        | False    | min_len = 1       | List of Nacos groups. Default is ["DEFAULT_GROUP"].    |
-| serviceRefreshInterval   | [Duration](../../type#duration) | False    | gte: 1s           | Interval for polling the service list. Default is 30s. |
+| serviceRefreshInterval   | [Duration](../type.md#duration) | False    | gte: 1s           | Interval for polling the service list. Default is 30s. |
 
 Nacos 1.x does not provide an API to subscribe to the current service list, so polling is the only way to retrieve the service list. Configuring a smaller value can allow for quicker detection of service deletions, but will place more pressure on Nacos.
 

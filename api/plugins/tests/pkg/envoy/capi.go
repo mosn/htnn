@@ -303,7 +303,7 @@ func (i *DynamicMetadata) Get(filterName string) map[string]interface{} {
 func (i *DynamicMetadata) Set(filterName string, key string, value interface{}) {
 	dm, ok := i.store[filterName]
 	if !ok {
-		dm := map[string]interface{}{}
+		dm = map[string]interface{}{}
 		i.store[filterName] = dm
 	}
 
@@ -360,6 +360,9 @@ func (i *StreamInfo) AttemptCount() uint32 {
 }
 
 func (i *StreamInfo) DynamicMetadata() api.DynamicMetadata {
+	if i.dynamicMetadata == nil {
+		i.dynamicMetadata = NewDynamicMetadata(map[string]map[string]interface{}{})
+	}
 	return i.dynamicMetadata
 }
 
@@ -388,6 +391,9 @@ func (i *StreamInfo) UpstreamClusterName() (string, bool) {
 }
 
 func (i *StreamInfo) FilterState() api.FilterState {
+	if i.filterState == nil {
+		i.filterState = NewFilterState(map[string]string{})
+	}
 	return i.filterState
 }
 
@@ -510,6 +516,40 @@ func (i *filterCallbackHandler) PluginState() api.PluginState {
 		i.pluginState = pluginstate.NewPluginState()
 	}
 	return i.pluginState
+}
+
+func (i *filterCallbackHandler) WithLogArg(key string, value any) api.FilterCallbackHandler {
+	return i
+}
+
+func (i *filterCallbackHandler) LogTracef(format string, v ...any) {
+}
+
+func (i *filterCallbackHandler) LogTrace(message string) {
+}
+
+func (i *filterCallbackHandler) LogDebugf(format string, v ...any) {
+}
+
+func (i *filterCallbackHandler) LogDebug(message string) {
+}
+
+func (i *filterCallbackHandler) LogInfof(format string, v ...any) {
+}
+
+func (i *filterCallbackHandler) LogInfo(message string) {
+}
+
+func (i *filterCallbackHandler) LogWarnf(format string, v ...any) {
+}
+
+func (i *filterCallbackHandler) LogWarn(message string) {
+}
+
+func (i *filterCallbackHandler) LogErrorf(format string, v ...any) {
+}
+
+func (i *filterCallbackHandler) LogError(message string) {
 }
 
 var _ api.FilterCallbackHandler = (*filterCallbackHandler)(nil)

@@ -1,0 +1,64 @@
+istioGateway:
+- apiVersion: networking.istio.io/v1beta1
+  kind: Gateway
+  metadata:
+    name: gateway
+    namespace: default
+  spec:
+    selector:
+      istio: ingressgateway
+    servers:
+    - hosts:
+      - example.com
+      port:
+        name: http
+        number: 80
+        protocol: HTTP
+- apiVersion: networking.istio.io/v1beta1
+  kind: Gateway
+  metadata:
+    name: gateway2
+    namespace: default2
+  spec:
+    selector:
+      istio: ingressgateway
+    servers:
+    - hosts:
+      - example.com
+      port:
+        name: http
+        number: 80
+        protocol: HTTP
+filterPolicy:
+  gateway:
+  - apiVersion: htnn.mosn.io/v1
+    kind: FilterPolicy
+    metadata:
+      name: policy
+      namespace: default
+    spec:
+      targetRef:
+        group: networking.istio.io
+        kind: Gateway
+        name: gateway
+      filters:
+        keyAuth:
+          config:
+            keys:
+              - name: apikey
+  gateway2:
+  - apiVersion: htnn.mosn.io/v1
+    kind: FilterPolicy
+    metadata:
+      name: policy
+      namespace: default2
+    spec:
+      targetRef:
+        group: networking.istio.io
+        kind: Gateway
+        name: gateway2
+      filters:
+        keyAuth:
+          config:
+            keys:
+              - name: apikey2

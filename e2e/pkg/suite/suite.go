@@ -106,7 +106,7 @@ func (suite *Suite) Run(t *testing.T) {
 			}
 			// TODO: find a signal to indicate that it's OK to test.
 			// EnvoyFilter is created doesn't mean that the RDS takes effects in Envoy.
-			time.Sleep(500 * time.Millisecond)
+			time.Sleep(1000 * time.Millisecond)
 			// TODO: configure Istio to push aggressively
 
 			t.Logf("Run test %q at %v", test.Name, time.Now())

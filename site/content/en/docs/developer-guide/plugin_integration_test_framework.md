@@ -12,7 +12,7 @@ Assumed you are at the `./plugins`:
 The test framework will start Envoy to run the Go plugins. The stdout/stderr of the Envoy can be found in `$test_dir/test-envoy/$test_name`.
 The `$test_dir` is where the test files locate, which is `./tests/integration` in this case.
 
-Some tests require third-party services. You can start them by running `docker-compose up $service` under `./tests/integration/testdata/services`.
+Some tests require third-party services. You can start them by running `docker compose up $service` under `./tests/integration/testdata/services`.
 
 By default, the test framework starts Envoy using the image `envoyproxy/envoy`. You can specify a different image by setting the `PROXY_IMAGE` environment variable. For example, `PROXY_IMAGE=envoyproxy/envoy:contrib-v1.29.4 go test -v ./tests/integration/ -run TestLimitCountRedis` will use the image `envoyproxy/envoy:contrib-v1.29.4`.
 

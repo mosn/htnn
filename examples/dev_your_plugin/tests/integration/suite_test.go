@@ -19,15 +19,15 @@ import (
 	"testing"
 	"time"
 
-	"mosn.io/htnn/api/plugins/tests/integration/control_plane"
+	"mosn.io/htnn/api/plugins/tests/integration/controlplane"
 )
 
 var (
-	controlPlane *control_plane.ControlPlane
+	controlPlane *controlplane.ControlPlane
 )
 
 func TestMain(m *testing.M) {
-	controlPlane = control_plane.NewControlPlane()
+	controlPlane = controlplane.NewControlPlane()
 	go func() {
 		controlPlane.Start()
 	}()
