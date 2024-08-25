@@ -105,9 +105,6 @@ func TestStart(t *testing.T) {
 		lock:                sync.RWMutex{},
 	}
 
-	err = reg.Start(config)
-	assert.Error(t, err)
-
 	config = &consul.Config{
 		ServerUrl: "::::::::::::",
 	}
@@ -131,6 +128,8 @@ func TestRefresh(t *testing.T) {
 	config := &consul.Config{
 		ServerUrl: "http://127.0.0.1:8500",
 	}
+	e := reg.Start(config)
+	assert.Error(t, e)
 	client, _ := reg.NewClient(config)
 	reg.client = client
 	services := map[string][]string{
