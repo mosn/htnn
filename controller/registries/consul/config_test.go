@@ -397,7 +397,8 @@ func TestSubscribe(t *testing.T) {
 		logger: log.NewLogger(&log.RegistryLoggerOptions{
 			Name: "test",
 		}),
-		lock: sync.RWMutex{},
+		store: &fakeServiceEntryStore{},
+		lock:  sync.RWMutex{},
 	}
 
 	plan := &watch.Plan{
