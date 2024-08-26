@@ -348,6 +348,7 @@ func TestSubscribe(t *testing.T) {
 	assert.Equal(t, reg.subscriptions["test-service"].Token, "test-token")
 	assert.Equal(t, reg.subscriptions["test-service"].Datacenter, "dc1")
 
+	patch.ApplyMethod(reflect.TypeOf(&watch.Plan{}), "Stop", func(_ *watch.Plan) {})
 	err = reg.unsubscribe("test-service")
 	assert.Nil(t, err)
 	assert.Nil(t, reg.subscriptions["test-service"])
