@@ -276,6 +276,7 @@ func (reg *Consul) getServiceEntryKey(tag, serviceName string) string {
 
 	re := regexp.MustCompile(`\.+`)
 	h := re.ReplaceAllString(host, ".")
+	h = strings.Trim(h, ".")
 	return strings.ToLower(h)
 }
 
