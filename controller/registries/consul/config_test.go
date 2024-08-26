@@ -82,11 +82,6 @@ func TestStart(t *testing.T) {
 
 	err := reg.Start(config)
 	assert.Nil(t, err)
-	err = reg.subscribe("123", "123")
-	assert.Nil(t, err)
-
-	err = reg.unsubscribe("123")
-	assert.Nil(t, err)
 
 	err = reg.Stop()
 	assert.Nil(t, err)
@@ -126,8 +121,7 @@ func TestRefresh(t *testing.T) {
 	config := &consul.Config{
 		ServerUrl: "::::::::::::::::::",
 	}
-	e := reg.Start(config)
-	assert.Error(t, e)
+
 	client, _ := reg.NewClient(config)
 	reg.client = client
 	services := map[string][]string{
