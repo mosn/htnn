@@ -323,15 +323,21 @@ func TestSubscribe(t *testing.T) {
 		lock: sync.RWMutex{},
 	}
 
+	plan := &watch.Plan{
+		Token:      "test-token",
+		Datacenter: "dc1",
+		Handler: func(idx uint64, data interface{}) {
+		},
+		Watcher: watch.WatcherFunc(func(plan *watch.Plan) (watch.BlockingParamVal, interface{}, error) {
+			return nil, "some data", nil
+		}),
+	}
 	patch := gomonkey.ApplyFunc(watch.Parse, func(params map[string]interface{}) (*watch.Plan, error) {
-		return &watch.Plan{
-			Token:      "test-token",
-			Datacenter: "dc1",
-		}, nil
+		return plan, nil
 	})
 	defer patch.Reset()
 
-	patch.ApplyMethod(reflect.TypeOf(&watch.Plan{}), "Run", func(_ *watch.Plan, address string) error {
+	patch.ApplyMethod(reflect.TypeOf(plan), "Run", func(_ *watch.Plan, address string) error {
 		return nil
 	})
 
@@ -342,7 +348,6 @@ func TestSubscribe(t *testing.T) {
 	assert.Equal(t, reg.subscriptions["test-service"].Token, "test-token")
 	assert.Equal(t, reg.subscriptions["test-service"].Datacenter, "dc1")
 
-	patch.ApplyMethod(reflect.TypeOf(&watch.Plan{}), "Stop", func(_ *watch.Plan) {})
 	err = reg.unsubscribe("test-service")
 	assert.Nil(t, err)
 	assert.Nil(t, reg.subscriptions["test-service"])
