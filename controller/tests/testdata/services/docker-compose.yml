@@ -18,7 +18,7 @@ services:
     networks:
       service:
   consul:
-    image: docker.m.daocloud.io/library/consul:1.10.8
+    image: docker.m.daocloud.io/library/consul:1.15.4
     ports:
       - "8500:8500"
       - "8600:8600"
@@ -26,7 +26,7 @@ services:
     networks:
       service:
   consul1:
-    image: docker.m.daocloud.io/library/consul:1.10.8
+    image: docker.m.daocloud.io/library/consul:1.15.4
     ports:
       - "8501:8500"
       - "8601:8600"

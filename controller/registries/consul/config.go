@@ -123,6 +123,10 @@ func (reg *Consul) Start(c registrytype.RegistryConfig) error {
 
 	services, err := reg.fetchAllServices(reg.client)
 
+	if err != nil {
+		return err
+	}
+
 	for key := range services {
 		err = reg.subscribe(key.Tag, key.ServiceName)
 		if err != nil {
@@ -130,10 +134,6 @@ func (reg *Consul) Start(c registrytype.RegistryConfig) error {
 			// the service will be resubscribed after refresh interval
 			delete(services, key)
 		}
-	}
-
-	if err != nil {
-		return err
 	}
 
 	reg.watchingServices = services
@@ -200,8 +200,6 @@ func (reg *Consul) Reload(c registrytype.RegistryConfig) error {
 		return err
 	}
 
-	reg.client = client
-
 	fetchedServices, err := reg.fetchAllServices(client)
 	if err != nil {
 		return fmt.Errorf("fetch all services error: %v", err)
@@ -226,10 +224,13 @@ func (reg *Consul) Reload(c registrytype.RegistryConfig) error {
 		}
 	}
 
+	reg.client = client
+
 	for key := range fetchedServices {
 		err = reg.subscribe(key.Tag, key.ServiceName)
 		if err != nil {
 			reg.logger.Errorf("failed to subscribe service, err: %v, service: %v", err, key)
+			delete(fetchedServices, key)
 		}
 	}
 	reg.watchingServices = fetchedServices
@@ -270,14 +271,9 @@ func (reg *Consul) fetchAllServices(client *Client) (map[consulService]bool, err
 }
 
 func (reg *Consul) getServiceEntryKey(tag, serviceName string) string {
-	var host string
-	suffix := strings.Join([]string{reg.client.NameSpace, reg.client.DataCenter, reg.name, RegistryType}, ".")
-	suffix = strings.ReplaceAll(suffix, "_", "-")
-	if len(tag) > 0 {
-		host = strings.Join([]string{tag, serviceName, suffix}, ".")
-	} else {
-		host = strings.Join([]string{serviceName, suffix}, ".")
-	}
+	host := strings.Join([]string{tag, serviceName, reg.client.NameSpace, reg.client.DataCenter, reg.name, RegistryType}, ".")
+	host = strings.ReplaceAll(host, "_", "-")
+
 	re := regexp.MustCompile(`\.+`)
 	h := re.ReplaceAllString(host, ".")
 	return strings.ToLower(h)
@@ -393,7 +389,6 @@ func (reg *Consul) refresh(services map[string][]string) {
 			if err != nil {
 				reg.logger.Errorf("failed to subscribe service, err: %v, service: %v", err, service.ServiceName)
 				delete(serviceMap, service)
-				delete(reg.watchingServices, service)
 			}
 		}
 	}

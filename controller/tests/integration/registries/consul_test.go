@@ -74,8 +74,8 @@ func registerConsulInstance(consulPort string, name string, ip string, port stri
 	Expect(err).To(BeNil())
 
 	service := map[string]any{
-		"Node":    "node1", // 指定节点名称
-		"Address": ip,      // 节点IP地址
+		"Node":    "node1",
+		"Address": ip,
 		"Service": map[string]any{
 			"ID":      name + ip + port,
 			"Service": name,
@@ -111,7 +111,7 @@ func deregisterConsulInstance(consulPort string, name string, ip string, port st
 
 	serviceID := name + ip + port
 	body := map[string]any{
-		"Node":      "node1", // 指定节点名称
+		"Node":      "node1",
 		"ServiceID": serviceID,
 	}
 
