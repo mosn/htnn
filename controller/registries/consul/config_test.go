@@ -313,7 +313,7 @@ func TestSubscribe(t *testing.T) {
 	reg := &Consul{
 		client: &Client{
 			Token:      "test-token",
-			DataCenter: "test-datacenter",
+			DataCenter: "dc1",
 			Address:    "127.0.0.1:8500",
 		},
 		subscriptions: make(map[string]*watch.Plan),
@@ -324,7 +324,10 @@ func TestSubscribe(t *testing.T) {
 	}
 
 	patch := gomonkey.ApplyFunc(watch.Parse, func(params map[string]interface{}) (*watch.Plan, error) {
-		return &watch.Plan{}, nil
+		return &watch.Plan{
+			Token:      "test-token",
+			Datacenter: "dc1",
+		}, nil
 	})
 	defer patch.Reset()
 
