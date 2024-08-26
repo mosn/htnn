@@ -309,53 +309,6 @@ func TestGetServiceEntryKey(t *testing.T) {
 	}
 }
 
-func TestSubscribe(t *testing.T) {
-	reg := &Consul{
-		client: &Client{
-			Token:      "test-token",
-			DataCenter: "dc1",
-			Address:    "127.0.0.1:8500",
-		},
-		subscriptions: make(map[string]*watch.Plan),
-		logger: log.NewLogger(&log.RegistryLoggerOptions{
-			Name: "test",
-		}),
-		lock: sync.RWMutex{},
-	}
-
-	plan := &watch.Plan{
-		Token:      "test-token",
-		Datacenter: "dc1",
-		Handler: func(idx uint64, data interface{}) {
-		},
-		Watcher: watch.WatcherFunc(func(plan *watch.Plan) (watch.BlockingParamVal, interface{}, error) {
-			return nil, "some data", nil
-		}),
-	}
-	patch := gomonkey.ApplyFunc(watch.Parse, func(params map[string]interface{}) (*watch.Plan, error) {
-		return plan, nil
-	})
-	defer patch.Reset()
-
-	patch.ApplyMethod(reflect.TypeOf(plan), "Run", func(_ *watch.Plan, address string) error {
-		return nil
-	})
-
-	err := reg.subscribe("", "test-service")
-
-	assert.Nil(t, err)
-	assert.NotNil(t, reg.subscriptions["test-service"])
-	assert.Equal(t, reg.subscriptions["test-service"].Token, "test-token")
-	assert.Equal(t, reg.subscriptions["test-service"].Datacenter, "dc1")
-
-	patch.ApplyMethod(reflect.TypeOf(&watch.Plan{}), "Stop", func(_ *watch.Plan) {})
-	err = reg.unsubscribe("test-service")
-	assert.Nil(t, err)
-	assert.Nil(t, reg.subscriptions["test-service"])
-	_, exists := reg.subscriptions["test-service"]
-	assert.False(t, exists)
-}
-
 type fakeServiceEntryStore struct {
 }
 
@@ -431,4 +384,46 @@ func TestReload(t *testing.T) {
 	reg.removeService(service)
 
 	patches.Reset()
+}
+
+func TestSubscribe(t *testing.T) {
+	reg := &Consul{
+		client: &Client{
+			Token:      "test-token",
+			DataCenter: "dc1",
+			Address:    "127.0.0.1:8500",
+		},
+		subscriptions: make(map[string]*watch.Plan),
+		logger: log.NewLogger(&log.RegistryLoggerOptions{
+			Name: "test",
+		}),
+		lock: sync.RWMutex{},
+	}
+
+	plan := &watch.Plan{
+		Token:      "test-token",
+		Datacenter: "dc1",
+		Handler: func(idx uint64, data interface{}) {
+		},
+	}
+
+	patch := gomonkey.ApplyMethod(reflect.TypeOf(plan), "Run", func(_ *watch.Plan, address string) error {
+		return nil
+	})
+
+	err := reg.subscribe("", "test-service")
+
+	assert.Nil(t, err)
+	assert.NotNil(t, reg.subscriptions["test-service"])
+	assert.Equal(t, reg.subscriptions["test-service"].Token, "test-token")
+	assert.Equal(t, reg.subscriptions["test-service"].Datacenter, "dc1")
+
+	patch.ApplyMethod(reflect.TypeOf(&watch.Plan{}), "Stop", func(_ *watch.Plan) {})
+	err = reg.unsubscribe("test-service")
+	patch.Reset()
+
+	assert.Nil(t, err)
+	assert.Nil(t, reg.subscriptions["test-service"])
+	_, exists := reg.subscriptions["test-service"]
+	assert.False(t, exists)
 }
