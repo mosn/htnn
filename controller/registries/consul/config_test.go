@@ -280,7 +280,6 @@ func TestGetServiceEntryKey(t *testing.T) {
 		name: "test_registry",
 	}
 
-	// 测试用例
 	testCases := []struct {
 		serviceName string
 		expectedKey string
