@@ -8,13 +8,13 @@ The `consul` registry connects to the [Consul](https://developer.hashicorp.com/c
 
 ## Configuration
 
-| Name                    | Type                        | Required | Validation        | Description        |
-|--------------------------|-----------------------------|----------|-------------------|---------------------|
-| serverUrl                | string                      | True     | must be valid URI | Consul URL          |
-| namespace                | string                      | False    |                   | Consul namespace    |
-| datacenter               | string                      | False    |                   | Consul datacenter   |
-| token                    | string                      | False    |                   | Consul token        |
-| serviceRefreshInterval   | [Duration](../type.md#duration) | False    | gte: 1s           | Interval for polling the service list. Default is 30s. |
+| Name                   | Type                        | Required | Validation        | Description        |
+|------------------------|-----------------------------|----------|-------------------|---------------------|
+| serverUrl              | string                      | True     | must be valid URI | Consul URL          |
+| namespace              | string                      | False    |                   | Consul namespace    |
+| dataCenter             | string                      | False    |                   | Consul datacenter   |
+| token                  | string                      | False    |                   | Consul token        |
+| serviceRefreshInterval | [Duration](../type.md#duration) | False    | gte: 1s           | Interval for polling the service list. Default is 30s. |
 
 ## Usage
 

@@ -12,7 +12,7 @@ title: Consul
 |------------------------|--------------------------|------|----------------------|--------------------|
 | serverUrl              | string                   | 是   | must be valid URI    | Consul URL         |
 | namespace              | string                   | 否   |                      | Consul namespace   |
-| datacenter             | string                   | 否   |                      | Consul datacenter  |
+| dataCenter             | string                   | 否   |                      | Consul datacenter  |
 | token                  | string                   | 否   |                      | Consul token       |
 | serviceRefreshInterval | [Duration](../type.md#duration) | 否   | gte: 1s              | 轮询服务列表的间隔。默认为 30s。 |
 
@@ -55,7 +55,7 @@ spec:
   resolution: STATIC
 ```
 
-`hosts` 和 `ServiceEntry` 的 `name` 是一致的，格式为 `$tag_name.$consul_namespace.$consul_datacenter.$service_registry_name.consul`。`_` 会被转换成 `-`，大写字母会变小写。如果host中有些配置为空，则会自动省略该配置。
+`hosts` 和 `ServiceEntry` 的 `name` 是一致的，格式为 `$tag_name.$consul_namespace.$consul_datacenter.$service_registry_name.consul`。`_` 会被转换成 `-`，大写字母会变小写。如果 host 中有些配置为空，则会自动省略该配置。
 
 生成的配置中，`protocol` 为 HTTP。如果是其他协议，可以在注册信息的 metadata 的 `protocol` 字段指定协议名称。目前支持的协议如下（不区分大小写）：
 
