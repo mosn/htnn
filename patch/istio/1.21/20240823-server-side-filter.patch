@@ -1,0 +1,150 @@
+diff --git a/pilot/pkg/config/kube/crdclient/client.go b/pilot/pkg/config/kube/crdclient/client.go
+index 26e5d66..2e07143 100644
+--- a/pilot/pkg/config/kube/crdclient/client.go
++++ b/pilot/pkg/config/kube/crdclient/client.go
+@@ -103,6 +103,9 @@ func New(client kube.Client, opts Option) *Client {
+ 	if features.EnableGatewayAPI {
+ 		schemas = collections.PilotGatewayAPI()
+ 	}
++	if features.IstioCRsServerSideFilterLabels != "" {
++		istioCRsServerSideFilter(schemas, &opts)
++	}
+ 	return NewForSchemas(client, opts, schemas)
+ }
+ 
+diff --git a/pilot/pkg/config/kube/crdclient/serversidefilter.go b/pilot/pkg/config/kube/crdclient/serversidefilter.go
+new file mode 100644
+index 0000000..b6d9cd0
+--- /dev/null
++++ b/pilot/pkg/config/kube/crdclient/serversidefilter.go
+@@ -0,0 +1,39 @@
++// Copyright The HTNN Authors.
++//
++// Licensed under the Apache License, Version 2.0 (the "License");
++// you may not use this file except in compliance with the License.
++// You may obtain a copy of the License at
++//
++//     http://www.apache.org/licenses/LICENSE-2.0
++//
++// Unless required by applicable law or agreed to in writing, software
++// distributed under the License is distributed on an "AS IS" BASIS,
++// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++// See the License for the specific language governing permissions and
++// limitations under the License.
++
++package crdclient
++
++import (
++	"istio.io/istio/pilot/pkg/features"
++	"istio.io/istio/pkg/config"
++	"istio.io/istio/pkg/config/schema/collection"
++	"istio.io/istio/pkg/kube/kubetypes"
++	"istio.io/istio/pkg/log"
++)
++
++func istioCRsServerSideFilter(schemas collection.Schemas, opts *Option) {
++	for _, v := range schemas.GroupVersionKinds() {
++		if opts.FiltersByGVK == nil {
++			opts.FiltersByGVK = make(map[config.GroupVersionKind]kubetypes.Filter)
++		}
++		if f, ok := opts.FiltersByGVK[v]; ok {
++			log.Debugf("GVK:%+v filter found", v)
++			f.LabelSelector = features.IstioCRsServerSideFilterLabels
++			opts.FiltersByGVK[v] = f
++		} else {
++			log.Debugf("GVK:%+v filter not found", v)
++			opts.FiltersByGVK[v] = kubetypes.Filter{LabelSelector: features.IstioCRsServerSideFilterLabels}
++		}
++	}
++}
+diff --git a/pilot/pkg/credentials/kube/secrets.go b/pilot/pkg/credentials/kube/secrets.go
+index fbde05a..6d4ab37 100644
+--- a/pilot/pkg/credentials/kube/secrets.go
++++ b/pilot/pkg/credentials/kube/secrets.go
+@@ -30,6 +30,7 @@ import (
+ 	authorizationv1client "k8s.io/client-go/kubernetes/typed/authorization/v1"
+ 
+ 	"istio.io/istio/pilot/pkg/credentials"
++	"istio.io/istio/pilot/pkg/features"
+ 	securitymodel "istio.io/istio/pilot/pkg/security/model"
+ 	"istio.io/istio/pkg/kube"
+ 	"istio.io/istio/pkg/kube/controllers"
+@@ -88,6 +89,7 @@ func NewCredentialsController(kc kube.Client) *CredentialsController {
+ 		fields.OneTermNotEqualSelector("type", "helm.sh/release.v1"),
+ 		fields.OneTermNotEqualSelector("type", string(v1.SecretTypeServiceAccountToken))).String()
+ 	secrets := kclient.NewFiltered[*v1.Secret](kc, kclient.Filter{
++		LabelSelector: features.SecretsServerSideFilterLabels,
+ 		FieldSelector: fieldSelector,
+ 	})
+ 
+diff --git a/pilot/pkg/features/serversidefilter.go b/pilot/pkg/features/serversidefilter.go
+new file mode 100644
+index 0000000..f401c59
+--- /dev/null
++++ b/pilot/pkg/features/serversidefilter.go
+@@ -0,0 +1,30 @@
++// Copyright The HTNN Authors.
++//
++// Licensed under the Apache License, Version 2.0 (the "License");
++// you may not use this file except in compliance with the License.
++// You may obtain a copy of the License at
++//
++//     http://www.apache.org/licenses/LICENSE-2.0
++//
++// Unless required by applicable law or agreed to in writing, software
++// distributed under the License is distributed on an "AS IS" BASIS,
++// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++// See the License for the specific language governing permissions and
++// limitations under the License.
++
++package features
++
++import "istio.io/istio/pkg/env"
++
++var (
++	PodsServerSideFilterLabels = env.Register("PODS_SERVER_SIDE_FILTER_LABELS", "",
++		"Reduce content and memory usage obtained from APIServer through LabelSelector in LIST&WATCH request").Get()
++	ServicesServerSideFilterLabels = env.Register("SERVICES_SERVER_SIDE_FILTER_LABELS", "",
++		"Reduce content and memory usage obtained from APIServer through LabelSelector in LIST&WATCH request").Get()
++	EndpointsServerSideFilterLabels = env.Register("ENDPOINTS_SERVER_SIDE_FILTER_LABELS", "",
++		"Reduce content and memory usage obtained from APIServer through LabelSelector in LIST&WATCH request").Get()
++	SecretsServerSideFilterLabels = env.Register("SECRETS_SERVER_SIDE_FILTER_LABELS", "",
++		"Reduce content and memory usage obtained from APIServer through LabelSelector in LIST&WATCH request").Get()
++	IstioCRsServerSideFilterLabels = env.Register("ISTIO_CRS_SERVER_SIDE_FILTER_LABELS", "",
++		"Reduce content and memory usage obtained from APIServer through LabelSelector in LIST&WATCH request").Get()
++)
+diff --git a/pilot/pkg/serviceregistry/kube/controller/controller.go b/pilot/pkg/serviceregistry/kube/controller/controller.go
+index cc55a71..89be611 100644
+--- a/pilot/pkg/serviceregistry/kube/controller/controller.go
++++ b/pilot/pkg/serviceregistry/kube/controller/controller.go
+@@ -272,7 +272,8 @@ func NewController(kubeClient kubelib.Client, options Options) *Controller {
+ 	}
+ 	c.initDiscoveryHandlers(c.opts.MeshWatcher, c.opts.DiscoveryNamespacesFilter)
+ 
+-	c.services = kclient.NewFiltered[*v1.Service](kubeClient, kclient.Filter{ObjectFilter: c.opts.DiscoveryNamespacesFilter.Filter})
++	c.services = kclient.NewFiltered[*v1.Service](kubeClient, kclient.Filter{
++		LabelSelector: features.ServicesServerSideFilterLabels, ObjectFilter: c.opts.DiscoveryNamespacesFilter.Filter})
+ 
+ 	registerHandlers[*v1.Service](c, c.services, "Services", c.onServiceEvent, nil)
+ 
+@@ -283,6 +284,7 @@ func NewController(kubeClient kubelib.Client, options Options) *Controller {
+ 	registerHandlers[*v1.Node](c, c.nodes, "Nodes", c.onNodeEvent, nil)
+ 
+ 	c.podsClient = kclient.NewFiltered[*v1.Pod](kubeClient, kclient.Filter{
++		LabelSelector:   features.PodsServerSideFilterLabels,
+ 		ObjectFilter:    c.opts.DiscoveryNamespacesFilter.Filter,
+ 		ObjectTransform: kubelib.StripPodUnusedFields,
+ 	})
+diff --git a/pilot/pkg/serviceregistry/kube/controller/endpointslice.go b/pilot/pkg/serviceregistry/kube/controller/endpointslice.go
+index 09a8845..93210ed 100644
+--- a/pilot/pkg/serviceregistry/kube/controller/endpointslice.go
++++ b/pilot/pkg/serviceregistry/kube/controller/endpointslice.go
+@@ -49,7 +49,7 @@ var (
+ )
+ 
+ func newEndpointSliceController(c *Controller) *endpointSliceController {
+-	slices := kclient.NewFiltered[*v1.EndpointSlice](c.client, kclient.Filter{ObjectFilter: c.opts.GetFilter()})
++	slices := kclient.NewFiltered[*v1.EndpointSlice](c.client, kclient.Filter{LabelSelector: features.EndpointsServerSideFilterLabels, ObjectFilter: c.opts.GetFilter()})
+ 	out := &endpointSliceController{
+ 		c:             c,
+ 		slices:        slices,
