@@ -1,0 +1,11 @@
+# This file is used to assign the plugin or something else to the corresponding author
+#
+# Currently, this file is only used to recognize the achievements of contributors.
+# Because GitHub doesn't support code owners without write permission.
+# See https://github.com/orgs/community/discussions/23042
+
+# Plugins
+
+
+# Registries
+/*/registries/consul @lyt122
