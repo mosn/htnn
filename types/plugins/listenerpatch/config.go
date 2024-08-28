@@ -49,7 +49,7 @@ func (p *Plugin) Order() plugins.PluginOrder {
 }
 
 func (p *Plugin) Type() plugins.PluginType {
-	return plugins.TypeObservability
+	return plugins.TypeGeneral
 }
 
 func (p *Plugin) Config() api.PluginConfig {
