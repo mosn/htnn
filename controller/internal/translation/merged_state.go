@@ -86,7 +86,7 @@ type PolicyKind int
 
 const (
 	PolicyKindRDS PolicyKind = iota
-	PolicyKindECDS
+	PolicyKindLDS
 )
 
 func translateFilterManagerConfigToPolicyInRDS(fmc *filtermanager.FilterManagerConfig,
@@ -173,7 +173,7 @@ func translateFilterManagerConfigToPolicyInRDS(fmc *filtermanager.FilterManagerC
 
 		golangFilterName := "htnn.filters.http.golang"
 		if ctrlcfg.EnableLDSPluginViaECDS() {
-			golangFilterName = virtualHost.ECDSResourceName + "-" + model.GolangPluginsFilter
+			golangFilterName = virtualHost.ECDSResourceName + "-" + model.CategoryGolangPlugins
 		}
 		config[golangFilterName] = map[string]interface{}{
 			"@type": "type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.ConfigsPerRoute",
@@ -196,15 +196,16 @@ func translateFilterManagerConfigToPolicyInRDS(fmc *filtermanager.FilterManagerC
 	return config
 }
 
-func translateFilterManagerConfigToPolicyInECDS(fmc *filtermanager.FilterManagerConfig, nsName *types.NamespacedName) map[string]interface{} {
+func translateFilterManagerConfigToPolicyInLDS(fmc *filtermanager.FilterManagerConfig, nsName *types.NamespacedName) map[string]interface{} {
 	config := map[string]interface{}{}
 
 	goFilterManager := &filtermanager.FilterManagerConfig{
 		Plugins: []*fmModel.FilterConfig{},
 	}
 	nativeFilters := map[string][]*fmModel.FilterConfig{
-		model.ECDSListenerFilter: {},
-		model.ECDSNetworkFilter:  {},
+		model.CategoryECDSListener: {},
+		model.CategoryECDSNetwork:  {},
+		model.CategoryListener:     {},
 	}
 
 	consumerNeeded := false
@@ -243,19 +244,28 @@ func translateFilterManagerConfigToPolicyInECDS(fmc *filtermanager.FilterManager
 				continue
 			}
 
-			url := nativePlugin.ConfigTypeURL()
 			m, ok := cfg.(map[string]interface{})
 			if !ok {
 				panic(fmt.Sprintf("unexpected type: %s", reflect.TypeOf(cfg)))
 			}
 
-			m["@type"] = url
-			plugin.Config = m
+			url := nativePlugin.ConfigTypeURL()
+			if url != "" {
+				m["@type"] = url
+				plugin.Config = m
 
-			if order.Position == plugins.OrderPositionListener {
-				nativeFilters[model.ECDSListenerFilter] = append(nativeFilters[model.ECDSListenerFilter], plugin)
-			} else if order.Position == plugins.OrderPositionNetwork {
-				nativeFilters[model.ECDSNetworkFilter] = append(nativeFilters[model.ECDSNetworkFilter], plugin)
+				if order.Position == plugins.OrderPositionListener {
+					nativeFilters[model.CategoryECDSListener] = append(nativeFilters[model.CategoryECDSListener], plugin)
+				} else if order.Position == plugins.OrderPositionNetwork {
+					nativeFilters[model.CategoryECDSNetwork] = append(nativeFilters[model.CategoryECDSNetwork], plugin)
+				}
+			} else {
+				plugin.Config = m
+
+				if order.Position == plugins.OrderPositionListener {
+					nativeFilters[model.CategoryListener] = append(nativeFilters[model.CategoryListener], plugin)
+				}
+				// TODO: support network filter
 			}
 		}
 	}
@@ -277,7 +287,7 @@ func translateFilterManagerConfigToPolicyInECDS(fmc *filtermanager.FilterManager
 			}
 		}
 		cfg["plugins"] = plugins
-		config[model.ECDSGolangFilter] = cfg
+		config[model.CategoryECDSGolang] = cfg
 	}
 
 	for category, filters := range nativeFilters {
@@ -325,8 +335,8 @@ func toMergedPolicy(nsName *types.NamespacedName, policies []*FilterPolicyWrappe
 	var config map[string]interface{}
 	if policyKind == PolicyKindRDS {
 		config = translateFilterManagerConfigToPolicyInRDS(fmc, nsName, virtualHost)
-	} else if policyKind == PolicyKindECDS {
-		config = translateFilterManagerConfigToPolicyInECDS(fmc, nsName)
+	} else if policyKind == PolicyKindLDS {
+		config = translateFilterManagerConfigToPolicyInLDS(fmc, nsName)
 	}
 
 	return &mergedPolicy{
@@ -384,7 +394,7 @@ func toMergedState(ctx *Ctx, state *dataPlaneState) (*FinalState, error) {
 				Gateway: gateway.Gateway,
 			}
 			if len(gateway.Policies) > 0 {
-				mg.Policy = toMergedPolicy(&gateway.Gateway.GatewaySection.NsName, gateway.Policies, PolicyKindECDS, nil)
+				mg.Policy = toMergedPolicy(&gateway.Gateway.GatewaySection.NsName, gateway.Policies, PolicyKindLDS, nil)
 			}
 
 			mergedGateways[name] = mg

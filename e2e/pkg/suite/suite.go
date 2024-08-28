@@ -31,6 +31,8 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/gateway-api/conformance/utils/roundtripper"
@@ -249,4 +251,31 @@ func (suite *Suite) Capture(resp *http.Response) (*roundtripper.CapturedRequest,
 	}
 
 	return cReq, cRes, nil
+}
+
+func (suite *Suite) GetLog(namespace string, prefix string) ([]byte, error) {
+	ctx := context.Background()
+	clientset := suite.Opt.Clientset
+
+	podName := ""
+	pods, err := clientset.CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, err
+	}
+
+	for _, pod := range pods.Items {
+		if strings.HasPrefix(pod.Name, prefix) {
+			podName = pod.Name
+			break
+		}
+	}
+
+	req := clientset.CoreV1().Pods(namespace).GetLogs(podName, &corev1.PodLogOptions{})
+	podLogs, err := req.Stream(ctx)
+	if err != nil {
+		return nil, err
+	}
+	defer podLogs.Close()
+
+	return io.ReadAll(podLogs)
 }
