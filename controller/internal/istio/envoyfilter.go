@@ -206,13 +206,36 @@ func GenerateRouteFilter(host *model.VirtualHost, route string, config map[strin
 	}
 }
 
-func GenerateLDSFilterViaECDS(key string, ldsName string, hasHCM bool, config map[string]interface{}) *istiov1a3.EnvoyFilter {
+func GenerateLDSFilter(key string, ldsName string, hasHCM bool, config map[string]interface{}) *istiov1a3.EnvoyFilter {
 	ef := &istiov1a3.EnvoyFilter{
 		Spec: istioapi.EnvoyFilter{},
 	}
 
-	if config[model.ECDSListenerFilter] != nil {
-		cfg, _ := config[model.ECDSListenerFilter].([]*fmModel.FilterConfig)
+	if config[model.CategoryListener] != nil {
+		cfg, _ := config[model.CategoryListener].([]*fmModel.FilterConfig)
+		for _, filter := range cfg {
+			c, _ := filter.Config.(map[string]interface{})
+			ef.Spec.ConfigPatches = append(ef.Spec.ConfigPatches,
+				&istioapi.EnvoyFilter_EnvoyConfigObjectPatch{
+					ApplyTo: istioapi.EnvoyFilter_LISTENER,
+					Match: &istioapi.EnvoyFilter_EnvoyConfigObjectMatch{
+						ObjectTypes: &istioapi.EnvoyFilter_EnvoyConfigObjectMatch_Listener{
+							Listener: &istioapi.EnvoyFilter_ListenerMatch{
+								Name: ldsName,
+							},
+						},
+					},
+					Patch: &istioapi.EnvoyFilter_Patch{
+						Operation: istioapi.EnvoyFilter_Patch_MERGE,
+						Value:     MustNewStruct(c),
+					},
+				},
+			)
+		}
+	}
+
+	if config[model.CategoryECDSListener] != nil {
+		cfg, _ := config[model.CategoryECDSListener].([]*fmModel.FilterConfig)
 		for i := len(cfg) - 1; i >= 0; i-- {
 			filter := cfg[i]
 			ecdsName := key + "-" + filter.Name
@@ -257,8 +280,8 @@ func GenerateLDSFilterViaECDS(key string, ldsName string, hasHCM bool, config ma
 		}
 	}
 
-	if config[model.ECDSNetworkFilter] != nil {
-		cfg, _ := config[model.ECDSNetworkFilter].([]*fmModel.FilterConfig)
+	if config[model.CategoryECDSNetwork] != nil {
+		cfg, _ := config[model.CategoryECDSNetwork].([]*fmModel.FilterConfig)
 		for i := len(cfg) - 1; i >= 0; i-- {
 			filter := cfg[i]
 			ecdsName := key + "-" + filter.Name
@@ -304,11 +327,11 @@ func GenerateLDSFilterViaECDS(key string, ldsName string, hasHCM bool, config ma
 	}
 
 	if hasHCM {
-		cfg := config[model.ECDSGolangFilter]
+		cfg := config[model.CategoryECDSGolang]
 		if cfg == nil {
 			cfg = map[string]interface{}{}
 		}
-		ecdsName := key + "-" + model.GolangPluginsFilter
+		ecdsName := key + "-" + model.CategoryGolangPlugins
 		ef.Spec.ConfigPatches = append(ef.Spec.ConfigPatches,
 			&istioapi.EnvoyFilter_EnvoyConfigObjectPatch{
 				ApplyTo: istioapi.EnvoyFilter_HTTP_FILTER,
