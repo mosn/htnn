@@ -373,6 +373,7 @@ func TestReload(t *testing.T) {
 	patches.ApplyPrivateMethod(reflect.TypeOf(reg), "unsubscribe", func(_ *Consul, serviceName string) error {
 		return nil
 	})
+	defer patches.Reset()
 
 	err := reg.Reload(&consul.Config{})
 
@@ -381,8 +382,6 @@ func TestReload(t *testing.T) {
 	assert.Contains(t, reg.watchingServices, consulService{"test-service", "new-datacenter"})
 
 	reg.removeService(service)
-
-	patches.Reset()
 }
 
 func TestSubscribe(t *testing.T) {
