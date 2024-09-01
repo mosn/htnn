@@ -1,0 +1,33 @@
+// Copyright The HTNN Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package types.registries.nacos.v2;
+
+import "google/protobuf/duration.proto";
+import "validate/validate.proto";
+
+option go_package = "mosn.io/htnn/types/registries/nacos/v2";
+
+message Config {
+  string server_url = 1 [(validate.rules).string = {uri: true}];
+  string namespace = 2;
+  repeated string groups = 3 [(validate.rules).repeated .items.string.min_len = 1];
+  // Nacos v1 doesn't provide a method to subscribe the number of services.
+  // So we need to check the services at interval. The interval is default to 30s.
+  // A shorter interval will make the new service take effect earlier but cause more pressure on Nacos server.
+  google.protobuf.Duration service_refresh_interval = 4
+      [(validate.rules).duration = {gte {seconds: 1}}];
+}
