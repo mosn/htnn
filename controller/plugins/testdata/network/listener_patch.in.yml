@@ -1,0 +1,21 @@
+apiVersion: htnn.mosn.io/v1
+kind: FilterPolicy
+metadata:
+  name: policy
+  namespace: default
+spec:
+  targetRef:
+    group: networking.istio.io
+    kind: Gateway
+    name: default
+  filters:
+    listenerPatch:
+      config:
+        accessLog:
+        - name: envoy.access_loggers.file
+          typedConfig:
+            "@type": type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+            path: /home/logs/access.log
+            logFormat:
+              textFormatSource:
+                inlineString: "%START_TIME%,%DOWNSTREAM_REMOTE_ADDRESS_WITHOUT_PORT%"

@@ -20,6 +20,7 @@ import (
 	_ "mosn.io/htnn/controller/plugins/cors"
 	_ "mosn.io/htnn/controller/plugins/extproc"
 	_ "mosn.io/htnn/controller/plugins/fault"
+	_ "mosn.io/htnn/controller/plugins/listenerpatch"
 	_ "mosn.io/htnn/controller/plugins/localratelimit"
 	_ "mosn.io/htnn/controller/plugins/lua"
 	_ "mosn.io/htnn/controller/plugins/networkrbac"

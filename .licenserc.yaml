@@ -21,6 +21,7 @@ header:
     - '**/*.md'
     - 'LICENSE'
     - 'NOTICE'
+    - 'CODEOWNERS'
     - '**/testdata/**'
     - '**/*.yaml'
     - '**/*.yml'

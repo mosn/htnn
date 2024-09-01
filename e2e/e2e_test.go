@@ -33,10 +33,12 @@ func TestE2E(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error loading Kubernetes config: %v", err)
 	}
+
 	client, err := client.New(cfg, client.Options{})
 	if err != nil {
 		t.Fatalf("Error initializing Kubernetes client: %v", err)
 	}
+
 	clientset, err := kubernetes.NewForConfig(cfg)
 	if err != nil {
 		t.Fatalf("Error initializing Kubernetes REST client: %v", err)

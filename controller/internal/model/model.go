@@ -47,9 +47,9 @@ type VirtualHost struct {
 }
 
 const (
-	ECDSGolangFilter   = "golang"
-	ECDSListenerFilter = "listener"
-	ECDSNetworkFilter  = "network"
-
-	GolangPluginsFilter = "golang-filter"
+	CategoryECDSGolang    = "ecds_golang"
+	CategoryECDSListener  = "ecds_listener"
+	CategoryECDSNetwork   = "ecds_network"
+	CategoryListener      = "listener"
+	CategoryGolangPlugins = "golang-filter"
 )
