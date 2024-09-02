@@ -3,6 +3,8 @@ services:
     image: nacos/nacos-server:v1.4.6-slim
     env_file:
       - env/nacos.env
+    # all services should have this restart policy, so that we don't need to
+    # restart them manually after the dev machine reboots
     restart: unless-stopped
     ports:
       - "8848:8848"
@@ -19,6 +21,7 @@ services:
       service:
   consul:
     image: docker.m.daocloud.io/library/consul:1.15.4
+    restart: unless-stopped
     ports:
       - "8500:8500"
       - "8600:8600"
@@ -27,6 +30,7 @@ services:
       service:
   consul1:
     image: docker.m.daocloud.io/library/consul:1.15.4
+    restart: unless-stopped
     ports:
       - "8501:8500"
       - "8601:8600"
