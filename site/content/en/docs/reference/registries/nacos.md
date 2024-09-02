@@ -14,6 +14,7 @@ The `nacos` registry interfaces with [Nacos](https://nacos.io/) service discover
 
 | Name                     | Type                            | Required | Validation        | Description                                            |
 |--------------------------|---------------------------------|----------|-------------------|--------------------------------------------------------|
+| version                  | string                          | True     | v1 or v2          | Nacos version                         |
 | serverUrl                | string                          | True     | must be valid URI | Nacos URL                                              |
 | namespace                | string                          | False    |                   | Nacos namespace. Default is "public".                  |
 | groups                   | string[]                        | False    | min_len = 1       | List of Nacos groups. Default is ["DEFAULT_GROUP"].    |

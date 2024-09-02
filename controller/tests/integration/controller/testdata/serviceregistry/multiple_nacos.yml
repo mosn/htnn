@@ -8,6 +8,7 @@
     config:
       serverUrl: http://0.0.0.0:8848
       serviceRefreshInterval: 1s
+      version: v1
 - apiVersion: htnn.mosn.io/v1
   kind: ServiceRegistry
   metadata:
@@ -18,3 +19,4 @@
     config:
       serverUrl: http://0.0.0.0:8848
       serviceRefreshInterval: 1s
+      version: v1

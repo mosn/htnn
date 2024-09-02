@@ -12,82 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package v2
+package nacos
 
 import (
 	"fmt"
 	"net/url"
 	"strconv"
-	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/nacos-group/nacos-sdk-go/v2/clients"
-	"github.com/nacos-group/nacos-sdk-go/v2/clients/naming_client"
 	"github.com/nacos-group/nacos-sdk-go/v2/common/constant"
 	"github.com/nacos-group/nacos-sdk-go/v2/vo"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"mosn.io/htnn/controller/pkg/registry"
-	"mosn.io/htnn/controller/pkg/registry/log"
 	registrytype "mosn.io/htnn/types/pkg/registry"
 	"mosn.io/htnn/types/registries/nacos"
 )
 
-func init() {
-	registry.AddRegistryFactory(nacos.Name, func(store registry.ServiceEntryStore, om metav1.ObjectMeta) (registry.Registry, error) {
-		reg := &Nacos{
-			logger: log.NewLogger(&log.RegistryLoggerOptions{
-				Name: om.Name,
-			}),
-			store:               store,
-			name:                om.Name,
-			softDeletedServices: map[nacosService]bool{},
-			done:                make(chan struct{}),
-		}
-		return reg, nil
-	})
+type Client struct {
+	Client any
 }
 
-const (
-	defaultNacosPort     = 8848
-	defaultTimeoutMs     = 5 * 1000
-	defaultLogLevel      = "warn"
-	defaultNotLoadCache  = true
-	defaultLogMaxDays    = 1
-	defaultLogMaxBackups = 10
-	defaultLogMaxSizeMB  = 1
-)
-
-type nacosService struct {
-	GroupName   string
-	ServiceName string
-}
-
-type nacosClient struct {
-	Groups    []string
-	Namespace string
-
-	namingClient naming_client.INamingClient
-}
-
-type Nacos struct {
-	nacos.RegistryType
-	logger log.RegistryLogger
-
-	store  registry.ServiceEntryStore
-	name   string
-	client *nacosClient
-
-	lock                sync.RWMutex
-	watchingServices    map[nacosService]bool
-	softDeletedServices map[nacosService]bool
-
-	done    chan struct{}
-	stopped atomic.Bool
-}
-
-func (reg *Nacos) newClient(config *nacos.Config) (*nacosClient, error) {
+func (reg *Nacos) newV2Client(config *nacos.Config) (*nacosClient, error) {
 	uri, err := url.Parse(config.ServerUrl)
 	if err != nil {
 		return nil, fmt.Errorf("invalid server url: %s", config.ServerUrl)
@@ -132,22 +77,25 @@ func (reg *Nacos) newClient(config *nacos.Config) (*nacosClient, error) {
 	if len(config.Groups) == 0 {
 		config.Groups = []string{"DEFAULT_GROUP"}
 	}
+	v2Client := &Client{
+		Client: namingClient,
+	}
 	return &nacosClient{
 		Groups:       config.Groups,
 		Namespace:    config.Namespace,
-		namingClient: namingClient,
+		namingClient: v2Client,
 	}, nil
 }
 
-func (reg *Nacos) Start(c registrytype.RegistryConfig) error {
+func (reg *Nacos) StartV2(c registrytype.RegistryConfig) error {
 	config := c.(*nacos.Config)
 
-	client, err := reg.newClient(config)
+	client, err := reg.newV2Client(config)
 	if err != nil {
 		return err
 	}
 
-	fetchedServices, err := reg.fetchAllServices(client)
+	fetchedServices, err := reg.fetchAllServicesV2(client)
 	if err != nil {
 		return fmt.Errorf("fetch all services error: %v", err)
 	}
@@ -167,7 +115,7 @@ func (reg *Nacos) Start(c registrytype.RegistryConfig) error {
 		for {
 			select {
 			case <-ticker.C:
-				err := reg.refresh()
+				err := reg.refreshV2()
 				if err != nil {
 					reg.logger.Errorf("failed to refresh services, err: %v", err)
 				}
@@ -181,7 +129,7 @@ func (reg *Nacos) Start(c registrytype.RegistryConfig) error {
 	return nil
 }
 
-func (reg *Nacos) Stop() error {
+func (reg *Nacos) StopV2() error {
 	close(reg.done)
 	reg.stopped.Store(true)
 
@@ -190,18 +138,18 @@ func (reg *Nacos) Stop() error {
 	return nil
 }
 
-func (reg *Nacos) Reload(c registrytype.RegistryConfig) error {
+func (reg *Nacos) ReloadV2(c registrytype.RegistryConfig) error {
 	return nil
 }
 
-func (reg *Nacos) subscribe(groupName, serviceName string) error {
+func (reg *Nacos) subscribeV2(groupName, serviceName string) error {
 	return nil
 }
 
-func (reg *Nacos) refresh() error {
+func (reg *Nacos) refreshV2() error {
 	return nil
 }
 
-func (reg *Nacos) fetchAllServices(client *nacosClient) (map[nacosService]bool, error) {
+func (reg *Nacos) fetchAllServicesV2(client *nacosClient) (map[nacosService]bool, error) {
 	return nil, nil
 }

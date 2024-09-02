@@ -78,16 +78,17 @@ type nacosClient struct {
 	Groups    []string
 	Namespace string
 
-	namingClient naming_client.INamingClient
+	namingClient *Client
 }
 
 type Nacos struct {
 	nacos.RegistryType
 	logger log.RegistryLogger
 
-	store  registry.ServiceEntryStore
-	name   string
-	client *nacosClient
+	store   registry.ServiceEntryStore
+	name    string
+	client  *nacosClient
+	version string
 
 	lock                sync.RWMutex
 	watchingServices    map[nacosService]bool
@@ -99,6 +100,7 @@ type Nacos struct {
 
 func (reg *Nacos) fetchAllServices(client *nacosClient) (map[nacosService]bool, error) {
 	fetchedServices := make(map[nacosService]bool)
+	c, _ := client.namingClient.Client.(naming_client.INamingClient)
 	for _, groupName := range client.Groups {
 		for page := 1; ; page++ {
 			// Nacos v1 doesn't provide a method to return all services in a call.
@@ -111,7 +113,7 @@ func (reg *Nacos) fetchAllServices(client *nacosClient) (map[nacosService]bool, 
 			// We also use soft-deletion to avoid the ServiceEntry mismatch. The ServiceEntry
 			// will be deleted only when the registry's configuration changes or an empty host list
 			// is returned from the subscription.
-			ss, err := client.namingClient.GetAllServicesInfo(vo.GetAllServiceInfoParam{
+			ss, err := c.GetAllServicesInfo(vo.GetAllServiceInfoParam{
 				GroupName: groupName,
 				PageNo:    uint32(page),
 				PageSize:  defaultFetchPageSize,
@@ -138,8 +140,8 @@ func (reg *Nacos) fetchAllServices(client *nacosClient) (map[nacosService]bool, 
 
 func (reg *Nacos) subscribe(groupName string, serviceName string) error {
 	reg.logger.Infof("subscribe serviceName: %s, groupName: %s", serviceName, groupName)
-
-	err := reg.client.namingClient.Subscribe(&vo.SubscribeParam{
+	c, _ := reg.client.namingClient.Client.(naming_client.INamingClient)
+	err := c.Subscribe(&vo.SubscribeParam{
 		ServiceName:       serviceName,
 		GroupName:         groupName,
 		SubscribeCallback: reg.getSubscribeCallback(groupName, serviceName),
@@ -154,8 +156,8 @@ func (reg *Nacos) subscribe(groupName string, serviceName string) error {
 
 func (reg *Nacos) unsubscribe(groupName string, serviceName string) error {
 	reg.logger.Infof("unsubscribe serviceName: %s, groupName: %s", serviceName, groupName)
-
-	err := reg.client.namingClient.Unsubscribe(&vo.SubscribeParam{
+	c, _ := reg.client.namingClient.Client.(naming_client.INamingClient)
+	err := c.Unsubscribe(&vo.SubscribeParam{
 		ServiceName:       serviceName,
 		GroupName:         groupName,
 		SubscribeCallback: reg.getSubscribeCallback(groupName, serviceName),
@@ -291,15 +293,24 @@ func (reg *Nacos) newClient(config *nacos.Config) (*nacosClient, error) {
 	if len(config.Groups) == 0 {
 		config.Groups = []string{"DEFAULT_GROUP"}
 	}
+	client := &Client{
+		Client: namingClient,
+	}
 	return &nacosClient{
 		Groups:       config.Groups,
 		Namespace:    config.Namespace,
-		namingClient: namingClient,
+		namingClient: client,
 	}, nil
 }
 
 func (reg *Nacos) Start(c registrytype.RegistryConfig) error {
 	config := c.(*nacos.Config)
+
+	reg.version = config.Version
+	if config.Version == "v2" {
+		err := reg.StartV2(c)
+		return err
+	}
 
 	client, err := reg.newClient(config)
 	if err != nil {
@@ -393,6 +404,10 @@ func (reg *Nacos) refresh() error {
 }
 
 func (reg *Nacos) Stop() error {
+	if reg.version == "v2" {
+		err := reg.StopV2()
+		return err
+	}
 	close(reg.done)
 	reg.stopped.Store(true)
 
@@ -412,6 +427,11 @@ func (reg *Nacos) Stop() error {
 
 func (reg *Nacos) Reload(c registrytype.RegistryConfig) error {
 	config := c.(*nacos.Config)
+
+	if config.Version == "v2" {
+		err := reg.ReloadV2(c)
+		return err
+	}
 
 	client, err := reg.newClient(config)
 	if err != nil {

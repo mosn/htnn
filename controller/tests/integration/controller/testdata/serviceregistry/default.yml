@@ -7,3 +7,4 @@
     type: nacos
     config:
       serverUrl: http://0.0.0.0:8848
+      version: v1
