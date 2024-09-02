@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"path/filepath"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -277,5 +278,42 @@ var _ = Describe("Consumer controller", func() {
 			Expect(filter["demo"]).ToNot(BeNil())
 		})
 
+		It("deal with name conflict", func() {
+			ctx := context.Background()
+			input := []map[string]interface{}{}
+			mustReadConsumer("consumer_name_conflict", &input)
+			for _, in := range input {
+				obj := pkg.MapToObj(in)
+				Expect(k8sClient.Create(ctx, obj)).Should(Succeed())
+			}
+
+			var consumers mosniov1.ConsumerList
+			Eventually(func() bool {
+				if err := k8sClient.List(ctx, &consumers); err != nil {
+					return false
+				}
+				handled := len(consumers.Items) == 2
+				for _, item := range consumers.Items {
+					conds := item.Status.Conditions
+					if len(conds) != 1 {
+						handled = false
+						break
+					}
+				}
+
+				return handled
+			}, timeout, interval).Should(BeTrue())
+
+			duplicatedFound := false
+			for _, item := range consumers.Items {
+				cs := item.Status.Conditions
+				if cs[0].Reason != string(mosniov1.ReasonAccepted) {
+					duplicatedFound = true
+					Expect(strings.Contains(cs[0].Message, "duplicate")).To(BeTrue())
+					break
+				}
+			}
+			Expect(duplicatedFound).To(BeTrue())
+		})
 	})
 })

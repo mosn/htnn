@@ -1,0 +1,21 @@
+- apiVersion: htnn.mosn.io/v1
+  kind: Consumer
+  metadata:
+    name: spacewander
+    namespace: default
+  spec:
+    auth:
+      keyAuth:
+        config:
+          key: xx
+- apiVersion: htnn.mosn.io/v1
+  kind: Consumer
+  metadata:
+    name: spacewander2
+    namespace: default
+  spec:
+    name: spacewander
+    auth:
+      keyAuth:
+        config:
+          key: xx

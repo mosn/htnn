@@ -45,6 +45,12 @@ type ConsumerSpec struct {
 	//
 	// +optional
 	Filters map[string]Plugin `json:"filters,omitempty"`
+
+	// Name is the name of consumer, which is used in the data plane matching.
+	// If this field is not set, the name of the consumer CustomResource will be used.
+	//
+	// +optional
+	Name string `json:"name,omitempty"`
 }
 
 // ConsumerStatus defines the observed state of Consumer
