@@ -22,12 +22,14 @@ import "validate/validate.proto";
 option go_package = "mosn.io/htnn/types/registries/nacos";
 
 message Config {
-  string server_url = 1 [(validate.rules).string = {uri: true}];
-  string namespace = 2;
-  repeated string groups = 3 [(validate.rules).repeated .items.string.min_len = 1];
+  // the version is used to choose the Nacos version between v1 and v2
+  string version = 1 [(validate.rules).string = {in: ["v1", "v2"]}];
+  string server_url = 2 [(validate.rules).string = {uri: true}];
+  string namespace = 3;
+  repeated string groups = 4 [(validate.rules).repeated .items.string.min_len = 1];
   // Nacos v1 doesn't provide a method to subscribe the number of services.
   // So we need to check the services at interval. The interval is default to 30s.
   // A shorter interval will make the new service take effect earlier but cause more pressure on Nacos server.
-  google.protobuf.Duration service_refresh_interval = 4
+  google.protobuf.Duration service_refresh_interval = 5
       [(validate.rules).duration = {gte {seconds: 1}}];
 }

@@ -56,6 +56,17 @@ func (m *Config) validate(all bool) error {
 
 	var errors []error
 
+	if _, ok := _Config_Version_InLookup[m.GetVersion()]; !ok {
+		err := ConfigValidationError{
+			field:  "Version",
+			reason: "value must be in list [v1 v2]",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
+
 	if uri, err := url.Parse(m.GetServerUrl()); err != nil {
 		err = ConfigValidationError{
 			field:  "ServerUrl",
@@ -201,3 +212,8 @@ var _ interface {
 	Cause() error
 	ErrorName() string
 } = ConfigValidationError{}
+
+var _Config_Version_InLookup = map[string]struct{}{
+	"v1": {},
+	"v2": {},
+}
