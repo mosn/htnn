@@ -393,6 +393,8 @@ func (reg *Consul) refresh(services map[string][]string) {
 			}
 		}
 	}
+	reg.lock.Lock()
+	defer reg.lock.Unlock()
 	prevFetchServices := reg.watchingServices
 	reg.watchingServices = serviceMap
 
