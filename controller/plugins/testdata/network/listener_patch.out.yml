@@ -1,0 +1,22 @@
+- metadata:
+    creationTimestamp: null
+    name: htnn-lds-0.0.0.0-18000
+    namespace: default
+  spec:
+    configPatches:
+    - applyTo: LISTENER
+      match:
+        listener:
+          name: 0.0.0.0_18000
+      patch:
+        operation: MERGE
+        value:
+          accessLog:
+          - name: envoy.access_loggers.file
+            typedConfig:
+              '@type': type.googleapis.com/envoy.extensions.access_loggers.file.v3.FileAccessLog
+              logFormat:
+                textFormatSource:
+                  inlineString: '%START_TIME%,%DOWNSTREAM_REMOTE_ADDRESS_WITHOUT_PORT%'
+              path: /home/logs/access.log
+  status: {}

@@ -131,7 +131,7 @@ func toFinalState(_ *Ctx, state *mergedState) (*FinalState, error) {
 				info = gateway.Policy.Info
 			}
 
-			ef := istio.GenerateLDSFilterViaECDS(key, name, gateway.Gateway.HasHCM, config)
+			ef := istio.GenerateLDSFilter(key, name, gateway.Gateway.HasHCM, config)
 			ef.SetNamespace(ns)
 			// Put all LDS level filters of the same LDS into the same EnvoyFilter.
 			efName := envoyFilterNameFromLds(name)

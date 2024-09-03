@@ -12,9 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package registries
+package listenerpatch
 
 import (
-	_ "mosn.io/htnn/controller/registries/consul"
-	_ "mosn.io/htnn/controller/registries/nacos"
+	"mosn.io/htnn/api/pkg/plugins"
+	"mosn.io/htnn/types/plugins/listenerpatch"
 )
+
+func init() {
+	plugins.RegisterPlugin(listenerpatch.Name, &plugin{})
+}
+
+type plugin struct {
+	listenerpatch.Plugin
+}
+
+func (p *plugin) ConfigTypeURL() string {
+	return ""
+}
