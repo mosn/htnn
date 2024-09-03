@@ -68,25 +68,14 @@ func TestStart(t *testing.T) {
 		lock:                sync.RWMutex{},
 	}
 
-	config := &consul.Config{}
-
-	patches := gomonkey.ApplyPrivateMethod(reflect.TypeOf(reg), "fetchAllServices", func(_ *Consul, client *Client) (map[consulService]bool, error) {
-		return map[consulService]bool{
-			{ServiceName: "service1", Tag: "tag1"}: true,
-			{ServiceName: "service2", Tag: "tag2"}: true,
-		}, nil
-	})
-	patches.ApplyPrivateMethod(reg, "subscribe", func(tag, serviceName string) error { return nil })
-	patches.ApplyPrivateMethod(reg, "unsubscribe", func(serviceName string) error { return nil })
-	patches.ApplyPrivateMethod(reg, "removeService", func(key consulService) {})
+	config := &consul.Config{
+		ServerUrl: "::::::::::::",
+	}
 
 	err := reg.Start(config)
-	assert.Nil(t, err)
-
+	assert.Error(t, err)
 	err = reg.Stop()
 	assert.Nil(t, err)
-
-	patches.Reset()
 
 	reg = &Consul{
 		logger: log.NewLogger(&log.RegistryLoggerOptions{
@@ -96,15 +85,25 @@ func TestStart(t *testing.T) {
 		subscriptions:       make(map[string]*watch.Plan),
 		done:                make(chan struct{}),
 		lock:                sync.RWMutex{},
+		store:               registry.FakeServiceEntryStore(),
 	}
 
-	config = &consul.Config{
-		ServerUrl: "::::::::::::",
-	}
+	config = &consul.Config{}
+
+	patches := gomonkey.ApplyPrivateMethod(reg, "fetchAllServices", func(_ *Consul, client *Client) (map[consulService]bool, error) {
+		return map[consulService]bool{
+			{ServiceName: "service1", Tag: "tag1"}: true,
+			{ServiceName: "service2", Tag: "tag2"}: true,
+		}, nil
+	})
+	patches.ApplyPrivateMethod(reg, "subscribe", func(serviceName string) error { return nil })
+	defer patches.Reset()
 
 	err = reg.Start(config)
-	assert.Error(t, err)
-	close(reg.done)
+	assert.Nil(t, err)
+
+	err = reg.Stop()
+	assert.Nil(t, err)
 }
 
 func TestRefresh(t *testing.T) {
@@ -129,7 +128,7 @@ func TestRefresh(t *testing.T) {
 		"service2": {"tag1"},
 	}
 
-	patches := gomonkey.ApplyPrivateMethod(reflect.TypeOf(reg), "fetchAllServices", func(_ *Consul, client *Client) (map[consulService]bool, error) {
+	patches := gomonkey.ApplyPrivateMethod(reg, "fetchAllServices", func(_ *Consul, client *Client) (map[consulService]bool, error) {
 		return map[consulService]bool{
 			{ServiceName: "service1", Tag: "tag1"}: true,
 			{ServiceName: "service2", Tag: "tag2"}: true,
@@ -180,7 +179,7 @@ func TestFetchAllServices(t *testing.T) {
 			Token:         "token",
 		}
 
-		patches := gomonkey.ApplyMethod(reflect.TypeOf(client.consulCatalog), "Services", func(_ *api.Catalog, q *api.QueryOptions) (map[string][]string, *api.QueryMeta, error) {
+		patches := gomonkey.ApplyMethod(client.consulCatalog, "Services", func(_ *api.Catalog, q *api.QueryOptions) (map[string][]string, *api.QueryMeta, error) {
 			return map[string][]string{
 				"service1": {"tag1", "tag2"},
 				"service2": {"tag3"},
@@ -209,7 +208,7 @@ func TestFetchAllServices(t *testing.T) {
 			Token:         "token",
 		}
 
-		patches := gomonkey.ApplyMethod(reflect.TypeOf(client.consulCatalog), "Services", func(_ *api.Catalog, q *api.QueryOptions) (map[string][]string, *api.QueryMeta, error) {
+		patches := gomonkey.ApplyMethod(client.consulCatalog, "Services", func(_ *api.Catalog, q *api.QueryOptions) (map[string][]string, *api.QueryMeta, error) {
 			return nil, nil, errors.New("mock error")
 		})
 		defer patches.Reset()
@@ -308,29 +307,15 @@ func TestGetServiceEntryKey(t *testing.T) {
 	}
 }
 
-type fakeServiceEntryStore struct {
-}
-
-func (f *fakeServiceEntryStore) Delete(service string) {
-}
-
-func (f *fakeServiceEntryStore) Update(service string, se *registry.ServiceEntryWrapper) {
-}
-
 func TestGetSubscribeCallback(t *testing.T) {
 	reg := &Consul{
-		store:   &fakeServiceEntryStore{},
+		store:   registry.FakeServiceEntryStore(),
 		stopped: atomic.Bool{},
+		client: &Client{
+			NameSpace:  "default",
+			DataCenter: "default-dc",
+		},
 	}
-
-	patch := gomonkey.ApplyPrivateMethod(reflect.TypeOf(reg), "getServiceEntryKey", func(_ *Consul, serviceName string) string {
-		return "test.default.default-dc.earth.consul"
-	})
-	defer patch.Reset()
-
-	patch.ApplyPrivateMethod(reflect.TypeOf(reg), "generateServiceEntry", func(_ *Consul, host string, services []*api.ServiceEntry) *registry.ServiceEntryWrapper {
-		return &registry.ServiceEntryWrapper{}
-	})
 
 	callback := reg.getSubscribeCallback("", "test-service")
 
@@ -347,7 +332,7 @@ func TestReload(t *testing.T) {
 		logger: log.NewLogger(&log.RegistryLoggerOptions{
 			Name: "test",
 		}),
-		store: &fakeServiceEntryStore{},
+		store: registry.FakeServiceEntryStore(),
 		lock:  sync.RWMutex{},
 	}
 
@@ -360,17 +345,17 @@ func TestReload(t *testing.T) {
 	})
 
 	service := consulService{"test-service", "new-datacenter"}
-	patches.ApplyPrivateMethod(reflect.TypeOf(reg), "fetchAllServices", func(client *Client) (map[consulService]bool, error) {
+	patches.ApplyPrivateMethod(reg, "fetchAllServices", func(client *Client) (map[consulService]bool, error) {
 		return map[consulService]bool{
 			service: true,
 		}, nil
 	})
 
-	patches.ApplyPrivateMethod(reflect.TypeOf(reg), "subscribe", func(_ *Consul, serviceName string) error {
+	patches.ApplyPrivateMethod(reg, "subscribe", func(_ *Consul, serviceName string) error {
 		return nil
 	})
 
-	patches.ApplyPrivateMethod(reflect.TypeOf(reg), "unsubscribe", func(_ *Consul, serviceName string) error {
+	patches.ApplyPrivateMethod(reg, "unsubscribe", func(_ *Consul, serviceName string) error {
 		return nil
 	})
 	defer patches.Reset()
@@ -395,7 +380,7 @@ func TestSubscribe(t *testing.T) {
 		logger: log.NewLogger(&log.RegistryLoggerOptions{
 			Name: "test",
 		}),
-		store: &fakeServiceEntryStore{},
+		store: registry.FakeServiceEntryStore(),
 		lock:  sync.RWMutex{},
 	}
 
