@@ -1,0 +1,75 @@
+metadata:
+  creationTimestamp: null
+  labels:
+    htnn.mosn.io/created-by: DynamicConfig
+  name: htnn-dynamic-config
+  namespace: ns
+spec:
+  configPatches:
+  - applyTo: EXTENSION_CONFIG
+    patch:
+      operation: ADD
+      value:
+        name: htnn-DynamicConfig-cb_name
+        typed_config:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.Config
+          library_id: dc
+          library_path: /etc/libgolang.so
+          plugin_config:
+            '@type': type.googleapis.com/xds.type.v3.TypedStruct
+            value:
+              config:
+                key: value
+              name: cb_name
+          plugin_name: dc
+  - applyTo: EXTENSION_CONFIG
+    patch:
+      operation: ADD
+      value:
+        name: htnn-DynamicConfig-cb_name2
+        typed_config:
+          '@type': type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.Config
+          library_id: dc
+          library_path: /etc/libgolang.so
+          plugin_config:
+            '@type': type.googleapis.com/xds.type.v3.TypedStruct
+            value:
+              config:
+                key2: value
+              name: cb_name2
+          plugin_name: dc
+  - applyTo: LISTENER
+    patch:
+      operation: ADD
+      value:
+        filter_chains:
+        - filters:
+          - name: envoy.filters.network.http_connection_manager
+            typed_config:
+              '@type': type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager
+              http_filters:
+              - config_discovery:
+                  config_source:
+                    ads: {}
+                  type_urls:
+                  - type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.Config
+                name: htnn-DynamicConfig-cb_name
+              - config_discovery:
+                  config_source:
+                    ads: {}
+                  type_urls:
+                  - type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.Config
+                name: htnn-DynamicConfig-cb_name2
+              - name: envoy.filters.http.router
+                typed_config:
+                  '@type': type.googleapis.com/envoy.extensions.filters.http.router.v3.Router
+              route_config:
+                name: htnn_dynamic_config
+                virtual_hosts:
+                - domains:
+                  - '*'
+                  name: htnn_dynamic_config
+              stat_prefix: htnn_dynamic_config
+        internal_listener: {}
+        name: htnn_dynamic_config
+status: {}

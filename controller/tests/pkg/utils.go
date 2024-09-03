@@ -60,6 +60,8 @@ func MapToObj(in map[string]interface{}) client.Object {
 			out = &mosniov1.Consumer{}
 		case "ServiceRegistry":
 			out = &mosniov1.ServiceRegistry{}
+		case "DynamicConfig":
+			out = &mosniov1.DynamicConfig{}
 		}
 	}
 	if out == nil {

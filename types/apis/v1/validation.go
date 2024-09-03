@@ -343,3 +343,8 @@ func ValidateServiceRegistry(sr *ServiceRegistry) error {
 	_, err := registry.ParseConfig(reg, sr.Spec.Config.Raw)
 	return err
 }
+
+func ValidateDynamicConfig(c *DynamicConfig) error {
+	// FIXME: implement this function
+	return nil
+}

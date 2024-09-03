@@ -1,0 +1,9 @@
+- apiVersion: htnn.mosn.io/v1
+  kind: DynamicConfig
+  metadata:
+    name: test
+    namespace: default
+  spec:
+    type: cb_name
+    config:
+      key: value

@@ -15,6 +15,7 @@
 package istio
 
 import (
+	"encoding/json"
 	"fmt"
 	"sort"
 
@@ -29,6 +30,7 @@ import (
 	"mosn.io/htnn/controller/internal/model"
 	"mosn.io/htnn/controller/pkg/component"
 	"mosn.io/htnn/controller/pkg/constant"
+	mosniov1 "mosn.io/htnn/types/apis/v1"
 )
 
 func MustNewStruct(fields map[string]interface{}) *structpb.Struct {
@@ -41,8 +43,9 @@ func MustNewStruct(fields map[string]interface{}) *structpb.Struct {
 }
 
 const (
-	DefaultHTTPFilter = "htnn-http-filter"
-	ECDSConsumerName  = "htnn-consumer"
+	DefaultHTTPFilter            = "htnn-http-filter"
+	ECDSConsumerName             = "htnn-consumer"
+	DynamicConfigEnvoyFilterName = "htnn-dynamic-config"
 )
 
 type configWrapper struct {
@@ -464,4 +467,120 @@ func GenerateConsumers(consumers map[string]interface{}) *istiov1a3.EnvoyFilter 
 			},
 		},
 	}
+}
+
+func GenerateDynamicConfigs(namespacedDynamicConfigs map[string]map[string]*mosniov1.DynamicConfig) map[component.EnvoyFilterKey]*istiov1a3.EnvoyFilter {
+	efs := map[component.EnvoyFilterKey]*istiov1a3.EnvoyFilter{}
+	for ns, dynamicConfigs := range namespacedDynamicConfigs {
+		ef := &istiov1a3.EnvoyFilter{
+			ObjectMeta: metav1.ObjectMeta{
+				Namespace: ns,
+				Name:      DynamicConfigEnvoyFilterName,
+				Labels: map[string]string{
+					constant.LabelCreatedBy: "DynamicConfig",
+				},
+			},
+			Spec: istioapi.EnvoyFilter{
+				ConfigPatches: []*istioapi.EnvoyFilter_EnvoyConfigObjectPatch{},
+			},
+		}
+		// Each DynamicConfig is smaller than 1.5MB, which is the limit applied by the k8s API server (the value may be different by configured).
+		// In prod, we generate the EnvoyFilter inside the istio, so the size of EnvoyFilter doesn't matter.
+
+		configs := make([]*mosniov1.DynamicConfig, 0, len(dynamicConfigs))
+		for _, dynamicConfig := range dynamicConfigs {
+			configs = append(configs, dynamicConfig)
+		}
+		sort.Slice(configs, func(i, j int) bool {
+			return configs[i].Spec.Type < configs[j].Spec.Type
+		})
+
+		httpFilters := []interface{}{}
+		for _, cfg := range configs {
+			var dispatchedConfig interface{}
+			_ = json.Unmarshal(cfg.Spec.Config.Raw, &dispatchedConfig)
+
+			ef.Spec.ConfigPatches = append(ef.Spec.ConfigPatches, &istioapi.EnvoyFilter_EnvoyConfigObjectPatch{
+				ApplyTo: istioapi.EnvoyFilter_EXTENSION_CONFIG,
+				Patch: &istioapi.EnvoyFilter_Patch{
+					Operation: istioapi.EnvoyFilter_Patch_ADD,
+					Value: MustNewStruct(map[string]interface{}{
+						"name": fmt.Sprintf("htnn-DynamicConfig-%s", cfg.Spec.Type),
+						"typed_config": map[string]interface{}{
+							"@type":        "type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.Config",
+							"library_id":   "dc",
+							"library_path": ctrlcfg.GoSoPath(),
+							"plugin_name":  "dc",
+							"plugin_config": map[string]interface{}{
+								"@type": "type.googleapis.com/xds.type.v3.TypedStruct",
+								"value": map[string]interface{}{
+									"name":   cfg.Spec.Type,
+									"config": dispatchedConfig,
+								},
+							},
+						},
+					}),
+				},
+			})
+			httpFilters = append(httpFilters, map[string]interface{}{
+				"name": fmt.Sprintf("htnn-DynamicConfig-%s", cfg.Spec.Type),
+				"config_discovery": map[string]interface{}{
+					"config_source": map[string]interface{}{
+						"ads": map[string]interface{}{},
+					},
+					"type_urls": []interface{}{
+						"type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.Config",
+					},
+				},
+			})
+		}
+
+		httpFilters = append(httpFilters, map[string]interface{}{
+			"name": "envoy.filters.http.router",
+			"typed_config": map[string]interface{}{
+				"@type": "type.googleapis.com/envoy.extensions.filters.http.router.v3.Router",
+			},
+		})
+		listener := &istioapi.EnvoyFilter_EnvoyConfigObjectPatch{
+			ApplyTo: istioapi.EnvoyFilter_LISTENER,
+			Patch: &istioapi.EnvoyFilter_Patch{
+				Operation: istioapi.EnvoyFilter_Patch_ADD,
+				Value: MustNewStruct(map[string]interface{}{
+					"name":              "htnn_dynamic_config",
+					"internal_listener": map[string]interface{}{},
+					"filter_chains": []interface{}{
+						map[string]interface{}{
+							"filters": []interface{}{
+								map[string]interface{}{
+									"name": "envoy.filters.network.http_connection_manager",
+									"typed_config": map[string]interface{}{
+										"@type":        "type.googleapis.com/envoy.extensions.filters.network.http_connection_manager.v3.HttpConnectionManager",
+										"stat_prefix":  "htnn_dynamic_config",
+										"http_filters": httpFilters,
+										"route_config": map[string]interface{}{
+											"name": "htnn_dynamic_config",
+											"virtual_hosts": []interface{}{
+												map[string]interface{}{
+													"name":    "htnn_dynamic_config",
+													"domains": []interface{}{"*"},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				),
+			},
+		}
+		ef.Spec.ConfigPatches = append(ef.Spec.ConfigPatches, listener)
+		efs[component.EnvoyFilterKey{
+			Namespace: ns,
+			Name:      ef.Name,
+		}] = ef
+	}
+
+	return efs
 }

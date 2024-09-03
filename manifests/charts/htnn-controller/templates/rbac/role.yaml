@@ -33,6 +33,32 @@ rules:
 - apiGroups:
   - htnn.mosn.io
   resources:
+  - dynamicconfigs
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - htnn.mosn.io
+  resources:
+  - dynamicconfigs/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - htnn.mosn.io
+  resources:
+  - dynamicconfigs/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - htnn.mosn.io
+  resources:
   - filterpolicies
   verbs:
   - create

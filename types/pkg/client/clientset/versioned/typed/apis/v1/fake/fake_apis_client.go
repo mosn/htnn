@@ -33,6 +33,10 @@ func (c *FakeApisV1) Consumers(namespace string) v1.ConsumerInterface {
 	return &FakeConsumers{c, namespace}
 }
 
+func (c *FakeApisV1) DynamicConfigs(namespace string) v1.DynamicConfigInterface {
+	return &FakeDynamicConfigs{c, namespace}
+}
+
 func (c *FakeApisV1) FilterPolicies(namespace string) v1.FilterPolicyInterface {
 	return &FakeFilterPolicies{c, namespace}
 }
