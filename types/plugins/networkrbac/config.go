@@ -75,22 +75,22 @@ func (conf *CustomConfig) Validate() error {
 	}
 
 	m := conf.RBAC.GetMatcher().GetMatcherTree()
-	typedURL := m.GetInput().GetTypedConfig().GetTypeUrl()
+	typeURL := m.GetInput().GetTypedConfig().GetTypeUrl()
 	found := false
 	for _, allowList := range matchingNetworkInputs {
-		if typedURL == allowList {
+		if typeURL == allowList {
 			found = true
 			break
 		}
 	}
 	if !found {
-		return fmt.Errorf("matcher.matcherTree.input.typedConfig.typeUrl must be one of %v, got %s", matchingNetworkInputs, typedURL)
+		return fmt.Errorf("matcher.matcherTree.input.typedConfig.typeUrl must be one of %v, got %s", matchingNetworkInputs, typeURL)
 	}
 
 	if m.GetCustomMatch().GetTypedConfig() != nil {
-		typedURL = m.GetCustomMatch().GetTypedConfig().GetTypeUrl()
-		if typedURL != "type.googleapis.com/xds.type.matcher.v3.IPMatcher" {
-			return fmt.Errorf("matcher.matcherTree.customMatch.typedConfig.typeUrl must be type.googleapis.com/xds.type.matcher.v3.IPMatcher, got %s", typedURL)
+		typeURL = m.GetCustomMatch().GetTypedConfig().GetTypeUrl()
+		if typeURL != "type.googleapis.com/xds.type.matcher.v3.IPMatcher" {
+			return fmt.Errorf("matcher.matcherTree.customMatch.typedConfig.typeUrl must be type.googleapis.com/xds.type.matcher.v3.IPMatcher, got %s", typeURL)
 		}
 		v := m.GetCustomMatch().GetTypedConfig().GetValue()
 		matcher := &matcher.IPMatcher{}
