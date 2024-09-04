@@ -94,7 +94,7 @@ func (r *ConsumerReconciler) consumersToState(ctx context.Context,
 		if consumer.IsSpecChanged() {
 			err := mosniov1.ValidateConsumer(consumer)
 			if err != nil {
-				log.Errorf("invalid Consumer, err: %v, name: %s, namespace: %s", consumer.Name, consumer.Namespace)
+				log.Errorf("invalid Consumer, err: %v, name: %s, namespace: %s", err, consumer.Name, consumer.Namespace)
 				consumer.SetAccepted(mosniov1.ReasonInvalid, err.Error())
 				continue
 			}
