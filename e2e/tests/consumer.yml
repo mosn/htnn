@@ -35,8 +35,9 @@ spec:
 apiVersion: htnn.mosn.io/v1
 kind: Consumer
 metadata:
-  name: morty
+  name: summer
 spec:
+  name: morty # the name specific in the spec is prior to the metadata name
   auth:
     keyAuth:
       config:

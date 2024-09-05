@@ -62,7 +62,7 @@ func init() {
 
 			c := suite.K8sClient()
 			ctx := context.Background()
-			nsName := types.NamespacedName{Name: "morty", Namespace: k8s.DefaultNamespace}
+			nsName := types.NamespacedName{Name: "summer", Namespace: k8s.DefaultNamespace}
 			var consumer mosniov1.Consumer
 			err = c.Get(ctx, nsName, &consumer)
 			require.NoError(t, err)
