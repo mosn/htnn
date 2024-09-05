@@ -15,7 +15,7 @@ HTNN (Hyper Trust-Native Network) is Ant Group's internally developed cloud-nati
 
 ## Documentation
 
-* [Introduction](https://github.com/mosn/htnn/blob/main/site/content/zh-hans/docs/getting-started/introduction.md)
+* [Introduction](https://github.com/mosn/htnn/blob/main/site/content/en/docs/getting-started/introduction.md)
 * [Quick Start](https://github.com/mosn/htnn/blob/main/site/content/en/docs/getting-started/quick_start.md)
 * [Get Involved](https://github.com/mosn/htnn/blob/main/site/content/en/docs/developer-guide/get_involved.md)
 
