@@ -46,6 +46,7 @@ func TestDemo(t *testing.T) {
 			}),
 			expect: func(t *testing.T, resp *http.Response) {
 				assert.Equal(t, "hello,", resp.Header.Get("Echo-Tom"), resp)
+				assert.Equal(t, "value", resp.Header.Get("DemoKey"), resp)
 			},
 		},
 		{

@@ -24,6 +24,7 @@ import (
 	gwapiv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gwapiv1a2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
 
+	"mosn.io/htnn/api/pkg/dynamicconfig"
 	"mosn.io/htnn/api/pkg/plugins"
 	"mosn.io/htnn/types/pkg/proto"
 	"mosn.io/htnn/types/pkg/registry"
@@ -345,6 +346,20 @@ func ValidateServiceRegistry(sr *ServiceRegistry) error {
 }
 
 func ValidateDynamicConfig(c *DynamicConfig) error {
-	// FIXME: implement this function
+	name := c.Spec.Type
+	p := dynamicconfig.LoadDynamicConfigProvider(name)
+	if p == nil {
+		return fmt.Errorf("unknown dynamic config type: %s", name)
+	}
+
+	data := c.Spec.Config.Raw
+	conf := p.Config()
+	if err := proto.UnmarshalJSON(data, conf); err != nil {
+		return fmt.Errorf("failed to unmarshal for dynamic config %s: %w", name, err)
+	}
+
+	if err := conf.Validate(); err != nil {
+		return fmt.Errorf("invalid config for dynamic config %s: %w", name, err)
+	}
 	return nil
 }

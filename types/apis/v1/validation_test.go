@@ -814,3 +814,58 @@ func TestValidateServiceRegistry(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateDynamicConfig(t *testing.T) {
+	tests := []struct {
+		name   string
+		config *DynamicConfig
+		err    string
+	}{
+		{
+			name: "ok",
+			config: &DynamicConfig{
+				Spec: DynamicConfigSpec{
+					Type: "demo",
+					Config: runtime.RawExtension{
+						Raw: []byte(`{"key":"value", "unknown_fields":"should be ignored"}`),
+					},
+				},
+			},
+		},
+		{
+			name: "unknown",
+			config: &DynamicConfig{
+				Spec: DynamicConfigSpec{
+					Type: "unknown",
+					Config: runtime.RawExtension{
+						Raw: []byte(`{"serverUrl":"http://nacos.io"}`),
+					},
+				},
+			},
+			err: "unknown dynamic config type: unknown",
+		},
+		{
+			name: "bad configuration",
+			config: &DynamicConfig{
+				Spec: DynamicConfigSpec{
+					Type: "demo",
+					Config: runtime.RawExtension{
+						Raw: []byte(`{}`),
+					},
+				},
+			},
+			err: "value length must be at least 1 runes",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateDynamicConfig(tt.config)
+			if tt.err == "" {
+				assert.Nil(t, err)
+			} else {
+				assert.ErrorContains(t, err, tt.err)
+			}
+		})
+	}
+}

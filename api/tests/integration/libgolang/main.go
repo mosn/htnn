@@ -20,6 +20,7 @@ import (
 	"github.com/envoyproxy/envoy/contrib/golang/filters/http/source/go/pkg/http"
 
 	"mosn.io/htnn/api/pkg/consumer"
+	"mosn.io/htnn/api/pkg/dynamicconfig"
 	"mosn.io/htnn/api/pkg/filtermanager"
 	_ "mosn.io/htnn/api/plugins/tests/integration/dataplane" // for utility plugins provided in the test framework
 	_ "mosn.io/htnn/api/tests/integration"                   // for plugins used in the test
@@ -28,6 +29,7 @@ import (
 func init() {
 	http.RegisterHttpFilterConfigFactoryAndParser("fm", filtermanager.FilterManagerFactory, &filtermanager.FilterManagerConfigParser{})
 	http.RegisterHttpFilterConfigFactoryAndParser("cm", consumer.ConsumerManagerFactory, &consumer.ConsumerManagerConfigParser{})
+	http.RegisterHttpFilterConfigFactoryAndParser("dc", dynamicconfig.DynamicConfigFactory, &dynamicconfig.DynamicConfigParser{})
 }
 
 func main() {}

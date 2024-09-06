@@ -4,6 +4,6 @@
     name: test
     namespace: default
   spec:
-    type: cb_name
+    type: demo
     config:
       key: value

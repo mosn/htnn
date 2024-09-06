@@ -205,6 +205,11 @@ func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 	content, _ := os.ReadFile(cfgFile.Name())
 	digest := md5.Sum(content)
 	if _, ok := validationCache[digest]; !ok {
+		// Workaround for https://github.com/envoyproxy/envoy/issues/35961
+		// TODO: drop this once we upgrade to Envoy 1.30+
+		cfgFile, _ := os.Create(cfgFile.Name())
+		opt.Bootstrap.WriteToForValidation(cfgFile)
+
 		validateCmd := cmdline + " " + envoyValidateCmd
 		cmds := strings.Fields(validateCmd)
 		logger.Info("run validate cmd", "cmdline", validateCmd)
@@ -215,6 +220,9 @@ func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 		}
 
 		validationCache[digest] = struct{}{}
+
+		cfgFile, _ = os.Create(cfgFile.Name())
+		cfgFile.Write(content)
 	}
 
 	cmdline = cmdline + " " + envoyCmd

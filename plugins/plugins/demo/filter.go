@@ -18,6 +18,7 @@ import (
 	"fmt"
 
 	"mosn.io/htnn/api/pkg/filtermanager/api"
+	"mosn.io/htnn/plugins/dynamicconfigs/demo"
 )
 
 // factory returns a per-request Filter which has configuration bound to it.
@@ -50,4 +51,12 @@ func (f *filter) hello() string {
 	name := f.callbacks.StreamInfo().FilterState().GetString("guest_name")
 	api.LogInfo("hello")
 	return fmt.Sprintf("hello, %s", name)
+}
+
+func (f *filter) EncodeHeaders(headers api.ResponseHeaderMap, endStream bool) api.ResultAction {
+	k := demo.GetDemoKey()
+	if k != "" {
+		headers.Add("DemoKey", k)
+	}
+	return api.Continue
 }

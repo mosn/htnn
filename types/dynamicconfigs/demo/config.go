@@ -12,23 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build so
-
-package main
+package demo
 
 import (
-	"github.com/envoyproxy/envoy/contrib/golang/filters/http/source/go/pkg/http"
-
-	"mosn.io/htnn/api/pkg/consumer"
 	"mosn.io/htnn/api/pkg/dynamicconfig"
-	"mosn.io/htnn/api/pkg/filtermanager"
-	_ "mosn.io/htnn/plugins"
 )
 
 func init() {
-	http.RegisterHttpFilterConfigFactoryAndParser("fm", filtermanager.FilterManagerFactory, &filtermanager.FilterManagerConfigParser{})
-	http.RegisterHttpFilterConfigFactoryAndParser("cm", consumer.ConsumerManagerFactory, &consumer.ConsumerManagerConfigParser{})
-	http.RegisterHttpFilterConfigFactoryAndParser("dc", dynamicconfig.DynamicConfigFactory, &dynamicconfig.DynamicConfigParser{})
+	// Register the definition of DynamicConfig demo
+	dynamicconfig.RegisterDynamicConfigProvider("demo", &Provider{})
 }
 
-func main() {}
+type Provider struct {
+}
+
+// Config provides the schema of DynamicConfig
+func (p *Provider) Config() dynamicconfig.DynamicConfig {
+	return &Config{}
+}
