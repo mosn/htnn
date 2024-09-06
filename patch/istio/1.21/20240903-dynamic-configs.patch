@@ -1,0 +1,16 @@
+diff --git a/pilot/pkg/config/htnn/component.go b/pilot/pkg/config/htnn/component.go
+index 57a257c..5362f53 100644
+--- a/pilot/pkg/config/htnn/component.go
++++ b/pilot/pkg/config/htnn/component.go
+@@ -125,6 +125,11 @@ func (o *output) FromServiceRegistry(ctx context.Context, serviceEntries map[str
+ 	o.ctrl.SetServiceEntries(entries)
+ }
+ 
++func (o *output) FromDynamicConfig(_ context.Context, generatedEnvoyFilters map[component.EnvoyFilterKey]*istiov1a3.EnvoyFilter) error {
++	// FIXME: implement this
++	return nil
++}
++
+ type resourceManager struct {
+ 	cache        model.ConfigStore
+ 	statusWriter StatusWriter

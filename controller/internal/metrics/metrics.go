@@ -24,6 +24,7 @@ const (
 	FP                      = "htnn_filterpolicy"
 	Consumer                = "htnn_consumer"
 	SR                      = "htnn_service_registry"
+	DC                      = "htnn_dynamic_config"
 	TranslateDurationSuffix = "translate_duration_seconds"
 	ReconcileDurationSuffix = "reconcile_duration_seconds"
 )
@@ -38,6 +39,7 @@ var (
 	FPReconcileDurationDistribution              component.Distribution = &voidMetric{}
 	ConsumerReconcileDurationDistribution        component.Distribution = &voidMetric{}
 	ServiceRegistryReconcileDurationDistribution component.Distribution = &voidMetric{}
+	DynamicConfigReconcileDurationDistribution   component.Distribution = &voidMetric{}
 )
 
 func InitMetrics(provider component.MetricProvider) {
@@ -59,6 +61,11 @@ func InitMetrics(provider component.MetricProvider) {
 	)
 	ServiceRegistryReconcileDurationDistribution = provider.NewDistribution(fmt.Sprintf("%s_%s", SR, ReconcileDurationSuffix),
 		"How long in seconds HTNN reconciles ServiceRegistry.",
+		// minimal: 100 microseconds
+		[]float64{1e-4, 1e-3, 0.01, 0.1, 1, 10},
+	)
+	DynamicConfigReconcileDurationDistribution = provider.NewDistribution(fmt.Sprintf("%s_%s", DC, ReconcileDurationSuffix),
+		"How long in seconds HTNN reconciles DynamicConfig.",
 		// minimal: 100 microseconds
 		[]float64{1e-4, 1e-3, 0.01, 0.1, 1, 10},
 	)

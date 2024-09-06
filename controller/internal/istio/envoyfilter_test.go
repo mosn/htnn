@@ -23,11 +23,14 @@ import (
 	local_ratelimit "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/local_ratelimit/v3"
 	"github.com/stretchr/testify/require"
 	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/yaml"
 
 	"mosn.io/htnn/api/pkg/filtermanager/api"
 	"mosn.io/htnn/api/pkg/plugins"
 	ctrlcfg "mosn.io/htnn/controller/internal/config"
+	"mosn.io/htnn/controller/pkg/component"
+	mosniov1 "mosn.io/htnn/types/apis/v1"
 )
 
 type basePlugin struct {
@@ -157,6 +160,41 @@ func TestGenerateConsumers(t *testing.T) {
 	d, _ := yaml.Marshal(out)
 	actual := string(d)
 	expFile := filepath.Join("testdata", "consumers.yml")
+	d, _ = os.ReadFile(expFile)
+	want := string(d)
+	require.Equal(t, want, actual)
+}
+
+func TestGenerateDynamicConfigs(t *testing.T) {
+	patch := gomonkey.ApplyFuncReturn(ctrlcfg.GoSoPath, "/etc/libgolang.so")
+	defer patch.Reset()
+
+	out := GenerateDynamicConfigs(map[string]map[string]*mosniov1.DynamicConfig{
+		"ns": {
+			"cb_name": {
+				Spec: mosniov1.DynamicConfigSpec{
+					Type: "cb_name",
+					Config: runtime.RawExtension{
+						Raw: []byte(`{"key": "value"}`),
+					},
+				},
+			},
+			"cb_name2": {
+				Spec: mosniov1.DynamicConfigSpec{
+					Type: "cb_name2",
+					Config: runtime.RawExtension{
+						Raw: []byte(`{"key2": "value"}`),
+					},
+				},
+			},
+		},
+	})
+	d, _ := yaml.Marshal(out[component.EnvoyFilterKey{
+		Namespace: "ns",
+		Name:      DynamicConfigEnvoyFilterName,
+	}])
+	actual := string(d)
+	expFile := filepath.Join("testdata", "dynamic_configs.yml")
 	d, _ = os.ReadFile(expFile)
 	want := string(d)
 	require.Equal(t, want, actual)

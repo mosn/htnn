@@ -34,5 +34,5 @@ func (m *metricProvider) NewDistribution(name string, description string, bucket
 func TestInitMetrics(t *testing.T) {
 	p := &metricProvider{}
 	InitMetrics(p)
-	assert.Equal(t, 4, p.distributions)
+	assert.Equal(t, 5, p.distributions)
 }

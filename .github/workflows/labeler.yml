@@ -14,5 +14,5 @@ jobs:
         uses: "pascalgn/size-label-action@v0.5.4"
         env:
           GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-          IGNORED: "**/*.pb.*\n*.sum\ntypes/pkg/client\n**/zz_generated.deepcopy.go"
+          IGNORED: "**/*.pb.*\n*.sum\ntypes/pkg/client/**\n**/zz_generated.deepcopy.go"
         # use same size labels as kubernetes: https://github.com/kubernetes/kubernetes/labels?q=size

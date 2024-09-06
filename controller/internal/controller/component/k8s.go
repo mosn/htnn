@@ -47,11 +47,23 @@ func NewK8sOutput(c client.Client) component.Output {
 }
 
 func (o *k8sOutput) FromFilterPolicy(ctx context.Context, generatedEnvoyFilters map[component.EnvoyFilterKey]*istiov1a3.EnvoyFilter) error {
+	return o.diffGeneratedEnvoyFilters(ctx, "FilterPolicy", generatedEnvoyFilters)
+}
+
+func (o *k8sOutput) FromConsumer(ctx context.Context, ef *istiov1a3.EnvoyFilter) error {
+	return o.diffGeneratedEnvoyFilter(ctx, "Consumer", ef)
+}
+
+func (o *k8sOutput) FromDynamicConfig(ctx context.Context, efs map[component.EnvoyFilterKey]*istiov1a3.EnvoyFilter) error {
+	return o.diffGeneratedEnvoyFilters(ctx, "DynamicConfig", efs)
+}
+
+func (o *k8sOutput) diffGeneratedEnvoyFilters(ctx context.Context, creator string, generatedEnvoyFilters map[component.EnvoyFilterKey]*istiov1a3.EnvoyFilter) error {
 	logger := o.logger
 
 	var envoyfilters istiov1a3.EnvoyFilterList
 	if err := o.List(ctx, &envoyfilters,
-		client.MatchingLabels{constant.LabelCreatedBy: "FilterPolicy"},
+		client.MatchingLabels{constant.LabelCreatedBy: creator},
 	); err != nil {
 		return fmt.Errorf("failed to list EnvoyFilter: %w", err)
 	}
@@ -101,12 +113,12 @@ func (o *k8sOutput) FromFilterPolicy(ctx context.Context, generatedEnvoyFilters 
 	return nil
 }
 
-func (o *k8sOutput) FromConsumer(ctx context.Context, ef *istiov1a3.EnvoyFilter) error {
+func (o *k8sOutput) diffGeneratedEnvoyFilter(ctx context.Context, creator string, ef *istiov1a3.EnvoyFilter) error {
 	logger := o.logger
 
 	nsName := types.NamespacedName{Name: ef.Name, Namespace: ef.Namespace}
 	var envoyfilters istiov1a3.EnvoyFilterList
-	if err := o.List(ctx, &envoyfilters, client.MatchingLabels{constant.LabelCreatedBy: "Consumer"}); err != nil {
+	if err := o.List(ctx, &envoyfilters, client.MatchingLabels{constant.LabelCreatedBy: creator}); err != nil {
 		return fmt.Errorf("failed to list EnvoyFilter: %w", err)
 	}
 

@@ -30,6 +30,7 @@ import (
 type ApisV1Interface interface {
 	RESTClient() rest.Interface
 	ConsumersGetter
+	DynamicConfigsGetter
 	FilterPoliciesGetter
 	HTTPFilterPoliciesGetter
 	ServiceRegistriesGetter
@@ -42,6 +43,10 @@ type ApisV1Client struct {
 
 func (c *ApisV1Client) Consumers(namespace string) ConsumerInterface {
 	return newConsumers(c, namespace)
+}
+
+func (c *ApisV1Client) DynamicConfigs(namespace string) DynamicConfigInterface {
+	return newDynamicConfigs(c, namespace)
 }
 
 func (c *ApisV1Client) FilterPolicies(namespace string) FilterPolicyInterface {

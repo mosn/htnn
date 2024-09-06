@@ -35,6 +35,7 @@ type Output interface {
 	// it assumes the write already succeed, and don't retry on error,
 	// so the output should handle the retry by themselves. That's why the error is not returned here.
 	FromServiceRegistry(ctx context.Context, serviceEntries map[string]*istioapi.ServiceEntry)
+	FromDynamicConfig(ctx context.Context, envoyFilters map[EnvoyFilterKey]*istiov1a3.EnvoyFilter) error
 }
 
 type ResourceManager interface {

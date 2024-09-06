@@ -13,3 +13,4 @@ This list documents each patch:
         * 20240510-fix-empty-ecds-with-delta-xds.patch: Backport https://github.com/istio/istio/commit/e91027cf0d5242e677a84e5f6f9dd1924d0175c5 to Istio 1.21. The bug occurred when delta xDS is enabled and using ECDS and pilot-agent.
         * 20240529-fix-routes-overwrite-when-merging-same-host-from-multi-virtualservices.patch: Backport https://github.com/istio/istio/commit/0cb5c33595cdfaea732178a4d70265ac0a762255 to Istio 1.21. The filename in the patch is renamed to match the file in Istio 1.21. The bug occurred sometimes when multiple virtualservices has the same domain.
         * 20240823-server-side-filter.patch: Add server-side filters to filter istio CRD.
+        * 20240903-dynamic-configs.patch: Add DynamicConfig CRD.
