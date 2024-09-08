@@ -16,5 +16,5 @@ package registries
 
 import (
 	_ "mosn.io/htnn/controller/registries/consul"
-	_ "mosn.io/htnn/controller/registries/nacos/client"
+	_ "mosn.io/htnn/controller/registries/nacos"
 )
