@@ -15,19 +15,14 @@
 package nacos
 
 import (
-	"errors"
 	"testing"
 
-	"github.com/agiledragon/gomonkey/v2"
-	"github.com/nacos-group/nacos-sdk-go/model"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/protobuf/proto"
 	istioapi "istio.io/api/networking/v1alpha3"
 
 	"mosn.io/htnn/controller/pkg/registry"
-	"mosn.io/htnn/controller/pkg/registry/log"
-	"mosn.io/htnn/types/registries/nacos"
+	"mosn.io/htnn/controller/registries/nacos/client"
 )
 
 func TestGenerateServiceEntry(t *testing.T) {
@@ -36,17 +31,17 @@ func TestGenerateServiceEntry(t *testing.T) {
 
 	type test struct {
 		name     string
-		services []model.SubscribeService
+		services []client.SubscribeService
 		port     *istioapi.ServicePort
 		endpoint *istioapi.WorkloadEntry
 	}
-	tests := []test{}
+	var tests []test
 	for input, proto := range registry.ProtocolMap {
 		s := string(proto)
 		tests = append(tests, test{
 			name: input,
-			services: []model.SubscribeService{
-				{Port: 80, Ip: "1.1.1.1", Metadata: map[string]string{
+			services: []client.SubscribeService{
+				{Port: 80, IP: "1.1.1.1", Metadata: map[string]string{
 					"protocol": input,
 				}},
 			},
@@ -72,46 +67,4 @@ func TestGenerateServiceEntry(t *testing.T) {
 			require.True(t, proto.Equal(se.ServiceEntry.Endpoints[0], tt.endpoint))
 		})
 	}
-}
-
-func TestUnsubscribeInReload(t *testing.T) {
-	prevClient := &nacosClient{}
-	reg := &Nacos{
-		logger: log.NewLogger(&log.RegistryLoggerOptions{
-			Name: "test",
-		}),
-		store:  registry.FakeServiceEntryStore(),
-		client: prevClient,
-		watchingServices: map[nacosService]bool{
-			{
-				GroupName:   "g",
-				ServiceName: "s",
-			}: true,
-		},
-	}
-
-	unsubscribed := false
-	patches := gomonkey.ApplyPrivateMethod(reg, "fetchAllServices", func(client *nacosClient) (map[nacosService]bool, error) {
-		return map[nacosService]bool{
-			{
-				GroupName:   "g",
-				ServiceName: "s",
-			}: true,
-		}, nil
-	})
-	patches.ApplyPrivateMethod(reg, "subscribe", func(groupName string, serviceName string) error { return nil })
-	patches.ApplyPrivateMethod(reg, "unsubscribe", func(groupName string, serviceName string) error {
-		unsubscribed = true
-		// use prev client to unsubscribe
-		assert.Equal(t, prevClient, reg.client)
-		// unsubscribe error should not affect the result
-		return errors.New("always error")
-	})
-	defer patches.Reset()
-
-	err := reg.Reload(&nacos.Config{
-		ServerUrl: "http://127.0.0.1:8848",
-	})
-	assert.Nil(t, err)
-	assert.True(t, unsubscribed)
 }

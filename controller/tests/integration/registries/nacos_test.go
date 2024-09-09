@@ -223,7 +223,7 @@ var _ = Describe("Nacos", func() {
 
 		// new
 		base := client.MergeFrom(currNacos.DeepCopy())
-		currNacos.Spec.Config.Raw = []byte(`{"serviceRefreshInterval":"1s", "serverUrl":"http://127.0.0.1:8849"}`)
+		currNacos.Spec.Config.Raw = []byte(`{"serviceRefreshInterval":"1s", "serverUrl":"http://127.0.0.1:8849", "version":"v1"}`)
 		Expect(k8sClient.Patch(ctx, currNacos, base)).Should(Succeed())
 		Eventually(func() bool {
 			entries = listServiceEntries()
@@ -238,7 +238,7 @@ var _ = Describe("Nacos", func() {
 
 		// ServiceEntry is removed only when the configuration changed
 		base = client.MergeFrom(currNacos.DeepCopy())
-		currNacos.Spec.Config.Raw = []byte(`{"serviceRefreshInterval":"2s", "serverUrl":"http://127.0.0.1:8849"}`)
+		currNacos.Spec.Config.Raw = []byte(`{"serviceRefreshInterval":"2s", "serverUrl":"http://127.0.0.1:8849", "version":"v1"}`)
 		Expect(k8sClient.Patch(ctx, currNacos, base)).Should(Succeed())
 		Eventually(func() bool {
 			entries = listServiceEntries()

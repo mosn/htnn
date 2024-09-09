@@ -772,7 +772,7 @@ func TestValidateServiceRegistry(t *testing.T) {
 				Spec: ServiceRegistrySpec{
 					Type: "nacos",
 					Config: runtime.RawExtension{
-						Raw: []byte(`{"serverUrl":"http://nacos.io", "unknown_fields":"should be ignored"}`),
+						Raw: []byte(`{"serverUrl":"http://nacos.io", "unknown_fields":"should be ignored", "version":"v1"}`),
 					},
 				},
 			},
@@ -795,7 +795,7 @@ func TestValidateServiceRegistry(t *testing.T) {
 				Spec: ServiceRegistrySpec{
 					Type: "nacos",
 					Config: runtime.RawExtension{
-						Raw: []byte(`{"serverUrl":""}`),
+						Raw: []byte(`{"serverUrl":"" ,"version":"v1"}`),
 					},
 				},
 			},

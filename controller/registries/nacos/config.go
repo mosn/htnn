@@ -19,26 +19,25 @@ package nacos
 
 import (
 	"fmt"
-	"net/url"
-	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
-	"github.com/nacos-group/nacos-sdk-go/clients"
-	"github.com/nacos-group/nacos-sdk-go/clients/naming_client"
-	"github.com/nacos-group/nacos-sdk-go/common/constant"
-	"github.com/nacos-group/nacos-sdk-go/model"
-	"github.com/nacos-group/nacos-sdk-go/vo"
-	"gopkg.in/natefinch/lumberjack.v2"
 	istioapi "istio.io/api/networking/v1alpha3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"mosn.io/htnn/controller/pkg/registry"
 	"mosn.io/htnn/controller/pkg/registry/log"
+	"mosn.io/htnn/controller/registries/nacos/client"
+	v1 "mosn.io/htnn/controller/registries/nacos/v1"
+	v2 "mosn.io/htnn/controller/registries/nacos/v2"
 	registrytype "mosn.io/htnn/types/pkg/registry"
 	"mosn.io/htnn/types/registries/nacos"
+)
+
+var (
+	RegistryType = "nacos"
 )
 
 func init() {
@@ -49,135 +48,56 @@ func init() {
 			}),
 			store:               store,
 			name:                om.Name,
-			softDeletedServices: map[nacosService]bool{},
+			softDeletedServices: map[client.NacosService]bool{},
 			done:                make(chan struct{}),
 		}
 		return reg, nil
 	})
 }
 
-const (
-	defaultFetchPageSize = 1000
-	defaultNacosPort     = 8848
-	defaultTimeoutMs     = 5 * 1000
-	defaultLogLevel      = "warn"
-	defaultNotLoadCache  = true
-	defaultLogMaxDays    = 1
-	defaultLogMaxBackups = 10
-	defaultLogMaxSizeMB  = 1
-
-	RegistryType = "nacos"
-)
-
-type nacosService struct {
-	GroupName   string
-	ServiceName string
-}
-
-type nacosClient struct {
-	Groups    []string
-	Namespace string
-
-	namingClient naming_client.INamingClient
-}
-
 type Nacos struct {
 	nacos.RegistryType
 	logger log.RegistryLogger
 
-	store  registry.ServiceEntryStore
-	name   string
-	client *nacosClient
+	store   registry.ServiceEntryStore
+	name    string
+	client  client.Client
+	version string
 
 	lock                sync.RWMutex
-	watchingServices    map[nacosService]bool
-	softDeletedServices map[nacosService]bool
+	watchingServices    map[client.NacosService]bool
+	softDeletedServices map[client.NacosService]bool
 
 	done    chan struct{}
 	stopped atomic.Bool
 }
 
-func (reg *Nacos) fetchAllServices(client *nacosClient) (map[nacosService]bool, error) {
-	fetchedServices := make(map[nacosService]bool)
-	for _, groupName := range client.Groups {
-		for page := 1; ; page++ {
-			// Nacos v1 doesn't provide a method to return all services in a call.
-			// We use a large page size to reduce the race but there is still chance
-			// that a service is missed. When the Nacos is starting or down (as discussed
-			// in https://github.com/alibaba/higress/discussions/769), there is also a chance
-			// that the ServiceEntry mismatches the service.
-			//
-			// Missing to add a new service will be solved by the next refresh.
-			// We also use soft-deletion to avoid the ServiceEntry mismatch. The ServiceEntry
-			// will be deleted only when the registry's configuration changes or an empty host list
-			// is returned from the subscription.
-			ss, err := client.namingClient.GetAllServicesInfo(vo.GetAllServiceInfoParam{
-				GroupName: groupName,
-				PageNo:    uint32(page),
-				PageSize:  defaultFetchPageSize,
-				NameSpace: client.Namespace,
-			})
-			if err != nil {
-				return nil, err
-			}
+func (reg *Nacos) createClient(config *nacos.Config) (client.Client, error) {
+	var cli client.Client
+	var err error
 
-			for _, serviceName := range ss.Doms {
-				s := nacosService{
-					GroupName:   groupName,
-					ServiceName: serviceName,
-				}
-				fetchedServices[s] = true
-			}
-			if len(ss.Doms) < defaultFetchPageSize {
-				break
-			}
-		}
-	}
-	return fetchedServices, nil
-}
-
-func (reg *Nacos) subscribe(groupName string, serviceName string) error {
-	reg.logger.Infof("subscribe serviceName: %s, groupName: %s", serviceName, groupName)
-
-	err := reg.client.namingClient.Subscribe(&vo.SubscribeParam{
-		ServiceName:       serviceName,
-		GroupName:         groupName,
-		SubscribeCallback: reg.getSubscribeCallback(groupName, serviceName),
-	})
-
-	if err != nil {
-		return fmt.Errorf("subscribe service error:%v, groupName:%s, serviceName:%s", err, groupName, serviceName)
+	switch reg.version {
+	case "v1":
+		cli, err = v1.NewClient(config)
+	case "v2":
+		cli, err = v2.NewClient(config)
+	default:
+		err = fmt.Errorf("unsupported version: %s", config.Version)
 	}
 
-	return nil
-}
-
-func (reg *Nacos) unsubscribe(groupName string, serviceName string) error {
-	reg.logger.Infof("unsubscribe serviceName: %s, groupName: %s", serviceName, groupName)
-
-	err := reg.client.namingClient.Unsubscribe(&vo.SubscribeParam{
-		ServiceName:       serviceName,
-		GroupName:         groupName,
-		SubscribeCallback: reg.getSubscribeCallback(groupName, serviceName),
-	})
-
-	if err != nil {
-		return fmt.Errorf("unsubscribe service error:%v, groupName:%s, serviceName:%s", err, groupName, serviceName)
-	}
-
-	return nil
+	return cli, err
 }
 
 func (reg *Nacos) getServiceEntryKey(groupName string, serviceName string) string {
-	suffix := strings.Join([]string{groupName, reg.client.Namespace, reg.name, RegistryType}, ".")
+	suffix := strings.Join([]string{groupName, reg.client.GetNamespace(), reg.name, RegistryType}, ".")
 	suffix = strings.ReplaceAll(suffix, "_", "-")
 	host := strings.Join([]string{serviceName, suffix}, ".")
 	return strings.ToLower(host)
 }
 
-func (reg *Nacos) getSubscribeCallback(groupName string, serviceName string) func(services []model.SubscribeService, err error) {
+func (reg *Nacos) getSubscribeCallback(groupName string, serviceName string) func(services []client.SubscribeService, err error) {
 	host := reg.getServiceEntryKey(groupName, serviceName)
-	return func(services []model.SubscribeService, err error) {
+	return func(services []client.SubscribeService, err error) {
 		if err != nil {
 			if !strings.Contains(err.Error(), "hosts is empty") {
 				reg.logger.Errorf("callback failed, err: %v, host: %s", err, host)
@@ -203,7 +123,7 @@ func (reg *Nacos) getSubscribeCallback(groupName string, serviceName string) fun
 	}
 }
 
-func (reg *Nacos) generateServiceEntry(host string, services []model.SubscribeService) *registry.ServiceEntryWrapper {
+func (reg *Nacos) generateServiceEntry(host string, services []client.SubscribeService) *registry.ServiceEntryWrapper {
 	portList := make([]*istioapi.ServicePort, 0, 1)
 	endpoints := make([]*istioapi.WorkloadEntry, 0, len(services))
 
@@ -227,7 +147,7 @@ func (reg *Nacos) generateServiceEntry(host string, services []model.SubscribeSe
 		}
 
 		endpoint := istioapi.WorkloadEntry{
-			Address: service.Ip,
+			Address: service.IP,
 			Ports:   map[string]uint32{port.Protocol: port.Number},
 			Labels:  service.Metadata,
 		}
@@ -246,74 +166,25 @@ func (reg *Nacos) generateServiceEntry(host string, services []model.SubscribeSe
 	}
 }
 
-func (reg *Nacos) newClient(config *nacos.Config) (*nacosClient, error) {
-	uri, err := url.Parse(config.ServerUrl)
-	if err != nil {
-		return nil, fmt.Errorf("invalid server url: %s", config.ServerUrl)
-	}
-
-	domain := uri.Hostname()
-	p := uri.Port()
-	port := defaultNacosPort
-	if p != "" {
-		port, _ = strconv.Atoi(p)
-	}
-
-	cc := constant.NewClientConfig(
-		constant.WithTimeoutMs(defaultTimeoutMs),
-		constant.WithLogLevel(defaultLogLevel),
-		constant.WithNotLoadCacheAtStart(defaultNotLoadCache),
-		constant.WithLogRollingConfig(&lumberjack.Logger{
-			MaxSize:    defaultLogMaxSizeMB,
-			MaxAge:     defaultLogMaxDays,
-			MaxBackups: defaultLogMaxBackups,
-		}),
-		// To simplify the permissions, use the path under current work dir to store log & cache
-	)
-
-	sc := []constant.ServerConfig{
-		*constant.NewServerConfig(domain, uint64(port),
-			constant.WithScheme(uri.Scheme),
-		),
-	}
-
-	namingClient, err := clients.NewNamingClient(vo.NacosClientParam{
-		ClientConfig:  cc,
-		ServerConfigs: sc,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("can not create naming client, err: %v", err)
-	}
-
-	if config.Namespace == "" {
-		config.Namespace = "public"
-	}
-	if len(config.Groups) == 0 {
-		config.Groups = []string{"DEFAULT_GROUP"}
-	}
-	return &nacosClient{
-		Groups:       config.Groups,
-		Namespace:    config.Namespace,
-		namingClient: namingClient,
-	}, nil
-}
-
 func (reg *Nacos) Start(c registrytype.RegistryConfig) error {
 	config := c.(*nacos.Config)
 
-	client, err := reg.newClient(config)
+	reg.version = config.Version
+
+	cli, err := reg.createClient(config)
 	if err != nil {
 		return err
 	}
+	reg.client = cli
 
-	fetchedServices, err := reg.fetchAllServices(client)
+	fetchedServices, err := reg.client.FetchAllServices()
 	if err != nil {
 		return fmt.Errorf("fetch all services error: %v", err)
 	}
-	reg.client = client
 
 	for key := range fetchedServices {
-		err = reg.subscribe(key.GroupName, key.ServiceName)
+		callback := reg.getSubscribeCallback(key.GroupName, key.ServiceName)
+		err = reg.client.Subscribe(key.GroupName, key.ServiceName, callback)
 		if err != nil {
 			reg.logger.Errorf("failed to subscribe service, err: %v, service: %v", err, key)
 			// the service will be resubscribed after refresh interval
@@ -349,8 +220,9 @@ func (reg *Nacos) Start(c registrytype.RegistryConfig) error {
 	return nil
 }
 
-func (reg *Nacos) removeService(key nacosService) {
-	err := reg.unsubscribe(key.GroupName, key.ServiceName)
+func (reg *Nacos) removeService(key client.NacosService) {
+	callback := reg.getSubscribeCallback(key.GroupName, key.ServiceName)
+	err := reg.client.Unsubscribe(key.GroupName, key.ServiceName, callback)
 	if err != nil {
 		reg.logger.Errorf("failed to unsubscribe service, err: %v, service: %v", err, key)
 		// the upcoming event will be thrown away
@@ -362,14 +234,15 @@ func (reg *Nacos) refresh() error {
 	reg.lock.Lock()
 	defer reg.lock.Unlock()
 
-	fetchedServices, err := reg.fetchAllServices(reg.client)
+	fetchedServices, err := reg.client.FetchAllServices()
 	if err != nil {
 		return fmt.Errorf("fetch all services error: %v", err)
 	}
 
 	for key := range fetchedServices {
 		if _, ok := reg.watchingServices[key]; !ok {
-			err = reg.subscribe(key.GroupName, key.ServiceName)
+			callback := reg.getSubscribeCallback(key.GroupName, key.ServiceName)
+			err = reg.client.Subscribe(key.GroupName, key.ServiceName, callback)
 			if err != nil {
 				reg.logger.Errorf("failed to subscribe service, err: %v, service: %v", err, key)
 			}
@@ -380,7 +253,8 @@ func (reg *Nacos) refresh() error {
 
 	for key := range prevFetchServices {
 		if _, ok := fetchedServices[key]; !ok {
-			err := reg.unsubscribe(key.GroupName, key.ServiceName)
+			callback := reg.getSubscribeCallback(key.GroupName, key.ServiceName)
+			err := reg.client.Unsubscribe(key.GroupName, key.ServiceName, callback)
 			if err != nil {
 				reg.logger.Errorf("failed to unsubscribe service, err: %v, service: %v", err, key)
 				// the upcoming event will be thrown away
@@ -413,15 +287,18 @@ func (reg *Nacos) Stop() error {
 func (reg *Nacos) Reload(c registrytype.RegistryConfig) error {
 	config := c.(*nacos.Config)
 
-	client, err := reg.newClient(config)
+	reg.version = config.Version
+
+	cli, err := reg.createClient(config)
 	if err != nil {
 		return err
 	}
+	reg.client = cli
 
 	reg.lock.Lock()
 	defer reg.lock.Unlock()
 
-	fetchedServices, err := reg.fetchAllServices(client)
+	fetchedServices, err := reg.client.FetchAllServices()
 	if err != nil {
 		return fmt.Errorf("fetch all services error: %v", err)
 	}
@@ -431,24 +308,24 @@ func (reg *Nacos) Reload(c registrytype.RegistryConfig) error {
 			reg.store.Delete(reg.getServiceEntryKey(key.GroupName, key.ServiceName))
 		}
 	}
-	reg.softDeletedServices = map[nacosService]bool{}
+	reg.softDeletedServices = map[client.NacosService]bool{}
 
 	for key := range reg.watchingServices {
 		// unsubscribe with the previous client
 		if _, ok := fetchedServices[key]; !ok {
 			reg.removeService(key)
 		} else {
-			err = reg.unsubscribe(key.GroupName, key.ServiceName)
+			callback := reg.getSubscribeCallback(key.GroupName, key.ServiceName)
+			err = reg.client.Unsubscribe(key.GroupName, key.ServiceName, callback)
 			if err != nil {
 				reg.logger.Errorf("failed to unsubscribe service, err: %v, service: %v", err, key)
 			}
 		}
 	}
 
-	reg.client = client
-
 	for key := range fetchedServices {
-		err = reg.subscribe(key.GroupName, key.ServiceName)
+		callback := reg.getSubscribeCallback(key.GroupName, key.ServiceName)
+		err = reg.client.Subscribe(key.GroupName, key.ServiceName, callback)
 		if err != nil {
 			reg.logger.Errorf("failed to subscribe service, err: %v, service: %v", err, key)
 		}
