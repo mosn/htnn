@@ -130,7 +130,7 @@ func (c *NacosClient) subscribe(groupName string, serviceName string, callback f
 }
 
 func (c *NacosClient) unsubscribe(groupName string, serviceName string, callback func(services []model.SubscribeService, err error)) error {
-	err := c.client.Subscribe(&vo.SubscribeParam{
+	err := c.client.Unsubscribe(&vo.SubscribeParam{
 		ServiceName:       serviceName,
 		GroupName:         groupName,
 		SubscribeCallback: callback,

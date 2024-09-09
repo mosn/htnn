@@ -72,6 +72,22 @@ type Nacos struct {
 	stopped atomic.Bool
 }
 
+func (reg *Nacos) createClient(config *nacos.Config) (client.Client, error) {
+	var cli client.Client
+	var err error
+
+	switch reg.version {
+	case "v1":
+		cli, err = v1.NewClient(config)
+	case "v2":
+		cli, err = v2.NewClient(config)
+	default:
+		err = fmt.Errorf("unsupported version: %s", config.Version)
+	}
+
+	return cli, err
+}
+
 func (reg *Nacos) getServiceEntryKey(groupName string, serviceName string) string {
 	suffix := strings.Join([]string{groupName, reg.client.GetNamespace(), reg.name, RegistryType}, ".")
 	suffix = strings.ReplaceAll(suffix, "_", "-")
@@ -154,19 +170,12 @@ func (reg *Nacos) Start(c registrytype.RegistryConfig) error {
 	config := c.(*nacos.Config)
 
 	reg.version = config.Version
-	if reg.version == "v1" {
-		cli, err := v1.NewClient(config)
-		if err != nil {
-			return err
-		}
-		reg.client = cli
-	} else if reg.version == "v2" {
-		cli, err := v2.NewClient(config)
-		if err != nil {
-			return err
-		}
-		reg.client = cli
+
+	cli, err := reg.createClient(config)
+	if err != nil {
+		return err
 	}
+	reg.client = cli
 
 	fetchedServices, err := reg.client.FetchAllServices()
 	if err != nil {
@@ -277,21 +286,14 @@ func (reg *Nacos) Stop() error {
 
 func (reg *Nacos) Reload(c registrytype.RegistryConfig) error {
 	config := c.(*nacos.Config)
+
 	reg.version = config.Version
 
-	if reg.version == "v1" {
-		cli, err := v1.NewClient(config)
-		if err != nil {
-			return err
-		}
-		reg.client = cli
-	} else if reg.version == "v2" {
-		cli, err := v2.NewClient(config)
-		if err != nil {
-			return err
-		}
-		reg.client = cli
+	cli, err := reg.createClient(config)
+	if err != nil {
+		return err
 	}
+	reg.client = cli
 
 	reg.lock.Lock()
 	defer reg.lock.Unlock()
