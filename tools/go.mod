@@ -18,5 +18,5 @@ go 1.21
 
 require (
 	github.com/yoheimuta/go-protoparser/v4 v4.11.0
-	golang.org/x/text v0.17.0
+	golang.org/x/text v0.18.0
 )
