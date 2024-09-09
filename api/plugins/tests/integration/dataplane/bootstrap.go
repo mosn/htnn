@@ -81,12 +81,12 @@ func (b *bootstrap) SetAccessLogFormat(fmt string) *bootstrap {
 	return b
 }
 
-func (b *bootstrap) WriteTo(cfgFile *os.File) error {
+func (b *bootstrap) buildConfiguration() (map[string]interface{}, error) {
 	var root map[string]interface{}
 	// check if the input is valid yaml
 	err := yaml.Unmarshal(boostrapTemplate, &root)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	// TODO: simplify it with some third party lib if possible
@@ -135,10 +135,47 @@ func (b *bootstrap) WriteTo(cfgFile *os.File) error {
 		}
 	}
 
+	return root, nil
+}
+
+func (b *bootstrap) WriteTo(cfgFile *os.File) error {
+	root, err := b.buildConfiguration()
+	if err != nil {
+		return err
+	}
+
 	res, err := yaml.Marshal(&root)
 	if err != nil {
 		return err
 	}
+
+	_, err = cfgFile.Write(res)
+	return err
+}
+
+func (b *bootstrap) WriteToForValidation(cfgFile *os.File) error {
+	root, err := b.buildConfiguration()
+	if err != nil {
+		return err
+	}
+
+	for _, l := range root["static_resources"].(map[string]interface{})["listeners"].([]interface{}) {
+		listener := l.(map[string]interface{})
+		if listener["name"] == "dynamic_config" {
+			listener["internal_listener"] = nil
+			listener["address"] = map[string]interface{}{
+				"pipe": map[string]interface{}{
+					"path": "/tmp/fake_socket_to_pass_validation",
+				},
+			}
+		}
+	}
+
+	res, err := yaml.Marshal(&root)
+	if err != nil {
+		return err
+	}
+
 	_, err = cfgFile.Write(res)
 	return err
 }

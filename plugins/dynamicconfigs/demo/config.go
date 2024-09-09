@@ -12,23 +12,38 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build so
-
-package main
+package demo
 
 import (
-	"github.com/envoyproxy/envoy/contrib/golang/filters/http/source/go/pkg/http"
-
-	"mosn.io/htnn/api/pkg/consumer"
 	"mosn.io/htnn/api/pkg/dynamicconfig"
-	"mosn.io/htnn/api/pkg/filtermanager"
-	_ "mosn.io/htnn/plugins"
+	"mosn.io/htnn/api/pkg/filtermanager/api"
+	"mosn.io/htnn/types/dynamicconfigs/demo"
+)
+
+var (
+	demoKey string
 )
 
 func init() {
-	http.RegisterHttpFilterConfigFactoryAndParser("fm", filtermanager.FilterManagerFactory, &filtermanager.FilterManagerConfigParser{})
-	http.RegisterHttpFilterConfigFactoryAndParser("cm", consumer.ConsumerManagerFactory, &consumer.ConsumerManagerConfigParser{})
-	http.RegisterHttpFilterConfigFactoryAndParser("dc", dynamicconfig.DynamicConfigFactory, &dynamicconfig.DynamicConfigParser{})
+	// Register the implementation of DynamicConfig demo
+	dynamicconfig.RegisterDynamicConfigHandler("demo", &handler{})
 }
 
-func main() {}
+type handler struct {
+	demo.Provider
+}
+
+// OnUpdate will be called when the dynamic config is updated
+func (d *handler) OnUpdate(config any) error {
+	c := config.(*demo.Config)
+	api.LogInfof("demo dynamic config: %v", c)
+
+	demoKey = c.Key
+	return nil
+}
+
+// GetDemoKey can be used in the plugins written in Go. It is for show case, don't call it in
+// the production code.
+func GetDemoKey() string {
+	return demoKey
+}

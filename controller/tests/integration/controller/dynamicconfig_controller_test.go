@@ -23,6 +23,7 @@ import (
 	. "github.com/onsi/gomega"
 	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"mosn.io/htnn/controller/tests/integration/helper"
 	"mosn.io/htnn/controller/tests/pkg"
@@ -106,7 +107,77 @@ var _ = Describe("DynamicConfig controller", func() {
 				}
 				return false
 			}, timeout, interval).Should(BeTrue())
-			// FIXME: check when the dynamic config is updated to invalid
+
+			// to invalid
+			base := client.MergeFrom(c.DeepCopy())
+			prevType := c.Spec.Type
+			c.Spec.Type = "unknown"
+			Expect(k8sClient.Patch(ctx, c, base)).Should(Succeed())
+			Eventually(func() bool {
+				if err := k8sClient.List(ctx, &configs); err != nil {
+					return false
+				}
+				for _, item := range configs.Items {
+					item := item
+					if item.Name == "test" {
+						c = &item
+						cs = c.Status.Conditions
+						if cs[0].Reason == string(mosniov1.ReasonInvalid) {
+							return true
+						}
+					}
+				}
+
+				return false
+			}, timeout, interval).Should(BeTrue())
+
+			// EnvoyFilter should be updated too
+			Eventually(func() bool {
+				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
+					return false
+				}
+				for _, item := range envoyfilters.Items {
+					if item.Name == "htnn-dynamic-config" {
+						return false
+					}
+				}
+				return true
+			}, timeout, interval).Should(BeTrue())
+
+			// back to valid
+			base = client.MergeFrom(c.DeepCopy())
+			c.Spec.Type = prevType
+			Expect(k8sClient.Patch(ctx, c, base)).Should(Succeed())
+			Eventually(func() bool {
+				if err := k8sClient.List(ctx, &configs); err != nil {
+					return false
+				}
+				for _, item := range configs.Items {
+					item := item
+					if item.Name == "test" {
+						c = &item
+						cs = c.Status.Conditions
+						if cs[0].Reason == string(mosniov1.ReasonAccepted) {
+							return true
+						}
+					}
+				}
+
+				return false
+			}, timeout, interval).Should(BeTrue())
+
+			// EnvoyFilter should be updated too
+			Eventually(func() bool {
+				if err := k8sClient.List(ctx, &envoyfilters); err != nil {
+					return false
+				}
+				for _, item := range envoyfilters.Items {
+					if item.Name == "htnn-dynamic-config" {
+						return true
+					}
+				}
+				return false
+			}, timeout, interval).Should(BeTrue())
 		})
 	})
 })

@@ -89,7 +89,7 @@ func (r *DynamicConfigReconciler) dynamicconfigsToState(ctx context.Context,
 		if dynamicConfig.IsSpecChanged() {
 			err := mosniov1.ValidateDynamicConfig(dynamicConfig)
 			if err != nil {
-				log.Errorf("invalid DynamicConfig, err: %v, name: %s, namespace: %s", dynamicConfig.Name, dynamicConfig.Namespace)
+				log.Errorf("invalid DynamicConfig, err: %v, name: %s, namespace: %s", err, dynamicConfig.Name, dynamicConfig.Namespace)
 				dynamicConfig.SetAccepted(mosniov1.ReasonInvalid, err.Error())
 				continue
 			}

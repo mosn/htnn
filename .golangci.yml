@@ -60,6 +60,9 @@ issues:
     - path: registries/ # ditto
       linters:
         - forcetypeassert
+    - path: dynamicconfigs/ # ditto
+      linters:
+        - forcetypeassert
   # Show the complete output
   max-issues-per-linter: 0
   max-same-issues: 0
