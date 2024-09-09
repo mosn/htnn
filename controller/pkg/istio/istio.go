@@ -62,7 +62,7 @@ type ServiceRegistryReconciler interface {
 	Reconciler
 }
 
-func NewServiceRegistryReconciler(output component.Output, manager component.ResourceManager) ConsumerReconciler {
+func NewServiceRegistryReconciler(output component.Output, manager component.ResourceManager) ServiceRegistryReconciler {
 	registry.InitRegistryManager(&registry.RegistryManagerOption{
 		Output: output,
 	})
