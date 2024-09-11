@@ -19,6 +19,24 @@ services:
       - "8849:8848"
     networks:
       service:
+  nacos3:
+    image: nacos/nacos-server:v2.2.3-slim
+    env_file:
+      - env/nacos.env
+    restart: unless-stopped
+    ports:
+      - "8850:8848"
+    networks:
+      service:
+  nacos4:
+    image: nacos/nacos-server:v2.2.3-slim
+    env_file:
+      - env/nacos.env
+    restart: unless-stopped
+    ports:
+      - "8851:8848"
+    networks:
+      service:
   consul:
     image: docker.m.daocloud.io/library/consul:1.15.4
     restart: unless-stopped
@@ -37,7 +55,6 @@ services:
     command: agent -server -bootstrap -client=0.0.0.0
     networks:
       service:
-
 
 
 networks:
