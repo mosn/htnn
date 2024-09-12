@@ -106,7 +106,7 @@ var _ = Describe("Consumer controller", func() {
 					return false
 				}
 				for _, item := range envoyfilters.Items {
-					if item.Name == "htnn-consumer" {
+					if item.Name == "htnn-consumer" && item.Namespace == "istio-system" {
 						ef = item
 						return true
 					}
@@ -114,7 +114,6 @@ var _ = Describe("Consumer controller", func() {
 				return false
 			}, timeout, interval).Should(BeTrue())
 
-			Expect(ef.Namespace).To(Equal("istio-system"))
 			Expect(len(ef.Spec.ConfigPatches)).To(Equal(2))
 			cp := ef.Spec.ConfigPatches[0]
 			Expect(cp.ApplyTo).To(Equal(istioapi.EnvoyFilter_EXTENSION_CONFIG))

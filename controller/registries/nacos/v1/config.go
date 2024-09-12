@@ -174,6 +174,7 @@ func NewClient(config *nacos.Config) (*NacosClient, error) {
 		),
 	}
 
+	fmt.Printf("AA %+v %+v\n", cc, sc)
 	namingClient, err := clients.NewNamingClient(vo.NacosClientParam{
 		ClientConfig:  cc,
 		ServerConfigs: sc,
