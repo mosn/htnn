@@ -1,16 +1,349 @@
 diff --git a/pilot/pkg/config/htnn/component.go b/pilot/pkg/config/htnn/component.go
-index 57a257c..5362f53 100644
+index 57a257c..84d743a 100644
 --- a/pilot/pkg/config/htnn/component.go
 +++ b/pilot/pkg/config/htnn/component.go
-@@ -125,6 +125,11 @@ func (o *output) FromServiceRegistry(ctx context.Context, serviceEntries map[str
+@@ -57,22 +57,6 @@ func NewOutput(ctrl *Controller) component.Output {
+ 	return o
+ }
+ 
+-func convertEnvoyFilterToConfig(ef *istiov1a3.EnvoyFilter) *config.Config {
+-	cfg := &config.Config{
+-		Meta: config.Meta{
+-			GroupVersionKind:  gvk.EnvoyFilter,
+-			CreationTimestamp: time.Now(),
+-			// Only copy fields used by istio during generating xDS
+-			Name:        ef.Name,
+-			Namespace:   ef.Namespace,
+-			Labels:      ef.Labels,
+-			Annotations: ef.Annotations,
+-		},
+-		Spec: &ef.Spec,
+-	}
+-	return cfg
+-}
+-
+ func convertServiceEntryToConfig(namespace string, name string, se *istioapi.ServiceEntry) *config.Config {
+ 	cfg := &config.Config{
+ 		Meta: config.Meta{
+@@ -90,26 +74,17 @@ func convertServiceEntryToConfig(namespace string, name string, se *istioapi.Ser
+ }
+ 
+ func (o *output) FromFilterPolicy(_ context.Context, generatedEnvoyFilters map[component.EnvoyFilterKey]*istiov1a3.EnvoyFilter) error {
+-	efs := make(map[string][]config.Config, 0)
+-
+-	log.Infof("write %d generated envoy filters to PushContext", len(generatedEnvoyFilters))
+-
+-	for key, ef := range generatedEnvoyFilters {
+-		log.Debugf("generate envoy filter %+v", ef)
+-
+-		ns := key.Namespace
+-		efs[ns] = append(efs[ns], *convertEnvoyFilterToConfig(ef))
+-	}
+-	// We don't write the generated filters to the cache here because the cache is read-only
+-	o.ctrl.SetFilterPolicyEnvoyFilters(efs)
++	o.ctrl.SetEnvoyFilters(EnvoyFilterFromFilterPolicy, generatedEnvoyFilters)
+ 	return nil
+ }
+ 
+-func (o *output) FromConsumer(ctx context.Context, ef *istiov1a3.EnvoyFilter) error {
+-	log.Debugf("generate envoy filter %+v", ef)
+-
+-	cfg := convertEnvoyFilterToConfig(ef)
+-	o.ctrl.SetConsumerEnvoyFilter(cfg)
++func (o *output) FromConsumer(_ context.Context, ef *istiov1a3.EnvoyFilter) error {
++	o.ctrl.SetEnvoyFilters(EnvoyFilterFromConsumer, map[component.EnvoyFilterKey]*istiov1a3.EnvoyFilter{
++		{
++			Name:      ef.Name,
++			Namespace: ef.Namespace,
++		}: ef,
++	})
+ 	return nil
+ }
+ 
+@@ -125,6 +100,11 @@ func (o *output) FromServiceRegistry(ctx context.Context, serviceEntries map[str
  	o.ctrl.SetServiceEntries(entries)
  }
  
 +func (o *output) FromDynamicConfig(_ context.Context, generatedEnvoyFilters map[component.EnvoyFilterKey]*istiov1a3.EnvoyFilter) error {
-+	// FIXME: implement this
++	o.ctrl.SetEnvoyFilters(EnvoyFilterFromDynamicConfig, generatedEnvoyFilters)
 +	return nil
 +}
 +
  type resourceManager struct {
  	cache        model.ConfigStore
  	statusWriter StatusWriter
+diff --git a/pilot/pkg/config/htnn/controller.go b/pilot/pkg/config/htnn/controller.go
+index f5ab33c..23d936c 100644
+--- a/pilot/pkg/config/htnn/controller.go
++++ b/pilot/pkg/config/htnn/controller.go
+@@ -18,7 +18,9 @@ import (
+ 	"context"
+ 	"errors"
+ 	"sync/atomic"
++	"time"
+ 
++	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
+ 	"k8s.io/apimachinery/pkg/types"
+ 	k8serrors "k8s.io/apimachinery/pkg/util/errors"
+ 	"mosn.io/htnn/controller/pkg/component"
+@@ -46,10 +48,10 @@ type Controller struct {
+ 	filterPolicyReconciler    istio.FilterPolicyReconciler
+ 	consumerReconciler        istio.ConsumerReconciler
+ 	serviceRegistryReconciler istio.ServiceRegistryReconciler
++	dynamicConfigReconciler   istio.DynamicConfigReconciler
+ 
+ 	currContext          *model.PushContext
+-	efFromFilterPolicy   map[string][]config.Config
+-	efFromConsumer       *config.Config
++	envoyFilters         map[string]map[string][]config.Config
+ 	serviceEntries       map[string]*config.Config
+ 	prevServiceEntries   map[string]*config.Config
+ 	serviceEntryHandlers []model.EventHandler
+@@ -70,6 +72,11 @@ func (c *Controller) Init(env *model.Environment) {
+ 	c.filterPolicyReconciler = istio.NewFilterPolicyReconciler(output, manager)
+ 	c.consumerReconciler = istio.NewConsumerReconciler(output, manager)
+ 	c.serviceRegistryReconciler = istio.NewServiceRegistryReconciler(output, manager)
++	c.dynamicConfigReconciler = istio.NewDynamicConfigReconciler(output, manager)
++	c.envoyFilters = make(map[string]map[string][]config.Config)
++	for _, s := range []string{EnvoyFilterFromFilterPolicy, EnvoyFilterFromConsumer, EnvoyFilterFromDynamicConfig} {
++		c.envoyFilters[s] = make(map[string][]config.Config)
++	}
+ }
+ 
+ // Implement model.ConfigStoreController
+@@ -102,17 +109,12 @@ func (c *Controller) Get(typ config.GroupVersionKind, name, namespace string) *c
+ 		return nil
+ 	}
+ 
+-	if c.efFromConsumer != nil {
+-		ef := c.efFromConsumer
+-		if ef.Name == name && ef.Namespace == namespace {
+-			return ef
+-		}
+-	}
+-
+-	if efList, ok := c.efFromFilterPolicy[namespace]; ok {
+-		for _, ef := range efList {
+-			if name == ef.Name {
+-				return &ef
++	for _, envoyFiltersSubset := range c.envoyFilters {
++		if efList, ok := envoyFiltersSubset[namespace]; ok {
++			for _, ef := range efList {
++				if name == ef.Name {
++					return &ef
++				}
+ 			}
+ 		}
+ 	}
+@@ -129,19 +131,20 @@ func (c *Controller) List(typ config.GroupVersionKind, namespace string) []confi
+ 
+ 	if namespace == "" {
+ 		efList := []config.Config{}
+-		for _, efs := range c.efFromFilterPolicy {
+-			efList = append(efList, efs...)
+-		}
+-		if c.efFromConsumer != nil {
+-			efList = append(efList, *c.efFromConsumer)
++		for _, envoyFiltersSubset := range c.envoyFilters {
++			for _, efs := range envoyFiltersSubset {
++				efList = append(efList, efs...)
++			}
+ 		}
+ 		return efList
+ 	}
+ 
+ 	// We return the internal structure directly as istio claims that the returned data should be read-only
+-	efList := c.efFromFilterPolicy[namespace]
+-	if c.efFromConsumer != nil && namespace == c.rootNamespace {
+-		return append(efList, *c.efFromConsumer)
++	efList := []config.Config{}
++	for _, envoyFiltersSubset := range c.envoyFilters {
++		if efs, ok := envoyFiltersSubset[namespace]; ok {
++			efList = append(efList, efs...)
++		}
+ 	}
+ 	return efList
+ }
+@@ -256,6 +259,7 @@ func (c *Controller) Reconcile(pc *model.PushContext, configsUpdated sets.Set[mo
+ 		}{
+ 			{gvk.Consumer, kind.Consumer},
+ 			{gvk.ServiceRegistry, kind.ServiceRegistry},
++			{gvk.DynamicConfig, kind.DynamicConfig},
+ 		} {
+ 			res := c.cache.List(pair.gvk, "")
+ 			if len(res) > 0 {
+@@ -266,7 +270,7 @@ func (c *Controller) Reconcile(pc *model.PushContext, configsUpdated sets.Set[mo
+ 		// here we provide our own change detection, so adding a new CR won't need to touch istio's own one in PushContext
+ 		for conf := range configsUpdated {
+ 			switch conf.Kind {
+-			case kind.FilterPolicy, kind.Consumer, kind.ServiceRegistry:
++			case kind.FilterPolicy, kind.Consumer, kind.ServiceRegistry, kind.DynamicConfig:
+ 				toReconcile[conf.Kind] = struct{}{}
+ 			case kind.HTTPFilterPolicy:
+ 				toReconcile[kind.FilterPolicy] = struct{}{}
+@@ -318,6 +322,8 @@ func (c *Controller) Reconcile(pc *model.PushContext, configsUpdated sets.Set[mo
+ 			_, err = c.consumerReconciler.Reconcile(ctx, req)
+ 		case kind.ServiceRegistry:
+ 			_, err = c.serviceRegistryReconciler.Reconcile(ctx, req)
++		case kind.DynamicConfig:
++			_, err = c.dynamicConfigReconciler.Reconcile(ctx, req)
+ 		}
+ 		errs = append(errs, err) // err can be nil
+ 	}
+@@ -328,12 +334,34 @@ func (c *Controller) RootNamespace() string {
+ 	return c.rootNamespace
+ }
+ 
+-func (c *Controller) SetFilterPolicyEnvoyFilters(efs map[string][]config.Config) {
+-	c.efFromFilterPolicy = efs
++func convertEnvoyFilterToConfig(ef *istiov1a3.EnvoyFilter) *config.Config {
++	cfg := &config.Config{
++		Meta: config.Meta{
++			GroupVersionKind:  gvk.EnvoyFilter,
++			CreationTimestamp: time.Now(),
++			// Only copy fields used by istio during generating xDS
++			Name:        ef.Name,
++			Namespace:   ef.Namespace,
++			Labels:      ef.Labels,
++			Annotations: ef.Annotations,
++		},
++		Spec: &ef.Spec,
++	}
++	return cfg
+ }
+ 
+-func (c *Controller) SetConsumerEnvoyFilter(ef *config.Config) {
+-	c.efFromConsumer = ef
++func (c *Controller) SetEnvoyFilters(source string, generatedEnvoyFilters map[component.EnvoyFilterKey]*istiov1a3.EnvoyFilter) {
++	efs := make(map[string][]config.Config, 0)
++
++	log.Infof("write %d generated envoy filters to PushContext, source: %s", len(generatedEnvoyFilters), source)
++
++	for key, ef := range generatedEnvoyFilters {
++		log.Debugf("generate envoy filter %+v", ef)
++
++		ns := key.Namespace
++		efs[ns] = append(efs[ns], *convertEnvoyFilterToConfig(ef))
++	}
++	c.envoyFilters[source] = efs
+ }
+ 
+ func (c *Controller) WriteStatus(status any, target status.Resource) {
+diff --git a/pilot/pkg/config/htnn/htnn.go b/pilot/pkg/config/htnn/htnn.go
+index 9bd0be3..07448cb 100644
+--- a/pilot/pkg/config/htnn/htnn.go
++++ b/pilot/pkg/config/htnn/htnn.go
+@@ -26,6 +26,12 @@ import (
+ 
+ var log = istiolog.RegisterScope("htnn", "htnn controller")
+ 
++const (
++	EnvoyFilterFromFilterPolicy  = "FilterPolicy"
++	EnvoyFilterFromConsumer      = "Consumer"
++	EnvoyFilterFromDynamicConfig = "DynamicConfig"
++)
++
+ type MetricProvider struct {
+ }
+ 
+diff --git a/pilot/pkg/xds/cds.go b/pilot/pkg/xds/cds.go
+index ad4ce1b..d3dcb96 100644
+--- a/pilot/pkg/xds/cds.go
++++ b/pilot/pkg/xds/cds.go
+@@ -31,6 +31,8 @@ var _ model.XdsDeltaResourceGenerator = &CdsGenerator{}
+ 
+ // Map of all configs that do not impact CDS
+ var skippedCdsConfigs = sets.New(
++	kind.DynamicConfig,
++
+ 	kind.Gateway,
+ 	kind.WorkloadEntry,
+ 	kind.WorkloadGroup,
+diff --git a/pilot/pkg/xds/ecds.go b/pilot/pkg/xds/ecds.go
+index 10186a9..9e8edae 100644
+--- a/pilot/pkg/xds/ecds.go
++++ b/pilot/pkg/xds/ecds.go
+@@ -55,7 +55,7 @@ func ecdsNeedsPush(req *model.PushRequest) bool {
+ 			return true
+ 		case kind.Secret:
+ 			return true
+-		case kind.FilterPolicy, kind.HTTPFilterPolicy, kind.Consumer, kind.Gateway:
++		case kind.FilterPolicy, kind.HTTPFilterPolicy, kind.Consumer, kind.Gateway, kind.DynamicConfig:
+ 			return true
+ 		}
+ 	}
+diff --git a/pilot/pkg/xds/eds.go b/pilot/pkg/xds/eds.go
+index af82449..c117dfa 100644
+--- a/pilot/pkg/xds/eds.go
++++ b/pilot/pkg/xds/eds.go
+@@ -90,6 +90,8 @@ var _ model.XdsDeltaResourceGenerator = &EdsGenerator{}
+ 
+ // Map of all configs that do not impact EDS
+ var skippedEdsConfigs = map[kind.Kind]struct{}{
++	kind.DynamicConfig: {},
++
+ 	kind.Gateway:               {},
+ 	kind.VirtualService:        {},
+ 	kind.WorkloadGroup:         {},
+diff --git a/pilot/pkg/xds/nds.go b/pilot/pkg/xds/nds.go
+index 1708230..e556221 100644
+--- a/pilot/pkg/xds/nds.go
++++ b/pilot/pkg/xds/nds.go
+@@ -38,6 +38,8 @@ var _ model.XdsResourceGenerator = &NdsGenerator{}
+ 
+ // Map of all configs that do not impact NDS
+ var skippedNdsConfigs = sets.New[kind.Kind](
++	kind.DynamicConfig,
++
+ 	kind.Gateway,
+ 	kind.VirtualService,
+ 	kind.DestinationRule,
+diff --git a/pkg/config/schema/metadata.yaml b/pkg/config/schema/metadata.yaml
+index 09a05fc..8005d04 100644
+--- a/pkg/config/schema/metadata.yaml
++++ b/pkg/config/schema/metadata.yaml
+@@ -63,6 +63,18 @@ resources:
+     statusProto: "htnn.mosn.io.v1.ServiceRegistryStatus"
+     statusProtoPackage: "mosn.io/htnn/types/apis/v1"
+ 
++  - kind: "DynamicConfig"
++    plural: "dynamicconfigs"
++    group: "htnn.mosn.io"
++    version: "v1"
++    clusterScoped: false
++    builtin: false
++    proto: "htnn.mosn.io.v1.DynamicConfigSpec"
++    protoPackage: "mosn.io/htnn/types/apis/v1"
++    validate: "ValidateDynamicConfig"
++    statusProto: "htnn.mosn.io.v1.DynamicConfigStatus"
++    statusProtoPackage: "mosn.io/htnn/types/apis/v1"
++
+   # Kubernetes specific configuration.
+   - kind: "CustomResourceDefinition"
+     plural: "customresourcedefinitions"
+diff --git a/pkg/config/validation/htnn.go b/pkg/config/validation/htnn.go
+index 92919e7..7fd4c22 100644
+--- a/pkg/config/validation/htnn.go
++++ b/pkg/config/validation/htnn.go
+@@ -70,6 +70,21 @@ var ValidateServiceRegistry = registerValidateFunc("ValidateServiceRegistry",
+ 		return warnings, err
+ 	})
+ 
++// ValidateDynamicConfig checks that DynamicConfig is well-formed.
++var ValidateDynamicConfig = registerValidateFunc("DynamicConfig",
++	func(cfg config.Config) (Warning, error) {
++		in, ok := cfg.Spec.(*mosniov1.DynamicConfigSpec)
++		if !ok {
++			return nil, fmt.Errorf("cannot cast to DynamicConfigSpec")
++		}
++
++		var warnings Warning
++		var dynamicConfig mosniov1.DynamicConfig
++		dynamicConfig.Spec = *in
++		err := mosniov1.ValidateDynamicConfig(&dynamicConfig)
++		return warnings, err
++	})
++
+ // ValidateConsumer checks that Consumer is well-formed.
+ var ValidateConsumer = registerValidateFunc("ValidateConsumer",
+ 	func(cfg config.Config) (Warning, error) {

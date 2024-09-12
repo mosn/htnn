@@ -1,0 +1,32 @@
+apiVersion: htnn.mosn.io/v1
+kind: FilterPolicy
+metadata:
+  name: policy
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: default
+  filters:
+    demo:
+      config:
+        hostName: Tom
+---
+apiVersion: htnn.mosn.io/v1
+kind: DynamicConfig
+metadata:
+  name: demo
+spec:
+  type: demo
+  config:
+    key: value
+---
+apiVersion: htnn.mosn.io/v1
+kind: DynamicConfig
+metadata:
+  name: demo
+  namespace: default
+spec:
+  type: demo
+  config:
+    key: should_not_be_used
