@@ -1,7 +1,7 @@
 - apiVersion: htnn.mosn.io/v1
   kind: ServiceRegistry
   metadata:
-    name: default
+    name: v2
     namespace: default
   spec:
     type: nacos

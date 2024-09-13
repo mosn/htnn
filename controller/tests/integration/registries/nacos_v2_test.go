@@ -36,7 +36,7 @@ import (
 )
 
 func enableNacosV2(nacosInstance string) {
-	input := []map[string]interface{}{}
+	var input []map[string]interface{}
 	fn := filepath.Join("testdata", "nacos", nacosInstance+".yml")
 	helper.MustReadInput(fn, &input)
 	for _, in := range input {
@@ -155,8 +155,8 @@ var _ = Describe("NacosV2", func() {
 			return len(entries) == 1
 		}, timeout, interval).Should(BeTrue())
 
-		Expect(entries[0].Name).To(Equal("test.default-group.public.default.nacos"))
-		Expect(entries[0].Spec.GetHosts()).To(Equal([]string{"test.default-group.public.default.nacos"}))
+		Expect(entries[0].Name).To(Equal("test.default-group.public.v2.nacos"))
+		Expect(entries[0].Spec.GetHosts()).To(Equal([]string{"test.default-group.public.v2.nacos"}))
 		Expect(entries[0].Spec.Location).To(Equal(istioapi.ServiceEntry_MESH_INTERNAL))
 		Expect(entries[0].Spec.Resolution).To(Equal(istioapi.ServiceEntry_STATIC))
 		Expect(len(entries[0].Spec.Endpoints)).To(Equal(1))
@@ -179,6 +179,7 @@ var _ = Describe("NacosV2", func() {
 			return len(entries[0].Spec.Endpoints) == 1
 		}, timeout, interval).Should(BeTrue())
 
+		deregisterNacosV2Instance("8850", "test", "1.2.3.4", "8080")
 		deleteNacosV2Service("8850", "test")
 	})
 
@@ -198,6 +199,8 @@ var _ = Describe("NacosV2", func() {
 			return len(entries) == 0
 		}, timeout, interval).Should(BeTrue())
 
+		deregisterNacosV2Instance("8850", "test", "1.2.3.4", "8080")
+
 		deleteNacosV2Service("8850", "test")
 	})
 
@@ -205,8 +208,8 @@ var _ = Describe("NacosV2", func() {
 		registerNacosV2Instance("8850", "test", "1.2.3.4", "8080", nil)
 		registerNacosV2Instance("8850", "test1", "1.2.3.4", "8080", nil)
 		registerNacosV2Instance("8850", "test2", "1.2.3.4", "8080", nil)
-		registerNacosV2Instance("8851", "test", "1.2.3.5", "8080", nil)
-		registerNacosV2Instance("8851", "test3", "1.2.3.5", "8080", nil)
+		registerNacosV2Instance("8852", "test", "1.2.3.5", "8080", nil)
+		registerNacosV2Instance("8852", "test3", "1.2.3.5", "8080", nil)
 
 		// old
 		enableNacosV2("v2")
@@ -219,7 +222,7 @@ var _ = Describe("NacosV2", func() {
 
 		// new
 		base := client.MergeFrom(currNacos.DeepCopy())
-		currNacos.Spec.Config.Raw = []byte(`{"serviceRefreshInterval":"1s", "serverUrl":"http://127.0.0.1:8851", "version":"v2"}`)
+		currNacos.Spec.Config.Raw = []byte(`{"serviceRefreshInterval":"1s", "serverUrl":"http://127.0.0.1:8852", "version":"v2"}`)
 		Expect(k8sClient.Patch(ctx, currNacos, base)).Should(Succeed())
 		Eventually(func() bool {
 			entries = listNacosV2ServiceEntries()
@@ -227,14 +230,15 @@ var _ = Describe("NacosV2", func() {
 		}, timeout, interval).Should(BeTrue())
 
 		// refresh & unsubscribe
-		deleteNacosV2Service("8851", "test3")
+		deregisterNacosV2Instance("8852", "test3", "1.2.3.5", "8080")
+		deleteNacosV2Service("8852", "test3")
 		time.Sleep(1 * time.Second)
 		entries = listNacosV2ServiceEntries()
 		Expect(len(entries)).To(Equal(2))
 
 		// ServiceEntry is removed only when the configuration changed
 		base = client.MergeFrom(currNacos.DeepCopy())
-		currNacos.Spec.Config.Raw = []byte(`{"serviceRefreshInterval":"2s", "serverUrl":"http://127.0.0.1:8851", "version":"v2"}`)
+		currNacos.Spec.Config.Raw = []byte(`{"serviceRefreshInterval":"2s", "serverUrl":"http://127.0.0.1:8852", "version":"v2"}`)
 		Expect(k8sClient.Patch(ctx, currNacos, base)).Should(Succeed())
 		Eventually(func() bool {
 			entries = listNacosV2ServiceEntries()
@@ -242,7 +246,8 @@ var _ = Describe("NacosV2", func() {
 		}, timeout, interval).Should(BeTrue())
 
 		// subscribe change
-		registerNacosV2Instance("8851", "test", "1.2.4.5", "8080", nil)
+		registerNacosV2Instance("8852", "test", "1.2.4.5", "8080", nil)
+		deregisterNacosV2Instance("8850", "test", "1.2.3.4", "8080")
 		deleteNacosV2Service("8850", "test") // should be ignored
 		Eventually(func() bool {
 			entries = listNacosV2ServiceEntries()
@@ -255,10 +260,13 @@ var _ = Describe("NacosV2", func() {
 			entries := listNacosV2ServiceEntries()
 			return len(entries) == 0
 		}, timeout, interval).Should(BeTrue())
-
+		deregisterNacosV2Instance("8850", "test1", "1.2.3.4", "8080")
+		deregisterNacosV2Instance("8850", "test2", "1.2.3.4", "8080")
+		deregisterNacosV2Instance("8852", "test", "1.2.4.5", "8080")
+		deregisterNacosV2Instance("8852", "test", "1.2.3.5", "8080")
 		deleteNacosV2Service("8850", "test1")
 		deleteNacosV2Service("8850", "test2")
-		deleteNacosV2Service("8851", "test")
+		deleteNacosV2Service("8852", "test")
 	})
 
 })
