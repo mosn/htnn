@@ -289,14 +289,14 @@ func (reg *Nacos) Reload(c registrytype.RegistryConfig) error {
 
 	reg.version = config.Version
 
+	reg.lock.Lock()
+	defer reg.lock.Unlock()
+
 	cli, err := reg.createClient(config)
 	if err != nil {
 		return err
 	}
 	reg.client = cli
-
-	reg.lock.Lock()
-	defer reg.lock.Unlock()
 
 	fetchedServices, err := reg.client.FetchAllServices()
 	if err != nil {
