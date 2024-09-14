@@ -14,6 +14,7 @@ The `limitReq` plugin limits the number of requests per second to this proxy. Th
 | Order | Traffic |
 
 ## Configuration
+
 | Name    | Type                            | Required | Validation | Description                                                                                        |
 |---------|---------------------------------|----------|------------|----------------------------------------------------------------------------------------------------|
 | average | uint32                          | True     | > 0        | The threshold value, by default calculated as the number of requests per second.                   |
@@ -67,7 +68,7 @@ spec:
 
 The first request will get a `200` status code, and subsequent requests will be dropped with `429`:
 
-```
+```shell
 $ while true; do curl -I http://localhost:10000/ 2>/dev/null | head -1 ; done
 HTTP/1.1 200 OK
 HTTP/1.1 429 Too Many Requests
@@ -76,7 +77,7 @@ HTTP/1.1 429 Too Many Requests
 
 If the client reduces its request rate under one request per second, all the requests won't be dropped:
 
-```
+```shell
 $ while true; do curl -I http://localhost:10000/ 2>/dev/null | head -1 ; sleep 1; done
 HTTP/1.1 200 OK
 HTTP/1.1 200 OK

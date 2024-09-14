@@ -105,7 +105,7 @@ curl -i http://localhost:10000/users -X GET -H "foo: bar" -H "Authorization: xxx
 
 The service listening on `10001` will receive an authorization request like:
 
-```
+```shell
 GET /ext_auth/users HTTP/1.1
 Host: localhost:10000
 User-Agent: Go-http-client/1.1
@@ -123,7 +123,7 @@ curl -i http://localhost:10000/users -d 'test'
 
 The authorization request will be:
 
-```
+```shell
 POST /ext_auth/users HTTP/1.1
 Host: localhost:10000
 User-Agent: Go-http-client/1.1

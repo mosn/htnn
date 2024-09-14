@@ -102,7 +102,7 @@ spec:
 
 When making requests to the `/echo` path, the first two requests will succeed, and subsequent requests will fail:
 
-```
+```shell
 $ curl http://localhost:10000/echo -i
 HTTP/1.1 200 OK
 x-ratelimit-limit: 2, 2;w=60
@@ -129,7 +129,7 @@ date: Tue, 20 Feb 2024 03:53:03 GMT
 
 After one minute, new requests will succeed:
 
-```
+```shell
 $ curl http://localhost:10000/echo -i
 HTTP/1.1 200 OK
 x-ratelimit-limit: 2, 2;w=60

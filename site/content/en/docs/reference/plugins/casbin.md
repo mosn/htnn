@@ -20,7 +20,6 @@ The `casbin` plugin embeds the powerful and efficient open-source access control
 | rule  | Rule  | True     |            |             |
 | token | Token | True     |            |             |
 
-
 ### Rule
 
 | Name   | Type   | Required | Validation | Description                                                                                               |
@@ -29,7 +28,6 @@ The `casbin` plugin embeds the powerful and efficient open-source access control
 | policy | string | True     | min_len: 1 | The path to Casbin policy file, see https://casbin.org/docs/policy-storage#loading-policy-from-a-csv-file |
 
 ### Token
-
 
 | Name   | Type   | Required | Validation | Description                                                                                         |
 | ------ | ------ | -------- | ---------- | --------------------------------------------------------------------------------------------------- |

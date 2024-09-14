@@ -62,7 +62,7 @@ spec:
 
 让我们试一下：
 
-```
+```shell
 $ curl http://localhost:10000/ -i 2>/dev/null | head -1
 HTTP/1.1 401 Unauthorized
 ```

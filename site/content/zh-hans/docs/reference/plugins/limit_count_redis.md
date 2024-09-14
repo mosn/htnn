@@ -102,7 +102,7 @@ spec:
 
 对 `/echo` 路径发起请求，前两个请求将成功，随后的请求将失败：
 
-```
+```shell
 $ curl http://localhost:10000/echo -i
 HTTP/1.1 200 OK
 x-ratelimit-limit: 2, 2;w=60
@@ -129,7 +129,7 @@ date: Tue, 20 Feb 2024 03:53:03 GMT
 
 过一分钟后，新的请求将成功：
 
-```
+```shell
 $ curl http://localhost:10000/echo -i
 HTTP/1.1 200 OK
 x-ratelimit-limit: 2, 2;w=60

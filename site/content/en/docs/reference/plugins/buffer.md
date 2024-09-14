@@ -64,12 +64,12 @@ spec:
 
 We can test it out:
 
-```
+```shell
 $ curl -d "hello" http://localhost:10000/ -i
 HTTP/1.1 413 Payload Too Large
 ```
 
-```
+```shell
 $ curl -d "hell" http://localhost:10000/ -i
 HTTP/1.1 200 OK
 ```

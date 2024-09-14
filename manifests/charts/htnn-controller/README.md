@@ -166,4 +166,3 @@ helm uninstall htnn-controller -n istio-system
 | telemetry.v2.enabled | bool | `true` |  |
 | telemetry.v2.prometheus.enabled | bool | `true` |  |
 | telemetry.v2.stackdriver.enabled | bool | `false` |  |
-

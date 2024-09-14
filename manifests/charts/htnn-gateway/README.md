@@ -55,4 +55,3 @@ helm uninstall htnn-gateway -n istio-system
 |-----|------|---------|-------------|
 | gateway.env.ISTIO_DELTA_XDS | string | `"true"` |  |
 | gateway.name | string | `"istio-ingressgateway"` |  |
-

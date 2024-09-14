@@ -93,24 +93,24 @@ The header `Authorization` will be checked first and then query argument `ak` wi
 
 Let's try it out:
 
-```
+```shell
 $ curl -I http://localhost:10000/ -H "Authorization: rick"
 HTTP/1.1 200 OK
 ```
 
-```
+```shell
 $ curl -I http://localhost:10000/ -H "Authorization: morty"
 HTTP/1.1 401 Unauthorized
 ```
 
-```
+```shell
 $ curl -I 'http://localhost:10000/?ak=rick'
 HTTP/1.1 200 OK
 ```
 
 Note that if a configured `key` exists in the request, the subsequent `key` in `keys` will not be used to authenticate the client:
 
-```
+```shell
 $ curl -I 'http://localhost:10000/?ak=rick' -H "Authorization: morty"
 HTTP/1.1 401 Unauthorized
 ```

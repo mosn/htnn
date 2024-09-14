@@ -64,7 +64,7 @@ The bandwidth limit is not very precise. The smaller the `fillInterval`, the hig
 
 To test the effect of the plugin, we have the backend server listening on port `8080` which echoes all received requests. Let's try it with [bombardier](https://pkg.go.dev/github.com/codesenberg/bombardier):
 
-```
+```shell
 $ bombardier -m POST -f go.sum -c 10 -t 180s -d 60s -l http://localhost:10000/
 Bombarding http://localhost:10000/ for 1m0s using 10 connection(s)
 [======================================================================================================================================================] 1m0s

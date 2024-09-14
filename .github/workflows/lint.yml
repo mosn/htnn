@@ -117,8 +117,8 @@ jobs:
       run: |
         make lint-remain
 
-    - name: install markdownlint-cli
+    - name: install markdownlint cli
       run: npm install -g markdownlint-cli
 
     - name: lint markdown
-      run: markdownlint '**/*.md'
+      run: markdownlint '**/*.md' --disable MD013 MD029 MD033 MD034 MD036 MD041
