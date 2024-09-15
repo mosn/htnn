@@ -1,0 +1,151 @@
+// Copyright The HTNN Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package types.plugins.sentinel;
+
+import "validate/validate.proto";
+
+option go_package = "mosn.io/htnn/types/plugins/sentinel";
+
+// TODO(WeixinX): The Config field will be refined, and currently only one Config rule is supported
+message Config {
+  enum Type {
+    FLOW = 0;
+    HOT_SPOT = 1;
+    ISOLATION = 2;
+    CIRCUIT_BREAKER = 3;
+    SYSTEM = 4;
+  }
+
+  Key key = 1;
+  Type type = 2;
+  oneof rule {
+    FlowRule flow = 3;
+    HotSpotRule hot_spot = 4;
+    IsolationRule isolation = 5;
+    CircuitBreakerRule circuit_breaker = 6;
+    SystemRule system = 7;
+  }
+}
+
+message Key {
+  enum Source {
+    HEADER = 0;
+    QUERY = 1;
+  }
+
+  string name = 1 [(validate.rules).string = {min_len: 1}];
+  Source source = 2;
+}
+
+enum ControlBehavior {
+  REJECT = 0;
+  THROTTLING = 1;
+}
+
+message FlowRule {
+  enum TokenCalculateStrategy {
+    DIRECT = 0;
+    WARMUP = 1;
+    MEMORY_ADAPTIVE = 2;
+  }
+
+  enum RelationStrategy {
+    CURRENT_RESOURCE = 0;
+    ASSOCIATED_RESOURCE = 1;
+  }
+
+  string id = 1;
+  string resource = 2;
+  TokenCalculateStrategy token_calculate_strategy = 3;
+  ControlBehavior control_behavior = 4;
+  double threshold = 5;
+  RelationStrategy relation_strategy = 6;
+  string ref_resource = 7;
+  uint32 max_queueing_time_ms = 8;
+  uint32 warm_up_period_sec = 9;
+  uint32 warm_up_cold_factor = 10;
+  uint32 stat_interval_in_ms = 11;
+  int64 low_mem_usage_threshold = 12;
+  int64 high_mem_usage_threshold = 13;
+  int64 mem_low_water_mark_bytes = 14;
+  int64 mem_high_water_mark_bytes = 15;
+}
+
+message HotSpotRule {
+  enum MetricType {
+    CONCURRENCY = 0;
+    QPS = 1;
+  }
+
+  string id = 1;
+  string resource = 2;
+  MetricType metric_type = 3;
+  ControlBehavior control_behavior = 4;
+  int32 param_index = 5;
+  string param_key = 6;
+  int64 threshold = 7;
+  int64 max_queueing_time_ms = 8;
+  int64 burst_count = 9;
+  int64 duration_in_sec = 10;
+  int64 params_max_capacity = 11;
+  map<string, int64> specific_items = 12;
+}
+
+message IsolationRule {
+  string id = 1;
+  string resource = 2;
+  uint32 concurrency = 3;
+}
+
+message CircuitBreakerRule {
+  enum Strategy {
+    SLOW_REQUEST_RATIO = 0;
+    ERROR_RATIO = 1;
+    ERROR_COUNT = 2;
+  }
+
+  string id = 1;
+  string resource = 2;
+  Strategy strategy = 3;
+  uint32 retry_timeout_ms = 4;
+  uint64 min_request_amount = 5;
+  uint32 stat_interval_ms = 6;
+  uint32 stat_sliding_window_bucket_count = 7;
+  uint64 max_allowed_rt_ms = 8;
+  double threshold = 9;
+  uint64 probe_num = 10;
+}
+
+message SystemRule {
+  enum MetricType {
+    LOAD = 0;
+    AVG_RT = 1;
+    CONCURRENCY = 2;
+    INBOUND_QPS = 3;
+    CPU_USAGE = 4;
+  }
+
+  enum Strategy {
+    NO_ADAPTIVE = 0;
+    BBR = 1;
+  }
+
+  string id = 1;
+  MetricType metric_type = 2;
+  double trigger_count = 3;
+  Strategy strategy = 4;
+}
