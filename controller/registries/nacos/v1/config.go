@@ -31,14 +31,14 @@ import (
 )
 
 type NacosClient struct {
-	Groups    []string
-	Namespace string
+	groups    []string
+	namespace string
 	client    naming_client.INamingClient
 }
 
 func (c *NacosClient) fetchAllServices() (map[client.NacosService]bool, error) {
 	fetchedServices := make(map[client.NacosService]bool)
-	for _, groupName := range c.Groups {
+	for _, groupName := range c.groups {
 		for page := 1; ; page++ {
 			// Nacos v1 doesn't provide a method to return all services in a call.
 			// We use a large page size to reduce the race but there is still chance
@@ -54,7 +54,7 @@ func (c *NacosClient) fetchAllServices() (map[client.NacosService]bool, error) {
 				GroupName: groupName,
 				PageNo:    uint32(page),
 				PageSize:  client.DefaultFetchPageSize,
-				NameSpace: c.Namespace,
+				NameSpace: c.namespace,
 			})
 			if err != nil {
 				return nil, err
@@ -76,11 +76,11 @@ func (c *NacosClient) fetchAllServices() (map[client.NacosService]bool, error) {
 }
 
 func (c *NacosClient) GetNamespace() string {
-	return c.Namespace
+	return c.namespace
 }
 
 func (c *NacosClient) GetGroups() []string {
-	return c.Groups
+	return c.groups
 }
 
 func (c *NacosClient) FetchAllServices() (map[client.NacosService]bool, error) {
@@ -190,8 +190,8 @@ func NewClient(config *nacos.Config) (*NacosClient, error) {
 	}
 
 	return &NacosClient{
-		Groups:    config.Groups,
-		Namespace: config.Namespace,
+		groups:    config.Groups,
+		namespace: config.Namespace,
 		client:    namingClient,
 	}, nil
 }
