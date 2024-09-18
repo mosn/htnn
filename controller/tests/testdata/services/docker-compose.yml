@@ -19,7 +19,7 @@ services:
       - "8849:8848"
     networks:
       service:
-  nacos3:
+  nacosv2-1:
     image: nacos-registry.cn-hangzhou.cr.aliyuncs.com/nacos/nacos-server:v2.4.2-slim
     env_file:
       - env/nacos.env
@@ -30,7 +30,7 @@ services:
       - "9851:9849"
     networks:
       service:
-  nacos4:
+  nacosv2-2:
     image: nacos-registry.cn-hangzhou.cr.aliyuncs.com/nacos/nacos-server:v2.4.2-slim
     env_file:
       - env/nacos.env

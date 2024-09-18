@@ -67,7 +67,7 @@ func listServiceEntries() []*istiov1a3.ServiceEntry {
 	return entries.Items
 }
 
-func registerInstance(nacosPort string, name string, ip string, port string, metadata map[string]any) {
+func registerInstance(nacosPort string, name string, ip string, port string, metadata map[string]any, version string) {
 	nacosServerURL := "http://0.0.0.0:" + nacosPort
 
 	params := url.Values{}
@@ -81,7 +81,7 @@ func registerInstance(nacosPort string, name string, ip string, port string, met
 		params.Set("metadata", string(b))
 	}
 
-	fullURL := nacosServerURL + "/nacos/v1/ns/instance?" + params.Encode()
+	fullURL := nacosServerURL + "/nacos/" + version + "/ns/instance?" + params.Encode()
 
 	req, err := http.NewRequest("POST", fullURL, strings.NewReader(""))
 	Expect(err).To(BeNil())
@@ -91,7 +91,7 @@ func registerInstance(nacosPort string, name string, ip string, port string, met
 	Expect(resp.StatusCode).To(Equal(200))
 }
 
-func deregisterInstance(nacosPort string, name string, ip string, port string) {
+func deregisterInstance(nacosPort string, name string, ip string, port string, version string) {
 	nacosServerURL := "http://0.0.0.0:" + nacosPort
 
 	params := url.Values{}
@@ -99,7 +99,7 @@ func deregisterInstance(nacosPort string, name string, ip string, port string) {
 	params.Set("ip", ip)
 	params.Set("port", port)
 
-	fullURL := nacosServerURL + "/nacos/v1/ns/instance?" + params.Encode()
+	fullURL := nacosServerURL + "/nacos/" + version + "/ns/instance?" + params.Encode()
 
 	req, err := http.NewRequest("DELETE", fullURL, nil)
 	Expect(err).To(BeNil())
@@ -109,13 +109,13 @@ func deregisterInstance(nacosPort string, name string, ip string, port string) {
 	Expect(resp.StatusCode).To(Equal(200))
 }
 
-func deleteService(nacosPort string, name string) {
+func deleteService(nacosPort string, name string, version string) {
 	nacosServerURL := "http://0.0.0.0:" + nacosPort
 
 	params := url.Values{}
 	params.Set("serviceName", name)
 
-	fullURL := nacosServerURL + "/nacos/v1/ns/service?" + params.Encode()
+	fullURL := nacosServerURL + "/nacos/" + version + "/ns/service?" + params.Encode()
 
 	req, err := http.NewRequest("DELETE", fullURL, nil)
 	Expect(err).To(BeNil())
@@ -151,7 +151,7 @@ var _ = Describe("Nacos", func() {
 	It("service life cycle", func() {
 		enableNacos("default")
 
-		registerInstance("8848", "test", "1.2.3.4", "8080", nil)
+		registerInstance("8848", "test", "1.2.3.4", "8080", nil, "v1")
 
 		var entries []*istiov1a3.ServiceEntry
 		Eventually(func() bool {
@@ -169,25 +169,25 @@ var _ = Describe("Nacos", func() {
 			"HTTP": 8080,
 		}))
 
-		registerInstance("8848", "test", "1.2.3.5", "8080", nil)
+		registerInstance("8848", "test", "1.2.3.5", "8080", nil, "v1")
 
 		Eventually(func() bool {
 			entries = listServiceEntries()
 			return len(entries[0].Spec.Endpoints) == 2
 		}, timeout, interval).Should(BeTrue())
 
-		deregisterInstance("8848", "test", "1.2.3.5", "8080")
+		deregisterInstance("8848", "test", "1.2.3.5", "8080", "v1")
 
 		Eventually(func() bool {
 			entries = listServiceEntries()
 			return len(entries[0].Spec.Endpoints) == 1
 		}, timeout, interval).Should(BeTrue())
 
-		deleteService("8848", "test")
+		deleteService("8848", "test", "v1")
 	})
 
 	It("stop nacos should remove service entries", func() {
-		registerInstance("8848", "test", "1.2.3.4", "8080", nil)
+		registerInstance("8848", "test", "1.2.3.4", "8080", nil, "v1")
 		enableNacos("default")
 
 		Eventually(func() bool {
@@ -202,15 +202,15 @@ var _ = Describe("Nacos", func() {
 			return len(entries) == 0
 		}, timeout, interval).Should(BeTrue())
 
-		deleteService("8848", "test")
+		deleteService("8848", "test", "v1")
 	})
 
 	It("reload", func() {
-		registerInstance("8848", "test", "1.2.3.4", "8080", nil)
-		registerInstance("8848", "test1", "1.2.3.4", "8080", nil)
-		registerInstance("8848", "test2", "1.2.3.4", "8080", nil)
-		registerInstance("8849", "test", "1.2.3.5", "8080", nil)
-		registerInstance("8849", "test3", "1.2.3.5", "8080", nil)
+		registerInstance("8848", "test", "1.2.3.4", "8080", nil, "v1")
+		registerInstance("8848", "test1", "1.2.3.4", "8080", nil, "v1")
+		registerInstance("8848", "test2", "1.2.3.4", "8080", nil, "v1")
+		registerInstance("8849", "test", "1.2.3.5", "8080", nil, "v1")
+		registerInstance("8849", "test3", "1.2.3.5", "8080", nil, "v1")
 
 		// old
 		enableNacos("default")
@@ -231,7 +231,7 @@ var _ = Describe("Nacos", func() {
 		}, timeout, interval).Should(BeTrue())
 
 		// refresh & unsubscribe
-		deleteService("8849", "test3")
+		deleteService("8849", "test3", "v1")
 		time.Sleep(1 * time.Second)
 		entries = listServiceEntries()
 		Expect(len(entries)).To(Equal(2))
@@ -246,8 +246,8 @@ var _ = Describe("Nacos", func() {
 		}, timeout, interval).Should(BeTrue())
 
 		// subscribe change
-		registerInstance("8849", "test", "1.2.4.5", "8080", nil)
-		deleteService("8848", "test") // should be ignored
+		registerInstance("8849", "test", "1.2.4.5", "8080", nil, "v1")
+		deleteService("8848", "test", "v1") // should be ignored
 		Eventually(func() bool {
 			entries = listServiceEntries()
 			return len(entries[0].Spec.Endpoints) == 2
@@ -260,9 +260,161 @@ var _ = Describe("Nacos", func() {
 			return len(entries) == 0
 		}, timeout, interval).Should(BeTrue())
 
-		deleteService("8848", "test1")
-		deleteService("8848", "test2")
-		deleteService("8849", "test")
+		deleteService("8848", "test1", "v1")
+		deleteService("8848", "test2", "v1")
+		deleteService("8849", "test", "v1")
+	})
+
+})
+
+// Nacos v2 sdk have bug about data race when creating a new nacos client
+// see https://github.com/nacos-group/nacos-sdk-go/issues/741
+var _ = Describe("NacosV2", func() {
+
+	const (
+		timeout  = time.Second * 30
+		interval = time.Millisecond * 250
+	)
+
+	helper.WaitServiceUp(":8850", "Nacos")
+
+	AfterEach(func() {
+		var registries mosniov1.ServiceRegistryList
+		if err := k8sClient.List(ctx, &registries); err == nil {
+			for _, e := range registries.Items {
+				pkg.DeleteK8sResource(ctx, k8sClient, &e)
+			}
+		}
+
+		Eventually(func() bool {
+			entries := listServiceEntries()
+			return len(entries) == 0
+		}, timeout, interval).Should(BeTrue())
+	})
+
+	It("service life cycle", func() {
+		enableNacos("v2")
+
+		registerInstance("8850", "test", "1.2.3.4", "8080", nil, "v2")
+
+		var entries []*istiov1a3.ServiceEntry
+		Eventually(func() bool {
+			entries = listServiceEntries()
+			return len(entries) == 1
+		}, timeout, interval).Should(BeTrue())
+
+		Expect(entries[0].Name).To(Equal("test.default-group.public.v2.nacos"))
+		Expect(entries[0].Spec.GetHosts()).To(Equal([]string{"test.default-group.public.v2.nacos"}))
+		Expect(entries[0].Spec.Location).To(Equal(istioapi.ServiceEntry_MESH_INTERNAL))
+		Expect(entries[0].Spec.Resolution).To(Equal(istioapi.ServiceEntry_STATIC))
+		Expect(len(entries[0].Spec.Endpoints)).To(Equal(1))
+		Expect(entries[0].Spec.Endpoints[0].Address).To(Equal("1.2.3.4"))
+		Expect(entries[0].Spec.Endpoints[0].Ports).To(Equal(map[string]uint32{
+			"HTTP": 8080,
+		}))
+
+		registerInstance("8850", "test", "1.2.3.5", "8080", nil, "v2")
+
+		Eventually(func() bool {
+			entries = listServiceEntries()
+			return len(entries[0].Spec.Endpoints) == 2
+		}, timeout, interval).Should(BeTrue())
+
+		deregisterInstance("8850", "test", "1.2.3.5", "8080", "v2")
+
+		Eventually(func() bool {
+			entries = listServiceEntries()
+			return len(entries[0].Spec.Endpoints) == 1
+		}, timeout, interval).Should(BeTrue())
+
+		deregisterInstance("8850", "test", "1.2.3.4", "8080", "v2")
+		deleteService("8850", "test", "v2")
+	})
+
+	It("stop nacos should remove service entries", func() {
+		registerInstance("8850", "test", "1.2.3.4", "8080", nil, "v2")
+		enableNacos("v2")
+
+		Eventually(func() bool {
+			entries := listServiceEntries()
+			return len(entries) == 1
+		}, timeout, interval).Should(BeTrue())
+
+		disableNacos("v2")
+
+		Eventually(func() bool {
+			entries := listServiceEntries()
+			return len(entries) == 0
+		}, timeout, interval).Should(BeTrue())
+
+		deregisterInstance("8850", "test", "1.2.3.4", "8080", "v2")
+
+		deleteService("8850", "test", "v2")
+	})
+
+	It("reload", func() {
+		registerInstance("8850", "test", "1.2.3.4", "8080", nil, "v2")
+		registerInstance("8850", "test1", "1.2.3.4", "8080", nil, "v2")
+		registerInstance("8850", "test2", "1.2.3.4", "8080", nil, "v2")
+		registerInstance("8852", "test", "1.2.3.5", "8080", nil, "v2")
+		registerInstance("8852", "test3", "1.2.3.5", "8080", nil, "v2")
+
+		// old
+		enableNacos("v2")
+		var entries []*istiov1a3.ServiceEntry
+		Eventually(func() bool {
+			entries = listServiceEntries()
+			return len(entries) == 3
+		}, timeout, interval).Should(BeTrue())
+		Expect(entries[0].Spec.Endpoints[0].Address).To(Equal("1.2.3.4"))
+
+		// new
+		base := client.MergeFrom(currNacos.DeepCopy())
+		currNacos.Spec.Config.Raw = []byte(`{"serviceRefreshInterval":"1s", "serverUrl":"http://127.0.0.1:8852", "version":"v2"}`)
+		Expect(k8sClient.Patch(ctx, currNacos, base)).Should(Succeed())
+		Eventually(func() bool {
+			entries = listServiceEntries()
+			return len(entries) == 2 && entries[0].Spec.Endpoints[0].Address == "1.2.3.5"
+		}, timeout, interval).Should(BeTrue())
+
+		// refresh & unsubscribe
+		deregisterInstance("8852", "test3", "1.2.3.5", "8080", "v2")
+		deleteService("8852", "test3", "v2")
+		time.Sleep(1 * time.Second)
+		entries = listServiceEntries()
+		Expect(len(entries)).To(Equal(2))
+
+		// ServiceEntry is removed only when the configuration changed
+		base = client.MergeFrom(currNacos.DeepCopy())
+		currNacos.Spec.Config.Raw = []byte(`{"serviceRefreshInterval":"2s", "serverUrl":"http://127.0.0.1:8852", "version":"v2"}`)
+		Expect(k8sClient.Patch(ctx, currNacos, base)).Should(Succeed())
+		Eventually(func() bool {
+			entries = listServiceEntries()
+			return len(entries) == 1
+		}, timeout, interval).Should(BeTrue())
+
+		// subscribe change
+		registerInstance("8852", "test", "1.2.4.5", "8080", nil, "v2")
+		deregisterInstance("8850", "test", "1.2.3.4", "8080", "v2")
+		deleteService("8850", "test", "v2") // should be ignored
+		Eventually(func() bool {
+			entries = listServiceEntries()
+			return len(entries[0].Spec.Endpoints) == 2
+		}, timeout, interval).Should(BeTrue())
+
+		// unsubscribe
+		disableNacos("v2")
+		Eventually(func() bool {
+			entries := listServiceEntries()
+			return len(entries) == 0
+		}, timeout, interval).Should(BeTrue())
+		deregisterInstance("8850", "test1", "1.2.3.4", "8080", "v2")
+		deregisterInstance("8850", "test2", "1.2.3.4", "8080", "v2")
+		deregisterInstance("8852", "test", "1.2.4.5", "8080", "v2")
+		deregisterInstance("8852", "test", "1.2.3.5", "8080", "v2")
+		deleteService("8850", "test1", "v2")
+		deleteService("8850", "test2", "v2")
+		deleteService("8852", "test", "v2")
 	})
 
 })
