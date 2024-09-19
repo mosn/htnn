@@ -15,7 +15,6 @@
 package v2
 
 import (
-	"fmt"
 	"reflect"
 	"testing"
 
@@ -33,6 +32,13 @@ import (
 
 func TestNewClient(t *testing.T) {
 	config := &nacos.Config{
+		ServerUrl: "::::::::::::",
+		Version:   "v2",
+	}
+	_, err := NewClient(config)
+	assert.Error(t, err)
+
+	config = &nacos.Config{
 		ServerUrl: "http://127.0.0.1:8848",
 		Version:   "v2",
 	}
@@ -47,25 +53,10 @@ func TestNewClient(t *testing.T) {
 	patches.ApplyFunc(clients.NewNamingClient, func(param vo.NacosClientParam) (naming_client.INamingClient, error) {
 		return nil, nil
 	})
-	_, err := NewClient(config)
+	_, err = NewClient(config)
 	assert.Nil(t, err)
 
-	patches.ApplyFunc(clients.NewNamingClient, func(param vo.NacosClientParam) (naming_client.INamingClient, error) {
-		return nil, fmt.Errorf("err")
-	})
-
-	_, err = NewClient(config)
-	assert.Error(t, err)
-
-	config = &nacos.Config{
-		ServerUrl: "::::::::::::",
-		Version:   "v2",
-	}
-	_, err = NewClient(config)
-	assert.Error(t, err)
-
 	patches.Reset()
-
 }
 
 func TestGetGroups(t *testing.T) {

@@ -267,7 +267,7 @@ var _ = Describe("Nacos", func() {
 
 })
 
-// Nacos v2 sdk have bug about data race when creating a new nacos client
+// Nacos v2 sdk has a bug about data race when creating a new nacos client which might cause the test to fail
 // see https://github.com/nacos-group/nacos-sdk-go/issues/741
 var _ = Describe("NacosV2", func() {
 
