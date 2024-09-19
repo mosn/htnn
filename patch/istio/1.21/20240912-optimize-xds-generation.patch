@@ -1,0 +1,89 @@
+diff --git a/pilot/pkg/xds/cds.go b/pilot/pkg/xds/cds.go
+index d3dcb96..3c0527e 100644
+--- a/pilot/pkg/xds/cds.go
++++ b/pilot/pkg/xds/cds.go
+@@ -31,6 +31,9 @@ var _ model.XdsDeltaResourceGenerator = &CdsGenerator{}
+ 
+ // Map of all configs that do not impact CDS
+ var skippedCdsConfigs = sets.New(
++	kind.FilterPolicy,
++	kind.Consumer,
++	kind.ServiceRegistry,
+ 	kind.DynamicConfig,
+ 
+ 	kind.Gateway,
+diff --git a/pilot/pkg/xds/eds.go b/pilot/pkg/xds/eds.go
+index c117dfa..a7dce42 100644
+--- a/pilot/pkg/xds/eds.go
++++ b/pilot/pkg/xds/eds.go
+@@ -90,7 +90,10 @@ var _ model.XdsDeltaResourceGenerator = &EdsGenerator{}
+ 
+ // Map of all configs that do not impact EDS
+ var skippedEdsConfigs = map[kind.Kind]struct{}{
+-	kind.DynamicConfig: {},
++	kind.FilterPolicy:    {},
++	kind.Consumer:        {},
++	kind.ServiceRegistry: {},
++	kind.DynamicConfig:   {},
+ 
+ 	kind.Gateway:               {},
+ 	kind.VirtualService:        {},
+diff --git a/pilot/pkg/xds/lds.go b/pilot/pkg/xds/lds.go
+index f93be3f..dc9967f 100644
+--- a/pilot/pkg/xds/lds.go
++++ b/pilot/pkg/xds/lds.go
+@@ -33,6 +33,8 @@ var _ model.XdsResourceGenerator = &LdsGenerator{}
+ // Map of all configs that do not impact LDS
+ var skippedLdsConfigs = map[model.NodeType]sets.Set[kind.Kind]{
+ 	model.Router: sets.New[kind.Kind](
++		kind.ServiceRegistry,
++
+ 		// for autopassthrough gateways, we build filterchains per-dr subset
+ 		kind.WorkloadGroup,
+ 		kind.WorkloadEntry,
+@@ -41,6 +43,8 @@ var skippedLdsConfigs = map[model.NodeType]sets.Set[kind.Kind]{
+ 		kind.DNSName,
+ 	),
+ 	model.SidecarProxy: sets.New[kind.Kind](
++		kind.ServiceRegistry,
++
+ 		kind.Gateway,
+ 		kind.WorkloadGroup,
+ 		kind.WorkloadEntry,
+@@ -49,6 +53,8 @@ var skippedLdsConfigs = map[model.NodeType]sets.Set[kind.Kind]{
+ 		kind.DNSName,
+ 	),
+ 	model.Waypoint: sets.New[kind.Kind](
++		kind.ServiceRegistry,
++
+ 		kind.Gateway,
+ 		kind.WorkloadGroup,
+ 		kind.WorkloadEntry,
+diff --git a/pilot/pkg/xds/nds.go b/pilot/pkg/xds/nds.go
+index e556221..7c827f4 100644
+--- a/pilot/pkg/xds/nds.go
++++ b/pilot/pkg/xds/nds.go
+@@ -38,6 +38,9 @@ var _ model.XdsResourceGenerator = &NdsGenerator{}
+ 
+ // Map of all configs that do not impact NDS
+ var skippedNdsConfigs = sets.New[kind.Kind](
++	kind.FilterPolicy,
++	kind.Consumer,
++	kind.ServiceRegistry,
+ 	kind.DynamicConfig,
+ 
+ 	kind.Gateway,
+diff --git a/pilot/pkg/xds/rds.go b/pilot/pkg/xds/rds.go
+index bc2a17f..a88ab1e 100644
+--- a/pilot/pkg/xds/rds.go
++++ b/pilot/pkg/xds/rds.go
+@@ -29,6 +29,9 @@ var _ model.XdsResourceGenerator = &RdsGenerator{}
+ 
+ // Map of all configs that do not impact RDS
+ var skippedRdsConfigs = sets.New[kind.Kind](
++	kind.Consumer,
++	kind.ServiceRegistry,
++
+ 	kind.WorkloadEntry,
+ 	kind.WorkloadGroup,
+ 	kind.AuthorizationPolicy,

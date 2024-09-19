@@ -71,6 +71,17 @@ func NewServiceRegistryReconciler(output component.Output, manager component.Res
 	)
 }
 
+type DynamicConfigReconciler interface {
+	Reconciler
+}
+
+func NewDynamicConfigReconciler(output component.Output, manager component.ResourceManager) DynamicConfigReconciler {
+	return &controller.DynamicConfigReconciler{
+		Output:          output,
+		ResourceManager: manager,
+	}
+}
+
 func SetLogger(logger component.CtrlLogger) {
 	log.SetLogger(logger)
 }

@@ -58,5 +58,4 @@ func TestNewClient(t *testing.T) {
 	assert.Nil(t, err)
 
 	patches.Reset()
-
 }
