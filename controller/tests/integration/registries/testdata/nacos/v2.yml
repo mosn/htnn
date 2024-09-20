@@ -1,0 +1,11 @@
+- apiVersion: htnn.mosn.io/v1
+  kind: ServiceRegistry
+  metadata:
+    name: v2
+    namespace: default
+  spec:
+    type: nacos
+    config:
+      serverUrl: http://127.0.0.1:8850
+      serviceRefreshInterval: 1s
+      version: v2

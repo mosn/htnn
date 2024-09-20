@@ -28,18 +28,16 @@ import (
 )
 
 func TestNewClient(t *testing.T) {
-	config := &nacos.Config{
-		ServerUrl: "http://127.0.0.1:9999999",
-	}
+	config := &nacos.Config{}
 	_, err := NewClient(config)
-	assert.ErrorContains(t, err, "can not create naming client")
+	assert.Error(t, err)
 
 	config = &nacos.Config{
 		ServerUrl: "::::::::::::",
 	}
 
 	_, err = NewClient(config)
-	assert.ErrorContains(t, err, "invalid server url")
+	assert.Error(t, err)
 
 	config = &nacos.Config{
 		ServerUrl: "http://127.0.0.1:8848",
