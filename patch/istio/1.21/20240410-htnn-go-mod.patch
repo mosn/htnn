@@ -2,7 +2,7 @@ diff --git a/go.mod b/go.mod
 index e7f308e890..def9507093 100644
 --- a/go.mod
 +++ b/go.mod
-@@ -5,6 +5,28 @@ go 1.21
+@@ -5,6 +5,29 @@ go 1.21
  // Client-go does not handle different versions of mergo due to some breaking changes - use the matching version
  replace github.com/imdario/mergo => github.com/imdario/mergo v0.3.5
 
@@ -21,6 +21,7 @@ index e7f308e890..def9507093 100644
 +replace (
 +	github.com/prometheus/common => github.com/prometheus/common v0.45.0
 +	github.com/prometheus/client_golang => github.com/prometheus/client_golang v1.18.0
++	github.com/envoyproxy/go-control-plane => github.com/envoyproxy/go-control-plane v0.12.1-0.20240326194405-485b2263e153
 +)
 +
 +// The break change https://github.com/google/cel-go/commit/04536922515e3de9de498f689b40f70d170b518b
