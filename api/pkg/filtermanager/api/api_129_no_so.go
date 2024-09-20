@@ -12,26 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package request
+//go:build 1.29 && !so
+
+package api
 
 import (
-	"mosn.io/htnn/api/pkg/filtermanager/api"
+	"github.com/envoyproxy/envoy/contrib/golang/common/go/api"
 )
 
-// GetHeaders returns a plain map represents the headers. The returned headers won't
-// contain any pseudo header like `:authority`.
-func GetHeaders(header api.RequestHeaderMap) map[string][]string {
-	hdr := map[string][]string{}
-	header.Range(func(k, v string) bool {
-		if k[0] == ':' {
-			return true
-		}
-		if entry, ok := hdr[k]; !ok {
-			hdr[k] = []string{v}
-		} else {
-			hdr[k] = append(entry, v)
-		}
-		return true
-	})
-	return hdr
+// SetLogLevel is used only for test! It doesn't exist when we build as so.
+func SetLogLevel(level api.LogType) {
+	currLogLevel.Store(int32(level))
 }

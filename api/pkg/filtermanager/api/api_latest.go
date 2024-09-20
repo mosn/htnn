@@ -12,42 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build so
+//go:build !1.29
 
 package api
 
 import (
-	"os"
-	"time"
-
 	"github.com/envoyproxy/envoy/contrib/golang/common/go/api"
 )
 
-func initLogLevelSyncer() {
-	interval := time.Second
-	envInterval := os.Getenv("ENVOY_GOLANG_LOG_LEVEL_SYNC_INTERVAL")
-	if envInterval != "" {
-		dur, err := time.ParseDuration(envInterval)
-		if err == nil && dur >= time.Millisecond {
-			// protect against too frequent sync
-			interval = dur
-		} else {
-			api.LogErrorf("invalid env var ENVOY_GOLANG_LOG_LEVEL_SYNC_INTERVAL: %s", envInterval)
-		}
-	}
+var (
+	LogTrace     = api.LogTrace
+	LogDebug     = api.LogDebug
+	LogInfo      = api.LogInfo
+	LogWarn      = api.LogWarn
+	LogError     = api.LogError
+	LogCritical  = api.LogCritical
+	LogTracef    = api.LogTracef
+	LogDebugf    = api.LogDebugf
+	LogInfof     = api.LogInfof
+	LogWarnf     = api.LogWarnf
+	LogErrorf    = api.LogErrorf
+	LogCriticalf = api.LogCriticalf
 
-	currLogLevel.Store(int32(api.GetLogLevel()))
-	ticker := time.NewTicker(interval)
-	go func() {
-		for {
-			select {
-			case <-ticker.C:
-				currLogLevel.Store(int32(api.GetLogLevel()))
-			}
-		}
-	}()
-}
-
-func init() {
-	initLogLevelSyncer()
-}
+	GetLogLevel = api.GetLogLevel
+)

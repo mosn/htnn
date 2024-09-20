@@ -28,8 +28,10 @@ PROJECT_NAME    = mosn.io/htnn
 DOCKER_MIRROR   = m.daocloud.io/
 # Both images use glibc 2.31. Ensure libc in the images match each other.
 BUILD_IMAGE     ?= $(DOCKER_MIRROR)docker.io/library/golang:1.21-bullseye
+ENVOY_API_VERSION ?= 1.29
 # We don't use istio/proxyv2 because it is not designed to be run separately (need to work around permission issue).
-PROXY_IMAGE     ?= $(DOCKER_MIRROR)docker.io/envoyproxy/envoy:contrib-v1.29.5
+PROXY_IMAGE_VERSION ?= 1.29.5
+PROXY_IMAGE     ?= $(DOCKER_MIRROR)docker.io/envoyproxy/envoy:contrib-v$(PROXY_IMAGE_VERSION)
 # We may need to use timestamp if we need to update the image in one PR
 REAL_DEV_TOOLS_IMAGE ?= ghcr.io/mosn/htnn-dev-tools:2024-07-12
 DEV_TOOLS_IMAGE ?= $(DOCKER_MIRROR)$(REAL_DEV_TOOLS_IMAGE)

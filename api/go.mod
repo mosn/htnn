@@ -21,7 +21,7 @@ go 1.21
 require (
 	github.com/agiledragon/gomonkey/v2 v2.11.0
 	github.com/cncf/xds/go v0.0.0-20231128003011-0fa0005c9caa
-	github.com/envoyproxy/envoy v1.29.4
+	github.com/envoyproxy/envoy v1.31.0
 	github.com/envoyproxy/go-control-plane v0.12.1-0.20240117015050-472addddff92 // version used by istio 1.21
 	github.com/envoyproxy/protoc-gen-validate v1.0.4
 	github.com/go-logr/logr v1.4.1
@@ -31,7 +31,7 @@ require (
 	go.uber.org/zap v1.27.0
 	golang.org/x/net v0.24.0
 	google.golang.org/grpc v1.63.2
-	google.golang.org/protobuf v1.33.0
+	google.golang.org/protobuf v1.34.1
 	gopkg.in/yaml.v3 v3.0.1
 )
 

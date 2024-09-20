@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build so
+//go:build so && !1.29
 
 package main
 
@@ -27,9 +27,9 @@ import (
 )
 
 func init() {
-	http.RegisterHttpFilterConfigFactoryAndParser("fm", filtermanager.FilterManagerFactory, &filtermanager.FilterManagerConfigParser{})
-	http.RegisterHttpFilterConfigFactoryAndParser("cm", consumer.ConsumerManagerFactory, &consumer.ConsumerManagerConfigParser{})
-	http.RegisterHttpFilterConfigFactoryAndParser("dc", dynamicconfig.DynamicConfigFactory, &dynamicconfig.DynamicConfigParser{})
+	http.RegisterHttpFilterFactoryAndConfigParser("fm", filtermanager.FilterManagerFactory, &filtermanager.FilterManagerConfigParser{})
+	http.RegisterHttpFilterFactoryAndConfigParser("cm", consumer.ConsumerManagerFactory, &consumer.ConsumerManagerConfigParser{})
+	http.RegisterHttpFilterFactoryAndConfigParser("dc", dynamicconfig.DynamicConfigFactory, &dynamicconfig.DynamicConfigParser{})
 }
 
 func main() {}

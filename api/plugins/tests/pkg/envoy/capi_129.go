@@ -12,15 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build !so
+//go:build 1.29 && !so
 
-package api
-
-import (
-	"github.com/envoyproxy/envoy/contrib/golang/common/go/api"
-)
-
-// SetLogLevel is used only for test! It doesn't exist when we build as so.
-func SetLogLevel(level api.LogType) {
-	currLogLevel.Store(int32(level))
-}
+package envoy
