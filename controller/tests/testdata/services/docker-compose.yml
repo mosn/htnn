@@ -19,6 +19,28 @@ services:
       - "8849:8848"
     networks:
       service:
+  nacosv2-1:
+    image: nacos-registry.cn-hangzhou.cr.aliyuncs.com/nacos/nacos-server:v2.4.2-slim
+    env_file:
+      - env/nacos.env
+    restart: unless-stopped
+    ports:
+      - "8850:8848"
+      - "9850:9848"
+      - "9851:9849"
+    networks:
+      service:
+  nacosv2-2:
+    image: nacos-registry.cn-hangzhou.cr.aliyuncs.com/nacos/nacos-server:v2.4.2-slim
+    env_file:
+      - env/nacos.env
+    restart: unless-stopped
+    ports:
+      - "8852:8848"
+      - "9852:9848"
+      - "9853:9849"
+    networks:
+      service:
   consul:
     image: docker.m.daocloud.io/library/consul:1.15.4
     restart: unless-stopped
@@ -39,7 +61,7 @@ services:
       service:
 
 
-
 networks:
   service:
+
 
