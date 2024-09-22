@@ -32,7 +32,7 @@ type Plugin struct {
 }
 
 func (p *Plugin) Type() plugins.PluginType {
-	return plugins.TypeTransform
+	return plugins.TypeTraffic
 }
 
 func (p *Plugin) Order() plugins.PluginOrder {
