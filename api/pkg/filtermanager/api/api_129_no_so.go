@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build 1.29 && !so
+//go:build envoy-1.29 && !so
 
 package api
 

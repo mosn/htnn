@@ -36,7 +36,9 @@ jobs:
         cache-dependency-path: "**/*.sum"
 
     - name: Unit test
-      run: make unit-test
+      run: |
+        ./patch/switch-envoy-go-version.sh 1.29
+        make unit-test
 
     - name: Build
       run: make build-test-so
