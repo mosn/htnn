@@ -4,23 +4,19 @@ title: Nacos
 
 ## Description
 
-The `nacos` registry interfaces with [Nacos](https://nacos.io/) service discovery, converting service information into `ServiceEntry`. This registry supports the V1 API, but according to the Nacos OpenAPI documentation, it can also be used to interface with Nacos 2.x.
-
-> Nacos 2.X is compatible with Nacos 1.X OpenAPI, please refer to the document Nacos1.X OpenAPI.
->
-> https://nacos.io/en/docs/v2/guide/user/open-api/
+The `nacos` registry interfaces with [Nacos](https://nacos.io/) service discovery, converting service information into `ServiceEntry`. This registry supports the V1 API and the V2 API.
 
 ## Configuration
 
-| Name                     | Type                            | Required | Validation        | Description                                            |
-|--------------------------|---------------------------------|----------|-------------------|--------------------------------------------------------|
-| version                  | string                          | True     | v1 or v2          | Nacos version                         |
-| serverUrl                | string                          | True     | must be valid URI | Nacos URL                                              |
-| namespace                | string                          | False    |                   | Nacos namespace. Default is "public".                  |
-| groups                   | string[]                        | False    | min_len = 1       | List of Nacos groups. Default is ["DEFAULT_GROUP"].    |
-| serviceRefreshInterval   | [Duration](../type.md#duration) | False    | gte: 1s           | Interval for polling the service list. Default is 30s. |
+| Name                   | Type                            | Required | Validation        | Description                                            |
+| ---------------------- | ------------------------------- | -------- | ----------------- | ------------------------------------------------------ |
+| version                | string                          | True     | v1 or v2          | Nacos version                                          |
+| serverUrl              | string                          | True     | must be valid URI | Nacos URL                                              |
+| namespace              | string                          | False    |                   | Nacos namespace. Default is "public".                  |
+| groups                 | string[]                        | False    | min_len = 1       | List of Nacos groups. Default is ["DEFAULT_GROUP"].    |
+| serviceRefreshInterval | [Duration](../type.md#duration) | False    | gte: 1s           | Interval for polling the service list. Default is 30s. |
 
-Nacos 1.x does not provide an API to subscribe to the current service list, so polling is the only way to retrieve the service list. Configuring a smaller value can allow for quicker detection of service deletions, but will place more pressure on Nacos.
+Nacos does not provide an API to subscribe to the current service list, so polling is the only way to retrieve the service list. Configuring a smaller value can allow for quicker detection of service deletions, but will place more pressure on Nacos.
 
 If a domain name is used inside `serverUrl`, it must be an FQDN, such as `svc.cluster.local`, rather than `svc`.
 
@@ -69,6 +65,7 @@ spec:
   type: nacos
   config:
     serverUrl: http://172.0.0.1:8848
+    version: v1
 ```
 
 For a registered service with a namespace of `public`, group of `prod`, name of `svr`, metadata of `{"type":"server"}`, IP of `192.168.0.1`, and port of 8080, the following configuration will be generated:

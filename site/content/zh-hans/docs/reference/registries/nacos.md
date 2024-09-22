@@ -4,23 +4,20 @@ title: Nacos
 
 ## 说明
 
-`nacos` registry 对接 [Nacos](https://nacos.io/) 服务发现，将服务信息转换成 `ServiceEntry`。该 registry 支持的是 V1 API，但根据 Nacos OpenAPI 文档，亦可用于对接 Nacos 2.x。
+`nacos` registry 对接 [Nacos](https://nacos.io/) 服务发现，将服务信息转换成 `ServiceEntry`。该 registry 既支持 V1 API，也支持 V2 API。
 
-> Nacos 2.X 版本兼容 Nacos1.X 版本的 OpenAPI, 请参考文档 Nacos1.X OpenAPI 使用。
->
-> https://nacos.io/zh-cn/docs/v2/guide/user/open-api.html
 
 ## 配置
 
-| 名称                      | 类型                              | 必选 | 校验规则              | 说明                                    |
-|-------------------------|---------------------------------|----|-------------------|---------------------------------------|
-| version                 | string                          | 是  | v1 or v2          | Nacos version                         |
-| serverUrl               | string                          | 是  | must be valid URI | Nacos URL                             |
-| namespace               | string                          | 否  |                   | Nacos namespace。默认为 "public"。         |
-| groups                  | string[]                        | 否  | min_len = 1       | Nacos group 列表。默认为 ["DEFAULT_GROUP"]。 |
-| serviceRefreshInterval  | [Duration](../type.md#duration) | 否  | gte: 1s           | 轮询服务列表的间隔。默认为 30s。                    |
+| 名称                   | 类型                            | 必选 | 校验规则          | 说明                                         |
+| ---------------------- | ------------------------------- | ---- | ----------------- | -------------------------------------------- |
+| version                | string                          | 是   | v1 or v2          | Nacos version                                |
+| serverUrl              | string                          | 是   | must be valid URI | Nacos URL                                    |
+| namespace              | string                          | 否   |                   | Nacos namespace。默认为 "public"。           |
+| groups                 | string[]                        | 否   | min_len = 1       | Nacos group 列表。默认为 ["DEFAULT_GROUP"]。 |
+| serviceRefreshInterval | [Duration](../type.md#duration) | 否   | gte: 1s           | 轮询服务列表的间隔。默认为 30s。             |
 
-Nacos 1.x 没有提供订阅当前服务列表的接口，所以只能通过轮询来获取服务列表。配置一个较小的值可以更快得知服务被删除，但是会给 Nacos 带来更大的压力。
+Nacos 没有提供订阅当前服务列表的接口，所以只能通过轮询来获取服务列表。配置一个较小的值可以更快得知服务被删除，但是会给 Nacos 带来更大的压力。
 
 如果在 `serverUrl` 里面使用域名，它必须是 FQDN，如 `svc.cluster.local`，而不是 `svc`。
 
@@ -69,6 +66,7 @@ spec:
   type: nacos
   config:
     serverUrl: http://172.0.0.1:8848
+    version: v1
 ```
 
 对于一个 namespace 为 `public`，group 为 `prod`，名称为 `svr`，metadata 为 `{"type":"server"}`，IP 为 `192.168.0.1`，port 为 8080 的注册服务，将生成如下配置：
