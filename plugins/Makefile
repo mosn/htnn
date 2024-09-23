@@ -39,6 +39,7 @@ build-test-so-local:
 build-test-so:
 	docker run --rm ${MOUNT_GOMOD_CACHE} -v ${PROJECT_ROOT}:/go/src/${PROJECT_NAME} -w /go/src/${PROJECT_NAME}/plugins \
 		-e GOPROXY \
+		-e ENVOY_API_VERSION \
 		${BUILD_IMAGE} \
 		bash -c "git config --global --add safe.directory '*' && make build-test-so-local"
 
@@ -70,6 +71,7 @@ build-so-local:
 build-so:
 	docker run --rm ${MOUNT_GOMOD_CACHE} -v ${PROJECT_ROOT}:/go/src/${PROJECT_NAME} -w /go/src/${PROJECT_NAME}/plugins \
 		-e GOPROXY \
+		-e ENVOY_API_VERSION \
 		${BUILD_IMAGE} \
 		bash -c "git config --global --add safe.directory '*' && make build-so-local"
 

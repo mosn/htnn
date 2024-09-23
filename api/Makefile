@@ -39,6 +39,7 @@ build-test-so:
 		-v $(PWD)/..:/go/src/${PROJECT_NAME} \
 		-w /go/src/${PROJECT_NAME}/api \
 		-e GOPROXY \
+		-e ENVOY_API_VERSION \
 		${BUILD_IMAGE} \
 		bash -c "git config --global --add safe.directory '*' && make build-test-so-local"
 

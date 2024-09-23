@@ -25,12 +25,8 @@ PROXY_BASE_IMAGE ?= istio/proxyv2:$(ISTIO_VERSION)
 CONTROLLER_IMAGE ?= htnn/controller:latest
 CONTROLLER_BASE_IMAGE ?= docker.io/istio/pilot:$(ISTIO_VERSION)
 
-.PHONY: build-so
-build-so:
-	cd ../plugins/ && ENVOY_API_VERSION=1.29 make build-so
-
 .PHONY: build-proxy-image
-build-proxy-image: build-so
+build-proxy-image:
 	cd .. && $(CONTAINER_TOOL) build -t ${PROXY_IMAGE} --build-arg GOPROXY=${GOPROXY} --build-arg PROXY_BASE_IMAGE=${PROXY_BASE_IMAGE} \
 		-f manifests/images/dp/Dockerfile .
 

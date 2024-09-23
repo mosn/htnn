@@ -17,17 +17,20 @@
 package filtermanager
 
 import (
+	"runtime/debug"
+
 	capi "github.com/envoyproxy/envoy/contrib/golang/common/go/api"
 
 	"mosn.io/htnn/api/pkg/filtermanager/api"
 )
 
 func (s *filterManagerStreamInfo) WorkerID() uint32 {
-	panic("not implemented")
+	api.LogErrorf("WorkerID is not implemented: %s", debug.Stack())
+	return 0
 }
 
 func (cb *filterManagerCallbackHandler) ClearRouteCache() {
-	panic("not implemented")
+	api.LogErrorf("ClearRouteCache is not implemented: %s", debug.Stack())
 }
 
 func (cb *filterManagerCallbackHandler) DecoderFilterCallbacks() api.DecoderFilterCallbacks {
