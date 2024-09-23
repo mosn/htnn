@@ -61,3 +61,6 @@ dependency:
     - name: github.com/golang/freetype # dual license: we choose the FreeType License, which is similar to the original BSD license with an advertising clause
     - name: github.com/chzyer/logex # use MIT License
     - name: github.com/JohnCGriffin/overflow # use MIT License added in the README
+    - name: github.com/hudl/fargo # use BSD-2-Clause license, which is not recognized in sentinel-golang 1.0.4
+    - name: github.com/lightstep/lightstep-tracer-common/golang/gogo # use MIT license, which is not recognized in sentinel-golang 1.0.4
+    - name: github.com/streadway/handy # use BSD-2-Clause license, which is not recognized in sentinel-golang 1.0.4
