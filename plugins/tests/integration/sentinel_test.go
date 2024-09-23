@@ -622,7 +622,7 @@ func TestSentinelMixture(t *testing.T) {
 
 	time.Sleep(1100 * time.Millisecond)
 
-	resp, err = doGet(200, hdr, nil)
+	resp, _ = doGet(200, hdr, nil)
 	assert.Equal(t, 200, resp.StatusCode)
 	// flow end
 
