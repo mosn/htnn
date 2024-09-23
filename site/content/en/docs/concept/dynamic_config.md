@@ -10,18 +10,18 @@ First, we provide a method for users to register callbacks:
 
 ```go
 type DynamicConfig interface {
-	ProtoReflect() protoreflect.Message
-	Validate() error
+    ProtoReflect() protoreflect.Message
+    Validate() error
 }
 
 type DynamicConfigProvider interface {
-	Config() DynamicConfig
+    Config() DynamicConfig
 }
 
 type DynamicConfigHandler interface {
-	DynamicConfigProvider
+    DynamicConfigProvider
 
-	OnUpdate(config any) error
+    OnUpdate(config any) error
 }
 
 func RegisterDynamicConfigHandler(name string, c DynamicConfigHandler) {
@@ -47,16 +47,16 @@ type demo struct {
 }
 
 func (d *demo) Config() DynamicConfig {
-	return &Config{}
+    return &Config{}
 }
 
 func (d *demo) OnUpdate(config any) error {
-	c := config.(*Config)
+    c := config.(*Config)
     ...
 }
 
 func init() {
-	RegisterDynamicConfigHandler("demo", &demo{})
+    RegisterDynamicConfigHandler("demo", &demo{})
 }
 ```
 
