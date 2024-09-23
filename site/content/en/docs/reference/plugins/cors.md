@@ -62,7 +62,7 @@ spec:
 
 Let's try it out:
 
-```
+```shell
 $ curl -X OPTIONS http://localhost:10000/ -H "Origin: https://x.efault.local" -H "Access-Control-Request-Method: GET" -i
 HTTP/1.1 200 OK
 server: istio-envoy

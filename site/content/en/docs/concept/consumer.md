@@ -82,7 +82,7 @@ spec:
 
 Without the Consumer layer of abstraction, each route would have to be configured with `key: Leo`. Imagine one day, for example, `Leo` is just a temporary user and we need to revoke their permissions. With the Consumer, we would only need to delete the consumer `Leo`, without any need to alter the route configurations.
 
-[Consumer plugins](../developer-guide/plugin_development.md) can be configured within the `auth` field of a Consumer. There are two types of configurations for each Consumer plugin: one is set on the Route, which specifies the source of authentication parameters, such as the `keys` in the previously mentioned FilterPolicy. The second type is configured on the Consumer, which determines the matching authentication parameters for that specific Consumer, as exemplified by the `key` in the above Consumer.
+[Consumer plugins](../developer-guide/plugin_development.md#consumer-plugins) can be configured within the `auth` field of a Consumer. There are two types of configurations for each Consumer plugin: one is set on the Route, which specifies the source of authentication parameters, such as the `keys` in the previously mentioned FilterPolicy. The second type is configured on the Consumer, which determines the matching authentication parameters for that specific Consumer, as exemplified by the `key` in the above Consumer.
 
 Each Consumer plugin configured on the Route will proceed through the following steps:
 

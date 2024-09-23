@@ -28,7 +28,18 @@ import (
 )
 
 func TestNewClient(t *testing.T) {
-	config := &nacos.Config{
+	config := &nacos.Config{}
+	_, err := NewClient(config)
+	assert.Error(t, err)
+
+	config = &nacos.Config{
+		ServerUrl: "::::::::::::",
+	}
+
+	_, err = NewClient(config)
+	assert.Error(t, err)
+
+	config = &nacos.Config{
 		ServerUrl: "http://127.0.0.1:8848",
 		Version:   "v1",
 	}
@@ -43,20 +54,8 @@ func TestNewClient(t *testing.T) {
 	patches.ApplyFunc(clients.NewNamingClient, func(param vo.NacosClientParam) (naming_client.INamingClient, error) {
 		return nil, nil
 	})
-	_, err := NewClient(config)
+	_, err = NewClient(config)
 	assert.Nil(t, err)
 
 	patches.Reset()
-
-	config = &nacos.Config{}
-	_, err = NewClient(config)
-	assert.Error(t, err)
-
-	config = &nacos.Config{
-		ServerUrl: "::::::::::::",
-	}
-
-	_, err = NewClient(config)
-	assert.Error(t, err)
-
 }

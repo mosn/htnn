@@ -54,3 +54,10 @@ dependency:
     - name: github.com/rcrowley/go-metrics # this repo uses BSD-2-Clause-Views, which is not recognized in skywalking-eye 0.6
     - name: github.com/kr/logfmt # the author adds MIT License later
     - name: github.com/pascaldekloe/goe # use CC0-1.0 License
+    - name: github.com/zeebo/assert # use CC0-1.0 License
+    - name: github.com/ajstarks/deck # use CC-BY-4.0 License
+    - name: github.com/ajstarks/deck/generate # use CC-BY-4.0 License
+    - name: github.com/ajstarks/svgo # use CC-BY-4.0 License
+    - name: github.com/golang/freetype # dual license: we choose the FreeType License, which is similar to the original BSD license with an advertising clause
+    - name: github.com/chzyer/logex # use MIT License
+    - name: github.com/JohnCGriffin/overflow # use MIT License added in the README

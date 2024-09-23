@@ -63,14 +63,14 @@ spec:
 
 对 `/echo` 路径发起 GET 请求，会成功：
 
-```
+```shell
 $ curl http://localhost:10000/echo
 HTTP/1.1 200 OK
 ```
 
 对 `/echo` 路径发起 POST 请求，会失败：
 
-```
+```shell
 $ curl -X POST http://localhost:10000/echo
 HTTP/1.1 403 Forbidden
 ```

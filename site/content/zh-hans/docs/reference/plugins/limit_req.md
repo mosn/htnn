@@ -68,7 +68,7 @@ spec:
 
 第一个请求将获得 `200` 状态码，随后的请求将以 `429` 被丢弃：
 
-```
+```shell
 $ while true; do curl -I http://localhost:10000/ 2>/dev/null | head -1 ; done
 HTTP/1.1 200 OK
 HTTP/1.1 429 Too Many Requests
@@ -77,7 +77,7 @@ HTTP/1.1 429 Too Many Requests
 
 如果客户端将其请求速率降低到每秒一个以下，所有请求都不会被丢弃：
 
-```
+```shell
 $ while true; do curl -I http://localhost:10000/ 2>/dev/null | head -1 ; sleep 1; done
 HTTP/1.1 200 OK
 HTTP/1.1 200 OK

@@ -31,7 +31,7 @@ HTNN 控制面额外增加了下面的指标：
 
 HTNN 控制面调和时生成的 EnvoyFilter 和 ServiceEntry 都可以通过 istio 自己的 configz 接口获取。例如执行 `kubectl exec -it istiod-xxx -- curl 127.0.0.1:8080/debug/configz | jq` 可以看到：
 
-```
+```json
 {
   "kind": "EnvoyFilter",
   "apiVersion": "networking.istio.io/v1alpha3",

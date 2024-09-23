@@ -95,6 +95,7 @@ spec:
 ```
 
 在两种情况下 `limitCountRedis.config` 对象会被重新创建：
+
 1. 任何 `vs` 所在的 Gateway 下的路由发生变化
 2. 任何指向上一种情况里面的路由的 FilterPolicy 的 spec 发生变化
 

@@ -28,7 +28,7 @@ StringMatcher 包含操作以及是否忽略大小写的 `ignore_case` 的 boole
 
 例如，
 
-```
+```json lines
 {"exact":"foo", "ignore_case": true}
 {"prefix":"pre"}
 {"regex":"^Cache"}

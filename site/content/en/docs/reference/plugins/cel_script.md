@@ -63,14 +63,14 @@ The `allowIf` expression requires that the request path is `/echo`, and the meth
 
 Sending a GET request to the `/echo` path will succeed:
 
-```
+```shell
 $ curl http://localhost:10000/echo
 HTTP/1.1 200 OK
 ```
 
 Sending a POST request to the `/echo` path will fail:
 
-```
+```shell
 $ curl -X POST http://localhost:10000/echo
 HTTP/1.1 403 Forbidden
 ```

@@ -184,13 +184,18 @@ lint-website: $(LOCALBIN)
 	@# ignore 'lookup htnn.mosn.io: no such host' error for now
 	test -f /tmp/htmltest.log && (grep -E '(target does not exist|Non-OK status: 404)' /tmp/htmltest.log && exit 1 || true)
 
+.PHONY: lint-markdown
+lint-markdown:
+	if ! command -v markdownlint >/dev/null 2>&1; then npm install -g markdownlint-cli; fi
+	markdownlint '**/*.md' --disable MD012 MD013 MD029 MD033 MD034 MD036 MD041
+
 .PHONY: lint-remain
 lint-remain:
 	grep '>>>>>>' $(shell git ls-files .) | grep -v 'Makefile:' && exit 1 || true
 	cd tools && go run cmd/linter/main.go
 
 .PHONY: lint
-lint: lint-go lint-proto lint-license lint-spell lint-editorconfig lint-cjk lint-remain
+lint: lint-go lint-proto lint-license lint-spell lint-editorconfig lint-cjk lint-remain lint-markdown
 
 .PHONY: fmt
 fmt: fmt-go fmt-proto fix-spell fix-cjk

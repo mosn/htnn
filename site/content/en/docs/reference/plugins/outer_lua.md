@@ -80,7 +80,7 @@ spec:
 
 We can test it out:
 
-```
+```shell
 $ curl http://localhost:10000/
 HTTP/1.1 200 OK
 content-length: 12

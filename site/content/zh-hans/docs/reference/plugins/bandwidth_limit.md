@@ -64,7 +64,7 @@ spec:
 
 为了测试插件效果，我们让监听端口 `8080` 的后端服务器返回所有收到的请求。让我们用 [bombardier](https://pkg.go.dev/github.com/codesenberg/bombardier) 试一下：
 
-```
+```shell
 $ bombardier -m POST -f go.sum -c 10 -t 180s -d 60s -l http://localhost:10000/
 Bombarding http://localhost:10000/ for 1m0s using 10 connection(s)
 [======================================================================================================================================================] 1m0s

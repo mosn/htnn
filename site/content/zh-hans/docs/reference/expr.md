@@ -20,7 +20,7 @@ HTNN 许多地方使用了 CEL（Common Expression Language）作为运行时动
 
 如果`request.header(name)` 或 `request.query(name)` 指定的 name 对应存在多个值，会将它们以 `,` 拼接起来。比如下面的请求：
 
-```
+```shell
 GET /x?a=1&a=2 HTTP/1.1
 x-hdr: a
 x-hdr: b

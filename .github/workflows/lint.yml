@@ -116,3 +116,9 @@ jobs:
     - name: lint remain
       run: |
         make lint-remain
+
+    - name: install markdownlint cli
+      run: npm install -g markdownlint-cli
+
+    - name: lint markdown
+      run: make lint-markdown

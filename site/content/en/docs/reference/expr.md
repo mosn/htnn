@@ -20,7 +20,7 @@ HTNN uses CEL (Common Expression Language) in many places as a runtime expressio
 
 If there are multiple values corresponding to the name specified by `request.header(name)` or `request.query(name)`, they will be concatenated with `,`. For example, the following request:
 
-```
+```shell
 GET /x?a=1&a=2 HTTP/1.1
 x-hdr: a
 x-hdr: b

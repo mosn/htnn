@@ -19,7 +19,7 @@ helm repo update
 Installation command:
 
 ```shell
-$ helm install $package_name htnn/$package_name --namespace istio-system --create-namespace --wait
+helm install $package_name htnn/$package_name --namespace istio-system --create-namespace --wait
 ```
 
 Where `$package_name` can be:

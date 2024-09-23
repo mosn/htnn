@@ -57,8 +57,8 @@ spec:
 
 ```shell
 hydra create client --response-type code,id_token \
-	--grant-type authorization_code,refresh_token -e http://hydra.service:4445 \
-	--redirect-uri "http://localhost:10000/callback/oidc" --format json
+    --grant-type authorization_code,refresh_token -e http://hydra.service:4445 \
+    --redirect-uri "http://localhost:10000/callback/oidc" --format json
 ```
 
 hydra 返回结果如下：`{"client_id":"5730b1ee-3b0e-4395-b9a2-9e83e8eb1956","client_name":"","client_secret":"Rjqxp0~VdERveFkUxWhfi8mK8-",...}`
