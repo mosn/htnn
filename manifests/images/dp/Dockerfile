@@ -31,6 +31,8 @@ COPY api/ api/
 COPY types/ types/
 COPY plugins/ plugins/
 COPY controller/ controller/
+COPY patch/switch-envoy-go-version.sh patch/switch-envoy-go-version.sh
+RUN ./patch/switch-envoy-go-version.sh 1.29.5
 # Remember to run `make prebuild` before building the image
 COPY external/istio/ external/istio/
 WORKDIR /workspace/external/istio

@@ -13,7 +13,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-
+# This script is used to switch the envoy version in go.mod files
 set -euo pipefail
 
 envoy_version=$1
@@ -24,9 +24,19 @@ if [ -z "$envoy_version" ]; then
     exit 1
 fi
 
-if [[ "$envoy_version" =~ ^1\.29\.? ]]; then
-    # patch version is trivial as so far we don't have any patch version created for Envoy Go
-    envoy_version="1.29.5"
+if [[ ! "$envoy_version" =~ ^[0-9]+\.[0-9]+\. ]]; then
+    echo "Envoy version $envoy_version should be in the format of x.y.z"
+    exit 1
+fi
+
+if [[ "$envoy_version" =~ ^1\.31\. ]]; then
+    echo "Envoy version $envoy_version is already in used"
+    exit 0
+fi
+
+if [[ ! "$envoy_version" =~ ^1\.(29)\. ]]; then
+    echo "Unsupport envoy version $envoy_version"
+    exit 1
 fi
 
 append_if_need() {

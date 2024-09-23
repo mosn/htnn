@@ -16,7 +16,7 @@ include ../common.mk
 
 .PHONY: unit-test
 unit-test:
-	go test -tags ${ENVOY_API_VERSION} ${TEST_OPTION} $(shell go list ./... | \
+	go test -tags envoy${ENVOY_API_VERSION} ${TEST_OPTION} $(shell go list ./... | \
 		grep -v tests/integration)
 
 # We can't specify -race to `go build` because it seems that
@@ -24,7 +24,7 @@ unit-test:
 # the race detector will allocate memory out of 48bits address which is not allowed in x64.
 .PHONY: build-test-so-local
 build-test-so-local:
-	CGO_ENABLED=1 go build -tags so,${ENVOY_API_VERSION} \
+	CGO_ENABLED=1 go build -tags so,envoy${ENVOY_API_VERSION} \
 		-ldflags "-B 0x$(shell head -c20 /dev/urandom|od -An -tx1|tr -d ' \n') " \
 		--buildmode=c-shared \
 		-cover -covermode=atomic -coverpkg=${PROJECT_NAME}/... \
@@ -47,10 +47,10 @@ build-test-so:
 integration-test:
 	test -d /tmp/htnn_coverage && rm -rf /tmp/htnn_coverage || true
 	$(foreach PKG, $(shell go list ./tests/integration/...), \
-		go test -tags ${ENVOY_API_VERSION} -v ${PKG} || exit 1; \
+		go test -tags envoy${ENVOY_API_VERSION} -v ${PKG} || exit 1; \
 	)
 
 # The benchmark running time can be controlled via env var HTNN_DATA_PLANE_BENCHMARK_DURATION
 .PHONY: benchmark
 benchmark:
-	go test -tags benchmark,${ENVOY_API_VERSION} -v ./tests/integration/ -run TestBenchmark
+	go test -tags benchmark,envoy${ENVOY_API_VERSION} -v ./tests/integration/ -run TestBenchmark

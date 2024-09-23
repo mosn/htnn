@@ -26,12 +26,13 @@ $(LOCALBIN):
 TARGET_SO       = libgolang.so
 PROJECT_NAME    = mosn.io/htnn
 DOCKER_MIRROR   = m.daocloud.io/
+
 # Both images use glibc 2.31. Ensure libc in the images match each other.
 BUILD_IMAGE     ?= $(DOCKER_MIRROR)docker.io/library/golang:1.21-bullseye
-ENVOY_API_VERSION ?= 1.29
-# We don't use istio/proxyv2 because it is not designed to be run separately (need to work around permission issue).
-PROXY_IMAGE_VERSION ?= 1.29.5
-PROXY_IMAGE     ?= $(DOCKER_MIRROR)docker.io/envoyproxy/envoy:contrib-v$(PROXY_IMAGE_VERSION)
+ENVOY_API_VERSION ?= 1.31
+PROXY_IMAGE     ?= $(DOCKER_MIRROR)docker.io/envoyproxy/envoy:contrib-v1.31.2
+# We also support Envoy 1.29. See https://github.com/mosn/htnn/tree/main/site/content/en/docs/developer-guide/dataplane_support.md (TODO: write the doc)
+
 # We may need to use timestamp if we need to update the image in one PR
 REAL_DEV_TOOLS_IMAGE ?= ghcr.io/mosn/htnn-dev-tools:2024-07-12
 DEV_TOOLS_IMAGE ?= $(DOCKER_MIRROR)$(REAL_DEV_TOOLS_IMAGE)

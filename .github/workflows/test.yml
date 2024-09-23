@@ -34,6 +34,11 @@ jobs:
       with:
         go-version: '1.21'
         cache-dependency-path: "**/*.sum"
+    - name: Choose the Envoy API
+      run: |
+        pushd ..
+        ./patch/switch-envoy-go-version.sh 1.29.5
+        popd
 
     - name: Unit test
       run: make unit-test
