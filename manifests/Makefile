@@ -27,7 +27,7 @@ CONTROLLER_BASE_IMAGE ?= docker.io/istio/pilot:$(ISTIO_VERSION)
 
 .PHONY: build-so
 build-so:
-	cd ../plugins/ && make build-so
+	cd ../plugins/ && ENVOY_API_VERSION=1.29 make build-so
 
 .PHONY: build-proxy-image
 build-proxy-image: build-so

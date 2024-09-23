@@ -18,6 +18,7 @@ package filtermanager
 
 import (
 	capi "github.com/envoyproxy/envoy/contrib/golang/common/go/api"
+
 	"mosn.io/htnn/api/pkg/filtermanager/api"
 )
 

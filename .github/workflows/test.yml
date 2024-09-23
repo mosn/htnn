@@ -41,12 +41,12 @@ jobs:
         popd
 
     - name: Unit test
-      run: make unit-test
+      run: ENVOY_API_VERSION=1.29 make unit-test
 
     - name: Build
       run: make build-test-so
     - name: Integration test
-      run: make integration-test
+      run: ENVOY_API_VERSION=1.29 PROXY_IMAGE=envoyproxy/envoy:contrib-v1.29.5 make integration-test
     - name: Upload logs
       uses: actions/upload-artifact@v4
       if: failure()
