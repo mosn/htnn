@@ -49,7 +49,7 @@ message FlowRule {
   TokenCalculateStrategy token_calculate_strategy = 3;
   ControlBehavior control_behavior = 4;
   double threshold = 5;
-  uint32 stat_interval_in_ms = 6 [(validate.rules).uint32 = {gt: 0}];
+  uint32 stat_interval_in_ms = 6;
   uint32 max_queueing_time_ms = 7;
   RelationStrategy relation_strategy = 8;
   string ref_resource = 9;
@@ -81,8 +81,8 @@ message HotSpotRule {
   ControlBehavior control_behavior = 4;
   int32 param_index = 5;
   string param_key = 6;
-  int64 threshold = 7;
-  int64 duration_in_sec = 8 [(validate.rules).int64 = {gt: 0}];
+  int64 threshold = 7 [(validate.rules).int64 = {gt: 0}];
+  int64 duration_in_sec = 8;
   int64 max_queueing_time_ms = 9;
   int64 burst_count = 10;
   int64 params_max_capacity = 11;
@@ -102,7 +102,7 @@ message CircuitBreakerRule {
   Strategy strategy = 3;
   uint32 retry_timeout_ms = 4;
   uint64 min_request_amount = 5;
-  uint32 stat_interval_ms = 6 [(validate.rules).uint32 = {gt: 0}];
+  uint32 stat_interval_ms = 6;
   double threshold = 7 [(validate.rules).double = {gt: 0}];
   uint64 probe_num = 8;
   uint64 max_allowed_rt_ms = 9;

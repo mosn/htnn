@@ -733,16 +733,7 @@ func (m *FlowRule) validate(all bool) error {
 
 	// no validation rules for Threshold
 
-	if m.GetStatIntervalInMs() <= 0 {
-		err := FlowRuleValidationError{
-			field:  "StatIntervalInMs",
-			reason: "value must be greater than 0",
-		}
-		if !all {
-			return err
-		}
-		errors = append(errors, err)
-	}
+	// no validation rules for StatIntervalInMs
 
 	// no validation rules for MaxQueueingTimeMs
 
@@ -911,11 +902,9 @@ func (m *HotSpotRule) validate(all bool) error {
 
 	// no validation rules for ParamKey
 
-	// no validation rules for Threshold
-
-	if m.GetDurationInSec() <= 0 {
+	if m.GetThreshold() <= 0 {
 		err := HotSpotRuleValidationError{
-			field:  "DurationInSec",
+			field:  "Threshold",
 			reason: "value must be greater than 0",
 		}
 		if !all {
@@ -923,6 +912,8 @@ func (m *HotSpotRule) validate(all bool) error {
 		}
 		errors = append(errors, err)
 	}
+
+	// no validation rules for DurationInSec
 
 	// no validation rules for MaxQueueingTimeMs
 
@@ -1079,16 +1070,7 @@ func (m *CircuitBreakerRule) validate(all bool) error {
 
 	// no validation rules for MinRequestAmount
 
-	if m.GetStatIntervalMs() <= 0 {
-		err := CircuitBreakerRuleValidationError{
-			field:  "StatIntervalMs",
-			reason: "value must be greater than 0",
-		}
-		if !all {
-			return err
-		}
-		errors = append(errors, err)
-	}
+	// no validation rules for StatIntervalMs
 
 	if m.GetThreshold() <= 0 {
 		err := CircuitBreakerRuleValidationError{
