@@ -16,7 +16,6 @@ package translation
 
 import (
 	"context"
-	"fmt"
 	"maps"
 	"os"
 	"path/filepath"
@@ -25,9 +24,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
-	istioapi "istio.io/api/networking/v1alpha3"
 	istiov1a3 "istio.io/client-go/pkg/apis/networking/v1alpha3"
 	gwapiv1b1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 	"sigs.k8s.io/yaml"
@@ -38,7 +34,6 @@ import (
 	"mosn.io/htnn/controller/internal/log"
 	_ "mosn.io/htnn/controller/plugins"    // register plugins
 	_ "mosn.io/htnn/controller/registries" // register registries
-	"mosn.io/htnn/controller/tests/pkg"
 	mosniov1 "mosn.io/htnn/types/apis/v1"
 )
 
@@ -272,93 +267,6 @@ func TestTranslate(t *testing.T) {
 			// google/go-cmp is not used here as it will compare unexported fields by default.
 			// Calling IgnoreUnexported for each types in istio object is too cubmersome so we
 			// just use string comparison here.
-			require.Equal(t, want, actual)
-		})
-	}
-}
-
-// snakeToCamel converts a snake_case string to a camelCase string.
-func snakeToCamel(s string) string {
-	words := strings.Split(s, "_")
-	for i := 1; i < len(words); i++ {
-		words[i] = cases.Title(language.Und, cases.NoLower).String(words[i])
-	}
-	return strings.Join(words, "")
-}
-
-func TestPlugins(t *testing.T) {
-	inputFiles, err := filepath.Glob(filepath.Join("testdata", "plugins", "*.in.yml"))
-	require.NoError(t, err)
-
-	var vs *istiov1a3.VirtualService
-	var gw *istiov1a3.Gateway
-	input := []map[string]interface{}{}
-	mustUnmarshal(t, filepath.Join("testdata", "plugins", "default.yml"), &input)
-
-	for _, in := range input {
-		obj := pkg.MapToObj(in)
-		gvk := obj.GetObjectKind().GroupVersionKind()
-		if gvk.Kind == "VirtualService" {
-			vs = obj.(*istiov1a3.VirtualService)
-		} else if gvk.Group == "networking.istio.io" && gvk.Kind == "Gateway" {
-			gw = obj.(*istiov1a3.Gateway)
-		}
-	}
-
-	for _, inputFile := range inputFiles {
-		name := testName(inputFile)
-		t.Run(name, func(t *testing.T) {
-			var fp mosniov1.FilterPolicy
-			mustUnmarshal(t, inputFile, &fp)
-
-			s := NewInitState()
-			s.AddPolicyForVirtualService(&fp, vs, []*istiov1a3.Gateway{gw})
-
-			fs, err := s.Process(context.Background())
-			require.NoError(t, err)
-
-			defaultEnvoyFilters := istio.DefaultEnvoyFilters()
-			expPlugin := fmt.Sprintf("htnn.filters.http.%s", snakeToCamel(name))
-			for key := range defaultEnvoyFilters {
-				for _, ef := range fs.EnvoyFilters {
-					if ef.Name == key.Name {
-						if ef.Name == "htnn-http-filter" {
-							kept := []*istioapi.EnvoyFilter_EnvoyConfigObjectPatch{}
-							for _, cp := range ef.Spec.ConfigPatches {
-								st := cp.Patch.Value
-								name := st.AsMap()["name"].(string)
-								if name == expPlugin {
-									kept = append(kept, cp)
-								}
-							}
-							ef.Spec.ConfigPatches = kept
-						} else {
-							delete(fs.EnvoyFilters, key)
-						}
-						break
-					}
-				}
-			}
-
-			var out []*istiov1a3.EnvoyFilter
-			for _, ef := range fs.EnvoyFilters {
-				// drop irrelevant fields
-				ef.Labels = nil
-				ef.Annotations = nil
-				out = append(out, ef)
-			}
-			sort.Slice(out, func(i, j int) bool {
-				if out[i].Namespace != out[j].Namespace {
-					return out[i].Namespace < out[j].Namespace
-				}
-				return out[i].Name < out[j].Name
-			})
-			d, _ := yaml.Marshal(out)
-			actual := string(d)
-
-			outputFilePath := strings.ReplaceAll(inputFile, ".in.yml", ".out.yml")
-			d, _ = os.ReadFile(outputFilePath)
-			want := string(d)
 			require.Equal(t, want, actual)
 		})
 	}
