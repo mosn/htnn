@@ -9,5 +9,6 @@ Manually managing `ServiceEntry` can solve some simple scenarios, but it is not 
 Currently, HTNN has provided an implementation for Nacos V1, and we welcome contributors to submit code to support more service discovery systems.
 
 Relevant links:
+
 * [How to develop a registry](../developer-guide/registry_development.md)
 * [Existing registry documentation](../reference/registries)

@@ -41,7 +41,7 @@ Either `remote` or `local` is required.
 
 Assumed the original client request is:
 
-```
+```shell
 GET /?a=1&b= HTTP/1.1
 Host: localhost:10000
 Pet: dog
@@ -157,14 +157,14 @@ As you can see, the policy `test` will be used to evaluate the input that we sen
 
 Now, to test it out:
 
-```
+```shell
 curl -i -X GET localhost:10000/echo
 HTTP/1.1 200 OK
 ```
 
 If we try to make a request with a different method, the request will fail:
 
-```
+```shell
 curl -i -X POST localhost:10000/echo -d "AA"
 HTTP/1.1 403 Forbidden
 ```
@@ -189,14 +189,14 @@ opa:
 
 Now, to test it out:
 
-```
+```shell
 curl -i -X GET localhost:10000/echo
 HTTP/1.1 200 OK
 ```
 
 If we try to make a request with a different method, the request will fail:
 
-```
+```shell
 curl -i -X POST localhost:10000/echo -d "AA"
 HTTP/1.1 403 Forbidden
 ```

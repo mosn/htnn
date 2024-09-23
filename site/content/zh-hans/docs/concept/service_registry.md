@@ -9,5 +9,6 @@ title: 服务发现
 目前 HTNN 已经提供了针对 Nacos V1 的实现，欢迎各位贡献者提交代码，支持更多的服务发现系统。
 
 相关链接：
+
 * [如何开发 registry](../developer-guide/registry_development.md)
 * [现有 registry 的文档](../reference/registries)

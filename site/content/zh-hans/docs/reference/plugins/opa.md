@@ -41,7 +41,7 @@ title: OPA
 
 假设原始的客户端请求为：
 
-```
+```shell
 GET /?a=1&b= HTTP/1.1
 Host: localhost:10000
 Pet: dog
@@ -154,14 +154,14 @@ spec:
 
 现在，来进行测试：
 
-```
+```shell
 curl -i -X GET localhost:10000/echo
 HTTP/1.1 200 OK
 ```
 
 如果我们尝试使用其他方法发起请求，请求将会失败：
 
-```
+```shell
 curl -i -X POST localhost:10000/echo -d "AA"
 HTTP/1.1 403 Forbidden
 ```
@@ -186,14 +186,14 @@ opa:
 
 现在，来进行测试：
 
-```
+```shell
 curl -i -X GET localhost:10000/echo
 HTTP/1.1 200 OK
 ```
 
 如果我们尝试使用其他方法发起请求，请求将会失败：
 
-```
+```shell
 curl -i -X POST localhost:10000/echo -d "AA"
 HTTP/1.1 403 Forbidden
 ```

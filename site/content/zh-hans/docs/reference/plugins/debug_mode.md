@@ -70,7 +70,7 @@ spec:
 
 当请求路由 default 的时间超过 1 秒时，将会打印如下错误日志：
 
-```
+```text
 [2024-06-14 03:31:38.868][30][error][golang] [contrib/golang/common/log/cgo.cc:24] slow log report: {"total_seconds":4.364525,"request":{"headers":{":autho
 rity":["localhost:10000"],":method":["HEAD"],":path":["/echo"],":scheme":["http"],"user-agent":["Go-http-client/1.1"],"x-forwarded-proto":["http"],"x-request-id":["cb212874-58af-469c-b5a3-3bd0c70cb776"]}},"response":{"headers":{":status":["200"],"date":["Fri, 14 Jun 2024 03:31:38 GMT"],"server":["envoy"],"transfer-encoding":["chunked"],"x-envoy-upstream-service-time":["0"]}},"stream_info":{"downstream_remote_address":"172.21.0.1:37384","upstream_remote_address":"127.0.0.1:10001"},"executed_plugins":[{"name":"debugMode","per_phase_cost_seconds":{"DecodeHeaders":0.000004}},{"name":"limitReq","per_phase_cost_seconds":{"DecodeHeaders":0.042762708}}]}
 ```

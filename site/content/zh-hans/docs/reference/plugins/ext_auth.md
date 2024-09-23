@@ -105,7 +105,7 @@ curl -i http://localhost:10000/users -X GET -H "foo: bar" -H "Authorization: xxx
 
 监听 `10001` 的服务将接收到类似如下的鉴权请求：
 
-```
+```shell
 GET /ext_auth/users HTTP/1.1
 Host: localhost:10000
 User-Agent: Go-http-client/1.1
@@ -123,7 +123,7 @@ curl -i http://localhost:10000/users -d 'test'
 
 鉴权请求将为：
 
-```
+```shell
 POST /ext_auth/users HTTP/1.1
 Host: localhost:10000
 User-Agent: Go-http-client/1.1

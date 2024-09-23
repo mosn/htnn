@@ -126,10 +126,10 @@ HTNN 是全栈开源的完整产品，从数据面，到控制面，到 console 
 
 ### 微信群
 
-<img src="/images/wechat_group.png" height=424 width=270 />
+<img src="/images/wechat_group.png" height=424 width=270  alt="spacewander_lzx"/>
 
 （如过期请加微信：spacewander_lzx，注明“HTNN”）
 
 ### 钉钉群
 
-<img src="/images/dingding_group.png" height=492 width=483 />
+<img src="/images/dingding_group.png" height=492 width=483  alt="dingding_group"/>

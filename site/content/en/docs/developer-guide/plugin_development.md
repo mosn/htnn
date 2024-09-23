@@ -62,7 +62,7 @@ End of the Go plugins.
 * Istio's extensions go here
 * `Inner`: Last position. It's reserved for Native plugins.
 
-There are three kinds of operation: `OrderOperationInsertFirst `, `OrderOperationInsertLast` and `OrderOperationNop`. Each kind means `First`, `Last` and `Middle`.
+There are three kinds of operation: `OrderOperationInsertFirst`, `OrderOperationInsertLast` and `OrderOperationNop`. Each kind means `First`, `Last` and `Middle`.
 
 You can specify the plugin's type in its `Order` method.
 If a plugin doesn't claim its order, it will be put into `OrderPositionUnspecified` group, with the operation `OrderOperationNop`.

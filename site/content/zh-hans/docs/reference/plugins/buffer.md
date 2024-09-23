@@ -10,6 +10,7 @@ title: Buffer
 * 一些插件会缓冲整个请求。当请求体超过最大长度时，将触发 413 HTTP 状态码。我们可以设置 `maxRequestBytes` 大于 `per_connection_buffer_limit_bytes` 来增加单个路由的最大请求体大小。
 
 ## 属性
+
 |       |         |
 |-------|---------|
 | Type  | General |
@@ -63,12 +64,12 @@ spec:
 
 我们可以测试一下：
 
-```
+```shell
 $ curl -d "hello" http://localhost:10000/ -i
 HTTP/1.1 413 Payload Too Large
 ```
 
-```
+```shell
 $ curl -d "hell" http://localhost:10000/ -i
 HTTP/1.1 200 OK
 ```

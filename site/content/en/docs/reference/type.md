@@ -28,7 +28,7 @@ A StringMatcher contains the operation plus `ignore_case` boolean flag. Here is 
 
 For example,
 
-```
+```json lines
 {"exact":"foo", "ignore_case": true}
 {"prefix":"pre"}
 {"regex":"^Cache"}

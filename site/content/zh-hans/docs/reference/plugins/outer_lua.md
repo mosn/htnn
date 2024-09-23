@@ -80,7 +80,7 @@ spec:
 
 我们可以测试一下：
 
-```
+```shell
 $ curl http://localhost:10000/
 HTTP/1.1 200 OK
 content-length: 12

@@ -100,7 +100,7 @@ spec:
 
 让我们试一试：
 
-```
+```shell
 $ curl -I 'http://localhost:10000/echo?age=36&address=&title=ops&title=dev' -H "x-ak: ak" \
     -H "x-sign-hdr: E6m5y84WIu/XeeIox2VZes/+xd/8QPRSMKqo+lp3cAo=" \
     -H "date: Fri Jan  5 16:10:54 CST 2024" -H "x-custom-a: test"
@@ -109,7 +109,7 @@ HTTP/1.1 200 OK
 
 稍微改变下签名，会有不一样的结果：
 
-```
+```shell
 $ curl -I 'http://localhost:10000/echo?age=36&address=&title=ops&title=dev' -H "x-ak: ak" \
     -H "x-sign-hdr: E6m5y84WIu/XeeIox2VZea/+xd/8QPRSMKqo+lp3cAo=" \
     -H "date: Fri Jan  5 16:10:54 CST 2024" -H "x-custom-a: test"

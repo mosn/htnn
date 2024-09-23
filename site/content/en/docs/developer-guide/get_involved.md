@@ -95,6 +95,7 @@ spec:
 ```
 
 In two cases, the `limitCountRedis.config` object will be recreated:
+
 1. Any changes to the routing under any Gateway that `vs` belongs to
 2. Any changes into the specification of FilterPolicy that points to routes mentioned in the previous case
 

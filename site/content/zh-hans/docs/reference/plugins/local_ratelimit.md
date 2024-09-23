@@ -71,14 +71,14 @@ spec:
 
 我们可以进行测试：
 
-```
+```shell
 $ while true; do curl -I http://localhost:10000/ 2>/dev/null | head -1 ;done
 HTTP/1.1 200 OK
 HTTP/1.1 429 Too Many Requests
 HTTP/1.1 429 Too Many Requests
 ```
 
-```
+```shell
 $ while true; do curl -I http://localhost:10000/ 2>/dev/null | head -1 ; sleep 1; done
 HTTP/1.1 200 OK
 HTTP/1.1 200 OK

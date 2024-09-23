@@ -97,24 +97,24 @@ spec:
 
 让我们试一试：
 
-```
+```shell
 $ curl -I http://localhost:10000/ -H "Authorization: rick"
 HTTP/1.1 200 OK
 ```
 
-```
+```shell
 $ curl -I http://localhost:10000/ -H "Authorization: morty"
 HTTP/1.1 401 Unauthorized
 ```
 
-```
+```shell
 $ curl -I 'http://localhost:10000/?ak=rick'
 HTTP/1.1 200 OK
 ```
 
 注意，如果请求中存在一个配置的 `key`，那么在 `keys` 中后续的 `key` 将不会用于认证客户端：
 
-```
+```shell
 $ curl -I 'http://localhost:10000/?ak=rick' -H "Authorization: morty"
 HTTP/1.1 401 Unauthorized
 ```

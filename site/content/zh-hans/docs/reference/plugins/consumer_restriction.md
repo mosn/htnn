@@ -105,7 +105,7 @@ spec:
 
 让我们试一试：
 
-```
+```shell
 $ curl -I http://localhost:10000/time_travel -H "Authorization: doraemon"
 HTTP/1.1 200 OK
 $ curl -I http://localhost:10000/time_travel -H "Authorization: rick"

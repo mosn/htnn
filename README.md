@@ -25,12 +25,12 @@ HTNN (Hyper Trust-Native Network) is Ant Group's internally developed cloud-nati
 
 #### 微信群
 
-<img src="/images/wechat_group.png" height=424 width=270 />
+<img src="/images/wechat_group.png" height=424 width=270  alt="spacewander_lzx"/>
 （如过期请加微信：spacewander_lzx，注明“HTNN”）
 
 ## Thanks
 
 **HTNN** would not be possible without the valuable open-source work of projects in the community. We would like to extend a special thank-you to:
 
-- [Envoy](https://www.envoyproxy.io).
-- [Istio](https://istio.io).
+* [Envoy](https://www.envoyproxy.io).
+* [Istio](https://istio.io).

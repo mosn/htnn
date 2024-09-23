@@ -61,7 +61,7 @@ spec:
         key: doraemon
 ```
 
-Suppose we have provided the following configuration to `http://localhost:10000/time_travel, and a backend server listening to port `8080``:
+Suppose we have provided the following configuration to `http://localhost:10000/time_travel`, and a backend server listening to port `8080`:
 
 ```yaml
 apiVersion: gateway.networking.k8s.io/v1
@@ -105,7 +105,7 @@ spec:
 
 Let's give it a try:
 
-```
+```shell
 $ curl -I http://localhost:10000/time_travel -H "Authorization: doraemon"
 HTTP/1.1 200 OK
 $ curl -I http://localhost:10000/time_travel -H "Authorization: rick"
