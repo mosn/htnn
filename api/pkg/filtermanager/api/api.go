@@ -17,7 +17,6 @@ package api
 import (
 	"net/http"
 	"net/url"
-	"sync/atomic"
 
 	"github.com/envoyproxy/envoy/contrib/golang/common/go/api"
 	"google.golang.org/protobuf/reflect/protoreflect"
@@ -172,6 +171,8 @@ type StreamInfo interface {
 	FilterState() FilterState
 	// VirtualClusterName returns the name of the virtual cluster which got matched
 	VirtualClusterName() (string, bool)
+	// WorkerID returns the ID of the Envoy worker thread
+	WorkerID() uint32
 
 	// Methods added by HTNN
 
@@ -194,13 +195,10 @@ type Consumer interface {
 	PluginConfig(name string) PluginConsumerConfig
 }
 
-// FilterCallbackHandler provides API that is used during request processing
-type FilterCallbackHandler interface {
+// StreamFilterCallbacks provides API that is used during request processing
+type StreamFilterCallbacks interface {
 	// StreamInfo provides API to get/set current stream's context.
 	StreamInfo() StreamInfo
-	// RecoverPanic covers panic to 500 response to avoid crashing Envoy. If you create goroutine
-	// in your Filter, please add `defer RecoverPanic()` to avoid crash by panic.
-	RecoverPanic()
 	// GetProperty fetch Envoy attribute and return the value as a string.
 	// The list of attributes can be found in https://www.envoyproxy.io/docs/envoy/latest/intro/arch_overview/advanced/attributes.
 	// If the fetch succeeded, a string will be returned.
@@ -212,6 +210,9 @@ type FilterCallbackHandler interface {
 	// * ErrSerializationFailure (Currently, fetching attributes in List/Map type are unsupported)
 	// * ErrValueNotFound
 	GetProperty(key string) (string, error)
+	// ClearRouteCache clears the route cache for the current request, and filtermanager will re-fetch the route in the next filter.
+	// Please be careful to invoke it, since filtermanager will raise an 404 route_not_found response when failed to re-fetch a route.
+	ClearRouteCache()
 
 	// Methods added by HTNN
 
@@ -229,7 +230,7 @@ type FilterCallbackHandler interface {
 	// WithLogArg injectes `key: value` as the suffix of application log created by this
 	// callback's Log* methods. The injected log arguments are only valid in the current request.
 	// This method can be used to inject IDs or other context information into the logs.
-	WithLogArg(key string, value any) FilterCallbackHandler
+	WithLogArg(key string, value any) StreamFilterCallbacks
 	LogTracef(format string, v ...any)
 	LogTrace(message string)
 	LogDebugf(format string, v ...any)
@@ -240,6 +241,31 @@ type FilterCallbackHandler interface {
 	LogWarn(message string)
 	LogErrorf(format string, v ...any)
 	LogError(message string)
+}
+
+// FilterProcessCallbacks is the interface for filter to process request/response in decode/encode phase.
+type FilterProcessCallbacks interface {
+	SendLocalReply(responseCode int, bodyText string, headers map[string][]string, grpcStatus int64, details string)
+	// RecoverPanic recover panic in defer and terminate the request by SendLocalReply with 500 status code.
+	RecoverPanic()
+
+	// hide Continue() method from the user
+}
+
+type DecoderFilterCallbacks interface {
+	FilterProcessCallbacks
+}
+
+type EncoderFilterCallbacks interface {
+	FilterProcessCallbacks
+}
+
+type FilterCallbackHandler interface {
+	StreamFilterCallbacks
+	// DecoderFilterCallbacks could only be used in DecodeXXX phases.
+	DecoderFilterCallbacks() DecoderFilterCallbacks
+	// EncoderFilterCallbacks could only be used in EncodeXXX phases.
+	EncoderFilterCallbacks() EncoderFilterCallbacks
 }
 
 // FilterFactory returns a per-request Filter which has configuration bound to it.
@@ -281,102 +307,6 @@ var (
 	LogLevelError    = api.Error
 	LogLevelCritical = api.Critical
 )
-
-// Drop our log optimization once https://github.com/envoyproxy/envoy/commit/591fb13817ddf1f54945186e3c6de4e0345508d2
-// is used.
-
-var (
-	currLogLevel atomic.Int32
-)
-
-func GetLogLevel() LogType {
-	lv := currLogLevel.Load()
-	return LogType(lv)
-}
-
-func LogTrace(message string) {
-	if GetLogLevel() > LogLevelTrace {
-		return
-	}
-	api.LogTrace(message)
-}
-
-func LogDebug(message string) {
-	if GetLogLevel() > LogLevelDebug {
-		return
-	}
-	api.LogDebug(message)
-}
-
-func LogInfo(message string) {
-	if GetLogLevel() > LogLevelInfo {
-		return
-	}
-	api.LogInfo(message)
-}
-
-func LogWarn(message string) {
-	if GetLogLevel() > LogLevelWarn {
-		return
-	}
-	api.LogWarn(message)
-}
-
-func LogError(message string) {
-	if GetLogLevel() > LogLevelError {
-		return
-	}
-	api.LogError(message)
-}
-
-func LogCritical(message string) {
-	if GetLogLevel() > LogLevelCritical {
-		return
-	}
-	api.LogCritical(message)
-}
-
-func LogTracef(format string, v ...any) {
-	if GetLogLevel() > LogLevelTrace {
-		return
-	}
-	api.LogTracef(format, v...)
-}
-
-func LogDebugf(format string, v ...any) {
-	if GetLogLevel() > LogLevelDebug {
-		return
-	}
-	api.LogDebugf(format, v...)
-}
-
-func LogInfof(format string, v ...any) {
-	if GetLogLevel() > LogLevelInfo {
-		return
-	}
-	api.LogInfof(format, v...)
-}
-
-func LogWarnf(format string, v ...any) {
-	if GetLogLevel() > LogLevelWarn {
-		return
-	}
-	api.LogWarnf(format, v...)
-}
-
-func LogErrorf(format string, v ...any) {
-	if GetLogLevel() > LogLevelError {
-		return
-	}
-	api.LogErrorf(format, v...)
-}
-
-func LogCriticalf(format string, v ...any) {
-	if GetLogLevel() > LogLevelCritical {
-		return
-	}
-	api.LogCriticalf(format, v...)
-}
 
 var (
 	ErrInternalFailure      = api.ErrInternalFailure

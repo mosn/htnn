@@ -42,6 +42,7 @@ type Config struct {
 	sizeCache     protoimpl.SizeCache
 	unknownFields protoimpl.UnknownFields
 
+	// the version is used to choose the Nacos version between v1 and v2
 	Version   string   `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
 	ServerUrl string   `protobuf:"bytes,2,opt,name=server_url,json=serverUrl,proto3" json:"server_url,omitempty"`
 	Namespace string   `protobuf:"bytes,3,opt,name=namespace,proto3" json:"namespace,omitempty"`

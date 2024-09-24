@@ -207,7 +207,7 @@ func (cb *filterManagerCallbackHandler) PluginState() api.PluginState {
 	return cb.pluginState
 }
 
-func (cb *filterManagerCallbackHandler) WithLogArg(key string, value any) api.FilterCallbackHandler {
+func (cb *filterManagerCallbackHandler) WithLogArg(key string, value any) api.StreamFilterCallbacks {
 	// As the log is embedded into the Envoy's log, it's not so necessary to use structural logging
 	// here. So far the value is just an ID string, introduce complex processions like quoting is
 	// overkill.

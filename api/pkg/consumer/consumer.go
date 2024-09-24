@@ -36,16 +36,14 @@ type consumerManager struct {
 	conf      *consumerManagerConfig
 }
 
-func ConsumerManagerFactory(c interface{}) capi.StreamFilterFactory {
+func ConsumerManagerFactory(c interface{}, callbacks capi.FilterCallbackHandler) capi.StreamFilter {
 	conf, ok := c.(*consumerManagerConfig)
 	if !ok {
 		panic(fmt.Sprintf("wrong config type: %s", reflect.TypeOf(c)))
 	}
-	return func(callbacks capi.FilterCallbackHandler) capi.StreamFilter {
-		return &consumerManager{
-			callbacks: callbacks,
-			conf:      conf,
-		}
+	return &consumerManager{
+		callbacks: callbacks,
+		conf:      conf,
 	}
 }
 

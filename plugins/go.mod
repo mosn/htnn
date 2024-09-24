@@ -27,7 +27,7 @@ require (
 	github.com/avast/retry-go v3.0.0+incompatible
 	github.com/casbin/casbin/v2 v2.88.0
 	github.com/coreos/go-oidc/v3 v3.10.0
-	github.com/envoyproxy/envoy v1.29.4
+	github.com/envoyproxy/envoy v1.31.0
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/google/cel-go v0.20.1
 	github.com/gorilla/securecookie v1.1.2

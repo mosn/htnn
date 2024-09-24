@@ -18,7 +18,7 @@ PROJECT_ROOT := $(PWD)/..
 
 .PHONY: unit-test
 unit-test:
-	go test ${TEST_OPTION} $(shell go list ./... | \
+	go test -tags envoy${ENVOY_API_VERSION} ${TEST_OPTION} $(shell go list ./... | \
 		grep -v tests/integration)
 
 # We can't specify -race to `go build` because it seems that
@@ -26,7 +26,7 @@ unit-test:
 # the race detector will allocate memory out of 48bits address which is not allowed in x64.
 .PHONY: build-test-so-local
 build-test-so-local:
-	CGO_ENABLED=1 go build -tags so \
+	CGO_ENABLED=1 go build -tags so,envoy${ENVOY_API_VERSION} \
 		-ldflags "-B 0x$(shell head -c20 /dev/urandom|od -An -tx1|tr -d ' \n')" \
 		--buildmode=c-shared \
 		-cover -covermode=atomic -coverpkg=${PROJECT_NAME}/... \
@@ -39,6 +39,7 @@ build-test-so-local:
 build-test-so:
 	docker run --rm ${MOUNT_GOMOD_CACHE} -v ${PROJECT_ROOT}:/go/src/${PROJECT_NAME} -w /go/src/${PROJECT_NAME}/plugins \
 		-e GOPROXY \
+		-e ENVOY_API_VERSION \
 		${BUILD_IMAGE} \
 		bash -c "git config --global --add safe.directory '*' && make build-test-so-local"
 
@@ -55,12 +56,12 @@ stop-service:
 integration-test:
 	test -d /tmp/htnn_coverage && rm -rf /tmp/htnn_coverage || true
 	$(foreach PKG, $(shell go list ./tests/integration/...), \
-		go test -v ${PKG} || exit 1; \
+		go test -tags envoy${ENVOY_API_VERSION} -v ${PKG} || exit 1; \
 	)
 
 .PHONY: build-so-local
 build-so-local:
-	CGO_ENABLED=1 go build -tags so \
+	CGO_ENABLED=1 go build -tags so,envoy${ENVOY_API_VERSION} \
 		-ldflags "-B 0x$(shell head -c20 /dev/urandom|od -An -tx1|tr -d ' \n')" \
 		--buildmode=c-shared \
 		-v -o ${TARGET_SO} \
@@ -70,6 +71,7 @@ build-so-local:
 build-so:
 	docker run --rm ${MOUNT_GOMOD_CACHE} -v ${PROJECT_ROOT}:/go/src/${PROJECT_NAME} -w /go/src/${PROJECT_NAME}/plugins \
 		-e GOPROXY \
+		-e ENVOY_API_VERSION \
 		${BUILD_IMAGE} \
 		bash -c "git config --global --add safe.directory '*' && make build-so-local"
 

@@ -33,6 +33,14 @@ COPY plugins/ plugins/
 COPY controller/ controller/
 # Remember to run `make prebuild` before building the image
 COPY external/istio/ external/istio/
+
+COPY patch/switch-envoy-go-version.sh patch/switch-envoy-go-version.sh
+COPY common.mk common.mk
+# hadolint ignore=DL3003
+RUN ./patch/switch-envoy-go-version.sh 1.29.5 && \
+    cd plugins/ && \
+    ENVOY_API_VERSION=1.29 make build-so-local
+
 WORKDIR /workspace/external/istio
 RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -C pilot/cmd/pilot-agent -a -o /workspace/pilot-agent
 
@@ -46,5 +54,5 @@ LABEL org.opencontainers.image.description="This is image used in the HTNN data 
 LABEL org.opencontainers.image.licenses="Apache-2.0"
 
 COPY --from=builder /workspace/pilot-agent /usr/local/bin/
-COPY plugins/libgolang.so /etc/libgolang.so
+COPY --from=builder /workspace/plugins/libgolang.so /etc/libgolang.so
 CMD ["envoy"]

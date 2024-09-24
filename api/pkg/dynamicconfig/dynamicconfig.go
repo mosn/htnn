@@ -41,11 +41,9 @@ type dynamicConfigFilter struct {
 	callbacks capi.FilterCallbackHandler
 }
 
-func DynamicConfigFactory(c interface{}) capi.StreamFilterFactory {
-	return func(callbacks capi.FilterCallbackHandler) capi.StreamFilter {
-		return &dynamicConfigFilter{
-			callbacks: callbacks,
-		}
+func DynamicConfigFactory(_ interface{}, callbacks capi.FilterCallbackHandler) capi.StreamFilter {
+	return &dynamicConfigFilter{
+		callbacks: callbacks,
 	}
 }
 

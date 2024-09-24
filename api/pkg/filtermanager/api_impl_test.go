@@ -78,7 +78,7 @@ func TestPluginState(t *testing.T) {
 			Factory: getPluginStateFilterFactory,
 		},
 	}
-	m := FilterManagerFactory(config)(cb).(*filterManager)
+	m := FilterManagerFactory(config, cb).(*filterManager)
 	h := http.Header{}
 	hdr := envoy.NewRequestHeaderMap(h)
 	m.DecodeHeaders(hdr, true)
@@ -143,7 +143,7 @@ func TestAccessCacheFieldsConcurrently(t *testing.T) {
 	for i := 0; i < n; i++ {
 		go func(i int) {
 			cb := envoy.NewCAPIFilterCallbackHandler()
-			m := FilterManagerFactory(config)(cb).(*filterManager)
+			m := FilterManagerFactory(config, cb).(*filterManager)
 			h := http.Header{}
 			hdr := envoy.NewRequestHeaderMap(h)
 			m.DecodeHeaders(hdr, true)
@@ -223,7 +223,7 @@ func TestLogWithArgs(t *testing.T) {
 			Factory: testLogFilterFactory,
 		},
 	}
-	m := FilterManagerFactory(config)(cb).(*filterManager)
+	m := FilterManagerFactory(config, cb).(*filterManager)
 	h := http.Header{}
 	hdr := envoy.NewRequestHeaderMap(h)
 	m.DecodeHeaders(hdr, true)

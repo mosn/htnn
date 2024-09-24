@@ -36,8 +36,12 @@ func init() {
 	capi.SetCommonCAPI(&fakeCapi{})
 }
 
+var (
+	logLevel = capi.Info
+)
+
 func DisableLogInTest() {
-	api.SetLogLevel(capi.Critical)
+	logLevel = capi.Critical
 }
 
 func logInGo(level capi.LogType, message string) {
@@ -51,7 +55,7 @@ func (a *fakeCapi) Log(level capi.LogType, message string) {
 }
 
 func (a *fakeCapi) LogLevel() capi.LogType {
-	return 0
+	return logLevel
 }
 
 type HeaderMap struct {
@@ -68,6 +72,10 @@ func (i *HeaderMap) Get(key string) (string, bool) {
 		return v, false
 	}
 	return v, true
+}
+
+func (i *HeaderMap) GetAllHeaders() map[string][]string {
+	return i.Header.Clone()
 }
 
 func (i *HeaderMap) Values(key string) []string {
@@ -142,6 +150,18 @@ func (i *RequestHeaderMap) Path() string {
 		return "/"
 	}
 	return path
+}
+
+func (i *RequestHeaderMap) SetMethod(method string) {
+	i.Set(":method", method)
+}
+
+func (i *RequestHeaderMap) SetPath(path string) {
+	i.Set(":path", path)
+}
+
+func (i *RequestHeaderMap) SetHost(host string) {
+	i.Set(":authority", host)
 }
 
 func (i *RequestHeaderMap) URL() *url.URL {
@@ -499,6 +519,9 @@ func (i *filterCallbackHandler) GetProperty(key string) (string, error) {
 	return "", nil
 }
 
+func (i *filterCallbackHandler) ClearRouteCache() {
+}
+
 func (i *filterCallbackHandler) LookupConsumer(_, _ string) (api.Consumer, bool) {
 	return nil, false
 }
@@ -518,7 +541,7 @@ func (i *filterCallbackHandler) PluginState() api.PluginState {
 	return i.pluginState
 }
 
-func (i *filterCallbackHandler) WithLogArg(key string, value any) api.FilterCallbackHandler {
+func (i *filterCallbackHandler) WithLogArg(key string, value any) api.StreamFilterCallbacks {
 	return i
 }
 
@@ -550,6 +573,16 @@ func (i *filterCallbackHandler) LogErrorf(format string, v ...any) {
 }
 
 func (i *filterCallbackHandler) LogError(message string) {
+}
+
+func (i *filterCallbackHandler) DecoderFilterCallbacks() api.DecoderFilterCallbacks {
+	// we don't distinguish between decoder and encoder filter callbacks in the test helper
+	return i
+}
+
+func (i *filterCallbackHandler) EncoderFilterCallbacks() api.EncoderFilterCallbacks {
+	// we don't distinguish between decoder and encoder filter callbacks in the test helper
+	return i
 }
 
 var _ api.FilterCallbackHandler = (*filterCallbackHandler)(nil)

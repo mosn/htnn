@@ -12,26 +12,33 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package request
+//go:build envoy1.29
+
+package api
 
 import (
-	"mosn.io/htnn/api/pkg/filtermanager/api"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
-// GetHeaders returns a plain map represents the headers. The returned headers won't
-// contain any pseudo header like `:authority`.
-func GetHeaders(header api.RequestHeaderMap) map[string][]string {
-	hdr := map[string][]string{}
-	header.Range(func(k, v string) bool {
-		if k[0] == ':' {
-			return true
-		}
-		if entry, ok := hdr[k]; !ok {
-			hdr[k] = []string{v}
-		} else {
-			hdr[k] = append(entry, v)
-		}
-		return true
-	})
-	return hdr
+func TestLogAPI(t *testing.T) {
+	currLogLevel.Store(int32(LogLevelCritical))
+	assert.Equal(t, LogLevelCritical, GetLogLevel())
+
+	for _, s := range []struct {
+		level string
+		logf  func(string, ...any)
+		log   func(string)
+	}{
+		{"Trace", LogTracef, LogTrace},
+		{"Debug", LogDebugf, LogDebug},
+		{"Info", LogInfof, LogInfo},
+		{"Warn", LogWarnf, LogWarn},
+		{"Error", LogErrorf, LogError},
+	} {
+		s.logf("test %s", s.level)
+		s.log(s.level)
+		// should not call api.LogXX directly - which will panic
+	}
 }

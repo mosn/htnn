@@ -23,6 +23,17 @@ jobs:
   api-module-test:
     timeout-minutes: 10
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        envoy_version:
+          - 1.29
+          - 1.31
+    env:
+      ENVOY_API_VERSION: ${{ matrix.envoy_version }}
+      # patch version should not contain API breaking changes, so we just pick the first one
+      FULL_ENVOY_VERSION: ${{ matrix.envoy_version }}.0
+      PROXY_IMAGE: envoyproxy/envoy:contrib-v${{ matrix.envoy_version }}.0
     defaults:
       run:
         working-directory: ./api
@@ -34,6 +45,11 @@ jobs:
       with:
         go-version: '1.21'
         cache-dependency-path: "**/*.sum"
+    - name: Choose the Envoy API
+      run: |
+        pushd ..
+        ./patch/switch-envoy-go-version.sh ${FULL_ENVOY_VERSION}
+        popd
 
     - name: Unit test
       run: make unit-test
@@ -47,7 +63,7 @@ jobs:
       if: failure()
       with:
         # upload artifact can be found in https://github.com/mosn/htnn/actions/runs/$id
-        name: api-module-test-logs
+        name: api-module-test-logs-${{ matrix.envoy_version }}
         path: ./test-envoy
 
     - name: Generate coverage
@@ -58,7 +74,7 @@ jobs:
       if: always() # always upload coverage, so the coverage percents won't affect by the failed tests
       uses: actions/upload-artifact@v4
       with:
-        name: api-module-test-cover
+        name: api-module-test-cover-${{ matrix.envoy_version }}
         path: |
           ./api/cover.out
           ./api/cover_integration.out
@@ -213,8 +229,10 @@ jobs:
       with:
         fail_ci_if_error: true
         files: |
-          ./api-module-test-cover/cover.out,
-          ./api-module-test-cover/cover_integration.out,
+          ./api-module-test-cover-1.29/cover.out,
+          ./api-module-test-cover-1.29/cover_integration.out,
+          ./api-module-test-cover-1.31/cover.out,
+          ./api-module-test-cover-1.31/cover_integration.out,
           ./types-module-test-cover/cover.out,
           ./plugins-unit-test-cover/cover.out,
           ./plugins-integration-test-cover/cover.out,
