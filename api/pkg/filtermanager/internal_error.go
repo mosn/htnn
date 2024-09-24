@@ -46,16 +46,18 @@ func NewInternalErrorFactory(plugin string, err error) api.FilterFactory {
 type internalErrorFilterForCAPI struct {
 	capi.PassThroughStreamFilter
 
-	callbacks capi.FilterCallbacks
+	callbacks api.FilterCallbackHandler
 }
 
 func (f *internalErrorFilterForCAPI) DecodeHeaders(headers capi.RequestHeaderMap, endStream bool) capi.StatusType {
-	f.callbacks.SendLocalReply(500, "", nil, 0, "")
+	f.callbacks.DecoderFilterCallbacks().SendLocalReply(500, "", nil, 0, "")
 	return capi.LocalReply
 }
 
 func InternalErrorFactoryForCAPI(cfg interface{}, callbacks capi.FilterCallbackHandler) capi.StreamFilter {
 	return &internalErrorFilterForCAPI{
-		callbacks: callbacks,
+		callbacks: &filterManagerCallbackHandler{
+			FilterCallbackHandler: callbacks,
+		},
 	}
 }

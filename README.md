@@ -19,6 +19,10 @@ HTNN (Hyper Trust-Native Network) is Ant Group's internally developed cloud-nati
 * [Quick Start](https://github.com/mosn/htnn/blob/main/site/content/en/docs/getting-started/quick_start.md)
 * [Get Involved](https://github.com/mosn/htnn/blob/main/site/content/en/docs/developer-guide/get_involved.md)
 
+If you want to extend Envoy via Go, you can consider using the dataplane of HTNN only. Please read the documentation:
+
+* [Dataplane Support](https://github.com/mosn/htnn/blob/main/site/content/en/docs/developer-guide/dataplane_support.md)
+
 ## Community
 
 ### Chinese

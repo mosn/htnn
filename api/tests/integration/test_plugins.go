@@ -180,16 +180,20 @@ type localReplyFilter struct {
 
 	callbacks api.FilterCallbackHandler
 	config    *Config
-	reqHdr    api.RequestHeaderMap
+
+	reqHdr     api.RequestHeaderMap
+	runFilters []string
 }
 
-func (f *localReplyFilter) NewLocalResponse(reply string) *api.LocalResponse {
+func (f *localReplyFilter) NewLocalResponse(reply string, decoding bool) *api.LocalResponse {
 	hdr := http.Header{}
 	hdr.Set("local", reply)
 
-	runFilters := f.reqHdr.Values("run")
-	if len(runFilters) > 0 {
-		hdr.Set("order", strings.Join(runFilters, "|"))
+	if decoding {
+		f.runFilters = f.reqHdr.Values("run")
+	}
+	if len(f.runFilters) > 0 {
+		hdr.Set("order", strings.Join(f.runFilters, "|"))
 	}
 
 	msg := "ok"
@@ -202,8 +206,9 @@ func (f *localReplyFilter) NewLocalResponse(reply string) *api.LocalResponse {
 func (f *localReplyFilter) DecodeRequest(headers api.RequestHeaderMap, buf api.BufferInstance, trailer api.RequestTrailerMap) api.ResultAction {
 	api.LogInfof("traceback: %s", string(debug.Stack()))
 	f.reqHdr = headers
+	f.runFilters = headers.Values("run")
 	if f.config.Decode {
-		return f.NewLocalResponse("reply")
+		return f.NewLocalResponse("reply", true)
 	}
 	return api.Continue
 }
@@ -212,7 +217,7 @@ func (f *localReplyFilter) EncodeResponse(headers api.ResponseHeaderMap, buf api
 	api.LogInfof("traceback: %s", string(debug.Stack()))
 	if f.config.Encode {
 		r, _ := headers.Get("echo-from")
-		return f.NewLocalResponse(r)
+		return f.NewLocalResponse(r, false)
 	}
 	return api.Continue
 }
@@ -223,8 +228,9 @@ func (f *localReplyFilter) DecodeHeaders(headers api.RequestHeaderMap, endStream
 		return api.WaitAllData
 	}
 	f.reqHdr = headers
+	f.runFilters = headers.Values("run")
 	if f.config.Decode && f.config.Headers {
-		return f.NewLocalResponse("reply")
+		return f.NewLocalResponse("reply", true)
 	}
 	return api.Continue
 }
@@ -232,7 +238,7 @@ func (f *localReplyFilter) DecodeHeaders(headers api.RequestHeaderMap, endStream
 func (f *localReplyFilter) DecodeData(data api.BufferInstance, endStream bool) api.ResultAction {
 	api.LogInfof("traceback: %s", string(debug.Stack()))
 	if f.config.Decode && f.config.Data {
-		return f.NewLocalResponse("reply")
+		return f.NewLocalResponse("reply", true)
 	}
 	return api.Continue
 }
@@ -244,7 +250,7 @@ func (f *localReplyFilter) EncodeHeaders(headers api.ResponseHeaderMap, endStrea
 	}
 	if f.config.Encode && f.config.Headers {
 		r, _ := headers.Get("echo-from")
-		return f.NewLocalResponse(r)
+		return f.NewLocalResponse(r, false)
 	}
 	return api.Continue
 }
@@ -252,7 +258,7 @@ func (f *localReplyFilter) EncodeHeaders(headers api.ResponseHeaderMap, endStrea
 func (f *localReplyFilter) EncodeData(data api.BufferInstance, endStream bool) api.ResultAction {
 	api.LogInfof("traceback: %s", string(debug.Stack()))
 	if f.config.Encode && f.config.Data {
-		return f.NewLocalResponse("reply")
+		return f.NewLocalResponse("reply", false)
 	}
 	return api.Continue
 }

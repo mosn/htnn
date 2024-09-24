@@ -37,7 +37,8 @@ type filterManager struct {
 
 	decodeRequestNeeded bool
 	decodeIdx           int
-	reqHdr              api.RequestHeaderMap
+	reqHdr              api.RequestHeaderMap // don't access it in Encode phases
+	contentType         string
 
 	encodeResponseNeeded bool
 	encodeIdx            int
@@ -66,6 +67,7 @@ func (m *filterManager) Reset() {
 	m.decodeRequestNeeded = false
 	m.decodeIdx = -1
 	m.reqHdr = nil
+	m.contentType = ""
 
 	m.encodeResponseNeeded = false
 	m.encodeIdx = -1
@@ -127,7 +129,17 @@ func needLogExecution() bool {
 	return api.GetLogLevel() <= api.LogLevelDebug
 }
 
-func FilterManagerFactory(c interface{}) capi.StreamFilterFactory {
+func FilterManagerFactory(c interface{}, cb capi.FilterCallbackHandler) (streamFilter capi.StreamFilter) {
+	// the RecoverPanic requires the underline Go req to be created. However, the Go req is created
+	// after the FilterManagerFactory is called. So we implement our own RecoverPanic here to avoid breaking
+	// the creation of Go req.
+	defer func() {
+		if p := recover(); p != nil {
+			api.LogErrorf("panic: %v\n%s", p, debug.Stack())
+			streamFilter = InternalErrorFactoryForCAPI(c, cb)
+		}
+	}()
+
 	conf, ok := c.(*filterManagerConfig)
 	if !ok {
 		panic(fmt.Sprintf("wrong config type: %s", reflect.TypeOf(c)))
@@ -135,96 +147,86 @@ func FilterManagerFactory(c interface{}) capi.StreamFilterFactory {
 
 	parsedConfig := conf.parsed
 
-	return func(cb capi.FilterCallbackHandler) (streamFilter capi.StreamFilter) {
-		// TODO: remove this protection once we upgrade to the new Envoy version
-		defer func() {
-			if p := recover(); p != nil {
-				api.LogErrorf("panic: %v\n%s", p, debug.Stack())
-				streamFilter = InternalErrorFactoryForCAPI(c, cb)
-			}
-		}()
-
-		data := conf.pool.Get()
-		fm, ok := data.(*filterManager)
-		if !ok {
-			panic(fmt.Sprintf("unexpected type: %s", reflect.TypeOf(data)))
-		}
-
-		fm.callbacks.FilterCallbackHandler = cb
-
-		canSkipMethod := fm.canSkipMethod
-		if canSkipMethod == nil {
-			canSkipMethod = newSkipMethodsMap()
-		}
-
-		filters := make([]*model.FilterWrapper, len(parsedConfig))
-		logExecution := needLogExecution()
-		for i, fc := range parsedConfig {
-			factory := fc.Factory
-			config := fc.ParsedConfig
-			f := factory(config, fm.callbacks)
-			// Technically, the factory might create different f for different calls. We don't support this edge case for now.
-			if fm.canSkipMethod == nil {
-				definedMethod := make(map[string]bool, len(canSkipMethod))
-				for meth := range canSkipMethod {
-					definedMethod[meth] = false
-				}
-				for meth := range canSkipMethod {
-					overridden, err := reflectx.IsMethodOverridden(f, meth)
-					if err != nil {
-						api.LogErrorf("failed to check method %s in plugin %s: %v", meth, fc.Name, err)
-						// canSkipMethod[meth] will be false
-					}
-					canSkipMethod[meth] = canSkipMethod[meth] && !overridden
-					definedMethod[meth] = overridden
-				}
-
-				if definedMethod["DecodeRequest"] {
-					if !definedMethod["DecodeHeaders"] {
-						api.LogErrorf("plugin %s has DecodeRequest but not DecodeHeaders. To run DecodeRequest, we need to return api.WaitAllData from DecodeHeaders", fc.Name)
-					}
-
-					p := pkgPlugins.LoadPluginType(fc.Name)
-					if p != nil {
-						order := p.Order()
-						if order.Position <= pkgPlugins.OrderPositionAuthn {
-							api.LogErrorf("plugin %s has DecodeRequest which is not supported because the order of plugin", fc.Name)
-						}
-					}
-				}
-				if definedMethod["EncodeResponse"] && !definedMethod["EncodeHeaders"] {
-					api.LogErrorf("plugin %s has EncodeResponse but not EncodeHeaders. To run EncodeResponse, we need to return api.WaitAllData from EncodeHeaders", fc.Name)
-				}
-			}
-
-			if logExecution {
-				filters[i] = model.NewFilterWrapper(fc.Name, NewLogExecutionFilter(fc.Name, f, fm.callbacks))
-			} else {
-				filters[i] = model.NewFilterWrapper(fc.Name, f)
-			}
-
-			if fm.DebugModeEnabled() {
-				filters[i] = model.NewFilterWrapper(fc.Name, NewDebugFilter(fc.Name, filters[i].Filter, fm.callbacks))
-			}
-		}
-
-		if fm.canSkipMethod == nil {
-			fm.canSkipMethod = canSkipMethod
-		}
-
-		// We can't cache the slice of filters as it may be changed by consumer
-		fm.filters = filters
-
-		// The skip check is based on the compiled code. So if the DecodeRequest is defined,
-		// even it is not called, DecodeData will not be skipped. Same as EncodeResponse.
-		fm.canSkipDecodeHeaders = fm.canSkipMethod["DecodeHeaders"] && fm.canSkipMethod["DecodeRequest"] && fm.config.initOnce == nil
-		fm.canSkipDecodeData = fm.canSkipMethod["DecodeData"] && fm.canSkipMethod["DecodeRequest"]
-		fm.canSkipEncodeHeaders = fm.canSkipMethod["EncodeHeaders"]
-		fm.canSkipEncodeData = fm.canSkipMethod["EncodeData"] && fm.canSkipMethod["EncodeResponse"]
-		fm.canSkipOnLog = fm.canSkipMethod["OnLog"]
-
-		return fm
+	data := conf.pool.Get()
+	fm, ok := data.(*filterManager)
+	if !ok {
+		panic(fmt.Sprintf("unexpected type: %s", reflect.TypeOf(data)))
 	}
+
+	fm.callbacks.FilterCallbackHandler = cb
+
+	canSkipMethod := fm.canSkipMethod
+	if canSkipMethod == nil {
+		canSkipMethod = newSkipMethodsMap()
+	}
+
+	filters := make([]*model.FilterWrapper, len(parsedConfig))
+	logExecution := needLogExecution()
+	for i, fc := range parsedConfig {
+		factory := fc.Factory
+		config := fc.ParsedConfig
+		f := factory(config, fm.callbacks)
+		// Technically, the factory might create different f for different calls. We don't support this edge case for now.
+		if fm.canSkipMethod == nil {
+			definedMethod := make(map[string]bool, len(canSkipMethod))
+			for meth := range canSkipMethod {
+				definedMethod[meth] = false
+			}
+			for meth := range canSkipMethod {
+				overridden, err := reflectx.IsMethodOverridden(f, meth)
+				if err != nil {
+					api.LogErrorf("failed to check method %s in plugin %s: %v", meth, fc.Name, err)
+					// canSkipMethod[meth] will be false
+				}
+				canSkipMethod[meth] = canSkipMethod[meth] && !overridden
+				definedMethod[meth] = overridden
+			}
+
+			if definedMethod["DecodeRequest"] {
+				if !definedMethod["DecodeHeaders"] {
+					api.LogErrorf("plugin %s has DecodeRequest but not DecodeHeaders. To run DecodeRequest, we need to return api.WaitAllData from DecodeHeaders", fc.Name)
+				}
+
+				p := pkgPlugins.LoadPluginType(fc.Name)
+				if p != nil {
+					order := p.Order()
+					if order.Position <= pkgPlugins.OrderPositionAuthn {
+						api.LogErrorf("plugin %s has DecodeRequest which is not supported because the order of plugin", fc.Name)
+					}
+				}
+			}
+			if definedMethod["EncodeResponse"] && !definedMethod["EncodeHeaders"] {
+				api.LogErrorf("plugin %s has EncodeResponse but not EncodeHeaders. To run EncodeResponse, we need to return api.WaitAllData from EncodeHeaders", fc.Name)
+			}
+		}
+
+		if logExecution {
+			filters[i] = model.NewFilterWrapper(fc.Name, NewLogExecutionFilter(fc.Name, f, fm.callbacks))
+		} else {
+			filters[i] = model.NewFilterWrapper(fc.Name, f)
+		}
+
+		if fm.DebugModeEnabled() {
+			filters[i] = model.NewFilterWrapper(fc.Name, NewDebugFilter(fc.Name, filters[i].Filter, fm.callbacks))
+		}
+	}
+
+	if fm.canSkipMethod == nil {
+		fm.canSkipMethod = canSkipMethod
+	}
+
+	// We can't cache the slice of filters as it may be changed by consumer
+	fm.filters = filters
+
+	// The skip check is based on the compiled code. So if the DecodeRequest is defined,
+	// even it is not called, DecodeData will not be skipped. Same as EncodeResponse.
+	fm.canSkipDecodeHeaders = fm.canSkipMethod["DecodeHeaders"] && fm.canSkipMethod["DecodeRequest"] && fm.config.initOnce == nil
+	fm.canSkipDecodeData = fm.canSkipMethod["DecodeData"] && fm.canSkipMethod["DecodeRequest"]
+	fm.canSkipEncodeHeaders = fm.canSkipMethod["EncodeHeaders"]
+	fm.canSkipEncodeData = fm.canSkipMethod["EncodeData"] && fm.canSkipMethod["EncodeResponse"]
+	fm.canSkipOnLog = fm.canSkipMethod["OnLog"]
+
+	return fm
 }
 
 func (m *filterManager) recordLocalReplyPluginName(name string) {
@@ -254,7 +256,7 @@ func (m *filterManager) handleAction(res api.ResultAction, phase phase, filter *
 	switch v := res.(type) {
 	case *api.LocalResponse:
 		m.recordLocalReplyPluginName(filter.Name)
-		m.localReply(v)
+		m.localReply(v, phase < phaseEncodeHeaders)
 		return true
 	default:
 		api.LogErrorf("unknown result action: %+v", v)
@@ -266,7 +268,7 @@ type jsonReply struct {
 	Msg string `json:"msg"`
 }
 
-func (m *filterManager) localReply(v *api.LocalResponse) {
+func (m *filterManager) localReply(v *api.LocalResponse, decoding bool) {
 	var hdr map[string][]string
 	if v.Header != nil {
 		hdr = map[string][]string(v.Header)
@@ -294,8 +296,10 @@ func (m *filterManager) localReply(v *api.LocalResponse) {
 				isJSON = true
 			}
 		} else {
-			ct, ok = m.reqHdr.Get("content-type")
-			if !ok || ct == "application/json" {
+			// use the Content-Type header passed by the client, not the header
+			// provided by the gateway if have.
+			ct = m.contentType
+			if ct == "" || ct == "application/json" {
 				isJSON = true
 			}
 		}
@@ -310,14 +314,22 @@ func (m *filterManager) localReply(v *api.LocalResponse) {
 			hdr["Content-Type"] = []string{"application/json"}
 		}
 	}
-	m.callbacks.SendLocalReply(v.Code, msg, hdr, 0, "")
+
+	var cb api.FilterProcessCallbacks
+	if decoding {
+		cb = m.callbacks.DecoderFilterCallbacks()
+	} else {
+		cb = m.callbacks.EncoderFilterCallbacks()
+	}
+	cb.SendLocalReply(v.Code, msg, hdr, 0, "")
 }
 
 func (m *filterManager) DecodeHeaders(headers capi.RequestHeaderMap, endStream bool) capi.StatusType {
+	m.contentType, _ = headers.Get("content-type")
+
 	// Ensure the headers are cached on the Go side.
 	// FIXME: remove this once we support OnLog phase headers in Envoy Go.
 	if m.DebugModeEnabled() {
-		headers.Get("test")
 		headers := &filterManagerRequestHeaderMap{
 			RequestHeaderMap: headers,
 		}
@@ -332,7 +344,7 @@ func (m *filterManager) DecodeHeaders(headers capi.RequestHeaderMap, endStream b
 
 	go func() {
 		defer m.MarkRunningInGoThread(false)
-		defer m.callbacks.RecoverPanic()
+		defer m.callbacks.DecoderFilterCallbacks().RecoverPanic()
 		var res api.ResultAction
 
 		m.config.InitOnce()
@@ -341,7 +353,7 @@ func (m *filterManager) DecodeHeaders(headers capi.RequestHeaderMap, endStream b
 			m.recordLocalReplyPluginName(m.config.initFailedPluginName)
 			m.localReply(&api.LocalResponse{
 				Code: 500,
-			})
+			}, true)
 			return
 		}
 
@@ -370,7 +382,7 @@ func (m *filterManager) DecodeHeaders(headers capi.RequestHeaderMap, endStream b
 				m.localReply(&api.LocalResponse{
 					Code: 401,
 					Msg:  "consumer not found",
-				})
+				}, true)
 				return
 			}
 
@@ -484,7 +496,7 @@ func (m *filterManager) DecodeHeaders(headers capi.RequestHeaderMap, endStream b
 					m.decodeIdx = i
 					// some filters, like authorization with request body, need to
 					// have a whole body before passing to the next filter
-					m.callbacks.Continue(capi.StopAndBuffer)
+					m.callbacks.Continue(capi.StopAndBuffer, true)
 					return
 				}
 
@@ -496,7 +508,7 @@ func (m *filterManager) DecodeHeaders(headers capi.RequestHeaderMap, endStream b
 			}
 		}
 
-		m.callbacks.Continue(capi.Continue)
+		m.callbacks.Continue(capi.Continue, true)
 	}()
 
 	return capi.Running
@@ -511,7 +523,7 @@ func (m *filterManager) DecodeData(buf capi.BufferInstance, endStream bool) capi
 
 	go func() {
 		defer m.MarkRunningInGoThread(false)
-		defer m.callbacks.RecoverPanic()
+		defer m.callbacks.DecoderFilterCallbacks().RecoverPanic()
 		var res api.ResultAction
 
 		// We have discussed a lot about how to support processing data both streamingly and
@@ -537,7 +549,7 @@ func (m *filterManager) DecodeData(buf capi.BufferInstance, endStream bool) capi
 					return
 				}
 			}
-			m.callbacks.Continue(capi.Continue)
+			m.callbacks.Continue(capi.Continue, true)
 
 		} else {
 			for i := 0; i < m.decodeIdx; i++ {
@@ -592,7 +604,7 @@ func (m *filterManager) DecodeData(buf capi.BufferInstance, endStream bool) capi
 				}
 			}
 
-			m.callbacks.Continue(capi.Continue)
+			m.callbacks.Continue(capi.Continue, true)
 		}
 	}()
 
@@ -615,7 +627,7 @@ func (m *filterManager) EncodeHeaders(headers capi.ResponseHeaderMap, endStream 
 
 	go func() {
 		defer m.MarkRunningInGoThread(false)
-		defer m.callbacks.RecoverPanic()
+		defer m.callbacks.EncoderFilterCallbacks().RecoverPanic()
 		var res api.ResultAction
 
 		m.hdrLock.Lock()
@@ -633,7 +645,7 @@ func (m *filterManager) EncodeHeaders(headers capi.ResponseHeaderMap, endStream 
 				m.encodeResponseNeeded = false
 				if !endStream {
 					m.encodeIdx = i
-					m.callbacks.Continue(capi.StopAndBuffer)
+					m.callbacks.Continue(capi.StopAndBuffer, false)
 					return
 				}
 
@@ -645,7 +657,7 @@ func (m *filterManager) EncodeHeaders(headers capi.ResponseHeaderMap, endStream 
 			}
 		}
 
-		m.callbacks.Continue(capi.Continue)
+		m.callbacks.Continue(capi.Continue, false)
 	}()
 
 	return capi.Running
@@ -660,7 +672,7 @@ func (m *filterManager) EncodeData(buf capi.BufferInstance, endStream bool) capi
 
 	go func() {
 		defer m.MarkRunningInGoThread(false)
-		defer m.callbacks.RecoverPanic()
+		defer m.callbacks.EncoderFilterCallbacks().RecoverPanic()
 		var res api.ResultAction
 
 		n := len(m.filters)
@@ -673,7 +685,7 @@ func (m *filterManager) EncodeData(buf capi.BufferInstance, endStream bool) capi
 					return
 				}
 			}
-			m.callbacks.Continue(capi.Continue)
+			m.callbacks.Continue(capi.Continue, false)
 
 		} else {
 			for i := n - 1; i > m.encodeIdx; i-- {
@@ -724,7 +736,7 @@ func (m *filterManager) EncodeData(buf capi.BufferInstance, endStream bool) capi
 				}
 			}
 
-			m.callbacks.Continue(capi.Continue)
+			m.callbacks.Continue(capi.Continue, false)
 		}
 	}()
 
