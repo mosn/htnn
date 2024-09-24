@@ -762,6 +762,11 @@
               "title": "HTNN_ENABLE_LDS_PLUGIN_VIA_ECDS",
               "type": "string"
             },
+            "ISTIO_DUAL_STACK": {
+              "default": "true",
+              "title": "ISTIO_DUAL_STACK",
+              "type": "string"
+            },
             "PILOT_ENABLE_HTNN": {
               "default": "true",
               "title": "PILOT_ENABLE_HTNN",
@@ -784,7 +789,8 @@
             "PILOT_SCOPE_GATEWAY_TO_NAMESPACE",
             "PILOT_ENABLE_HTNN",
             "PILOT_ENABLE_HTNN_STATUS",
-            "HTNN_ENABLE_LDS_PLUGIN_VIA_ECDS"
+            "HTNN_ENABLE_LDS_PLUGIN_VIA_ECDS",
+            "ISTIO_DUAL_STACK"
           ]
         },
         "extraContainerArgs": {
