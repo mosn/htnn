@@ -15,7 +15,7 @@
 package request
 
 import (
-	"github.com/envoyproxy/envoy/contrib/golang/common/go/api"
+	"mosn.io/htnn/api/pkg/filtermanager/api"
 )
 
 // GetHeaders returns a plain map represents the headers. The returned headers won't
