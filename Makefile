@@ -187,7 +187,8 @@ lint-website: $(LOCALBIN)
 .PHONY: lint-markdown
 lint-markdown:
 	if ! command -v markdownlint >/dev/null 2>&1; then npm install -g markdownlint-cli; fi
-	markdownlint '**/*.md' --disable MD012 MD013 MD029 MD033 MD034 MD036 MD041
+	@# ignore markdown under 'external/istio'
+	markdownlint '{*.md,site/**/*.md}' --disable MD012 MD013 MD029 MD033 MD034 MD036 MD041
 
 .PHONY: lint-remain
 lint-remain:
