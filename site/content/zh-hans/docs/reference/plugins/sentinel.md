@@ -49,6 +49,7 @@ title: Sentinel
 
 | 名称                     | 类型                              | 必选 | 校验规则                                    | 说明                                                                                 |
 |------------------------|---------------------------------|----|-----------------------------------------|------------------------------------------------------------------------------------|
+| id                     | string                          | 否  |                                         | 唯一 ID                                                                              |
 | resource               | string                          | 是  | min_len: 1                              | 规则名称                                                                               |
 | tokenCalculateStrategy | enum                            | 否  | [DIRECT, WARMUP]                        | token 计算策略，即流控策略，可选值为 DIRECT (默认), WARMUP，分别表示直接使用 threshold 字段、使用预热方式计算 token 阈值  |
 | controlBehavior        | enum                            | 否  | [REJECT, THROTTLING]                    | 流控行为，可选值为 REJECT (默认), THROTTLING，分别表示触发流控时直接拒绝请求、对请求匀速排队                          |
@@ -77,6 +78,7 @@ WARMUP 详见：[sentinel-golang 流量控制策略](https://sentinelguard.io/zh
 
 | 名称                | 类型                              | 必选 | 校验规则                 | 说明                                                                                   |
 |-------------------|---------------------------------|----|----------------------|--------------------------------------------------------------------------------------|
+| id                | string                          | 否  |                      | 唯一 ID                                                                                |
 | resource          | string                          | 是  | min_len: 1           | 规则名称                                                                                 |
 | metricType        | enum                            | 否  | [CONCURRENCY, QPS]   | 流控统计类型，可选值为 CONCURRENCY (默认), QPS，分别表示使用并发数、请求数 QPS 作为指标进行统计                         |
 | controlBehavior   | enum                            | 否  | [REJECT, THROTTLING] | 流控行为，仅在 `metricType == QPS` 时生效，可选值为 REJECT (默认), THROTTLING，分别表示触发流控时直接拒绝请求、对请求匀速排队 |
@@ -100,6 +102,7 @@ WARMUP 详见：[sentinel-golang 流量控制策略](https://sentinelguard.io/zh
 
 | 名称                           | 类型                              | 必选 | 校验规则                                           | 说明                                                                                                            |
 |------------------------------|---------------------------------|----|------------------------------------------------|---------------------------------------------------------------------------------------------------------------|
+| id                           | string                          | 否  |                                                | 唯一 ID                                                                                                         |
 | resource                     | string                          | 是  | min_len: 1                                     | 该规则名称                                                                                                         |
 | strategy                     | enum                            | 否  | [SLOW_REQUEST_RATIO, ERROR_RATIO, ERROR_COUNT] | 熔断策略，可选值为 SLOW_REQUEST_RATIO (默认), ERROR_RATIO, ERROR_COUNT，分别表示慢响应率、错误率、错误次数                                 |
 | retryTimeoutMs               | uint32                          | 否  |                                                | 熔断打开（Open）至半打开（Half-Open）状态的持续时间，默认为 3000                                                                     |

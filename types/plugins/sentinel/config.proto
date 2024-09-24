@@ -55,12 +55,8 @@ message FlowRule {
   string ref_resource = 9;
   uint32 warm_up_period_sec = 10;
   uint32 warm_up_cold_factor = 11;
-  int64 low_mem_usage_threshold = 12;
-  int64 high_mem_usage_threshold = 13;
-  int64 mem_low_water_mark_bytes = 14;
-  int64 mem_high_water_mark_bytes = 15;
 
-  BlockResponse block_response = 16;
+  BlockResponse block_response = 12;
 
   enum TokenCalculateStrategy {
     DIRECT = 0;

@@ -56,10 +56,6 @@ func LoadFlowRules(f *types.Flow, m map[string]*types.FlowRule) (bool, error) {
 			WarmUpPeriodSec:        r.GetWarmUpPeriodSec(),
 			WarmUpColdFactor:       r.GetWarmUpColdFactor(),
 			StatIntervalInMs:       r.GetStatIntervalInMs(),
-			LowMemUsageThreshold:   r.GetLowMemUsageThreshold(),
-			HighMemUsageThreshold:  r.GetHighMemUsageThreshold(),
-			MemLowWaterMarkBytes:   r.GetMemLowWaterMarkBytes(),
-			MemHighWaterMarkBytes:  r.GetMemHighWaterMarkBytes(),
 		})
 	}
 

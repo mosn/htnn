@@ -745,14 +745,6 @@ func (m *FlowRule) validate(all bool) error {
 
 	// no validation rules for WarmUpColdFactor
 
-	// no validation rules for LowMemUsageThreshold
-
-	// no validation rules for HighMemUsageThreshold
-
-	// no validation rules for MemLowWaterMarkBytes
-
-	// no validation rules for MemHighWaterMarkBytes
-
 	if all {
 		switch v := interface{}(m.GetBlockResponse()).(type) {
 		case interface{ ValidateAll() error }:
