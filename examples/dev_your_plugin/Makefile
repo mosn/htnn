@@ -20,9 +20,9 @@ DOCKER_MIRROR   = m.daocloud.io/
 # Both images use glibc 2.31. Ensure libc in the images match each other.
 BUILD_IMAGE     ?= $(DOCKER_MIRROR)docker.io/library/golang:1.21-bullseye
 # We don't use istio/proxyv2 because it is not designed to be run separately (need to work around permission issue).
-PROXY_IMAGE     ?= $(DOCKER_MIRROR)docker.io/envoyproxy/envoy:contrib-v1.29.5
+PROXY_IMAGE     ?= $(DOCKER_MIRROR)docker.io/envoyproxy/envoy:contrib-v1.31.2
 # We may need to use timestamp if we need to update the image in one PR
-DEV_TOOLS_IMAGE ?= $(DOCKER_MIRROR)ghcr.io/mosn/htnn-dev-tools:2024-03-05
+DEV_TOOLS_IMAGE ?= $(DOCKER_MIRROR)ghcr.io/mosn/htnn-dev-tools:2024-07-12
 
 PROTOC = protoc
 
