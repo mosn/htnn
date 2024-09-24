@@ -84,7 +84,7 @@ WARMUP 详见：[sentinel-golang 流量控制策略](https://sentinelguard.io/zh
 | controlBehavior   | enum                            | 否  | [REJECT, THROTTLING] | 流控行为，仅在 `metricType == QPS` 时生效，可选值为 REJECT (默认), THROTTLING，分别表示触发流控时直接拒绝请求、对请求匀速排队 |
 | paramIndex        | int32                           | 否  |                      | 流控参数列表下标，指定使用列表中某个参数进行流控                                                             |
 | paramKey          | string                          | 否  |                      | 流控附件 Key，即 attachmentKey，指定使用某个附件进行流控，相比流控参数更灵活，因为它的 Value 来自请求头部或请求参数               |
-| threshold         | int64                           | 否  |                      | 流控阈值 (针对某个流控参数/附件)                                                                   |
+| threshold         | int64                           | 是  | gt: 0                | 流控阈值 (针对某个流控参数/附件)                                                                   |
 | durationInSec     | int64                           | 否  |                      | 流控统计周期，仅在 `metricType == QPS` 时生效                                                    |
 | maxQueueingTimeMs | int64                           | 否  |                      | 最大匀速排队等待时间，仅在 `controlBehavior == THROTTLING` 时生效                                    |
 | burstCount        | int64                           | 否  |                      | 静默值，仅在 `controlBehavior == REJECT` 时生效                                               |
@@ -108,7 +108,7 @@ WARMUP 详见：[sentinel-golang 流量控制策略](https://sentinelguard.io/zh
 | retryTimeoutMs               | uint32                          | 否  |                                                | 熔断打开（Open）至半打开（Half-Open）状态的持续时间，默认为 3000                                                                     |
 | minRequestAmount             | uint64                          | 否  |                                                | 静默值，若当前统计周期内的请求数小于此值，即使达到熔断条件规则也不会触发                                                                          |
 | statIntervalMs               | uint32                          | 否  |                                                | 统计周期，默认为 1000                                                                                                 |
-| threshold                    | double                          | 否  |                                                | 熔断阈值，若 `strategy == SLOW_REQUEST_RATIO \| ERROR_RATIO`，则用小数表示百分比，否则用整数表示错误次数                                  |
+| threshold                    | double                          | 是  | gt: 0                                          | 熔断阈值，若 `strategy == SLOW_REQUEST_RATIO \| ERROR_RATIO`，则用小数表示百分比，否则用整数表示错误次数                                  |
 | probeNum                     | uint64                          | 否  |                                                | 探测次数，熔断从半打开（Half-Open）转变为关闭（Closed）状态需要的成功请求次数                                                                |
 | maxAllowedRtMs               | uint64                          | 否  |                                                | 最大允许响应时延，仅在 `strategy == SLOW_REQUEST_RATIO` 时生效                                                              |
 | statSlidingWindowBucketCount | uint32                          | 否  |                                                | 统计滑动窗口的桶数量，要求 `statIntervalMs % statSlidingWindowBucketCount == 0`                                            |
