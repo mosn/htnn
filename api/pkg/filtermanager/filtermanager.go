@@ -38,7 +38,6 @@ type filterManager struct {
 	decodeRequestNeeded bool
 	decodeIdx           int
 	reqHdr              api.RequestHeaderMap // don't access it in Encode phases
-	contentType         string
 
 	encodeResponseNeeded bool
 	encodeIdx            int
@@ -67,7 +66,6 @@ func (m *filterManager) Reset() {
 	m.decodeRequestNeeded = false
 	m.decodeIdx = -1
 	m.reqHdr = nil
-	m.contentType = ""
 
 	m.encodeResponseNeeded = false
 	m.encodeIdx = -1
@@ -295,10 +293,8 @@ func (m *filterManager) localReply(v *api.LocalResponse, decoding bool) {
 			if ct == "application/json" {
 				isJSON = true
 			}
-		} else {
-			// use the Content-Type header passed by the client, not the header
-			// provided by the gateway if have.
-			ct = m.contentType
+		} else if decoding {
+			ct, _ = m.reqHdr.Get("content-type")
 			if ct == "" || ct == "application/json" {
 				isJSON = true
 			}
@@ -325,11 +321,10 @@ func (m *filterManager) localReply(v *api.LocalResponse, decoding bool) {
 }
 
 func (m *filterManager) DecodeHeaders(headers capi.RequestHeaderMap, endStream bool) capi.StatusType {
-	m.contentType, _ = headers.Get("content-type")
-
 	// Ensure the headers are cached on the Go side.
 	// FIXME: remove this once we support OnLog phase headers in Envoy Go.
 	if m.DebugModeEnabled() {
+		headers.Get("test")
 		headers := &filterManagerRequestHeaderMap{
 			RequestHeaderMap: headers,
 		}

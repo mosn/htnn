@@ -140,11 +140,10 @@ func TestLocalReplyJSON_UseRespHeader(t *testing.T) {
 			hdr: func(h http.Header) http.Header {
 				return h
 			},
-			// use the Content-Type from the request
+			// do not use the Content-Type from the request
 			reply: envoy.LocalResponse{
-				Code:    200,
-				Body:    `{"msg":"msg"}`,
-				Headers: map[string][]string{"Content-Type": {"application/json"}},
+				Code: 200,
+				Body: "msg",
 			},
 		},
 		{
