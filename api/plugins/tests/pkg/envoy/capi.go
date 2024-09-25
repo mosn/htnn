@@ -60,13 +60,19 @@ func (a *fakeCapi) LogLevel() capi.LogType {
 
 type HeaderMap struct {
 	http.Header
+
+	lock sync.Mutex
 }
 
 func (i *HeaderMap) GetRaw(name string) string {
+	i.lock.Lock()
+	defer i.lock.Unlock()
 	return i.Header.Get(name)
 }
 
 func (i *HeaderMap) Get(key string) (string, bool) {
+	i.lock.Lock()
+	defer i.lock.Unlock()
 	v := i.Header.Get(key)
 	if v == "" {
 		return v, false
@@ -75,26 +81,38 @@ func (i *HeaderMap) Get(key string) (string, bool) {
 }
 
 func (i *HeaderMap) GetAllHeaders() map[string][]string {
+	i.lock.Lock()
+	defer i.lock.Unlock()
 	return i.Header.Clone()
 }
 
 func (i *HeaderMap) Values(key string) []string {
+	i.lock.Lock()
+	defer i.lock.Unlock()
 	return i.Header.Values(key)
 }
 
 func (i *HeaderMap) Set(key, value string) {
+	i.lock.Lock()
+	defer i.lock.Unlock()
 	i.Header.Set(key, value)
 }
 
 func (i *HeaderMap) Add(key, value string) {
+	i.lock.Lock()
+	defer i.lock.Unlock()
 	i.Header.Add(key, value)
 }
 
 func (i *HeaderMap) Del(key string) {
+	i.lock.Lock()
+	defer i.lock.Unlock()
 	i.Header.Del(key)
 }
 
 func (i *HeaderMap) Range(f func(key, value string) bool) {
+	i.lock.Lock()
+	defer i.lock.Unlock()
 	for k, v := range map[string][]string(i.Header) {
 		for _, vv := range v {
 			if !f(k, vv) {
@@ -116,7 +134,10 @@ type RequestHeaderMap struct {
 
 func NewRequestHeaderMap(hdr http.Header) *RequestHeaderMap {
 	return &RequestHeaderMap{
-		HeaderMap: HeaderMap{hdr},
+		HeaderMap: HeaderMap{
+			Header: hdr,
+			lock:   sync.Mutex{},
+		},
 	}
 }
 
@@ -192,7 +213,10 @@ type ResponseHeaderMap struct {
 
 func NewResponseHeaderMap(hdr http.Header) *ResponseHeaderMap {
 	return &ResponseHeaderMap{
-		HeaderMap: HeaderMap{hdr},
+		HeaderMap: HeaderMap{
+			Header: hdr,
+			lock:   sync.Mutex{},
+		},
 	}
 }
 

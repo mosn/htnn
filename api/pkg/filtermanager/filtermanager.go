@@ -226,7 +226,7 @@ func FilterManagerFactory(c interface{}, cb capi.FilterCallbackHandler) (streamF
 	fm.canSkipEncodeData = fm.canSkipMethod["EncodeData"] && fm.canSkipMethod["EncodeResponse"]
 	fm.canSkipOnLog = fm.canSkipMethod["OnLog"]
 
-	return fm
+	return wrapFilterManager(fm)
 }
 
 func (m *filterManager) recordLocalReplyPluginName(name string) {
@@ -745,27 +745,12 @@ func (m *filterManager) EncodeData(buf capi.BufferInstance, endStream bool) capi
 
 // TODO: handle trailers
 
-func (m *filterManager) OnLog() {
-	if m.canSkipOnLog {
-		return
-	}
-
+func (m *filterManager) runOnLogPhase(reqHdr api.RequestHeaderMap, rspHdr api.ResponseHeaderMap) {
 	// It is unsafe to access the f.callbacks in the goroutine, as the underlying request
 	// may be destroyed when the goroutine is running. So if people want to do some IO jobs,
 	// they need to copy the used data from the request to the Go side before kicking off
 	// the goroutine.
-	var reqHdr api.RequestHeaderMap
-	m.hdrLock.Lock()
-	reqHdr = m.reqHdr
-	m.hdrLock.Unlock()
-	var rspHdr api.ResponseHeaderMap
-	m.hdrLock.Lock()
-	rspHdr = m.rspHdr
-	m.hdrLock.Unlock()
-
 	for _, f := range m.filters {
-		// TODO: the cached headers passed here is not precise. We need to get the real one via
-		// Envoy Go API. But it is not supported yet.
 		f.OnLog(reqHdr, nil, rspHdr, nil)
 	}
 

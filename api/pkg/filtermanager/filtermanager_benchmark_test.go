@@ -44,7 +44,7 @@ func BenchmarkFilterManagerAllPhase(b *testing.B) {
 	respBuf := envoy.NewBufferInstance([]byte{})
 
 	for n := 0; n < b.N; n++ {
-		m := FilterManagerFactory(config, cb)
+		m := unwrapFilterManager(FilterManagerFactory(config, cb))
 		m.DecodeHeaders(reqHdr, false)
 		cb.WaitContinued()
 		m.DecodeData(reqBuf, true)
@@ -53,7 +53,7 @@ func BenchmarkFilterManagerAllPhase(b *testing.B) {
 		cb.WaitContinued()
 		m.EncodeData(respBuf, true)
 		cb.WaitContinued()
-		m.OnLog()
+		m.OnLog(reqHdr, nil, respHdr, nil)
 	}
 }
 
@@ -88,10 +88,10 @@ func BenchmarkFilterManagerRegular(b *testing.B) {
 	reqHdr := envoy.NewRequestHeaderMap(http.Header{})
 
 	for n := 0; n < b.N; n++ {
-		m := FilterManagerFactory(config, cb)
+		m := unwrapFilterManager(FilterManagerFactory(config, cb))
 		m.DecodeHeaders(reqHdr, false)
 		cb.WaitContinued()
-		m.OnLog()
+		m.OnLog(reqHdr, nil, nil, nil)
 	}
 }
 
@@ -129,9 +129,9 @@ func BenchmarkFilterManagerConsumerWithFilter(b *testing.B) {
 	}
 
 	for n := 0; n < b.N; n++ {
-		m := FilterManagerFactory(config, cb)
+		m := unwrapFilterManager(FilterManagerFactory(config, cb))
 		m.DecodeHeaders(reqHdrs[n%num], false)
 		cb.WaitContinued()
-		m.OnLog()
+		m.OnLog(reqHdrs[n%num], nil, nil, nil)
 	}
 }
