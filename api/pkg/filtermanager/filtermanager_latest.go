@@ -22,6 +22,10 @@ import (
 	"mosn.io/htnn/api/pkg/filtermanager/api"
 )
 
+const (
+	supportGettingHeadersOnLog = false
+)
+
 func (m *filterManager) OnLog(_ capi.RequestHeaderMap, _ capi.RequestTrailerMap, _ capi.ResponseHeaderMap, _ capi.ResponseTrailerMap) {
 	if m.canSkipOnLog {
 		return

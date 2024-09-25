@@ -45,7 +45,7 @@ type filterManager struct {
 	rspHdr               api.ResponseHeaderMap
 
 	runningInGoThread atomic.Int32
-	hdrLock           sync.Mutex // FIXME: remove this once we get request headers from the OnLog directly
+	hdrLock           sync.Mutex
 
 	// use a group of bools instead of map to avoid lookup
 	canSkipDecodeHeaders bool
@@ -327,9 +327,8 @@ func (m *filterManager) localReply(v *api.LocalResponse, decoding bool) {
 func (m *filterManager) DecodeHeaders(headers capi.RequestHeaderMap, endStream bool) capi.StatusType {
 	m.contentType, _ = headers.Get("content-type")
 
-	// Ensure the headers are cached on the Go side.
-	// FIXME: remove this once we support OnLog phase headers in Envoy Go.
-	if m.DebugModeEnabled() {
+	if !supportGettingHeadersOnLog && m.DebugModeEnabled() {
+		// Ensure the headers are cached on the Go side.
 		headers := &filterManagerRequestHeaderMap{
 			RequestHeaderMap: headers,
 		}
@@ -612,9 +611,8 @@ func (m *filterManager) DecodeData(buf capi.BufferInstance, endStream bool) capi
 }
 
 func (m *filterManager) EncodeHeaders(headers capi.ResponseHeaderMap, endStream bool) capi.StatusType {
-	// Ensure the headers are cached on the Go side.
-	// FIXME: remove this once we support OnLog phase headers in Envoy Go.
-	if m.DebugModeEnabled() {
+	if !supportGettingHeadersOnLog && m.DebugModeEnabled() {
+		// Ensure the headers are cached on the Go side.
 		headers.Get("test")
 		m.rspHdr = headers
 	}

@@ -20,14 +20,28 @@ import (
 	capi "github.com/envoyproxy/envoy/contrib/golang/common/go/api"
 )
 
+const (
+	supportGettingHeadersOnLog = true
+)
+
 func (m *filterManager) OnLog(reqHdr capi.RequestHeaderMap, _ capi.RequestTrailerMap, rspHdr capi.ResponseHeaderMap, _ capi.ResponseTrailerMap) {
 	if m.canSkipOnLog {
 		return
 	}
 
-	m.runOnLogPhase(&filterManagerRequestHeaderMap{
-		RequestHeaderMap: reqHdr,
-	}, rspHdr)
+	m.hdrLock.Lock()
+	if m.reqHdr == nil {
+		m.reqHdr = &filterManagerRequestHeaderMap{
+			RequestHeaderMap: reqHdr,
+		}
+	} else {
+		// In our benchmark BenchmarkFilterManagerRegular, reuse the request header wrapper is 5% faster than create a new one,
+		// even the reusage requires holding the lock though it is running on fast path.
+		h, _ := m.reqHdr.(*filterManagerRequestHeaderMap)
+		h.RequestHeaderMap = reqHdr
+	}
+	m.hdrLock.Unlock()
+	m.runOnLogPhase(m.reqHdr, rspHdr)
 }
 
 func wrapFilterManager(fm *filterManager) capi.StreamFilter {
