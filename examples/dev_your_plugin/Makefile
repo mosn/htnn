@@ -112,6 +112,7 @@ integration-test: build-test-so
 
 .PHONY: run-plugin
 run-plugin:
+	docker rm -f dev_your_plugin 2>/dev/null || true
 	docker run --name dev_your_plugin --rm -d -v $(PWD)/etc/demo.yaml:/etc/demo.yaml \
 		-v $(PWD)/libgolang.so:/etc/libgolang.so \
 		-p 10000:10000 \
