@@ -83,7 +83,7 @@ func (f *filter) DecodeData(data api.BufferInstance, endStream bool) api.ResultA
 
 // DecodeRequest is for processing the full request body with buffered data.
 func (f *filter) DecodeRequest(headers api.RequestHeaderMap, data api.BufferInstance, trailers api.RequestTrailerMap) api.ResultAction {
-	// DecodeRequest is called if DecodeHeaders has return api.WaitAllData, which means the full request body is buffered,.
+	// DecodeRequest is called if DecodeHeaders has return api.WaitAllData, which means the full request body is buffered.
 	api.LogInfof("Decode full request body: %s", data.String())
 
 	// Please note return api.WaitAllData is only allowed to be used in DecodeHeaders.
