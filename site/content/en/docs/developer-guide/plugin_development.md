@@ -120,8 +120,8 @@ In some situations, we need to stop the iteration of header filter, then read th
 Therefore, we introduce a group of new types:
 
 * `WaitAllData`: a `ResultAction` returns from the `DecodeHeaders` or `EncodeHeaders`
-* `DecodeRequest(headers api.RequestHeaderMap, data api.BufferInstance, trailers api.RequestTrailerMap) ResultAction`
-* `EncodeResponse(headers ResponseHeaderMap, data BufferInstance, trailers ResponseTrailerMap) ResultAction`
+* `DecodeRequest(headers api.RequestHeaderMap, data api.BufferInstance, trailers api.RequestTrailerMap) api.ResultAction`
+* `EncodeResponse(headers api.ResponseHeaderMap, data api.BufferInstance, trailers api.ResponseTrailerMap) api.ResultAction`
 
 `WaitAllData` can be used to decide if the body needs to be buffered, according to the configuration and the headers.
 
