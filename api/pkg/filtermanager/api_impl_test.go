@@ -78,7 +78,7 @@ func TestPluginState(t *testing.T) {
 			Factory: getPluginStateFilterFactory,
 		},
 	}
-	m := FilterManagerFactory(config, cb).(*filterManager)
+	m := FilterManagerFactory(config, cb)
 	h := http.Header{}
 	hdr := envoy.NewRequestHeaderMap(h)
 	m.DecodeHeaders(hdr, true)
@@ -99,8 +99,6 @@ type accessCacheFieldsFilter struct {
 }
 
 func (f *accessCacheFieldsFilter) do(headers api.RequestHeaderMap) api.ResultAction {
-	// Maybe we can relax the concurreny requirement for header modification?
-	// Update headers in OnLog is meaningless. Anyway, add lock for now.
 	headers.Set("Cookie", "k=v")
 	p := headers.URL().Path
 	headers.Add("Cookie", fmt.Sprintf("k=%s", p))
@@ -143,11 +141,11 @@ func TestAccessCacheFieldsConcurrently(t *testing.T) {
 	for i := 0; i < n; i++ {
 		go func(i int) {
 			cb := envoy.NewCAPIFilterCallbackHandler()
-			m := FilterManagerFactory(config, cb).(*filterManager)
+			m := unwrapFilterManager(FilterManagerFactory(config, cb))
 			h := http.Header{}
 			hdr := envoy.NewRequestHeaderMap(h)
 			m.DecodeHeaders(hdr, true)
-			m.OnLog()
+			m.OnLog(hdr, nil, nil, nil)
 			wg.Done()
 		}(i)
 	}
@@ -223,7 +221,7 @@ func TestLogWithArgs(t *testing.T) {
 			Factory: testLogFilterFactory,
 		},
 	}
-	m := FilterManagerFactory(config, cb).(*filterManager)
+	m := FilterManagerFactory(config, cb)
 	h := http.Header{}
 	hdr := envoy.NewRequestHeaderMap(h)
 	m.DecodeHeaders(hdr, true)
