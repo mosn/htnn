@@ -134,11 +134,11 @@ If `WaitAllData` is returned from `DecodeHeaders`, we will:
 
 ![filter manager, with DecodeWholeRequestFilter, buffer the whole request](/images/filtermanager_sub_path.jpg)
 
-Note: `DecodeRequest` is only executed if `DecodeHeaders` returns `WaitAllData`. So if `DecodeRequest` is defined, `DecodeHeaders` must be defined as well. If both `DecodeRequest` and `DecodeData` are defined in the plugin, which method is executed depends on whether `DecodeHeaders` returns `WaitAllData`.
+Note: `DecodeRequest` is only executed if `DecodeHeaders` returns `WaitAllData`. So if `DecodeRequest` is defined, `DecodeHeaders` must be defined as well. When both `DecodeRequest` and `DecodeData` are defined in the plugin: if `DecodeHeaders` returns `WaitAllData`, only `DecodeRequest` is executed, otherwise, only `DecodeData` is executed.
 
 The same process applies to the Encode path in a reverse order, and the method is slightly different. This time it requires `EncodeHeaders` to return `WaitAllData` to invoke `EncodeResponse`.
 
-Note: `EncodeResponse` is only executed if `EncodeHeaders` returns `WaitAllData`. So if `EncodeResponse` is defined, `EncodeHeaders` must be defined as well. If both `EncodeResponse` and `EncodeData` are defined in the plugin, which method is executed depends on whether `EncodeHeaders` returns `WaitAllData`.
+Note: `EncodeResponse` is only executed if `EncodeHeaders` returns `WaitAllData`. So if `EncodeResponse` is defined, `EncodeHeaders` must be defined as well. When both `EncodeResponse` and `EncodeData` are defined in the plugin: if `EncodeHeaders` returns `WaitAllData`, only `EncodeResponse` is executed, otherwise, only `EncodeData` is executed.
 
 Currently, `DecodeRequest` is not supported by plugins whose order is `Access` or `Authn`.
 
