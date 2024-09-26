@@ -22,7 +22,7 @@ type ResultAction interface {
 }
 
 type isResultAction struct {
-	typeid int // we need to add a field, otherwises Go will optimize all `&isResultAction{}` to same address.
+	typeid int // we need to add a field, otherwise Go will optimize all `&isResultAction{}` to same address.
 }
 
 func (i *isResultAction) OK() {}
