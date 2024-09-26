@@ -40,7 +40,7 @@ type filter struct {
 	config    *config
 }
 
-// The doc of each API can be found in package pkg/filtermanager/api
+// The doc of each API can be found in https://pkg.go.dev/mosn.io/htnn/api/pkg/filtermanager/api
 
 func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {
 	headers.Add(f.config.HostName, f.hello())
