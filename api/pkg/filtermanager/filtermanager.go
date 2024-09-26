@@ -187,6 +187,10 @@ func FilterManagerFactory(c interface{}, cb capi.FilterCallbackHandler) (streamF
 					api.LogErrorf("plugin %s has DecodeRequest but not DecodeHeaders. To run DecodeRequest, we need to return api.WaitAllData from DecodeHeaders", fc.Name)
 				}
 
+				if definedMethod["DecodeData"] {
+					api.LogErrorf("plugin %s has DecodeRequest but also DecodeData. DecodeData will not be executed in this case.", fc.Name)
+				}
+
 				p := pkgPlugins.LoadPluginType(fc.Name)
 				if p != nil {
 					order := p.Order()
@@ -195,8 +199,14 @@ func FilterManagerFactory(c interface{}, cb capi.FilterCallbackHandler) (streamF
 					}
 				}
 			}
-			if definedMethod["EncodeResponse"] && !definedMethod["EncodeHeaders"] {
-				api.LogErrorf("plugin %s has EncodeResponse but not EncodeHeaders. To run EncodeResponse, we need to return api.WaitAllData from EncodeHeaders", fc.Name)
+			if definedMethod["EncodeResponse"] {
+				if !definedMethod["EncodeHeaders"] {
+					api.LogErrorf("plugin %s has EncodeResponse but not EncodeHeaders. To run EncodeResponse, we need to return api.WaitAllData from EncodeHeaders", fc.Name)
+				}
+
+				if definedMethod["EncodeData"] {
+					api.LogErrorf("plugin %s has EncodeResponse but also EncodeData. EncodeData will not be executed in this case.", fc.Name)
+				}
 			}
 		}
 
@@ -248,7 +258,8 @@ func (m *filterManager) handleAction(res api.ResultAction, phase phase, filter *
 		} else if phase == phaseEncodeHeaders {
 			m.encodeResponseNeeded = true
 		} else {
-			api.LogErrorf("WaitAllData only allowed when processing headers, phase: %v", phase)
+			api.LogErrorf("WaitAllData only allowed when processing headers, phase: %v. "+
+				" If you need to buffer the body, please use DecodeRequest or EncodeResponse instead", phase)
 		}
 		return false
 	}

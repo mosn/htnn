@@ -129,11 +129,11 @@ filter manager 实现了以下特性：
 
 ![过滤器管理器，带有 DecodeWholeRequestFilter，缓冲整个请求](/images/filtermanager_sub_path.jpg)
 
-注意：`DecodeRequest` 仅在 `DecodeHeaders` 返回 `WaitAllData` 时才被执行。所以如果定义了 `DecodeRequest`，一定要定义 `DecodeHeaders`。
+注意：`DecodeRequest` 仅在 `DecodeHeaders` 返回 `WaitAllData` 时才被执行。所以如果定义了 `DecodeRequest`，一定要定义 `DecodeHeaders`。如果定义了 `DecodeRequest`，`DecodeData` 将被忽略。
 
-同样的过程适用于 Encode 路径，但方式略有不同。此时需要由 `EncodeHeaders` 返回 `WaitAllData`，调用方法 `EncodeResponse`。
+同样的过程适用于方向相反的 Encode 路径，且方式略有不同。此时需要由 `EncodeHeaders` 返回 `WaitAllData`，调用方法 `EncodeResponse`。
 
-注意：`EncodeResponse` 仅在 `EncodeHeaders` 返回 `WaitAllData` 时才被执行。所以如果定义了 `EncodeResponse`，一定要定义 `EncodeHeaders`。
+注意：`EncodeResponse` 仅在 `EncodeHeaders` 返回 `WaitAllData` 时才被执行。所以如果定义了 `EncodeResponse`，一定要定义 `EncodeHeaders`。如果定义了 `EncodeResponse`，`EncodeData` 将被忽略。
 
 目前顺序为 `Access` 或 `Authn` 的插件不支持 `DecodeRequest` 方法。
 
