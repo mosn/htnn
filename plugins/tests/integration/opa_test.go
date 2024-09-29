@@ -43,7 +43,7 @@ func TestOpa(t *testing.T) {
 	}{
 		{
 			name: "happy path",
-			config: controlplane.NewSinglePluinConfig("opa", map[string]interface{}{
+			config: controlplane.NewSinglePluginConfig("opa", map[string]interface{}{
 				"remote": map[string]string{
 					"url":    "http://opa:8181",
 					"policy": "test",
@@ -59,7 +59,7 @@ func TestOpa(t *testing.T) {
 		},
 		{
 			name: "local",
-			config: controlplane.NewSinglePluinConfig("opa", map[string]interface{}{
+			config: controlplane.NewSinglePluginConfig("opa", map[string]interface{}{
 				"local": map[string]string{
 					"text": `package test
 						import input.request

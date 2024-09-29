@@ -184,7 +184,7 @@ func (cp *ControlPlane) UseGoPluginConfig(t *testing.T, config *filtermanager.Fi
 											"fm": {
 												Override: &golang.RouterPlugin_Config{
 													Config: proto.MessageToAny(
-														FilterManagerConfigToTypedStruct(NewPluinConfig(nil))),
+														FilterManagerConfigToTypedStruct(NewPluginConfig(nil))),
 												},
 											},
 										},
@@ -208,7 +208,7 @@ func (cp *ControlPlane) UseGoPluginConfig(t *testing.T, config *filtermanager.Fi
 											"fm": {
 												Override: &golang.RouterPlugin_Config{
 													Config: proto.MessageToAny(
-														FilterManagerConfigToTypedStruct(NewSinglePluinConfig("coverage", nil))),
+														FilterManagerConfigToTypedStruct(NewSinglePluginConfig("coverage", nil))),
 												},
 											},
 										},
@@ -243,14 +243,14 @@ func FilterManagerConfigToTypedStruct(fmc *filtermanager.FilterManagerConfig) *x
 	}
 }
 
-func NewSinglePluinConfig(name string, config interface{}) *filtermanager.FilterManagerConfig {
+func NewSinglePluginConfig(name string, config interface{}) *filtermanager.FilterManagerConfig {
 	fmc := &filtermanager.FilterManagerConfig{}
 	fmc.Namespace = "ns"
 	fmc.Plugins = []*model.FilterConfig{{Name: name, Config: config}}
 	return fmc
 }
 
-func NewPluinConfig(plugins []*model.FilterConfig) *filtermanager.FilterManagerConfig {
+func NewPluginConfig(plugins []*model.FilterConfig) *filtermanager.FilterManagerConfig {
 	fmc := &filtermanager.FilterManagerConfig{}
 	fmc.Namespace = "ns"
 	fmc.Plugins = plugins

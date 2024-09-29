@@ -41,7 +41,7 @@ func TestDemo(t *testing.T) {
 	}{
 		{
 			name: "happy path",
-			config: controlplane.NewSinglePluinConfig("demo", map[string]interface{}{
+			config: controlplane.NewSinglePluginConfig("demo", map[string]interface{}{
 				"hostName": "Tom",
 			}),
 			expect: func(t *testing.T, resp *http.Response) {
@@ -51,7 +51,7 @@ func TestDemo(t *testing.T) {
 		},
 		{
 			name: "change config",
-			config: controlplane.NewSinglePluinConfig("demo", map[string]interface{}{
+			config: controlplane.NewSinglePluginConfig("demo", map[string]interface{}{
 				"hostName": "Mike",
 			}),
 

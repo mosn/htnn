@@ -57,7 +57,7 @@ func TestHmacAuth(t *testing.T) {
 	}{
 		{
 			name: "sanity",
-			config: controlplane.NewSinglePluinConfig("hmacAuth", map[string]interface{}{
+			config: controlplane.NewSinglePluginConfig("hmacAuth", map[string]interface{}{
 				"signatureHeader": "x-sign-hdr",
 				"accessKeyHeader": "x-ak",
 				"dateHeader":      "x-date",
@@ -76,7 +76,7 @@ func TestHmacAuth(t *testing.T) {
 		},
 		{
 			name: "bypass if no credential",
-			config: controlplane.NewPluinConfig([]*model.FilterConfig{
+			config: controlplane.NewPluginConfig([]*model.FilterConfig{
 				{
 					Name: "hmacAuth",
 					Config: map[string]interface{}{

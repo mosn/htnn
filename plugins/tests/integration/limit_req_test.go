@@ -41,7 +41,7 @@ func TestLimitReq(t *testing.T) {
 	}{
 		{
 			name: "rps > 1",
-			config: controlplane.NewSinglePluinConfig("limitReq", map[string]interface{}{
+			config: controlplane.NewSinglePluginConfig("limitReq", map[string]interface{}{
 				"average": 1,
 				"period":  "0.1s",
 			}),
@@ -66,7 +66,7 @@ func TestLimitReq(t *testing.T) {
 		},
 		{
 			name: "rps <= 1",
-			config: controlplane.NewSinglePluinConfig("limitReq", map[string]interface{}{
+			config: controlplane.NewSinglePluginConfig("limitReq", map[string]interface{}{
 				"average": 1,
 				"period":  "60s",
 			}),
@@ -79,7 +79,7 @@ func TestLimitReq(t *testing.T) {
 		},
 		{
 			name: "by header, fallback to source ip",
-			config: controlplane.NewSinglePluinConfig("limitReq", map[string]interface{}{
+			config: controlplane.NewSinglePluginConfig("limitReq", map[string]interface{}{
 				"average": 1,
 				"key":     `request.header("x-key")`,
 			}),
@@ -104,7 +104,7 @@ func TestLimitReq(t *testing.T) {
 		},
 		{
 			name: "complex key",
-			config: controlplane.NewSinglePluinConfig("limitReq", map[string]interface{}{
+			config: controlplane.NewSinglePluginConfig("limitReq", map[string]interface{}{
 				"average": 1,
 				"key":     `request.header("x-key") != "" ? request.header("x-key") : source.ip()`,
 			}),

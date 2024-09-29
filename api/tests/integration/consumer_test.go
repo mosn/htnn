@@ -53,7 +53,7 @@ func TestConsumerWithFilter(t *testing.T) {
 	}{
 		{
 			name:   "authn & exec",
-			config: controlplane.NewSinglePluinConfig("consumer", map[string]interface{}{}),
+			config: controlplane.NewSinglePluginConfig("consumer", map[string]interface{}{}),
 			run: func(t *testing.T) {
 				resp, _ := dp.Get("/echo", http.Header{"Authorization": []string{"marvin"}})
 				assert.Equal(t, 206, resp.StatusCode)
@@ -102,7 +102,7 @@ func TestConsumerWithFilterInitFailed(t *testing.T) {
 	}{
 		{
 			name:   "authn & exec",
-			config: controlplane.NewSinglePluinConfig("consumer", map[string]interface{}{}),
+			config: controlplane.NewSinglePluginConfig("consumer", map[string]interface{}{}),
 			run: func(t *testing.T) {
 				resp, _ := dp.Get("/echo", http.Header{"Authorization": []string{"marvin"}})
 				assert.Equal(t, 500, resp.StatusCode)
@@ -154,7 +154,7 @@ func TestConsumerWithFilterAndMergeFromFilter(t *testing.T) {
 	}{
 		{
 			name:   "authn & exec",
-			config: controlplane.NewSinglePluinConfig("consumer", map[string]interface{}{}),
+			config: controlplane.NewSinglePluginConfig("consumer", map[string]interface{}{}),
 			run: func(t *testing.T) {
 				resp, _ := dp.Get("/echo", http.Header{"Authorization": []string{"marvin"}})
 				assert.Equal(t, 206, resp.StatusCode)
@@ -199,7 +199,7 @@ func TestConsumerFilterNotAfterConsumerRunInLaterPhase(t *testing.T) {
 	}{
 		{
 			name: "authn & exec",
-			config: controlplane.NewPluinConfig([]*model.FilterConfig{
+			config: controlplane.NewPluginConfig([]*model.FilterConfig{
 				{
 					Name:   "beforeConsumerAndHasOtherMethod",
 					Config: map[string]interface{}{},

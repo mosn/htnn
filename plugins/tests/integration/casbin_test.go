@@ -74,7 +74,7 @@ g, bob, admin
 	}{
 		{
 			name: "happy path",
-			config: controlplane.NewSinglePluinConfig("casbin", map[string]interface{}{
+			config: controlplane.NewSinglePluginConfig("casbin", map[string]interface{}{
 				"rule": map[string]string{
 					"model":  modelFile.Name(),
 					"policy": policyFile.Name(),
@@ -89,7 +89,7 @@ g, bob, admin
 		},
 		{
 			name: "change config",
-			config: controlplane.NewSinglePluinConfig("casbin", map[string]interface{}{
+			config: controlplane.NewSinglePluginConfig("casbin", map[string]interface{}{
 				"rule": map[string]string{
 					"model":  modelFile.Name(),
 					"policy": policyFile2.Name(),
