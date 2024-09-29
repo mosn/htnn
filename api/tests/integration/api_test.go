@@ -44,7 +44,7 @@ func TestLogLevelCache(t *testing.T) {
 	}
 	defer dp.Stop()
 
-	config := controlplane.NewSinglePluinConfig("buffer", map[string]interface{}{})
+	config := controlplane.NewSinglePluginConfig("buffer", map[string]interface{}{})
 	controlPlane.UseGoPluginConfig(t, config, dp)
 	err = dp.SetLogLevel("golang", "debug")
 	require.Nil(t, err)

@@ -40,7 +40,7 @@ func TestDebugModeSlowLog(t *testing.T) {
 	}
 	defer dp.Stop()
 
-	config := controlplane.NewPluinConfig([]*model.FilterConfig{
+	config := controlplane.NewPluginConfig([]*model.FilterConfig{
 		{
 			Name: "debugMode",
 			Config: map[string]interface{}{
@@ -87,7 +87,7 @@ func TestDebugModeSlowLogNoPlugin(t *testing.T) {
 	}
 	defer dp.Stop()
 
-	config := controlplane.NewPluinConfig([]*model.FilterConfig{
+	config := controlplane.NewPluginConfig([]*model.FilterConfig{
 		{
 			Name: "debugMode",
 			Config: map[string]interface{}{
@@ -119,7 +119,7 @@ func TestDebugModeSlowLogNoEncodeHeaders(t *testing.T) {
 	}
 	defer dp.Stop()
 
-	config := controlplane.NewPluinConfig([]*model.FilterConfig{
+	config := controlplane.NewPluginConfig([]*model.FilterConfig{
 		{
 			Name: "debugMode",
 			Config: map[string]interface{}{
@@ -156,7 +156,7 @@ func TestDebugModeSlowLogNotEmit(t *testing.T) {
 	}{
 		{
 			name: "not emit",
-			config: controlplane.NewPluinConfig([]*model.FilterConfig{
+			config: controlplane.NewPluginConfig([]*model.FilterConfig{
 				{
 					Name: "debugMode",
 					Config: map[string]interface{}{
@@ -212,7 +212,7 @@ func TestDebugModeSlowLogWithFiltersFromConsumer(t *testing.T) {
 	}{
 		{
 			name: "sanity",
-			config: controlplane.NewPluinConfig([]*model.FilterConfig{
+			config: controlplane.NewPluginConfig([]*model.FilterConfig{
 				{
 					Name: "debugMode",
 					Config: map[string]interface{}{
