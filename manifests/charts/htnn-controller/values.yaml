@@ -35,6 +35,7 @@ pilot:
     PILOT_ENABLE_HTNN: "true"
     PILOT_ENABLE_HTNN_STATUS: "true"
     HTNN_ENABLE_LDS_PLUGIN_VIA_ECDS: "false"
+    ISTIO_DUAL_STACK: "true"
 
   # Settings related to the untaint controller
   # This controller will remove `cni.istio.io/not-ready` from nodes when the istio-cni pod becomes ready

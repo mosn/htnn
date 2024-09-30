@@ -34,7 +34,7 @@ helm: $(LOCALBIN)
 
 .PHONY: create-cluster
 create-cluster: kind kubectl
-	$(KIND) create cluster --name htnn --image kindest/node:v$(MIN_K8S_VERSION)
+	$(KIND) create cluster --name htnn --image kindest/node:v$(MIN_K8S_VERSION) --config=kind_cluster.yaml
 	$(KUBECTL) apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v$(GATEWAY_API_VERSION)/standard-install.yaml
 	$(KUBECTL) apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v$(GATEWAY_API_VERSION)/experimental-install.yaml
 

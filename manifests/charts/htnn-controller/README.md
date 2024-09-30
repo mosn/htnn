@@ -121,6 +121,7 @@ helm uninstall htnn-controller -n istio-system
 | pilot.cpu.targetAverageUtilization | int | `80` |  |
 | pilot.deploymentLabels | object | `{}` |  |
 | pilot.env.HTNN_ENABLE_LDS_PLUGIN_VIA_ECDS | string | `"false"` |  |
+| pilot.env.ISTIO_DUAL_STACK | string | `"true"` |  |
 | pilot.env.PILOT_ENABLE_HTNN | string | `"true"` |  |
 | pilot.env.PILOT_ENABLE_HTNN_STATUS | string | `"true"` |  |
 | pilot.env.PILOT_SCOPE_GATEWAY_TO_NAMESPACE | string | `"true"` |  |
