@@ -246,7 +246,8 @@ func (m *filterManager) handleAction(res api.ResultAction, phase phase, filter *
 		} else if phase == phaseEncodeHeaders {
 			m.encodeResponseNeeded = true
 		} else {
-			api.LogErrorf("WaitAllData only allowed when processing headers, phase: %v", phase)
+			api.LogErrorf("WaitAllData only allowed when processing headers, phase: %v. "+
+				" In the mean time, use DecodeRequest /  EncodeResponse instead of DecodeData / EncodeData to handle fully buffered body.", phase)
 		}
 		return false
 	}
