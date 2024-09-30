@@ -8,10 +8,11 @@ title: TLS Inspector
 
 ## 属性
 
-|       |          |
-|-------|----------|
-| Type  | General  |
-| Order | Listener |
+|        |              |
+|--------|--------------|
+| Type   | General      |
+| Order  | Listener     |
+| Status | Experimental |
 
 ## 配置
 

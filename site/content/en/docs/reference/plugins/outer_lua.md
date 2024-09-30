@@ -18,10 +18,11 @@ Because Envoy uses the onion model to proxy requests, the execution order is:
 
 ## Attribute
 
-|       |         |
-|-------|---------|
-| Type  | General |
-| Order | Outer   |
+|        |              |
+|--------|--------------|
+| Type   | General      |
+| Order  | Outer        |
+| Status | Experimental |
 
 ## Configuration
 

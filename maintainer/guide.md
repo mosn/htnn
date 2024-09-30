@@ -13,6 +13,7 @@ To release a new version, please follow the steps below:
     * Once the image is ready, update the version in the `manifests/charts/*/Chart.yaml`.
     * Update the `./examples/dev_your_plugin` to use the released version.
     * Run `make fmt-go`.
+    * Update the `maintainer/feature_maturity_level.yaml`
 6. Create a release branch `release/v${version}` from the main branch, like `release/v0.3.2`. The CI will create a new chart package.
 
 ## Upgrade components

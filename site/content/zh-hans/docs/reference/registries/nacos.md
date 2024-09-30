@@ -6,6 +6,11 @@ title: Nacos
 
 `nacos` registry 对接 [Nacos](https://nacos.io/) 服务发现，将服务信息转换成 `ServiceEntry`。该 registry 既支持 V1 API，也支持 V2 API。
 
+## 属性
+
+|        |              |
+|--------|--------------|
+| Status | Experimental |
 
 ## 配置
 

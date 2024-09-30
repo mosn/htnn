@@ -20,7 +20,8 @@ Please refer to [outerLua](./outer_lua.md) plugin documentation to know how to u
 
 ## Attribute
 
-|       |         |
-|-------|---------|
-| Type  | General |
-| Order | Inner   |
+|        |              |
+|--------|--------------|
+| Type   | General      |
+| Order  | Inner        |
+| Status | Experimental |

@@ -9,10 +9,11 @@ You can use it to interact with remote OPA service (the remote mode), or authori
 
 ## Attribute
 
-|       |       |
-| ----- | ----- |
-| Type  | Authz |
-| Order | Authz |
+|        |              |
+|--------|--------------|
+| Type   | Authz        |
+| Order  | Authz        |
+| Status | Experimental |
 
 ## Configuration
 

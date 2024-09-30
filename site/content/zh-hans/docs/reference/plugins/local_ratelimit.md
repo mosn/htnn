@@ -8,10 +8,11 @@ title: Local Ratelimit
 
 ## 属性
 
-|       |         |
-|-------|---------|
-| Type  | Traffic |
-| Order | Outer   |
+|        |              |
+|--------|--------------|
+| Type   | Traffic      |
+| Order  | Outer        |
+| Status | Experimental |
 
 ## 配置
 

@@ -8,10 +8,11 @@ The `casbin` plugin embeds the powerful and efficient open-source access control
 
 ## Attribute
 
-|       |       |
-| ----- | ----- |
-| Type  | Authz |
-| Order | Authz |
+|        |              |
+|--------|--------------|
+| Type   | Authz        |
+| Order  | Authz        |
+| Status | Experimental |
 
 ## Configuration
 

@@ -11,10 +11,11 @@ The `buffer` plugin fully buffers the complete request, by leveraging Envoy's `b
 
 ## Attribute
 
-|       |         |
-|-------|---------|
-| Type  | General |
-| Order | Outer   |
+|        |              |
+|--------|--------------|
+| Type   | General      |
+| Order  | Outer        |
+| Status | Experimental |
 
 ## Configuration
 

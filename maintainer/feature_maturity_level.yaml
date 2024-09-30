@@ -1,0 +1,91 @@
+# Definition of feature: a feature is a plugin or a registry.
+#
+# Feature maturity grading rules:
+# 1. A feature's maturity level is `experimental` when its implementation is complete.
+# 2. A feature is `stable` when it meets both of the following conditions:
+#   2.1 It has been in a release version for more than 6 months.
+#   2.2 There are no bugfixes on this feature in the last three months.
+# 3. If a breaking change occurs or the maintainer thinks it is not stable enough, it returns to `experimental`.
+#
+# When creating new release, please update the maturity level of the features in this file, according to
+# the above rules.
+#
+# When adding a new feature, please set the experimental_since field to the next release.
+
+plugins:
+  - name: bandwidth_limit
+    status: experimental
+    experimental_since: 0.4.0
+  - name: buffer
+    status: experimental
+    experimental_since: 0.4.0
+  - name: casbin
+    status: experimental
+    experimental_since: 0.4.0
+  - name: cel_script
+    status: experimental
+    experimental_since: 0.4.0
+  - name: consumer_restriction
+    status: experimental
+    experimental_since: 0.4.0
+  - name: cors
+    status: experimental
+    experimental_since: 0.4.0
+  - name: debug_mode
+    status: experimental
+    experimental_since: 0.4.0
+  - name: demo
+    status: experimental
+    experimental_since: 0.4.0
+  - name: ext_auth
+    status: experimental
+    experimental_since: 0.4.0
+  - name: fault
+    status: experimental
+    experimental_since: 0.4.0
+  - name: hmac_auth
+    status: experimental
+    experimental_since: 0.4.0
+  - name: inner_ext_proc
+    status: experimental
+    experimental_since: 0.4.0
+  - name: inner_lua
+    status: experimental
+    experimental_since: 0.4.0
+  - name: key_auth
+    status: experimental
+    experimental_since: 0.4.0
+  - name: limit_count_redis
+    status: experimental
+    experimental_since: 0.4.0
+  - name: limit_req
+    status: experimental
+    experimental_since: 0.4.0
+  - name: listener_patch
+    status: experimental
+    experimental_since: 0.4.0
+  - name: local_ratelimit
+    status: experimental
+    experimental_since: 0.4.0
+  - name: oidc
+    status: experimental
+    experimental_since: 0.4.0
+  - name: opa
+    status: experimental
+    experimental_since: 0.4.0
+  - name: outer_ext_proc
+    status: experimental
+    experimental_since: 0.4.0
+  - name: outer_lua
+    status: experimental
+    experimental_since: 0.4.0
+  - name: tls_inspector
+    status: experimental
+    experimental_since: 0.4.0
+registries:
+  - name: consul
+    status: experimental
+    experimental_since: 0.4.0
+  - name: nacos
+    status: experimental
+    experimental_since: 0.4.0

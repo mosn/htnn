@@ -6,6 +6,12 @@ title: Consul
 
 `consul` registry 对接 [Consul](https://developer.hashicorp.com/consul) 服务发现，将服务信息转换成 `ServiceEntry`。
 
+## 属性
+
+|        |              |
+|--------|--------------|
+| Status | Experimental |
+
 ## 配置
 
 | 名称                     | 类型                       | 必选 | 校验规则                 | 说明                 |

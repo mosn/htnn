@@ -8,10 +8,11 @@ title: Demo
 
 ## 属性
 
-|       |             |
-|-------|-------------|
-| Type  | General     |
-| Order | Unspecified |
+|        |              |
+|--------|--------------|
+| Type   | General      |
+| Order  | Unspecified  |
+| Status | Experimental |
 
 ## 配置
 

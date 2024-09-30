@@ -8,10 +8,11 @@ The `fault` plugin supports response and delay injections by leveraging Envoy's 
 
 ## Attribute
 
-|       |         |
-|-------|---------|
-| Type  | General |
-| Order | Outer   |
+|        |              |
+|--------|--------------|
+| Type   | General      |
+| Order  | Outer        |
+| Status | Experimental |
 
 ## Configuration
 

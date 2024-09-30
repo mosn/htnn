@@ -8,10 +8,11 @@ The `cors` plugin handles Cross-Origin Resource Sharing requests by leveraging E
 
 ## Attribute
 
-|       |          |
-|-------|----------|
-| Type  | Security |
-| Order | Outer    |
+|        |              |
+|--------|--------------|
+| Type   | Security     |
+| Order  | Outer        |
+| Status | Experimental |
 
 ## Configuration
 

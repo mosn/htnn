@@ -8,10 +8,11 @@ The `keyAuth` plugin authenticates the client according to the consumers and the
 
 ## Attribute
 
-|       |       |
-| ----- | ----- |
-| Type  | Authn |
-| Order | Authn |
+|        |              |
+|--------|--------------|
+| Type   | Authn        |
+| Order  | Authn        |
+| Status | Experimental |
 
 ## Configuration
 

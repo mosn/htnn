@@ -8,10 +8,11 @@ The `limitReq` plugin limits the number of requests per second to this proxy. Th
 
 ## Attribute
 
-|       |         |
-|-------|---------|
-| Type  | Traffic |
-| Order | Traffic |
+|        |              |
+|--------|--------------|
+| Type   | Traffic      |
+| Order  | Traffic      |
+| Status | Experimental |
 
 ## Configuration
 

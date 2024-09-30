@@ -8,10 +8,11 @@ title: Casbin
 
 ## 属性
 
-|       |       |
-| ----- | ----- |
-| Type  | Authz |
-| Order | Authz |
+|        |              |
+|--------|--------------|
+| Type   | Authz        |
+| Order  | Authz        |
+| Status | Experimental |
 
 ## 配置
 

@@ -8,10 +8,11 @@ The `limitCountRedis` plugin implements a global fixed window rate-limiting by s
 
 ## Attribute
 
-|       |         |
-| ----- | ------- |
-| Type  | Traffic |
-| Order | Traffic |
+|        |              |
+|--------|--------------|
+| Type   | Traffic      |
+| Order  | Traffic      |
+| Status | Experimental |
 
 ## Configuration
 
