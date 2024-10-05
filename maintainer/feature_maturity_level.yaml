@@ -29,8 +29,8 @@ plugins:
     status: experimental
     experimental_since: 0.4.0
   - name: cors
-    status: experimental
-    experimental_since: 0.4.0
+    status: stable
+    stable_since: 0.4.0
   - name: debug_mode
     status: experimental
     experimental_since: 0.4.0
@@ -38,11 +38,11 @@ plugins:
     status: experimental
     experimental_since: 0.4.0
   - name: ext_auth
-    status: experimental
-    experimental_since: 0.4.0
+    status: stable
+    stable_since: 0.4.0
   - name: fault
-    status: experimental
-    experimental_since: 0.4.0
+    status: stable
+    stable_since: 0.4.0
   - name: hmac_auth
     status: experimental
     experimental_since: 0.4.0
@@ -53,11 +53,11 @@ plugins:
     status: experimental
     experimental_since: 0.4.0
   - name: key_auth
-    status: experimental
-    experimental_since: 0.4.0
+    status: stable
+    stable_since: 0.4.0
   - name: limit_count_redis
-    status: experimental
-    experimental_since: 0.4.0
+    status: stable
+    stable_since: 0.4.0
   - name: limit_req
     status: experimental
     experimental_since: 0.4.0
@@ -65,8 +65,8 @@ plugins:
     status: experimental
     experimental_since: 0.4.0
   - name: local_ratelimit
-    status: experimental
-    experimental_since: 0.4.0
+    status: stable
+    stable_since: 0.4.0
   - name: oidc
     status: experimental
     experimental_since: 0.4.0

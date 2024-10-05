@@ -8,11 +8,11 @@ The `extAuth` plugin sends an authorization request to an authorization service 
 
 ## Attribute
 
-|        |              |
-|--------|--------------|
-| Type   | Authz        |
-| Order  | Authz        |
-| Status | Experimental |
+|        |        |
+|--------|--------|
+| Type   | Authz  |
+| Order  | Authz  |
+| Status | Stable |
 
 ## Configuration
 

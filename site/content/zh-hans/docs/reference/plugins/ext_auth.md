@@ -8,11 +8,11 @@ title: Ext Auth
 
 ## 属性
 
-|        |              |
-|--------|--------------|
-| Type   | Authz        |
-| Order  | Authz        |
-| Status | Experimental |
+|        |        |
+|--------|--------|
+| Type   | Authz  |
+| Order  | Authz  |
+| Status | Stable |
 
 ## 配置
 
