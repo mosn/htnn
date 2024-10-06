@@ -22,14 +22,14 @@ import (
 	types "mosn.io/htnn/types/plugins/sentinel"
 )
 
-func LoadFlowRules(f *types.Flow, m map[string]*types.FlowRule) (bool, error) {
+func LoadFlowRules(f *types.Flow, m map[string]*types.FlowRule) error {
 	if f == nil {
-		return true, nil
+		return nil
 	}
 
 	rs := f.GetRules()
 	if len(rs) == 0 {
-		return true, nil
+		return nil
 	}
 
 	news := make([]*flow.Rule, 0, len(rs))
@@ -40,7 +40,7 @@ func LoadFlowRules(f *types.Flow, m map[string]*types.FlowRule) (bool, error) {
 		}
 
 		if _, exist := m[res]; exist {
-			return false, fmt.Errorf("duplicate flow rule for resource %s", res)
+			return fmt.Errorf("duplicate flow rule for resource %s", res)
 		}
 		m[res] = r
 
@@ -59,5 +59,6 @@ func LoadFlowRules(f *types.Flow, m map[string]*types.FlowRule) (bool, error) {
 		})
 	}
 
-	return flow.LoadRules(news)
+	_, err := flow.LoadRules(news)
+	return err
 }

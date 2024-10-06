@@ -23,12 +23,13 @@ title: Sentinel
 
 详细配置说明请额外参考 [sentinel-golang 官方文档](https://sentinelguard.io/zh-cn/docs/golang/quick-start.html)
 
-| 名称             | 类型                                | 必选 | 校验规则 | 说明                   |
-|----------------|-----------------------------------|----|------|----------------------|
-| resource       | [Source](#source)                 | 是  |      | 流控规则名称来源             |
-| flow           | [Flow](#flow)                     | 否  |      | flow 流量控制            |
-| hotSpot        | [HotSpot](#hotspot)               | 否  |      | hot spot 热点参数流控      |
-| circuitBreaker | [CircuitBreaker](#circuitbreaker) | 否  |      | circuit breaker 熔断降级 |
+| 名称             | 类型                                | 必选 | 校验规则 | 说明                              |
+|----------------|-----------------------------------|----|------|---------------------------------|
+| resource       | [Source](#source)                 | 是  |      | 流控规则名称来源                        |
+| flow           | [Flow](#flow)                     | 否  |      | flow 流量控制                       |
+| hotSpot        | [HotSpot](#hotspot)               | 否  |      | hot spot 热点参数流控                 |
+| circuitBreaker | [CircuitBreaker](#circuitbreaker) | 否  |      | circuit breaker 熔断降级            |
+| logDir         | string                            | 否  |      | 流控插件日志存储目录，默认值为 `/tmp/sentinel` |
 
 `flow`, `hotSpot`, `circuitBreaker` 三者至少有一项
 
@@ -338,7 +339,7 @@ HTTP/1.1 500 Internal Server Error
 
 若开启 DEBUG 日志，会看到：
 
-```bash
+```text
 ... [circuitbreaker state change] resource: baz, steategy: ErrorCount, Closed -> Open, failed times: 5
 ```
 
@@ -356,7 +357,7 @@ HTTP/1.1 200 OK
 
 若开启 DEBUG 日志，会看到：
 
-```bash
+```text
 ... [circuitbreaker state change] resource: baz, steategy: ErrorCount, Open -> Half-Open
 ...
 ... [circuitbreaker state change] resource: baz, steategy: ErrorCount, HalfOpen -> Closed

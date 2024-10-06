@@ -23,14 +23,14 @@ import (
 	types "mosn.io/htnn/types/plugins/sentinel"
 )
 
-func LoadCircuitBreakerRules(cb *types.CircuitBreaker, m map[string]*types.CircuitBreakerRule) (bool, error) {
+func LoadCircuitBreakerRules(cb *types.CircuitBreaker, m map[string]*types.CircuitBreakerRule) error {
 	if cb == nil {
-		return true, nil
+		return nil
 	}
 
 	rs := cb.GetRules()
 	if len(rs) == 0 {
-		return true, nil
+		return nil
 	}
 
 	news := make([]*circuitbreaker.Rule, 0, len(rs))
@@ -41,7 +41,7 @@ func LoadCircuitBreakerRules(cb *types.CircuitBreaker, m map[string]*types.Circu
 		}
 
 		if _, exist := m[res]; exist {
-			return false, fmt.Errorf("duplicate circuit breaker rule for resource %s", res)
+			return fmt.Errorf("duplicate circuit breaker rule for resource %s", res)
 		}
 		m[res] = r
 
@@ -49,7 +49,6 @@ func LoadCircuitBreakerRules(cb *types.CircuitBreaker, m map[string]*types.Circu
 			lsn := &debugListener{res}
 			listeners[res] = lsn
 			circuitbreaker.RegisterStateChangeListeners(lsn)
-			// api.LogDebugf("registered state change listener for resource: %s", res)
 		}
 
 		news = append(news, &circuitbreaker.Rule{
@@ -66,7 +65,8 @@ func LoadCircuitBreakerRules(cb *types.CircuitBreaker, m map[string]*types.Circu
 		})
 	}
 
-	return circuitbreaker.LoadRules(news)
+	_, err := circuitbreaker.LoadRules(news)
+	return err
 }
 
 var listeners = make(debugListenerMap)

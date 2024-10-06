@@ -22,14 +22,14 @@ import (
 	types "mosn.io/htnn/types/plugins/sentinel"
 )
 
-func LoadHotSpotRules(hs *types.HotSpot, m map[string]*types.HotSpotRule) (bool, error) {
+func LoadHotSpotRules(hs *types.HotSpot, m map[string]*types.HotSpotRule) error {
 	if hs == nil {
-		return true, nil
+		return nil
 	}
 
 	rs := hs.GetRules()
 	if len(rs) == 0 {
-		return true, nil
+		return nil
 	}
 
 	news := make([]*hotspot.Rule, 0, len(rs))
@@ -40,7 +40,7 @@ func LoadHotSpotRules(hs *types.HotSpot, m map[string]*types.HotSpotRule) (bool,
 		}
 
 		if _, exist := m[res]; exist {
-			return false, fmt.Errorf("duplicate hot spot rule for resource %s", res)
+			return fmt.Errorf("duplicate hot spot rule for resource %s", res)
 		}
 		m[res] = r
 
@@ -65,5 +65,6 @@ func LoadHotSpotRules(hs *types.HotSpot, m map[string]*types.HotSpotRule) (bool,
 		})
 	}
 
-	return hotspot.LoadRules(news)
+	_, err := hotspot.LoadRules(news)
+	return err
 }

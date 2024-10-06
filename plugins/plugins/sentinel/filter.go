@@ -29,7 +29,6 @@ func factory(c interface{}, callbacks api.FilterCallbackHandler) api.Filter {
 	return &filter{
 		callbacks: callbacks,
 		config:    c.(*config),
-		ctx:       make(map[string]interface{}),
 	}
 }
 
@@ -38,7 +37,7 @@ type filter struct {
 
 	callbacks api.FilterCallbackHandler
 	config    *config
-	ctx       map[string]interface{}
+	entry     *base.SentinelEntry
 }
 
 func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {
@@ -69,7 +68,7 @@ func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api
 			res, b.BlockType().String(), b.TriggeredRule(), b.TriggeredValue())
 
 		resp := &types.BlockResponse{
-			Message:    "sentinel traffic control",
+			Message:    "blocked by sentinel traffic control",
 			StatusCode: 429,
 		}
 
@@ -104,15 +103,17 @@ func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api
 		}
 	}
 
-	f.ctx["_entry"] = e
+	f.entry = e
 	api.LogDebugf("passed, resource: %s", res)
 
 	return api.Continue
 }
 
 func (f *filter) EncodeHeaders(headers api.ResponseHeaderMap, endStream bool) api.ResultAction {
-	e, exist := f.ctx["_entry"].(*base.SentinelEntry)
-	if !exist {
+	// the reason to Exit during the response phase is that the Circuit Breaker needs the response status code to ensure
+	// that it works properly, rather than waiting for the entire request/response to complete.
+	e := f.entry
+	if e == nil {
 		return api.Continue
 	}
 	defer e.Exit()

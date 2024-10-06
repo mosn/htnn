@@ -58,19 +58,19 @@ type res2RuleMap struct {
 func (conf *config) Init(cb api.ConfigCallbackHandler) error {
 	sc := sentinelConf.NewDefaultConfig()
 	sc.Sentinel.Log.Logger = logging.NewConsoleLogger()
-	sc.Sentinel.Log.Dir = "/tmp/sentinel"
+	sc.Sentinel.Log.Dir = conf.GetLogDir()
 	if err := sentinelApi.InitWithConfig(sc); err != nil {
 		return err
 	}
 
-	if _, err := loadRules(conf); err != nil {
+	if err := loadRules(conf); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func loadRules(conf *config) (bool, error) {
+func loadRules(conf *config) error {
 	conf.m = &res2RuleMap{
 		f:  make(map[string]*sentinel.FlowRule),
 		hs: make(map[string]*sentinel.HotSpotRule),
@@ -89,17 +89,17 @@ func loadRules(conf *config) (bool, error) {
 		conf.attachments = hs.GetAttachments()
 	}
 
-	if ok, err := rules.LoadFlowRules(conf.GetFlow(), conf.m.f); !ok || err != nil {
-		return ok, err
+	if err := rules.LoadFlowRules(conf.GetFlow(), conf.m.f); err != nil {
+		return err
 	}
 
-	if ok, err := rules.LoadHotSpotRules(hs, conf.m.hs); !ok || err != nil {
-		return ok, err
+	if err := rules.LoadHotSpotRules(hs, conf.m.hs); err != nil {
+		return err
 	}
 
-	if ok, err := rules.LoadCircuitBreakerRules(conf.GetCircuitBreaker(), conf.m.cb); !ok || err != nil {
-		return ok, err
+	if err := rules.LoadCircuitBreakerRules(conf.GetCircuitBreaker(), conf.m.cb); err != nil {
+		return err
 	}
 
-	return true, nil
+	return nil
 }

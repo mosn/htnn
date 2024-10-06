@@ -23,12 +23,13 @@ The configuration fields are largely consistent with sentinel-golang v1.0.4, wit
 
 For detailed configuration instructions, please refer to the [sentinel-golang official documentation](https://sentinelguard.io/zh-cn/docs/golang/quick-start.html).
 
-| Name           | Type                              | Required | Validation | Description                         |
-|----------------|-----------------------------------|----------|------------|-------------------------------------|
-| resource       | [Source](#source)                 | True     |            | Source of traffic control rule name |
-| flow           | [Flow](#flow)                     | False    |            | Flow traffic control                |
-| hotSpot        | [HotSpot](#hotspot)               | False    |            | Hot spot traffic control            |
-| circuitBreaker | [CircuitBreaker](#circuitbreaker) | False    |            | Circuit breaker and degradation     |
+| Name           | Type                              | Required | Validation | Description                                                                                      |
+|----------------|-----------------------------------|----------|------------|--------------------------------------------------------------------------------------------------|
+| resource       | [Source](#source)                 | True     |            | Source of traffic control rule name                                                              |
+| flow           | [Flow](#flow)                     | False    |            | Flow traffic control                                                                             |
+| hotSpot        | [HotSpot](#hotspot)               | False    |            | Hot spot traffic control                                                                         |
+| circuitBreaker | [CircuitBreaker](#circuitbreaker) | False    |            | Circuit breaker and degradation                                                                  |
+| logDir         | string                            | False    |            | Directory where the traffic control plugin logs are stored. The default value is `/tmp/sentinel` |
 
 At least one of `flow`, `hotSpot`, or `circuitBreaker` must be provided.
 
@@ -339,7 +340,7 @@ HTTP/1.1 500 Internal Server Error
 
 If DEBUG logging is enabled, you will see:
 
-```bash
+```text
 ... [circuitbreaker state change] resource: baz, steategy: ErrorCount, Closed -> Open, failed times: 5
 ```
 
@@ -357,7 +358,7 @@ HTTP/1.1 200 OK
 
 If DEBUG logging is enabled, you will see:
 
-```bash
+```text
 ... [circuitbreaker state change] resource: baz, steategy: ErrorCount, Open -> Half-Open
 ...
 ... [circuitbreaker state change] resource: baz, steategy: ErrorCount, HalfOpen -> Closed

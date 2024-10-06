@@ -183,6 +183,8 @@ func (m *Config) validate(all bool) error {
 		}
 	}
 
+	// no validation rules for LogDir
+
 	if len(errors) > 0 {
 		return ConfigMultiError(errors)
 	}

@@ -26,6 +26,8 @@ message Config {
   Flow flow = 2;
   HotSpot hot_spot = 3;
   CircuitBreaker circuit_breaker = 4;
+
+  string log_dir = 5;
 }
 
 message Flow {
