@@ -79,7 +79,7 @@ func TestSentinelFlow(t *testing.T) {
 	}{
 		{
 			name: "simple",
-			config: controlplane.NewSinglePluinConfig("sentinel", map[string]interface{}{
+			config: controlplane.NewSinglePluginConfig("sentinel", map[string]interface{}{
 				"resource": map[string]interface{}{
 					"from": "HEADER",
 					"key":  "X-Sentinel",
@@ -130,7 +130,7 @@ func TestSentinelFlow(t *testing.T) {
 		},
 		{
 			name: "resource from query",
-			config: controlplane.NewSinglePluinConfig("sentinel", map[string]interface{}{
+			config: controlplane.NewSinglePluginConfig("sentinel", map[string]interface{}{
 				"resource": map[string]interface{}{
 					"from": "QUERY",
 					"key":  "query",
@@ -165,7 +165,7 @@ func TestSentinelFlow(t *testing.T) {
 		},
 		{
 			name: "throttling mode",
-			config: controlplane.NewSinglePluinConfig("sentinel", map[string]interface{}{
+			config: controlplane.NewSinglePluginConfig("sentinel", map[string]interface{}{
 				"resource": map[string]interface{}{
 					"from": "HEADER",
 					"key":  "X-Sentinel",
@@ -207,7 +207,7 @@ func TestSentinelFlow(t *testing.T) {
 		},
 		{
 			name: "associated resource",
-			config: controlplane.NewSinglePluinConfig("sentinel", map[string]interface{}{
+			config: controlplane.NewSinglePluginConfig("sentinel", map[string]interface{}{
 				"resource": map[string]interface{}{
 					"from": "HEADER",
 					"key":  "X-Sentinel",
@@ -293,7 +293,7 @@ func TestSentinelHotSpot(t *testing.T) {
 	}{
 		{
 			name: "simple",
-			config: controlplane.NewSinglePluinConfig("sentinel", map[string]interface{}{
+			config: controlplane.NewSinglePluginConfig("sentinel", map[string]interface{}{
 				"resource": map[string]interface{}{
 					"from": "HEADER",
 					"key":  "X-Sentinel",
@@ -345,7 +345,7 @@ func TestSentinelHotSpot(t *testing.T) {
 		},
 		{
 			name: "with attachments",
-			config: controlplane.NewSinglePluinConfig("sentinel", map[string]interface{}{
+			config: controlplane.NewSinglePluginConfig("sentinel", map[string]interface{}{
 				"resource": map[string]interface{}{
 					"from": "HEADER",
 					"key":  "X-Sentinel",
@@ -401,7 +401,7 @@ func TestSentinelHotSpot(t *testing.T) {
 		},
 		{
 			name: "specific items",
-			config: controlplane.NewSinglePluinConfig("sentinel", map[string]interface{}{
+			config: controlplane.NewSinglePluginConfig("sentinel", map[string]interface{}{
 				"resource": map[string]interface{}{
 					"from": "HEADER",
 					"key":  "X-Sentinel",
@@ -463,7 +463,7 @@ func TestSentinelCircuitBreaker(t *testing.T) {
 	}{
 		{
 			name: "simple",
-			config: controlplane.NewSinglePluinConfig("sentinel", map[string]interface{}{
+			config: controlplane.NewSinglePluginConfig("sentinel", map[string]interface{}{
 				"resource": map[string]interface{}{
 					"from": "HEADER",
 					"key":  "X-Sentinel",
@@ -539,7 +539,7 @@ func TestSentinelMixture(t *testing.T) {
 	}
 	defer dp.Stop()
 
-	config := controlplane.NewSinglePluinConfig("sentinel", map[string]interface{}{
+	config := controlplane.NewSinglePluginConfig("sentinel", map[string]interface{}{
 		"resource": map[string]interface{}{
 			"from": "HEADER",
 			"key":  "X-Sentinel",
