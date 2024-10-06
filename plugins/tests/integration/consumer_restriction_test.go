@@ -58,7 +58,7 @@ func TestConsumerRestriction(t *testing.T) {
 	}{
 		{
 			name: "allow",
-			config: controlplane.NewPluinConfig([]*model.FilterConfig{
+			config: controlplane.NewPluginConfig([]*model.FilterConfig{
 				{
 					Name: "keyAuth",
 					Config: map[string]interface{}{
@@ -92,7 +92,7 @@ func TestConsumerRestriction(t *testing.T) {
 		},
 		{
 			name: "allowed by method",
-			config: controlplane.NewPluinConfig([]*model.FilterConfig{
+			config: controlplane.NewPluginConfig([]*model.FilterConfig{
 				{
 					Name: "keyAuth",
 					Config: map[string]interface{}{
@@ -136,7 +136,7 @@ func TestConsumerRestriction(t *testing.T) {
 		},
 		{
 			name: "deny",
-			config: controlplane.NewPluinConfig([]*model.FilterConfig{
+			config: controlplane.NewPluginConfig([]*model.FilterConfig{
 				{
 					Name: "keyAuth",
 					Config: map[string]interface{}{
@@ -179,7 +179,7 @@ func TestConsumerRestriction(t *testing.T) {
 		},
 		{
 			name: "denied by method",
-			config: controlplane.NewPluinConfig([]*model.FilterConfig{
+			config: controlplane.NewPluginConfig([]*model.FilterConfig{
 				{
 					Name: "keyAuth",
 					Config: map[string]interface{}{

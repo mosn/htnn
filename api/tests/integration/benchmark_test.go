@@ -86,7 +86,7 @@ func TestBenchmarkPlugin(t *testing.T) {
 	}
 	defer dp.Stop()
 
-	config := controlplane.NewSinglePluinConfig("benchmark", map[string]interface{}{})
+	config := controlplane.NewSinglePluginConfig("benchmark", map[string]interface{}{})
 	controlPlane.UseGoPluginConfig(t, config, dp)
 
 	runBenchmark(t, clientBin, "http://localhost:10000/echo")
@@ -114,7 +114,7 @@ func TestBenchmarkPluginFromConsumer(t *testing.T) {
 	}
 	defer dp.Stop()
 
-	config := controlplane.NewPluinConfig([]*model.FilterConfig{
+	config := controlplane.NewPluginConfig([]*model.FilterConfig{
 		{
 			Name:   "consumer",
 			Config: map[string]interface{}{},

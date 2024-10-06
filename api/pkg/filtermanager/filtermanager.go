@@ -38,14 +38,13 @@ type filterManager struct {
 	decodeRequestNeeded bool
 	decodeIdx           int
 	reqHdr              api.RequestHeaderMap // don't access it in Encode phases
-	contentType         string
 
 	encodeResponseNeeded bool
 	encodeIdx            int
 	rspHdr               api.ResponseHeaderMap
 
 	runningInGoThread atomic.Int32
-	hdrLock           sync.Mutex // FIXME: remove this once we get request headers from the OnLog directly
+	hdrLock           sync.Mutex
 
 	// use a group of bools instead of map to avoid lookup
 	canSkipDecodeHeaders bool
@@ -67,7 +66,6 @@ func (m *filterManager) Reset() {
 	m.decodeRequestNeeded = false
 	m.decodeIdx = -1
 	m.reqHdr = nil
-	m.contentType = ""
 
 	m.encodeResponseNeeded = false
 	m.encodeIdx = -1
@@ -226,7 +224,7 @@ func FilterManagerFactory(c interface{}, cb capi.FilterCallbackHandler) (streamF
 	fm.canSkipEncodeData = fm.canSkipMethod["EncodeData"] && fm.canSkipMethod["EncodeResponse"]
 	fm.canSkipOnLog = fm.canSkipMethod["OnLog"]
 
-	return fm
+	return wrapFilterManager(fm)
 }
 
 func (m *filterManager) recordLocalReplyPluginName(name string) {
@@ -248,7 +246,8 @@ func (m *filterManager) handleAction(res api.ResultAction, phase phase, filter *
 		} else if phase == phaseEncodeHeaders {
 			m.encodeResponseNeeded = true
 		} else {
-			api.LogErrorf("WaitAllData only allowed when processing headers, phase: %v", phase)
+			api.LogErrorf("WaitAllData only allowed when processing headers, phase: %v. "+
+				" In the mean time, use DecodeRequest /  EncodeResponse instead of DecodeData / EncodeData to handle fully buffered body.", phase)
 		}
 		return false
 	}
@@ -295,10 +294,8 @@ func (m *filterManager) localReply(v *api.LocalResponse, decoding bool) {
 			if ct == "application/json" {
 				isJSON = true
 			}
-		} else {
-			// use the Content-Type header passed by the client, not the header
-			// provided by the gateway if have.
-			ct = m.contentType
+		} else if decoding {
+			ct, _ = m.reqHdr.Get("content-type")
 			if ct == "" || ct == "application/json" {
 				isJSON = true
 			}
@@ -325,11 +322,9 @@ func (m *filterManager) localReply(v *api.LocalResponse, decoding bool) {
 }
 
 func (m *filterManager) DecodeHeaders(headers capi.RequestHeaderMap, endStream bool) capi.StatusType {
-	m.contentType, _ = headers.Get("content-type")
-
-	// Ensure the headers are cached on the Go side.
-	// FIXME: remove this once we support OnLog phase headers in Envoy Go.
-	if m.DebugModeEnabled() {
+	if !supportGettingHeadersOnLog && m.DebugModeEnabled() {
+		// Ensure the headers are cached on the Go side.
+		headers.Get("test")
 		headers := &filterManagerRequestHeaderMap{
 			RequestHeaderMap: headers,
 		}
@@ -612,9 +607,8 @@ func (m *filterManager) DecodeData(buf capi.BufferInstance, endStream bool) capi
 }
 
 func (m *filterManager) EncodeHeaders(headers capi.ResponseHeaderMap, endStream bool) capi.StatusType {
-	// Ensure the headers are cached on the Go side.
-	// FIXME: remove this once we support OnLog phase headers in Envoy Go.
-	if m.DebugModeEnabled() {
+	if !supportGettingHeadersOnLog && m.DebugModeEnabled() {
+		// Ensure the headers are cached on the Go side.
 		headers.Get("test")
 		m.rspHdr = headers
 	}
@@ -745,27 +739,12 @@ func (m *filterManager) EncodeData(buf capi.BufferInstance, endStream bool) capi
 
 // TODO: handle trailers
 
-func (m *filterManager) OnLog() {
-	if m.canSkipOnLog {
-		return
-	}
-
+func (m *filterManager) runOnLogPhase(reqHdr api.RequestHeaderMap, rspHdr api.ResponseHeaderMap) {
 	// It is unsafe to access the f.callbacks in the goroutine, as the underlying request
 	// may be destroyed when the goroutine is running. So if people want to do some IO jobs,
 	// they need to copy the used data from the request to the Go side before kicking off
 	// the goroutine.
-	var reqHdr api.RequestHeaderMap
-	m.hdrLock.Lock()
-	reqHdr = m.reqHdr
-	m.hdrLock.Unlock()
-	var rspHdr api.ResponseHeaderMap
-	m.hdrLock.Lock()
-	rspHdr = m.rspHdr
-	m.hdrLock.Unlock()
-
 	for _, f := range m.filters {
-		// TODO: the cached headers passed here is not precise. We need to get the real one via
-		// Envoy Go API. But it is not supported yet.
 		f.OnLog(reqHdr, nil, rspHdr, nil)
 	}
 

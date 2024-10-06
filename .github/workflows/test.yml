@@ -29,10 +29,10 @@ jobs:
         envoy_version:
           - 1.29
           - 1.31
+          - dev
     env:
       ENVOY_API_VERSION: ${{ matrix.envoy_version }}
       # patch version should not contain API breaking changes, so we just pick the first one
-      FULL_ENVOY_VERSION: ${{ matrix.envoy_version }}.0
       PROXY_IMAGE: envoyproxy/envoy:contrib-v${{ matrix.envoy_version }}.0
     defaults:
       run:
@@ -47,6 +47,18 @@ jobs:
         cache-dependency-path: "**/*.sum"
     - name: Choose the Envoy API
       run: |
+        FULL_ENVOY_VERSION=${ENVOY_API_VERSION}.0
+        if [[ $ENVOY_API_VERSION == dev ]]; then
+          # update this once there are more breaking changes
+          FULL_ENVOY_VERSION=1.31.1-0.20240909145059-353737786a7f
+          # This is the envoy:contrib-dev image pull in 2024-09-25.
+          # Use docker inspect --format='{{index .RepoDigests 0}}' envoyproxy/envoy:contrib-dev to get the sha256 ID.
+          # We don't use the envoy:contrib-dev tag directly because it will be rewritten by the latest commit and
+          # our test suite uses IfPresent policy to pull image.
+          # We don't use the CI to catch the breaking change from the upstream so far.
+          export PROXY_IMAGE=envoyproxy/envoy@sha256:845c392c1f128a00c49439d129ca9f2c12ff8748aeb42c8aa2b3b8240d6e0d5b
+          echo PROXY_IMAGE=$PROXY_IMAGE >> $GITHUB_ENV
+        fi
         pushd ..
         ./patch/switch-envoy-go-version.sh ${FULL_ENVOY_VERSION}
         popd
@@ -233,6 +245,8 @@ jobs:
           ./api-module-test-cover-1.29/cover_integration.out,
           ./api-module-test-cover-1.31/cover.out,
           ./api-module-test-cover-1.31/cover_integration.out,
+          ./api-module-test-cover-dev/cover.out,
+          ./api-module-test-cover-dev/cover_integration.out,
           ./types-module-test-cover/cover.out,
           ./plugins-unit-test-cover/cover.out,
           ./plugins-integration-test-cover/cover.out,

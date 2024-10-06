@@ -40,7 +40,7 @@ func TestCelScript(t *testing.T) {
 	}{
 		{
 			name: "allowIf",
-			config: controlplane.NewSinglePluinConfig("celScript", map[string]interface{}{
+			config: controlplane.NewSinglePluginConfig("celScript", map[string]interface{}{
 				"allowIf": `request.path() == "/echo" && request.method() == "GET"`,
 			}),
 			expect: func(t *testing.T, resp *http.Response) {
@@ -49,7 +49,7 @@ func TestCelScript(t *testing.T) {
 		},
 		{
 			name: "allowIf, reject",
-			config: controlplane.NewSinglePluinConfig("celScript", map[string]interface{}{
+			config: controlplane.NewSinglePluginConfig("celScript", map[string]interface{}{
 				"allowIf": `request.path() == "/echo" && request.method() != "GET"`,
 			}),
 			expect: func(t *testing.T, resp *http.Response) {

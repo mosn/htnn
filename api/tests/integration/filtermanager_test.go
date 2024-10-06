@@ -901,7 +901,7 @@ func TestFilterManagerIgnoreUnknownFields(t *testing.T) {
 	}
 	defer dp.Stop()
 
-	config := controlplane.NewSinglePluinConfig("buffer", map[string]interface{}{
+	config := controlplane.NewSinglePluginConfig("buffer", map[string]interface{}{
 		"unknown": "blah",
 	})
 	controlPlane.UseGoPluginConfig(t, config, dp)
@@ -927,7 +927,7 @@ func TestFilterManagerPluginReturnsErrorInParse(t *testing.T) {
 	}
 	defer dp.Stop()
 
-	config := controlplane.NewSinglePluinConfig("buffer", map[string]interface{}{
+	config := controlplane.NewSinglePluginConfig("buffer", map[string]interface{}{
 		"decode": []string{"wrong type"},
 	})
 	controlPlane.UseGoPluginConfig(t, config, dp)
@@ -1093,7 +1093,7 @@ func TestFilterManagerRecordLocalReplyPlugin(t *testing.T) {
 	}
 	defer dp.Stop()
 
-	config := controlplane.NewSinglePluinConfig("localReply", map[string]interface{}{
+	config := controlplane.NewSinglePluginConfig("localReply", map[string]interface{}{
 		"decode":  true,
 		"headers": true,
 	})

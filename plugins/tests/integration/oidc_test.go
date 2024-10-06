@@ -64,7 +64,7 @@ func TestOIDC(t *testing.T) {
 	var hydra hydraOutput
 	json.Unmarshal(stdout, &hydra)
 
-	config := controlplane.NewSinglePluinConfig("oidc", map[string]interface{}{
+	config := controlplane.NewSinglePluginConfig("oidc", map[string]interface{}{
 		"clientId":     hydra.ClientID,
 		"clientSecret": hydra.ClientSecret,
 		"redirectUrl":  redirectURL,

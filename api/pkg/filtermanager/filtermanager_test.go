@@ -41,7 +41,7 @@ func TestPassThrough(t *testing.T) {
 		},
 	}
 	for i := 0; i < 2; i++ {
-		m := FilterManagerFactory(config, cb).(*filterManager)
+		m := unwrapFilterManager(FilterManagerFactory(config, cb))
 		hdr := envoy.NewRequestHeaderMap(http.Header{})
 		m.DecodeHeaders(hdr, false)
 		cb.WaitContinued()
@@ -53,7 +53,7 @@ func TestPassThrough(t *testing.T) {
 		cb.WaitContinued()
 		m.EncodeData(buf, true)
 		cb.WaitContinued()
-		m.OnLog()
+		m.OnLog(hdr, nil, respHdr, nil)
 	}
 }
 
@@ -109,7 +109,7 @@ func TestLocalReplyJSON_UseReqHeader(t *testing.T) {
 					Factory: PassThroughFactory,
 				},
 			}
-			m := FilterManagerFactory(config, cb).(*filterManager)
+			m := unwrapFilterManager(FilterManagerFactory(config, cb))
 			patches := gomonkey.ApplyMethodReturn(m.filters[0].Filter, "DecodeHeaders", &api.LocalResponse{
 				Code: 200,
 				Msg:  "msg",
@@ -140,11 +140,10 @@ func TestLocalReplyJSON_UseRespHeader(t *testing.T) {
 			hdr: func(h http.Header) http.Header {
 				return h
 			},
-			// use the Content-Type from the request
+			// do not use the Content-Type from the request
 			reply: envoy.LocalResponse{
-				Code:    200,
-				Body:    `{"msg":"msg"}`,
-				Headers: map[string][]string{"Content-Type": {"application/json"}},
+				Code: 200,
+				Body: "msg",
 			},
 		},
 		{
@@ -182,7 +181,7 @@ func TestLocalReplyJSON_UseRespHeader(t *testing.T) {
 					Factory: PassThroughFactory,
 				},
 			}
-			m := FilterManagerFactory(config, cb).(*filterManager)
+			m := unwrapFilterManager(FilterManagerFactory(config, cb))
 			patches := gomonkey.ApplyMethodReturn(m.filters[0].Filter, "EncodeHeaders", &api.LocalResponse{
 				Code: 200,
 				Msg:  "msg",
@@ -218,7 +217,7 @@ func TestLocalReplyJSON_DoNotChangeMsgIfContentTypeIsGiven(t *testing.T) {
 			Factory: PassThroughFactory,
 		},
 	}
-	m := FilterManagerFactory(config, cb).(*filterManager)
+	m := unwrapFilterManager(FilterManagerFactory(config, cb))
 	patches := gomonkey.ApplyMethodReturn(m.filters[0].Filter, "DecodeHeaders", &api.LocalResponse{
 		Msg:    "msg",
 		Header: http.Header(map[string][]string{"Content-Type": {"text/plain"}}),
@@ -280,7 +279,7 @@ func TestInitFailed(t *testing.T) {
 	for i := 0; i < n; i++ {
 		go func(i int) {
 			cb := envoy.NewCAPIFilterCallbackHandler()
-			m := FilterManagerFactory(config, cb).(*filterManager)
+			m := FilterManagerFactory(config, cb)
 			h := http.Header{}
 			hdr := envoy.NewRequestHeaderMap(h)
 			m.DecodeHeaders(hdr, true)
@@ -303,7 +302,7 @@ func TestInitFailed(t *testing.T) {
 	for i := 0; i < n; i++ {
 		go func(i int) {
 			cb := envoy.NewCAPIFilterCallbackHandler()
-			m := FilterManagerFactory(config2, cb).(*filterManager)
+			m := FilterManagerFactory(config2, cb)
 			h := http.Header{}
 			hdr := envoy.NewRequestHeaderMap(h)
 			m.DecodeHeaders(hdr, true)
@@ -371,7 +370,7 @@ func TestSkipMethodWhenThereAreMultiFilters(t *testing.T) {
 	}
 
 	for i := 0; i < 2; i++ {
-		m := FilterManagerFactory(config, cb).(*filterManager)
+		m := unwrapFilterManager(FilterManagerFactory(config, cb))
 		assert.Equal(t, false, m.canSkipOnLog)
 		assert.Equal(t, false, m.canSkipDecodeHeaders)
 		assert.Equal(t, true, m.canSkipDecodeData)
@@ -452,7 +451,7 @@ func TestFiltersFromConsumer(t *testing.T) {
 	for i := 0; i < 2*n; i++ {
 		go func(i int) {
 			cb := envoy.NewCAPIFilterCallbackHandler()
-			m := FilterManagerFactory(config, cb).(*filterManager)
+			m := unwrapFilterManager(FilterManagerFactory(config, cb))
 			assert.Equal(t, true, m.canSkipOnLog)
 			assert.Equal(t, 2, len(m.filters))
 			h := http.Header{}
@@ -545,11 +544,11 @@ func TestDoNotRecycleInUsedFilterManager(t *testing.T) {
 	for i := 0; i < n; i++ {
 		go func(i int) {
 			cb := envoy.NewCAPIFilterCallbackHandler()
-			m := FilterManagerFactory(config, cb).(*filterManager)
+			m := unwrapFilterManager(FilterManagerFactory(config, cb))
 			h := http.Header{}
 			hdr := envoy.NewRequestHeaderMap(h)
 			m.DecodeHeaders(hdr, true)
-			m.OnLog()
+			m.OnLog(hdr, nil, nil, nil)
 			wg.Done()
 		}(i)
 	}
@@ -560,13 +559,13 @@ func TestDoNotRecycleInUsedFilterManager(t *testing.T) {
 	for i := 0; i < n; i++ {
 		go func(i int) {
 			cb := envoy.NewCAPIFilterCallbackHandler()
-			m := FilterManagerFactory(config, cb).(*filterManager)
+			m := unwrapFilterManager(FilterManagerFactory(config, cb))
 			h := http.Header{}
 			hdr := envoy.NewRequestHeaderMap(h)
 			m.DecodeHeaders(hdr, false)
 			cb.WaitContinued()
 			m.DecodeData(nil, true)
-			m.OnLog()
+			m.OnLog(hdr, nil, nil, nil)
 			wg.Done()
 		}(i)
 	}
@@ -577,14 +576,14 @@ func TestDoNotRecycleInUsedFilterManager(t *testing.T) {
 	for i := 0; i < n; i++ {
 		go func(i int) {
 			cb := envoy.NewCAPIFilterCallbackHandler()
-			m := FilterManagerFactory(config, cb).(*filterManager)
+			m := unwrapFilterManager(FilterManagerFactory(config, cb))
 			h := http.Header{}
 			hdr := envoy.NewRequestHeaderMap(h)
 			m.DecodeHeaders(hdr, true)
 			cb.WaitContinued()
 			hdr2 := envoy.NewResponseHeaderMap(h)
 			m.EncodeHeaders(hdr2, true)
-			m.OnLog()
+			m.OnLog(hdr, nil, hdr2, nil)
 			wg.Done()
 		}(i)
 	}
@@ -595,7 +594,7 @@ func TestDoNotRecycleInUsedFilterManager(t *testing.T) {
 	for i := 0; i < n; i++ {
 		go func(i int) {
 			cb := envoy.NewCAPIFilterCallbackHandler()
-			m := FilterManagerFactory(config, cb).(*filterManager)
+			m := unwrapFilterManager(FilterManagerFactory(config, cb))
 			h := http.Header{}
 			hdr := envoy.NewRequestHeaderMap(h)
 			m.DecodeHeaders(hdr, true)
@@ -604,7 +603,7 @@ func TestDoNotRecycleInUsedFilterManager(t *testing.T) {
 			m.EncodeHeaders(hdr2, true)
 			cb.WaitContinued()
 			m.EncodeData(nil, true)
-			m.OnLog()
+			m.OnLog(hdr, nil, hdr2, nil)
 			wg.Done()
 		}(i)
 	}

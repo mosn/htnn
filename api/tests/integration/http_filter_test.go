@@ -119,7 +119,7 @@ func TestFilterMergeIntoRoute(t *testing.T) {
 		},
 		{
 			name:   "init should be called only once (route version)",
-			config: controlplane.NewSinglePluinConfig("init", map[string]interface{}{}),
+			config: controlplane.NewSinglePluginConfig("init", map[string]interface{}{}),
 			run: func(t *testing.T) {
 				resp, _ := dp.Get("/echo", nil)
 				assert.Equal(t, 200, resp.StatusCode)
@@ -131,7 +131,7 @@ func TestFilterMergeIntoRoute(t *testing.T) {
 		},
 		{
 			name: "override",
-			config: controlplane.NewSinglePluinConfig("buffer", map[string]interface{}{
+			config: controlplane.NewSinglePluginConfig("buffer", map[string]interface{}{
 				"decode": true,
 				"need":   true,
 			}),
@@ -143,7 +143,7 @@ func TestFilterMergeIntoRoute(t *testing.T) {
 		},
 		{
 			name: "sort merged plugins",
-			config: controlplane.NewPluinConfig([]*model.FilterConfig{
+			config: controlplane.NewPluginConfig([]*model.FilterConfig{
 				{
 					Name:   "stream",
 					Config: map[string]interface{}{},
