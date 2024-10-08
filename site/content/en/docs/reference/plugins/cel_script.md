@@ -8,10 +8,11 @@ The `celScript` plugin determines whether the current request can access the ups
 
 ## Attribute
 
-|       |         |
-|-------|---------|
-| Type  | Traffic |
-| Order | Traffic |
+|        |              |
+|--------|--------------|
+| Type   | Traffic      |
+| Order  | Traffic      |
+| Status | Experimental |
 
 ## Configuration
 

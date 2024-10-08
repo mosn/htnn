@@ -24,12 +24,14 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 
 	protoparser "github.com/yoheimuta/go-protoparser/v4"
 	"github.com/yoheimuta/go-protoparser/v4/parser"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
+	"gopkg.in/yaml.v3"
 )
 
 // This tool does what the third party linters don't
@@ -283,8 +285,12 @@ func lintFilenameForDoc(root string) error {
 	})
 }
 
+var (
+	Categories = []string{"plugins", "registries"}
+)
+
 func lintConfiguration() error {
-	for _, t := range []string{"plugins", "registries"} {
+	for _, t := range Categories {
 		err := lintConfigurationByCategory(t)
 		if err != nil {
 			return err
@@ -507,6 +513,135 @@ func lintConfigurationByCategory(category string) error {
 	return err
 }
 
+type maturityLevel struct {
+	name     string
+	maturity string
+}
+
+func getFeatureMaturityLevel(category string) ([]maturityLevel, error) {
+	res := []maturityLevel{}
+	err := filepath.Walk(filepath.Join("site", "content", "en", "docs", "reference", category), func(path string, info fs.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if info.IsDir() {
+			return nil
+		}
+
+		ext := filepath.Ext(path)
+		if ext != ".md" || strings.HasSuffix(path, "_index.md") {
+			return nil
+		}
+
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+
+		scanner := bufio.NewScanner(bytes.NewReader(data))
+		status := ""
+		for scanner.Scan() {
+			text := scanner.Text()
+			if text == "## Attribute" {
+				for i := 0; i < 3; i++ {
+					scanner.Scan() // drop table title
+				}
+
+				// the Attribute table in registries doc is different
+				if category != "registries" {
+					scanner.Scan()
+					scanner.Scan()
+				}
+				// the third row is the status
+				scanner.Scan()
+				ss := strings.Split(scanner.Text(), "|")
+				if len(ss) > 2 {
+					status = strings.ToLower(strings.TrimSpace(ss[2]))
+				}
+				break
+			}
+		}
+
+		name := filepath.Base(path)[:len(filepath.Base(path))-len(ext)]
+		res = append(res, maturityLevel{
+			name:     name,
+			maturity: status,
+		})
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return res, nil
+}
+
+type FeatureMaturityLevelRecord struct {
+	Name              string `yaml:"name"`
+	Status            string `yaml:"status"`
+	ExperimentalSince string `yaml:"experimental_since"`
+	StableSince       string `yaml:"stable_since"`
+}
+
+func lintFeatureMaturityLevel() error {
+	recordFile := filepath.Join("maintainer", "feature_maturity_level.yaml")
+	data, err := os.ReadFile(recordFile)
+	if err != nil {
+		return err
+	}
+
+	var records map[string][]FeatureMaturityLevelRecord
+	err = yaml.Unmarshal(data, &records)
+	if err != nil {
+		return err
+	}
+
+	actualRecords := map[string][]FeatureMaturityLevelRecord{}
+	for _, category := range Categories {
+		actualRecords[category] = []FeatureMaturityLevelRecord{}
+		actual, err := getFeatureMaturityLevel(category)
+		if err != nil {
+			return err
+		}
+
+		for _, record := range actual {
+			actualRecords[category] = append(actualRecords[category], FeatureMaturityLevelRecord{
+				Name:   record.name,
+				Status: record.maturity,
+			})
+		}
+	}
+
+	for category, recs := range records {
+		for _, record := range recs {
+			if record.Status == "experimental" && record.ExperimentalSince == "" {
+				return fmt.Errorf("experimental_since of %s %s is missing in %s", category, record.Name, recordFile)
+			}
+			found := false
+			for i, r := range actualRecords[category] {
+				if r.Name == record.Name {
+					found = true
+					if r.Status != record.Status {
+						return fmt.Errorf("status of %s %s is mismatched between %s and the documentation", category, record.Name, recordFile)
+					}
+					actualRecords[category] = slices.Delete(actualRecords[category], i, i+1)
+					break
+				}
+			}
+			if !found {
+				return fmt.Errorf("%s %s is missing in the documentation", category, record.Name)
+			}
+		}
+	}
+	for _, category := range Categories {
+		if len(actualRecords[category]) > 0 {
+			return fmt.Errorf("%s %s is missing in the %s", category, actualRecords[category][0].Name, recordFile)
+		}
+	}
+
+	return nil
+}
+
 func main() {
 	// change to the root directory so that we don't need to worry about why this tool locates
 	os.Chdir("..")
@@ -516,6 +651,7 @@ func main() {
 		lintConfiguration,
 		lintFilename,
 		lintSite,
+		lintFeatureMaturityLevel,
 	}
 	for _, linter := range linters {
 		err := linter()

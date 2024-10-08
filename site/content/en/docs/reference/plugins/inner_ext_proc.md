@@ -20,7 +20,8 @@ Please refer to the [outerExtProc](./outer_ext_proc.md) plugin documentation to 
 
 ## Attribute
 
-|       |         |
-| ----- | ------- |
-| Type  | General |
-| Order | Inner   |
+|        |              |
+|--------|--------------|
+| Type   | General      |
+| Order  | Inner        |
+| Status | Experimental |

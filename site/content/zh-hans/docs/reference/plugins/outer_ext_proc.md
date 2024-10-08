@@ -18,10 +18,11 @@ title: Outer Ext Proc
 
 ## 属性
 
-|       |         |
-|-------|---------|
-| Type  | General |
-| Order | Outer   |
+|        |              |
+|--------|--------------|
+| Type   | General      |
+| Order  | Outer        |
+| Status | Experimental |
 
 ## 配置
 

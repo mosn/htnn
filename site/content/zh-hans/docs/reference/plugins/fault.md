@@ -8,10 +8,11 @@ title: Fault
 
 ## 属性
 
-|       |         |
-|-------|---------|
-| Type  | General |
-| Order | Outer   |
+|        |         |
+|--------|---------|
+| Type   | General |
+| Order  | Outer   |
+| Status | Stable  |
 
 ## 配置
 

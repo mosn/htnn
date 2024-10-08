@@ -8,10 +8,11 @@ The `bandwidthLimit` plugin restricts the maximum bandwidth of the data stream b
 
 ## Attribute
 
-|       |         |
-|-------|---------|
-| Type  | Traffic |
-| Order | Outer   |
+|        |              |
+|--------|--------------|
+| Type   | Traffic      |
+| Order  | Outer        |
+| Status | Experimental |
 
 ## Configuration
 

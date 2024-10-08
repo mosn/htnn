@@ -8,10 +8,11 @@ The `listenerPatch` plugin allows users to directly patch the Listener resource 
 
 ## Attribute
 
-|       |          |
-|-------|----------|
-| Type  | General  |
-| Order | Listener |
+|        |              |
+|--------|--------------|
+| Type   | General      |
+| Order  | Listener     |
+| Status | Experimental |
 
 ## Configuration
 

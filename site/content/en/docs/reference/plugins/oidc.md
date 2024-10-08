@@ -8,10 +8,11 @@ The `OIDC` plugin supports integration with any OpenID Connect Provider (OP) by 
 
 ## Attribute
 
-|       |         |
-|-------|---------|
-| Type  | Authn   |
-| Order | Authn   |
+|        |              |
+|--------|--------------|
+| Type   | Authn        |
+| Order  | Authn        |
+| Status | Experimental |
 
 ## Configuration
 

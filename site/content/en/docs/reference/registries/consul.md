@@ -6,6 +6,12 @@ title: Consul
 
 The `consul` registry connects to the [Consul](https://developer.hashicorp.com/consul) service discovery and converts service information into `ServiceEntry`.
 
+## Attribute
+
+|        |              |
+|--------|--------------|
+| Status | Experimental |
+
 ## Configuration
 
 | Name                   | Type                        | Required | Validation        | Description        |

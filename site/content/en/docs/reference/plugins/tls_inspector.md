@@ -8,10 +8,11 @@ The `tlsInspector` plugin adds a TLS Inspector listener filter to the targeted G
 
 ## Attribute
 
-|       |          |
-|-------|----------|
-| Type  | General  |
-| Order | Listener |
+|        |              |
+|--------|--------------|
+| Type   | General      |
+| Order  | Listener     |
+| Status | Experimental |
 
 ## Configuration
 

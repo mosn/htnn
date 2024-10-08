@@ -8,10 +8,11 @@ The `demo` plugin is used to show how to add a plugin to htnn.
 
 ## Attribute
 
-|       |             |
-|-------|-------------|
-| Type  | General     |
-| Order | Unspecified |
+|        |              |
+|--------|--------------|
+| Type   | General      |
+| Order  | Unspecified  |
+| Status | Experimental |
 
 ## Configuration
 

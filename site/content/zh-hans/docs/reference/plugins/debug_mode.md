@@ -8,10 +8,11 @@ title: Debug Mode
 
 ## 属性
 
-|       |         |
-|-------|---------|
-| Type  | General |
-| Order | Access  |
+|        |              |
+|--------|--------------|
+| Type   | General      |
+| Order  | Access       |
+| Status | Experimental |
 
 ## 配置
 

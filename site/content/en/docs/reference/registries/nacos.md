@@ -6,6 +6,12 @@ title: Nacos
 
 The `nacos` registry interfaces with [Nacos](https://nacos.io/) service discovery, converting service information into `ServiceEntry`. This registry supports the V1 API and the V2 API.
 
+## Attribute
+
+|        |              |
+|--------|--------------|
+| Status | Experimental |
+
 ## Configuration
 
 | Name                   | Type                            | Required | Validation        | Description                                            |

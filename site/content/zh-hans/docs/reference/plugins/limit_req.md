@@ -8,10 +8,11 @@ title: Limit Req
 
 ## 属性
 
-|       |         |
-|-------|---------|
-| Type  | Traffic |
-| Order | Traffic |
+|        |              |
+|--------|--------------|
+| Type   | Traffic      |
+| Order  | Traffic      |
+| Status | Experimental |
 
 ## 配置
 
