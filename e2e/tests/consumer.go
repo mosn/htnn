@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/avast/retry-go"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -42,7 +43,20 @@ func init() {
 	suite.Register(suite.Test{
 		Manifests: []string{"base/httproute.yml"},
 		Run: func(t *testing.T, suite *suite.Suite) {
-			rsp, err := suite.Get("/echo", hdrWithKey("rick"))
+			var rsp *http.Response
+			var err error
+			err = retry.Do(
+				func() error {
+					rsp, err = suite.Get("/echo", hdrWithKey("rick"))
+					return err
+				},
+				retry.RetryIf(func(err error) bool {
+					return true
+				}),
+				retry.Attempts(3),
+				// backoff delay
+				retry.Delay(500*time.Millisecond),
+			)
 			require.NoError(t, err)
 			require.Equal(t, 200, rsp.StatusCode)
 			req, _, err := suite.Capture(rsp)
