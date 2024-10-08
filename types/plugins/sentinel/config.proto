@@ -26,6 +26,8 @@ message Config {
   Flow flow = 2;
   HotSpot hot_spot = 3;
   CircuitBreaker circuit_breaker = 4;
+
+  string log_dir = 5;
 }
 
 message Flow {
@@ -49,18 +51,14 @@ message FlowRule {
   TokenCalculateStrategy token_calculate_strategy = 3;
   ControlBehavior control_behavior = 4;
   double threshold = 5;
-  uint32 stat_interval_in_ms = 6 [(validate.rules).uint32 = {gt: 0}];
+  uint32 stat_interval_in_ms = 6;
   uint32 max_queueing_time_ms = 7;
   RelationStrategy relation_strategy = 8;
   string ref_resource = 9;
   uint32 warm_up_period_sec = 10;
   uint32 warm_up_cold_factor = 11;
-  int64 low_mem_usage_threshold = 12;
-  int64 high_mem_usage_threshold = 13;
-  int64 mem_low_water_mark_bytes = 14;
-  int64 mem_high_water_mark_bytes = 15;
 
-  BlockResponse block_response = 16;
+  BlockResponse block_response = 12;
 
   enum TokenCalculateStrategy {
     DIRECT = 0;
@@ -81,8 +79,8 @@ message HotSpotRule {
   ControlBehavior control_behavior = 4;
   int32 param_index = 5;
   string param_key = 6;
-  int64 threshold = 7;
-  int64 duration_in_sec = 8 [(validate.rules).int64 = {gt: 0}];
+  int64 threshold = 7 [(validate.rules).int64 = {gt: 0}];
+  int64 duration_in_sec = 8;
   int64 max_queueing_time_ms = 9;
   int64 burst_count = 10;
   int64 params_max_capacity = 11;
@@ -102,7 +100,7 @@ message CircuitBreakerRule {
   Strategy strategy = 3;
   uint32 retry_timeout_ms = 4;
   uint64 min_request_amount = 5;
-  uint32 stat_interval_ms = 6 [(validate.rules).uint32 = {gt: 0}];
+  uint32 stat_interval_ms = 6;
   double threshold = 7 [(validate.rules).double = {gt: 0}];
   uint64 probe_num = 8;
   uint64 max_allowed_rt_ms = 9;
