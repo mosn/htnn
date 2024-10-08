@@ -703,7 +703,7 @@ index 0000000..f5ab33c
 +	}
 +}
 +
-+func (c *Controller) notifySeviceEntryChange(prev, curr config.Config, event model.Event) {
++func (c *Controller) notifyServiceEntryChange(prev, curr config.Config, event model.Event) {
 +	log.Debugf("notify ServiceEntry change event %s, name: %s, namespace: %s",
 +		event, curr.Name, curr.Namespace)
 +
@@ -719,16 +719,16 @@ index 0000000..f5ab33c
 +	for name, entry := range c.prevServiceEntries {
 +		if curr, ok := c.serviceEntries[name]; !ok {
 +			// Deleted ServiceEntry should be passed as the 'curr' ServiceEntry
-+			c.notifySeviceEntryChange(config.Config{}, *entry, model.EventDelete)
++			c.notifyServiceEntryChange(config.Config{}, *entry, model.EventDelete)
 +		} else {
 +			// Let the serviceEntryHandler to diff them
-+			c.notifySeviceEntryChange(*entry, *curr, model.EventUpdate)
++			c.notifyServiceEntryChange(*entry, *curr, model.EventUpdate)
 +		}
 +	}
 +
 +	for name, entry := range c.serviceEntries {
 +		if _, ok := c.prevServiceEntries[name]; !ok {
-+			c.notifySeviceEntryChange(config.Config{}, *entry, model.EventAdd)
++			c.notifyServiceEntryChange(config.Config{}, *entry, model.EventAdd)
 +		}
 +	}
 +}
