@@ -40,7 +40,11 @@ func snakeToCamel(s string) string {
 }
 
 func getSecondColumn(line string) string {
-	return strings.TrimSpace(strings.Split(line, "|")[2])
+	cols := strings.Split(line, "|")
+	if len(cols) < 3 {
+		return ""
+	}
+	return strings.TrimSpace(cols[2])
 }
 
 func TestCheckPluginAttributes(t *testing.T) {
