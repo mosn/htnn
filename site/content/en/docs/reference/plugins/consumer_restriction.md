@@ -8,10 +8,11 @@ The `consumerRestriction` plugin determines whether the current consumer has acc
 
 ## Attribute
 
-|       |       |
-|-------|-------|
-| Type  | Authz |
-| Order | Authz |
+|        |              |
+|--------|--------------|
+| Type   | Authz        |
+| Order  | Authz        |
+| Status | Experimental |
 
 ## Configuration
 

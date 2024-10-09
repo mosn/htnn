@@ -8,10 +8,11 @@ The `debugMode` plugin is used to enable debug mode on the targeted Route.
 
 ## Attribute
 
-|       |         |
-|-------|---------|
-| Type  | General |
-| Order | Access  |
+|        |              |
+|--------|--------------|
+| Type   | General      |
+| Order  | Access       |
+| Status | Experimental |
 
 ## Configuration
 

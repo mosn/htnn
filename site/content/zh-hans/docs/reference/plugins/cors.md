@@ -8,10 +8,11 @@ title: CORS
 
 ## 属性
 
-|       |          |
-|-------|----------|
-| Type  | Security |
-| Order | Outer    |
+|        |          |
+|--------|----------|
+| Type   | Security |
+| Order  | Outer    |
+| Status | Stable   |
 
 ## 配置
 

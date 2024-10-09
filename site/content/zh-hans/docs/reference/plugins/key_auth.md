@@ -8,10 +8,11 @@ title: Key Auth
 
 ## 属性
 
-|       |       |
-|-------|-------|
-| Type  | Authn |
-| Order | Authn |
+|        |        |
+|--------|--------|
+| Type   | Authn  |
+| Order  | Authn  |
+| Status | Stable |
 
 ## 配置
 

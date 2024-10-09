@@ -20,7 +20,8 @@ title: Inner Lua
 
 ## 属性
 
-|       |         |
-|-------|---------|
-| Type  | General |
-| Order | Inner   |
+|        |              |
+|--------|--------------|
+| Type   | General      |
+| Order  | Inner        |
+| Status | Experimental |

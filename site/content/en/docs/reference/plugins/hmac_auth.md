@@ -8,10 +8,11 @@ The `hmacAuth` plugin authenticates the client based on the consumer configurati
 
 ## Attribute
 
-|       |       |
-|-------|-------|
-| Type  | Authn |
-| Order | Authn |
+|        |              |
+|--------|--------------|
+| Type   | Authn        |
+| Order  | Authn        |
+| Status | Experimental |
 
 ## Configuration
 

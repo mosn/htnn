@@ -36,7 +36,7 @@ require (
 	istio.io/client-go v1.21.2
 	k8s.io/apimachinery v0.29.3
 	k8s.io/client-go v0.29.3
-	mosn.io/htnn/api v0.3.2
+	mosn.io/htnn/api v0.4.0
 	sigs.k8s.io/controller-runtime v0.17.3
 	sigs.k8s.io/gateway-api v1.0.0
 )
@@ -51,7 +51,7 @@ require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/emicklei/go-restful/v3 v3.11.0 // indirect
-	github.com/envoyproxy/envoy v1.29.4 // indirect
+	github.com/envoyproxy/envoy v1.31.0 // indirect
 	github.com/evanphx/json-patch v5.7.0+incompatible // indirect
 	github.com/go-ini/ini v1.67.0 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect

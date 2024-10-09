@@ -8,10 +8,11 @@ title: Limit Count Redis
 
 ## 属性
 
-|       |         |
-| ----- | ------- |
-| Type  | Traffic |
-| Order | Traffic |
+|        |         |
+|--------|---------|
+| Type   | Traffic |
+| Order  | Traffic |
+| Status | Stable  |
 
 ## 配置
 

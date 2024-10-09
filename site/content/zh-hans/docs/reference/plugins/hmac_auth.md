@@ -10,10 +10,11 @@ title: HMAC Auth
 
 ## 属性
 
-|       |       |
-|-------|-------|
-| Type  | Authn |
-| Order | Authn |
+|        |              |
+|--------|--------------|
+| Type   | Authn        |
+| Order  | Authn        |
+| Status | Experimental |
 
 ## 配置
 
