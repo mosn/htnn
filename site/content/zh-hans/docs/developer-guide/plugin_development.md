@@ -85,10 +85,12 @@ filter manager 实现了以下特性：
 对于每个插件，回调的调用顺序是：
 
 1. DecodeHeaders
-2. DecodeData
-3. EncodeHeaders
-4. EncodeData
-5. OnLog
+2. DecodeData（如果存在 request body）
+3. DecodeTrailers（如果存在 request trailer）
+4. EncodeHeaders
+5. EncodeData（如果存在 response body）
+6. EncodeTrailers（如果存在 response trailer）
+7. OnLog
 
 在插件之间，调用顺序由插件顺序决定。假设 `A` 插件在 `Authn` 组，`B` 在 `Authz`，`C` 在 `Traffic`。
 处理请求时（Decode 路径），调用顺序是 `A -> B -> C`。
@@ -105,6 +107,7 @@ filter manager 实现了以下特性：
 请注意，这张图片显示的是主路径。实际执行路径可能有细微差别。例如，
 
 * 如果请求没有 body，将不会调用 `DecodeData`。
+* 如果请求中有 trailers，则会在处理完 body 后调用 `DecodeTrailers` 处理 trailers。
 * 如果 Envoy 在发送给上游之前回复了请求，我们将离开 Decode 路径并进入 Encode 路径。例如，如果插件 B 用一些自定义头拒绝了请求，Decode 路径是 `A -> B`，Encode 路径是 `C -> B -> A`。自定义头将被该路径上的插件重写。这种行为和 Envoy 的处理方式一致。
 
 在某些情况下，我们需要中止 header filter 的执行，直到收到整个 body。例如，
@@ -123,17 +126,17 @@ filter manager 实现了以下特性：
 如果 `DecodeHeaders` 返回 `WaitAllData`，我们将：
 
 1. 缓冲整个 body
-2. 执行之前插件的 `DecodeData`
+2. 执行之前插件的 `DecodeData/DecodeTrailers`
 3. 执行此插件的 `DecodeRequest`
 4. 回到原始路径，继续执行下一个插件的 `DecodeHeaders`
 
 ![过滤器管理器，带有 DecodeWholeRequestFilter，缓冲整个请求](/images/filtermanager_sub_path.jpg)
 
-注意：`DecodeRequest` 仅在 `DecodeHeaders` 返回 `WaitAllData` 时才被执行。所以如果定义了 `DecodeRequest`，一定要定义 `DecodeHeaders`。如果插件里同时定义了 `DecodeRequest` 和 `DecodeData`，执行哪一个方法取决于 `DecodeHeaders` 是否返回 `WaitAllData`：如果 `DecodeHeaders` 返回 `WaitAllData`，只有 `DecodeRequest` 会运行，否则只有 `DecodeData` 会运行。
+注意：`DecodeRequest` 仅在 `DecodeHeaders` 返回 `WaitAllData` 时才被执行。所以如果定义了 `DecodeRequest`，一定要定义 `DecodeHeaders`。如果插件里同时定义了 `DecodeRequest` 和 `DecodeData/DecodeTrailers`，执行哪一个方法取决于 `DecodeHeaders` 是否返回 `WaitAllData`：如果 `DecodeHeaders` 返回 `WaitAllData`，只有 `DecodeRequest` 会运行，否则只有 `DecodeData/DecodeTrailers` 会运行。
 
 同样的过程适用于方向相反的 Encode 路径，且方式略有不同。此时需要由 `EncodeHeaders` 返回 `WaitAllData`，调用方法 `EncodeResponse`。
 
-注意：`EncodeResponse` 仅在 `EncodeHeaders` 返回 `WaitAllData` 时才被执行。所以如果定义了 `EncodeResponse`，一定要定义 `EncodeHeaders`。当插件里同时定义了 `EncodeResponse` 和 `EncodeData`：如果 `EncodeHeaders` 返回 `WaitAllData`，只有 `EncodeResponse` 会运行，否则只有 `EncodeData` 会运行。
+注意：`EncodeResponse` 仅在 `EncodeHeaders` 返回 `WaitAllData` 时才被执行。所以如果定义了 `EncodeResponse`，一定要定义 `EncodeHeaders`。当插件里同时定义了 `EncodeResponse` 和 `EncodeData/EncodeTrailers`：如果 `EncodeHeaders` 返回 `WaitAllData`，只有 `EncodeResponse` 会运行，否则只有 `EncodeData/EncodeTrailers` 会运行。
 
 目前顺序为 `Access` 或 `Authn` 的插件不支持 `DecodeRequest` 方法。
 
