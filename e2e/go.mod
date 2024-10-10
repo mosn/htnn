@@ -17,6 +17,7 @@ module mosn.io/htnn/e2e
 go 1.21.5
 
 require (
+	github.com/avast/retry-go v3.0.0+incompatible
 	github.com/stretchr/testify v1.9.0
 	istio.io/client-go v1.21.2
 	k8s.io/api v0.29.3
