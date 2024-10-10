@@ -38,21 +38,25 @@ type filterManager struct {
 	decodeRequestNeeded bool
 	decodeIdx           int
 	reqHdr              api.RequestHeaderMap // don't access it in Encode phases
+	reqBuf              capi.BufferInstance  // don't access it in Encode phases
 
 	encodeResponseNeeded bool
 	encodeIdx            int
 	rspHdr               api.ResponseHeaderMap
+	rspBuf               capi.BufferInstance
 
 	runningInGoThread atomic.Int32
 	hdrLock           sync.Mutex
 
 	// use a group of bools instead of map to avoid lookup
-	canSkipDecodeHeaders bool
-	canSkipDecodeData    bool
-	canSkipEncodeHeaders bool
-	canSkipEncodeData    bool
-	canSkipOnLog         bool
-	canSkipMethod        map[string]bool
+	canSkipDecodeHeaders  bool
+	canSkipDecodeData     bool
+	canSkipDecodeTrailers bool
+	canSkipEncodeHeaders  bool
+	canSkipEncodeData     bool
+	canSkipEncodeTrailers bool
+	canSkipOnLog          bool
+	canSkipMethod         map[string]bool
 
 	callbacks *filterManagerCallbackHandler
 	config    *filterManagerConfig
@@ -66,17 +70,21 @@ func (m *filterManager) Reset() {
 	m.decodeRequestNeeded = false
 	m.decodeIdx = -1
 	m.reqHdr = nil
+	m.reqBuf = nil
 
 	m.encodeResponseNeeded = false
 	m.encodeIdx = -1
 	m.rspHdr = nil
+	m.rspBuf = nil
 
 	m.runningInGoThread.Store(0) // defence in depth
 
 	m.canSkipDecodeHeaders = false
 	m.canSkipDecodeData = false
+	m.canSkipDecodeTrailers = false
 	m.canSkipEncodeHeaders = false
 	m.canSkipEncodeData = false
+	m.canSkipEncodeTrailers = false
 	m.canSkipOnLog = false
 
 	m.callbacks.Reset()
@@ -116,9 +124,11 @@ func newSkipMethodsMap() map[string]bool {
 		"DecodeHeaders":  true,
 		"DecodeData":     true,
 		"DecodeRequest":  true,
+		"DecodeTrailers": true,
 		"EncodeHeaders":  true,
 		"EncodeData":     true,
 		"EncodeResponse": true,
+		"EncodeTrailers": true,
 		"OnLog":          true,
 	}
 }
@@ -220,8 +230,10 @@ func FilterManagerFactory(c interface{}, cb capi.FilterCallbackHandler) (streamF
 	// even it is not called, DecodeData will not be skipped. Same as EncodeResponse.
 	fm.canSkipDecodeHeaders = fm.canSkipMethod["DecodeHeaders"] && fm.canSkipMethod["DecodeRequest"] && fm.config.initOnce == nil
 	fm.canSkipDecodeData = fm.canSkipMethod["DecodeData"] && fm.canSkipMethod["DecodeRequest"]
+	fm.canSkipDecodeTrailers = fm.canSkipMethod["DecodeTrailers"] && fm.canSkipMethod["DecodeRequest"]
 	fm.canSkipEncodeHeaders = fm.canSkipMethod["EncodeHeaders"]
 	fm.canSkipEncodeData = fm.canSkipMethod["EncodeData"] && fm.canSkipMethod["EncodeResponse"]
+	fm.canSkipEncodeTrailers = fm.canSkipMethod["EncodeTrailers"] && fm.canSkipMethod["EncodeResponse"]
 	fm.canSkipOnLog = fm.canSkipMethod["OnLog"]
 
 	return wrapFilterManager(fm)
@@ -443,8 +455,10 @@ func (m *filterManager) DecodeHeaders(headers capi.RequestHeaderMap, endStream b
 
 				canSkipMethod := c.CanSkipMethod
 				m.canSkipDecodeData = m.canSkipDecodeData && canSkipMethod["DecodeData"] && canSkipMethod["DecodeRequest"]
+				m.canSkipDecodeTrailers = m.canSkipDecodeTrailers && canSkipMethod["DecodeTrailers"] && canSkipMethod["DecodeRequest"]
 				m.canSkipEncodeHeaders = m.canSkipEncodeData && canSkipMethod["EncodeHeaders"]
 				m.canSkipEncodeData = m.canSkipEncodeData && canSkipMethod["EncodeData"] && canSkipMethod["EncodeResponse"]
+				m.canSkipEncodeTrailers = m.canSkipEncodeTrailers && canSkipMethod["EncodeTrailers"] && canSkipMethod["EncodeResponse"]
 				m.canSkipOnLog = m.canSkipOnLog && canSkipMethod["OnLog"]
 
 				// TODO: add field to control if merging is allowed
@@ -495,7 +509,7 @@ func (m *filterManager) DecodeHeaders(headers capi.RequestHeaderMap, endStream b
 					return
 				}
 
-				// no body
+				// no body and no trailers
 				res = f.DecodeRequest(m.reqHdr, nil, nil)
 				if m.handleAction(res, phaseDecodeRequest, f) {
 					return
@@ -507,6 +521,94 @@ func (m *filterManager) DecodeHeaders(headers capi.RequestHeaderMap, endStream b
 	}()
 
 	return capi.Running
+}
+
+func (m *filterManager) DecodeRequest(headers api.RequestHeaderMap, buf capi.BufferInstance, trailers capi.RequestTrailerMap) bool {
+	// for readable
+	endStreamInBody := trailers == nil
+	hasBody := buf != nil
+	hasTrailers := trailers != nil
+
+	var res api.ResultAction
+	if hasBody {
+		for i := 0; i < m.decodeIdx; i++ {
+			f := m.filters[i]
+			res = f.DecodeData(buf, endStreamInBody)
+			if m.handleAction(res, phaseDecodeData, f) {
+				return false
+			}
+		}
+	}
+
+	// run DecodeTrailers as well after processing all the data
+	if hasTrailers {
+		for i := 0; i < m.decodeIdx; i++ {
+			f := m.filters[i]
+			res = f.DecodeTrailers(trailers)
+			if m.handleAction(res, phaseDecodeTrailers, f) {
+				return false
+			}
+		}
+	}
+
+	f := m.filters[m.decodeIdx]
+	res = f.DecodeRequest(headers, buf, trailers)
+	if m.handleAction(res, phaseDecodeRequest, f) {
+		return false
+	}
+
+	n := len(m.filters)
+	i := m.decodeIdx + 1
+	for i < n {
+		for ; i < n; i++ {
+			f := m.filters[i]
+			// The endStream in DecodeHeaders indicates whether there is a body.
+			// The body always exists when we hit this path.
+			res = f.DecodeHeaders(headers, false)
+			if m.handleAction(res, phaseDecodeHeaders, f) {
+				return false
+			}
+			if m.decodeRequestNeeded {
+				// decodeRequestNeeded will be set to false below
+				break
+			}
+		}
+
+		// When there are multiple filters want to decode the whole req,
+		// run part of the DecodeData which is before them
+		if hasBody {
+			for j := m.decodeIdx + 1; j < i; j++ {
+				f := m.filters[j]
+				res = f.DecodeData(buf, endStreamInBody)
+				if m.handleAction(res, phaseDecodeData, f) {
+					return false
+				}
+			}
+		}
+
+		if hasTrailers {
+			for j := m.decodeIdx + 1; j < i; j++ {
+				f := m.filters[j]
+				res = f.DecodeTrailers(trailers)
+				if m.handleAction(res, phaseDecodeTrailers, f) {
+					return false
+				}
+			}
+		}
+
+		if m.decodeRequestNeeded {
+			m.decodeRequestNeeded = false
+			m.decodeIdx = i
+			f := m.filters[m.decodeIdx]
+			res = f.DecodeRequest(headers, buf, trailers)
+			if m.handleAction(res, phaseDecodeRequest, f) {
+				return false
+			}
+			i++
+		}
+	}
+
+	return true
 }
 
 func (m *filterManager) DecodeData(buf capi.BufferInstance, endStream bool) capi.StatusType {
@@ -544,63 +646,48 @@ func (m *filterManager) DecodeData(buf capi.BufferInstance, endStream bool) capi
 					return
 				}
 			}
-			m.callbacks.Continue(capi.Continue, true)
-
+		} else if endStream || !supportBufferingWithTrailers {
+			conti := m.DecodeRequest(m.reqHdr, buf, nil)
+			if !conti {
+				return
+			}
 		} else {
-			for i := 0; i < m.decodeIdx; i++ {
-				f := m.filters[i]
-				res = f.DecodeData(buf, endStream)
-				if m.handleAction(res, phaseDecodeData, f) {
+			m.reqBuf = buf
+		}
+
+		m.callbacks.Continue(capi.Continue, true)
+	}()
+
+	return capi.Running
+}
+
+func (m *filterManager) DecodeTrailers(trailers capi.RequestTrailerMap) capi.StatusType {
+	if m.canSkipDecodeTrailers {
+		return capi.Continue
+	}
+
+	m.MarkRunningInGoThread(true)
+
+	go func() {
+		defer m.MarkRunningInGoThread(false)
+		defer m.callbacks.DecoderFilterCallbacks().RecoverPanic()
+		var res api.ResultAction
+
+		if m.decodeIdx == -1 || !supportBufferingWithTrailers {
+			for _, f := range m.filters {
+				res = f.DecodeTrailers(trailers)
+				if m.handleAction(res, phaseDecodeTrailers, f) {
 					return
 				}
 			}
-
-			f := m.filters[m.decodeIdx]
-			res = f.DecodeRequest(m.reqHdr, buf, nil)
-			if m.handleAction(res, phaseDecodeRequest, f) {
+		} else {
+			conti := m.DecodeRequest(m.reqHdr, m.reqBuf, trailers)
+			if !conti {
 				return
 			}
-
-			i := m.decodeIdx + 1
-			for i < n {
-				for ; i < n; i++ {
-					f := m.filters[i]
-					// The endStream in DecodeHeaders indicates whether there is a body.
-					// The body always exists when we hit this path.
-					res = f.DecodeHeaders(m.reqHdr, false)
-					if m.handleAction(res, phaseDecodeHeaders, f) {
-						return
-					}
-					if m.decodeRequestNeeded {
-						// decodeRequestNeeded will be set to false below
-						break
-					}
-				}
-
-				// When there are multiple filters want to decode the whole req,
-				// run part of the DecodeData which is before them
-				for j := m.decodeIdx + 1; j < i; j++ {
-					f := m.filters[j]
-					res = f.DecodeData(buf, endStream)
-					if m.handleAction(res, phaseDecodeData, f) {
-						return
-					}
-				}
-
-				if m.decodeRequestNeeded {
-					m.decodeRequestNeeded = false
-					m.decodeIdx = i
-					f := m.filters[m.decodeIdx]
-					res = f.DecodeRequest(m.reqHdr, buf, nil)
-					if m.handleAction(res, phaseDecodeRequest, f) {
-						return
-					}
-					i++
-				}
-			}
-
-			m.callbacks.Continue(capi.Continue, true)
 		}
+
+		m.callbacks.Continue(capi.Continue, true)
 	}()
 
 	return capi.Running
@@ -657,6 +744,88 @@ func (m *filterManager) EncodeHeaders(headers capi.ResponseHeaderMap, endStream 
 	return capi.Running
 }
 
+func (m *filterManager) EncodeResponse(headers api.ResponseHeaderMap, buf capi.BufferInstance, trailers capi.ResponseTrailerMap) bool {
+	endStreamInBody := trailers == nil
+	hasBody := buf != nil
+	hasTrailers := trailers != nil
+
+	var res api.ResultAction
+	n := len(m.filters)
+	if hasBody {
+		for i := n - 1; i > m.encodeIdx; i-- {
+			f := m.filters[i]
+			res = f.EncodeData(buf, endStreamInBody)
+			if m.handleAction(res, phaseEncodeData, f) {
+				return false
+			}
+		}
+	}
+
+	if hasTrailers {
+		for i := n - 1; i > m.encodeIdx; i-- {
+			f := m.filters[i]
+			res = f.EncodeTrailers(trailers)
+			if m.handleAction(res, phaseEncodeTrailers, f) {
+				return false
+			}
+		}
+	}
+
+	f := m.filters[m.encodeIdx]
+	res = f.EncodeResponse(m.rspHdr, buf, nil)
+	if m.handleAction(res, phaseEncodeResponse, f) {
+		return false
+	}
+
+	i := m.encodeIdx - 1
+	for i >= 0 {
+		for ; i >= 0; i-- {
+			f := m.filters[i]
+			res = f.EncodeHeaders(m.rspHdr, false)
+			if m.handleAction(res, phaseEncodeHeaders, f) {
+				return false
+			}
+			if m.encodeResponseNeeded {
+				// encodeResponseNeeded will be set to false below
+				break
+			}
+		}
+
+		if hasBody {
+			for j := m.encodeIdx - 1; j > i; j-- {
+				f := m.filters[j]
+				res = f.EncodeData(buf, endStreamInBody)
+				if m.handleAction(res, phaseEncodeData, f) {
+					return false
+				}
+			}
+		}
+
+		if hasTrailers {
+			for j := m.encodeIdx - 1; j > i; j-- {
+				f := m.filters[j]
+				res = f.EncodeTrailers(trailers)
+				if m.handleAction(res, phaseEncodeTrailers, f) {
+					return false
+				}
+			}
+		}
+
+		if m.encodeResponseNeeded {
+			m.encodeResponseNeeded = false
+			m.encodeIdx = i
+			f := m.filters[m.encodeIdx]
+			res = f.EncodeResponse(m.rspHdr, buf, nil)
+			if m.handleAction(res, phaseEncodeResponse, f) {
+				return false
+			}
+			i--
+		}
+	}
+
+	return true
+}
+
 func (m *filterManager) EncodeData(buf capi.BufferInstance, endStream bool) capi.StatusType {
 	if m.canSkipEncodeData {
 		return capi.Continue
@@ -679,73 +848,62 @@ func (m *filterManager) EncodeData(buf capi.BufferInstance, endStream bool) capi
 					return
 				}
 			}
-			m.callbacks.Continue(capi.Continue, false)
-
-		} else {
-			for i := n - 1; i > m.encodeIdx; i-- {
-				f := m.filters[i]
-				res = f.EncodeData(buf, endStream)
-				if m.handleAction(res, phaseEncodeData, f) {
-					return
-				}
-			}
-
-			f := m.filters[m.encodeIdx]
-			res = f.EncodeResponse(m.rspHdr, buf, nil)
-			if m.handleAction(res, phaseEncodeResponse, f) {
+		} else if endStream || !supportBufferingWithTrailers {
+			conti := m.EncodeResponse(m.rspHdr, buf, nil)
+			if !conti {
 				return
 			}
-
-			i := m.encodeIdx - 1
-			for i >= 0 {
-				for ; i >= 0; i-- {
-					f := m.filters[i]
-					res = f.EncodeHeaders(m.rspHdr, false)
-					if m.handleAction(res, phaseEncodeHeaders, f) {
-						return
-					}
-					if m.encodeResponseNeeded {
-						// encodeResponseNeeded will be set to false below
-						break
-					}
-				}
-
-				for j := m.encodeIdx - 1; j > i; j-- {
-					f := m.filters[j]
-					res = f.EncodeData(buf, endStream)
-					if m.handleAction(res, phaseEncodeData, f) {
-						return
-					}
-				}
-
-				if m.encodeResponseNeeded {
-					m.encodeResponseNeeded = false
-					m.encodeIdx = i
-					f := m.filters[m.encodeIdx]
-					res = f.EncodeResponse(m.rspHdr, buf, nil)
-					if m.handleAction(res, phaseEncodeResponse, f) {
-						return
-					}
-					i--
-				}
-			}
-
-			m.callbacks.Continue(capi.Continue, false)
+		} else {
+			m.rspBuf = buf
 		}
+
+		m.callbacks.Continue(capi.Continue, false)
 	}()
 
 	return capi.Running
 }
 
-// TODO: handle trailers
+func (m *filterManager) EncodeTrailers(trailers capi.ResponseTrailerMap) capi.StatusType {
+	if m.canSkipEncodeTrailers {
+		return capi.Continue
+	}
 
-func (m *filterManager) runOnLogPhase(reqHdr api.RequestHeaderMap, rspHdr api.ResponseHeaderMap) {
+	m.MarkRunningInGoThread(true)
+
+	go func() {
+		defer m.MarkRunningInGoThread(false)
+		defer m.callbacks.EncoderFilterCallbacks().RecoverPanic()
+		var res api.ResultAction
+
+		if m.encodeIdx == -1 || !supportBufferingWithTrailers {
+			for _, f := range m.filters {
+				res = f.EncodeTrailers(trailers)
+				if m.handleAction(res, phaseEncodeTrailers, f) {
+					return
+				}
+			}
+		} else {
+			conti := m.EncodeResponse(m.rspHdr, m.rspBuf, trailers)
+			if !conti {
+				return
+			}
+		}
+
+		m.callbacks.Continue(capi.Continue, false)
+	}()
+
+	return capi.Running
+}
+
+func (m *filterManager) runOnLogPhase(reqHdr api.RequestHeaderMap, reqTrailer api.RequestTrailerMap,
+	rspHdr api.ResponseHeaderMap, rspTrailer api.ResponseTrailerMap) {
+
 	// It is unsafe to access the f.callbacks in the goroutine, as the underlying request
 	// may be destroyed when the goroutine is running. So if people want to do some IO jobs,
 	// they need to copy the used data from the request to the Go side before kicking off
 	// the goroutine.
 	for _, f := range m.filters {
-		f.OnLog(reqHdr, nil, rspHdr, nil)
+		f.OnLog(reqHdr, reqTrailer, rspHdr, rspTrailer)
 	}
 
 	if m.IsRunningInGoThread() {

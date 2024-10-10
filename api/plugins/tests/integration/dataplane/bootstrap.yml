@@ -25,6 +25,8 @@ static_resources:
                   - name: envoy.access_loggers.stdout
                     typed_config:
                       "@type": type.googleapis.com/envoy.extensions.access_loggers.stream.v3.StdoutAccessLog
+                http_protocol_options:
+                  enable_trailers: true
                 http_filters:
                   - name: htnn-consumer
                     disabled: true
@@ -77,6 +79,8 @@ static_resources:
                   - name: envoy.access_loggers.stdout
                     typed_config:
                       "@type": type.googleapis.com/envoy.extensions.access_loggers.stream.v3.StdoutAccessLog
+                http_protocol_options:
+                  enable_trailers: true
                 http_filters:
                   - name: htnn.filters.http.bandwidth_limit
                     typed_config:
@@ -110,6 +114,7 @@ static_resources:
                               source_code:
                                 inline_string: |
                                   function envoy_on_request(handle)
+                                    handle:logInfo("upstream receives request")
                                     local headers = handle:headers()
                                     local resp_headers = {[":status"] = "200"}
                                     for key, value in pairs(headers) do
@@ -133,6 +138,23 @@ static_resources:
                                     local data = ""
                                     if size > 0 then
                                       data = body:getBytes(0, size)
+                                    end
+
+                                    local trailers = handle:trailers()
+                                    if trailers ~= nil then
+                                      for key, value in pairs(trailers) do
+                                        handle:logInfo("upstream receives trailer: " .. key .. " = " .. value)
+                                        -- Lua doesn't support setting trailler, use headers instead
+                                        local k = "echo-trailer-" .. key
+                                        local v = resp_headers[k]
+                                        if v ~= nil then
+                                          table.insert(v, value)
+                                          value = v
+                                        else
+                                          value = {value}
+                                        end
+                                        resp_headers[k] = value
+                                      end
                                     end
 
                                     handle:respond(
@@ -210,6 +232,7 @@ static_resources:
     - name: backend
       type: strict_dns
       lb_policy: round_robin
+      http2_protocol_options: {}
       load_assignment:
         cluster_name: backend
         endpoints:

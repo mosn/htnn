@@ -21,10 +21,12 @@ import (
 )
 
 const (
-	supportGettingHeadersOnLog = true
+	// FIXME: set header/buffer fails because of "invalid phase" error. We need to fix it.
+	supportBufferingWithTrailers = false
+	supportGettingHeadersOnLog   = true
 )
 
-func (m *filterManager) OnLog(reqHdr capi.RequestHeaderMap, _ capi.RequestTrailerMap, rspHdr capi.ResponseHeaderMap, _ capi.ResponseTrailerMap) {
+func (m *filterManager) OnLog(reqHdr capi.RequestHeaderMap, reqTrailer capi.RequestTrailerMap, rspHdr capi.ResponseHeaderMap, rspTrailer capi.ResponseTrailerMap) {
 	if m.canSkipOnLog {
 		return
 	}
@@ -41,7 +43,7 @@ func (m *filterManager) OnLog(reqHdr capi.RequestHeaderMap, _ capi.RequestTraile
 		h.RequestHeaderMap = reqHdr
 	}
 	m.hdrLock.Unlock()
-	m.runOnLogPhase(m.reqHdr, rspHdr)
+	m.runOnLogPhase(m.reqHdr, reqTrailer, rspHdr, rspTrailer)
 }
 
 func wrapFilterManager(fm *filterManager) capi.StreamFilter {

@@ -23,7 +23,8 @@ import (
 )
 
 const (
-	supportGettingHeadersOnLog = false
+	supportBufferingWithTrailers = false
+	supportGettingHeadersOnLog   = false
 )
 
 func (m *filterManager) OnLog(_ capi.RequestHeaderMap, _ capi.RequestTrailerMap, _ capi.ResponseHeaderMap, _ capi.ResponseTrailerMap) {
@@ -40,7 +41,7 @@ func (m *filterManager) OnLog(_ capi.RequestHeaderMap, _ capi.RequestTrailerMap,
 	rspHdr = m.rspHdr
 	m.hdrLock.Unlock()
 
-	m.runOnLogPhase(reqHdr, rspHdr)
+	m.runOnLogPhase(reqHdr, nil, rspHdr, nil)
 }
 
 type filterManagerWrapper struct {

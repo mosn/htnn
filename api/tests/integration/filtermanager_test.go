@@ -50,8 +50,8 @@ func TestFilterManagerDecode(t *testing.T) {
 			{
 				Name: "buffer",
 				Config: &Config{
-					Decode: true,
-					Need:   true,
+					Decode:     true,
+					NeedBuffer: true,
 				},
 			},
 		},
@@ -67,8 +67,8 @@ func TestFilterManagerDecode(t *testing.T) {
 			{
 				Name: "buffer",
 				Config: &Config{
-					Decode: true,
-					Need:   true,
+					Decode:     true,
+					NeedBuffer: true,
 				},
 			},
 		},
@@ -84,8 +84,8 @@ func TestFilterManagerDecode(t *testing.T) {
 			{
 				Name: "buffer",
 				Config: &Config{
-					Decode: true,
-					Need:   true,
+					Decode:     true,
+					NeedBuffer: true,
 				},
 			},
 			{
@@ -107,8 +107,8 @@ func TestFilterManagerDecode(t *testing.T) {
 			{
 				Name: "buffer",
 				Config: &Config{
-					Decode: true,
-					Need:   true,
+					Decode:     true,
+					NeedBuffer: true,
 				},
 			},
 			{
@@ -120,8 +120,8 @@ func TestFilterManagerDecode(t *testing.T) {
 			{
 				Name: "buffer",
 				Config: &Config{
-					Decode: true,
-					Need:   true,
+					Decode:     true,
+					NeedBuffer: true,
 				},
 			},
 		},
@@ -147,8 +147,8 @@ func TestFilterManagerDecode(t *testing.T) {
 			{
 				Name: "buffer",
 				Config: &Config{
-					Decode: true,
-					Need:   true,
+					Decode:     true,
+					NeedBuffer: true,
 				},
 			},
 			{
@@ -278,8 +278,8 @@ func TestFilterManagerEncode(t *testing.T) {
 			{
 				Name: "buffer",
 				Config: &Config{
-					Encode: true,
-					Need:   true,
+					Encode:     true,
+					NeedBuffer: true,
 				},
 			},
 		},
@@ -289,8 +289,8 @@ func TestFilterManagerEncode(t *testing.T) {
 			{
 				Name: "buffer",
 				Config: &Config{
-					Encode: true,
-					Need:   true,
+					Encode:     true,
+					NeedBuffer: true,
 				},
 			},
 			{
@@ -312,8 +312,8 @@ func TestFilterManagerEncode(t *testing.T) {
 			{
 				Name: "buffer",
 				Config: &Config{
-					Encode: true,
-					Need:   true,
+					Encode:     true,
+					NeedBuffer: true,
 				},
 			},
 			{
@@ -329,8 +329,8 @@ func TestFilterManagerEncode(t *testing.T) {
 			{
 				Name: "buffer",
 				Config: &Config{
-					Encode: true,
-					Need:   true,
+					Encode:     true,
+					NeedBuffer: true,
 				},
 			},
 			{
@@ -342,8 +342,8 @@ func TestFilterManagerEncode(t *testing.T) {
 			{
 				Name: "buffer",
 				Config: &Config{
-					Encode: true,
-					Need:   true,
+					Encode:     true,
+					NeedBuffer: true,
 				},
 			},
 			{
@@ -381,8 +381,8 @@ func TestFilterManagerEncode(t *testing.T) {
 			{
 				Name: "buffer",
 				Config: &Config{
-					Encode: true,
-					Need:   true,
+					Encode:     true,
+					NeedBuffer: true,
 				},
 			},
 		},
@@ -520,8 +520,8 @@ func TestFilterManagerDecodeLocalReply(t *testing.T) {
 			{
 				Name: "buffer",
 				Config: &Config{
-					Decode: true,
-					Need:   true,
+					Decode:     true,
+					NeedBuffer: true,
 				},
 			},
 		},
@@ -531,8 +531,8 @@ func TestFilterManagerDecodeLocalReply(t *testing.T) {
 			{
 				Name: "localReply",
 				Config: &Config{
-					Decode: true,
-					Need:   true,
+					Decode:     true,
+					NeedBuffer: true,
 				},
 			},
 		},
@@ -542,8 +542,8 @@ func TestFilterManagerDecodeLocalReply(t *testing.T) {
 			{
 				Name: "buffer",
 				Config: &Config{
-					Decode: true,
-					Need:   true,
+					Decode:     true,
+					NeedBuffer: true,
 				},
 			},
 			{
@@ -560,8 +560,8 @@ func TestFilterManagerDecodeLocalReply(t *testing.T) {
 			{
 				Name: "buffer",
 				Config: &Config{
-					Decode: true,
-					Need:   true,
+					Decode:     true,
+					NeedBuffer: true,
 				},
 			},
 			{
@@ -596,8 +596,8 @@ func TestFilterManagerDecodeLocalReply(t *testing.T) {
 			{
 				Name: "buffer",
 				Config: &Config{
-					Decode: true,
-					Need:   true,
+					Decode:     true,
+					NeedBuffer: true,
 				},
 			},
 			{
@@ -621,8 +621,8 @@ func TestFilterManagerDecodeLocalReply(t *testing.T) {
 			{
 				Name: "buffer",
 				Config: &Config{
-					Decode: true,
-					Need:   true,
+					Decode:     true,
+					NeedBuffer: true,
 				},
 			},
 			{
@@ -636,8 +636,8 @@ func TestFilterManagerDecodeLocalReply(t *testing.T) {
 			{
 				Name: "buffer",
 				Config: &Config{
-					Decode: true,
-					Need:   true,
+					Decode:     true,
+					NeedBuffer: true,
 				},
 			},
 			{
@@ -752,8 +752,8 @@ func TestFilterManagerEncodeLocalReply(t *testing.T) {
 			{
 				Name: "localReply",
 				Config: &Config{
-					Encode: true,
-					Need:   true,
+					Encode:     true,
+					NeedBuffer: true,
 				},
 			},
 		},
@@ -763,8 +763,8 @@ func TestFilterManagerEncodeLocalReply(t *testing.T) {
 			{
 				Name: "buffer",
 				Config: &Config{
-					Encode: true,
-					Need:   true,
+					Encode:     true,
+					NeedBuffer: true,
 				},
 			},
 			{
@@ -788,8 +788,8 @@ func TestFilterManagerEncodeLocalReply(t *testing.T) {
 			{
 				Name: "buffer",
 				Config: &Config{
-					Encode: true,
-					Need:   true,
+					Encode:     true,
+					NeedBuffer: true,
 				},
 			},
 		},
@@ -806,8 +806,8 @@ func TestFilterManagerEncodeLocalReply(t *testing.T) {
 			{
 				Name: "buffer",
 				Config: &Config{
-					Encode: true,
-					Need:   true,
+					Encode:     true,
+					NeedBuffer: true,
 				},
 			},
 		},
@@ -830,8 +830,8 @@ func TestFilterManagerEncodeLocalReply(t *testing.T) {
 			{
 				Name: "buffer",
 				Config: &Config{
-					Encode: true,
-					Need:   true,
+					Encode:     true,
+					NeedBuffer: true,
 				},
 			},
 		},

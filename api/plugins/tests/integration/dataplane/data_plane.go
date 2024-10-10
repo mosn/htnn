@@ -368,6 +368,10 @@ func (dp *DataPlane) Post(path string, header http.Header, body io.Reader) (*htt
 	return dp.do("POST", path, header, body)
 }
 
+func (dp *DataPlane) PostWithTrailer(path string, header http.Header, body io.Reader, trailer http.Header) (*http.Response, error) {
+	return dp.doWithTrailer("POST", path, header, body, trailer)
+}
+
 func (dp *DataPlane) Put(path string, header http.Header, body io.Reader) (*http.Response, error) {
 	return dp.do("PUT", path, header, body)
 }
@@ -408,6 +412,31 @@ func (dp *DataPlane) do(method string, path string, header http.Header, body io.
 	tr := &http.Transport{DialContext: func(ctx context.Context, proto, addr string) (conn net.Conn, err error) {
 		return net.DialTimeout("tcp", ":10000", 1*time.Second)
 	}}
+
+	client := &http.Client{Transport: tr,
+		Timeout: 10 * time.Second,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+	resp, err := client.Do(req)
+	return resp, err
+}
+
+func (dp *DataPlane) doWithTrailer(method string, path string, header http.Header, body io.Reader, trailer http.Header) (*http.Response, error) {
+	req, err := http.NewRequest(method, "http://localhost:10000"+path, body)
+	if err != nil {
+		return nil, err
+	}
+	req.Header = header
+	req.Header.Add("TE", "trailers")
+	req.Trailer = trailer
+	req.TransferEncoding = []string{"chunked"}
+	tr := &http.Transport{
+		DialContext: func(ctx context.Context, proto, addr string) (conn net.Conn, err error) {
+			return net.DialTimeout("tcp", ":10000", 1*time.Second)
+		},
+	}
 
 	client := &http.Client{Transport: tr,
 		Timeout: 10 * time.Second,

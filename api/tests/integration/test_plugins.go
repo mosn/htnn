@@ -65,6 +65,12 @@ func (f *streamFilter) DecodeData(data api.BufferInstance, endStream bool) api.R
 	return api.Continue
 }
 
+func (f *streamFilter) DecodeTrailers(trailers api.RequestTrailerMap) api.ResultAction {
+	api.LogInfof("traceback: %s", string(debug.Stack()))
+	trailers.Add("run", "stream")
+	return api.Continue
+}
+
 func (f *streamFilter) EncodeHeaders(headers api.ResponseHeaderMap, endStream bool) api.ResultAction {
 	api.LogInfof("traceback: %s", string(debug.Stack()))
 	headers.Add("run", "stream")
@@ -77,6 +83,12 @@ func (f *streamFilter) EncodeData(data api.BufferInstance, endStream bool) api.R
 	if f.config.Encode {
 		data.AppendString("stream\n")
 	}
+	return api.Continue
+}
+
+func (f *streamFilter) EncodeTrailers(trailers api.ResponseTrailerMap) api.ResultAction {
+	api.LogInfof("traceback: %s", string(debug.Stack()))
+	trailers.Add("run", "stream")
 	return api.Continue
 }
 
@@ -103,11 +115,14 @@ type bufferFilter struct {
 	config    *Config
 }
 
-func (f *bufferFilter) DecodeRequest(headers api.RequestHeaderMap, buf api.BufferInstance, trailer api.RequestTrailerMap) api.ResultAction {
+func (f *bufferFilter) DecodeRequest(headers api.RequestHeaderMap, buf api.BufferInstance, trailers api.RequestTrailerMap) api.ResultAction {
 	api.LogInfof("traceback: %s", string(debug.Stack()))
 	headers.Add("run", "buffer")
 	if buf != nil && f.config.Decode {
 		buf.AppendString("buffer\n")
+	}
+	if trailers != nil && f.config.Decode {
+		trailers.Add("run", "buffer")
 	}
 	return api.Continue
 }
@@ -119,13 +134,16 @@ func (f *bufferFilter) EncodeResponse(headers api.ResponseHeaderMap, buf api.Buf
 	if buf != nil && f.config.Encode {
 		buf.AppendString("buffer\n")
 	}
+	if trailers != nil && f.config.Encode {
+		trailers.Add("run", "buffer")
+	}
 	return api.Continue
 }
 
 func (f *bufferFilter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {
 	api.LogInfof("traceback: %s", string(debug.Stack()))
 	_, ok := headers.Get("stream")
-	if !ok && f.config.Need {
+	if !ok && f.config.NeedBuffer {
 		return api.WaitAllData
 	}
 	headers.Add("run", "no buffer")
@@ -140,10 +158,18 @@ func (f *bufferFilter) DecodeData(data api.BufferInstance, endStream bool) api.R
 	return api.Continue
 }
 
+func (f *bufferFilter) DecodeTrailers(trailers api.RequestTrailerMap) api.ResultAction {
+	api.LogInfof("traceback: %s", string(debug.Stack()))
+	if f.config.Decode {
+		trailers.Add("run", "no buffer")
+	}
+	return api.Continue
+}
+
 func (f *bufferFilter) EncodeHeaders(headers api.ResponseHeaderMap, endStream bool) api.ResultAction {
 	api.LogInfof("traceback: %s", string(debug.Stack()))
 	_, ok := headers.Get("stream")
-	if !ok && f.config.Need {
+	if !ok && f.config.NeedBuffer {
 		return api.WaitAllData
 	}
 	headers.Del("content-length")
@@ -155,6 +181,14 @@ func (f *bufferFilter) EncodeData(data api.BufferInstance, endStream bool) api.R
 	api.LogInfof("traceback: %s", string(debug.Stack()))
 	if f.config.Encode {
 		data.AppendString("no buffer\n")
+	}
+	return api.Continue
+}
+
+func (f *bufferFilter) EncodeTrailers(trailers api.ResponseTrailerMap) api.ResultAction {
+	api.LogInfof("traceback: %s", string(debug.Stack()))
+	if f.config.Encode {
+		trailers.Add("run", "no buffer")
 	}
 	return api.Continue
 }
@@ -224,7 +258,7 @@ func (f *localReplyFilter) EncodeResponse(headers api.ResponseHeaderMap, buf api
 
 func (f *localReplyFilter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {
 	api.LogInfof("traceback: %s", string(debug.Stack()))
-	if f.config.Need {
+	if f.config.NeedBuffer {
 		return api.WaitAllData
 	}
 	f.reqHdr = headers
@@ -243,9 +277,17 @@ func (f *localReplyFilter) DecodeData(data api.BufferInstance, endStream bool) a
 	return api.Continue
 }
 
+func (f *localReplyFilter) DecodeTrailers(trailers api.RequestTrailerMap) api.ResultAction {
+	api.LogInfof("traceback: %s", string(debug.Stack()))
+	if f.config.Decode && f.config.Trailers {
+		return f.NewLocalResponse("reply", true)
+	}
+	return api.Continue
+}
+
 func (f *localReplyFilter) EncodeHeaders(headers api.ResponseHeaderMap, endStream bool) api.ResultAction {
 	api.LogInfof("traceback: %s", string(debug.Stack()))
-	if f.config.Need {
+	if f.config.NeedBuffer {
 		return api.WaitAllData
 	}
 	if f.config.Encode && f.config.Headers {
@@ -490,6 +532,51 @@ func (f *beforeConsumerAndHasOtherMethodFilter) EncodeHeaders(headers api.Respon
 	return api.Continue
 }
 
+type onLogPlugin struct {
+	plugins.PluginMethodDefaultImpl
+}
+
+func (p *onLogPlugin) Order() plugins.PluginOrder {
+	return plugins.PluginOrder{
+		Position: plugins.OrderPositionAccess,
+	}
+}
+
+func (p *onLogPlugin) Config() api.PluginConfig {
+	return &Config{}
+}
+
+func (p *onLogPlugin) Factory() api.FilterFactory {
+	return onLogFactory
+}
+
+func onLogFactory(c interface{}, callbacks api.FilterCallbackHandler) api.Filter {
+	return &onLogFilter{
+		callbacks: callbacks,
+		config:    c.(*Config),
+	}
+}
+
+type onLogFilter struct {
+	api.PassThroughFilter
+
+	callbacks api.FilterCallbackHandler
+	config    *Config
+}
+
+func (f *onLogFilter) OnLog(reqHeaders api.RequestHeaderMap, reqTrailers api.RequestTrailerMap,
+	respHeaders api.ResponseHeaderMap, respTrailers api.ResponseTrailerMap) {
+
+	trailers := map[string]string{}
+	if reqTrailers != nil {
+		reqTrailers.Range(func(k, v string) bool {
+			trailers[k] = v
+			return true
+		})
+	}
+	api.LogWarnf("receive request trailers: %+v", trailers)
+}
+
 func init() {
 	plugins.RegisterPlugin("stream", &streamPlugin{})
 	plugins.RegisterPlugin("buffer", &bufferPlugin{})
@@ -500,4 +587,5 @@ func init() {
 	plugins.RegisterPlugin("benchmark", &benchmarkPlugin{})
 	plugins.RegisterPlugin("benchmark2", &benchmarkPlugin{})
 	plugins.RegisterPlugin("beforeConsumerAndHasOtherMethod", &beforeConsumerAndHasOtherMethodPlugin{})
+	plugins.RegisterPlugin("onLog", &onLogPlugin{})
 }

@@ -56,7 +56,7 @@ func (m *Config) validate(all bool) error {
 
 	var errors []error
 
-	// no validation rules for Need
+	// no validation rules for NeedBuffer
 
 	// no validation rules for Decode
 
@@ -65,6 +65,8 @@ func (m *Config) validate(all bool) error {
 	// no validation rules for Headers
 
 	// no validation rules for Data
+
+	// no validation rules for Trailers
 
 	// no validation rules for ReplyMsg
 
