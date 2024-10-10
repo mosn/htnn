@@ -556,9 +556,11 @@ func getFeatureMaturityLevel(category string) ([]maturityLevel, error) {
 				// the third row is the status
 				scanner.Scan()
 				ss := strings.Split(scanner.Text(), "|")
-				if len(ss) > 2 {
-					status = strings.ToLower(strings.TrimSpace(ss[2]))
+				if len(ss) < 3 {
+					return fmt.Errorf("status is missing in the `## Attribute` table of %s", path)
 				}
+
+				status = strings.ToLower(strings.TrimSpace(ss[2]))
 				break
 			}
 		}
@@ -614,22 +616,32 @@ func lintFeatureMaturityLevel() error {
 
 	for category, recs := range records {
 		for _, record := range recs {
-			if record.Status == "experimental" && record.ExperimentalSince == "" {
-				return fmt.Errorf("experimental_since of %s %s is missing in %s", category, record.Name, recordFile)
+			if record.Status == "experimental" {
+				if record.ExperimentalSince == "" {
+					return fmt.Errorf("experimental_since of %s %s is missing in %s", category, record.Name, recordFile)
+				}
+			} else if record.Status == "stable" {
+				if record.StableSince == "" {
+					return fmt.Errorf("stable_since of %s %s is missing in %s", category, record.Name, recordFile)
+				}
+			} else {
+				return fmt.Errorf("status '%s' of %s %s is invalid in %s", record.Status, category, record.Name, recordFile)
 			}
+
 			found := false
 			for i, r := range actualRecords[category] {
 				if r.Name == record.Name {
 					found = true
 					if r.Status != record.Status {
-						return fmt.Errorf("status of %s %s is mismatched between %s and the documentation", category, record.Name, recordFile)
+						return fmt.Errorf("status of %s %s is mismatched between %s and the documentation. Please update the record in %s.",
+							category, record.Name, recordFile, recordFile)
 					}
 					actualRecords[category] = slices.Delete(actualRecords[category], i, i+1)
 					break
 				}
 			}
 			if !found {
-				return fmt.Errorf("%s %s is missing in the documentation", category, record.Name)
+				return fmt.Errorf("feature maturity record of %s %s is missing in the documentation", category, record.Name)
 			}
 		}
 	}
