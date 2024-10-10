@@ -46,6 +46,7 @@ build-test-so:
 # The data plane image used in the integration test can be controlled via env var PROXY_IMAGE
 .PHONY: integration-test
 integration-test:
+	if ! command -v grpcurl >/dev/null 2>&1; then go install github.com/fullstorydev/grpcurl/cmd/grpcurl@latest; fi
 	test -d /tmp/htnn_coverage && rm -rf /tmp/htnn_coverage || true
 	$(foreach PKG, $(shell go list ./tests/integration/...), \
 		go test -tags envoy${ENVOY_API_VERSION} -v ${PKG} || exit 1; \
@@ -55,3 +56,11 @@ integration-test:
 .PHONY: benchmark
 benchmark:
 	go test -tags benchmark,envoy${ENVOY_API_VERSION} -v ./tests/integration/ -run TestBenchmark
+
+.PHONY: start-service
+start-service:
+	cd ./tests/integration/testdata/services && docker compose up -d --build
+
+.PHONY: stop-service
+stop-service:
+	cd ./tests/integration/testdata/services && docker compose down

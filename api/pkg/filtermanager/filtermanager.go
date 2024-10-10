@@ -851,14 +851,12 @@ func (m *filterManager) EncodeData(buf capi.BufferInstance, endStream bool) capi
 					return
 				}
 			}
-		} else if endStream {
+		} else {
+			// FIXME: we should implement like the decode part here, but it will cause server closed the stream without sending trailers
 			conti := m.EncodeResponse(m.rspHdr, buf, nil)
 			if !conti {
 				return
 			}
-		} else {
-			m.rspBuf = buf
-			status = capi.StopAndBuffer
 		}
 
 		m.callbacks.Continue(status, false)
@@ -885,11 +883,6 @@ func (m *filterManager) EncodeTrailers(trailers capi.ResponseTrailerMap) capi.St
 				if m.handleAction(res, phaseEncodeTrailers, f) {
 					return
 				}
-			}
-		} else {
-			conti := m.EncodeResponse(m.rspHdr, m.rspBuf, trailers)
-			if !conti {
-				return
 			}
 		}
 

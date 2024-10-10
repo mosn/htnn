@@ -448,6 +448,14 @@ func (dp *DataPlane) doWithTrailer(method string, path string, header http.Heade
 	return resp, err
 }
 
+// Use grpcurl so that the caller can specify the proto file without building the Go code.
+// TODO: we can rewrite this in Go.
+func (dp *DataPlane) Grpcurl(importPath, protoFile, fullMethodName, req string) ([]byte, error) {
+	cmd := exec.Command("grpcurl", "-v", "-format-error", "-import-path", importPath, "-proto", protoFile, "-plaintext", "-d", req, ":10000", fullMethodName)
+	dp.t.Logf("run grpcurl command: %s", cmd.String())
+	return cmd.CombinedOutput()
+}
+
 func (dp *DataPlane) Configured() bool {
 	// TODO: this is fine for the first init of the envoy configuration.
 	// But it may be misleading when updating the configuration.

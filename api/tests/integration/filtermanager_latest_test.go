@@ -19,6 +19,8 @@ package integration
 import (
 	"bytes"
 	"net/http"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -27,6 +29,7 @@ import (
 	"mosn.io/htnn/api/pkg/filtermanager"
 	"mosn.io/htnn/api/pkg/filtermanager/model"
 	"mosn.io/htnn/api/plugins/tests/integration/dataplane"
+	"mosn.io/htnn/api/plugins/tests/integration/helper"
 )
 
 func TestFilterManagerTrailers(t *testing.T) {
@@ -74,7 +77,6 @@ func TestFilterManagerTrailers(t *testing.T) {
 				assert.Equal(t, []string{"stream"}, resp.Header.Values("Echo-Trailer-Run"))
 			},
 		},
-		// TODO: add integration test to cover the EncodeTrailers. Neither Envoy configuration nor Lua snippet can't add trailers if there is not upstream trailers.
 		{
 			name:   "localReply",
 			config: lr,
@@ -209,6 +211,90 @@ func TestFilterManagerBufferingWithTrailers(t *testing.T) {
 			require.Nil(t, err)
 			defer resp.Body.Close()
 			tt.expectWithBody(t, resp)
+		})
+	}
+}
+
+func grpcurl(dp *dataplane.DataPlane, fullMethodName, req string) ([]byte, error) {
+	prefix := "api.tests.integration.testdata.services.grpc."
+	pwd, _ := os.Getwd()
+	return dp.Grpcurl(filepath.Join(pwd, "testdata/services/grpc"), "sample.proto", prefix+fullMethodName, req)
+}
+
+func TestFilterManagerTrailersWithGrpcBackend(t *testing.T) {
+	dp, err := dataplane.StartDataPlane(t, &dataplane.Option{
+		LogLevel: "debug",
+	})
+	if err != nil {
+		t.Fatalf("failed to start data plane: %v", err)
+		return
+	}
+	defer dp.Stop()
+
+	helper.WaitServiceUp(t, ":50051", "grpc")
+
+	s := &filtermanager.FilterManagerConfig{
+		Plugins: []*model.FilterConfig{
+			{
+				Name:   "stream",
+				Config: &Config{},
+			},
+		},
+	}
+
+	b := &filtermanager.FilterManagerConfig{
+		Plugins: []*model.FilterConfig{
+			{
+				Name: "buffer",
+				Config: &Config{
+					NeedBuffer: true,
+					InGrpcMode: true,
+					Encode:     true,
+				},
+			},
+		},
+	}
+
+	tests := []struct {
+		name   string
+		config *filtermanager.FilterManagerConfig
+		expect func(t *testing.T, resp []byte)
+	}{
+		{
+			name:   "EncodeTrailers",
+			config: s,
+			expect: func(t *testing.T, resp []byte) {
+				exp := `Response contents:
+{
+  "message": "Hello Jordan"
+}
+
+Response trailers received:
+run: stream`
+				assert.Contains(t, string(resp), exp, "response: %s", string(resp))
+			},
+		},
+		{
+			name:   "EncodeResponse",
+			config: b,
+			expect: func(t *testing.T, resp []byte) {
+				exp := `Response contents:
+{
+  "message": "Hello Jordan"
+}
+
+Response trailers received:
+(empty)`
+				assert.Contains(t, string(resp), exp, "response: %s", string(resp))
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			controlPlane.UseGoPluginConfig(t, tt.config, dp)
+			resp, _ := grpcurl(dp, "Sample.SayHello", `{"name":"Jordan"}`)
+			tt.expect(t, resp)
 		})
 	}
 }

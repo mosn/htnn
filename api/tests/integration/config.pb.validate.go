@@ -70,6 +70,8 @@ func (m *Config) validate(all bool) error {
 
 	// no validation rules for ReplyMsg
 
+	// no validation rules for InGrpcMode
+
 	if len(errors) > 0 {
 		return ConfigMultiError(errors)
 	}

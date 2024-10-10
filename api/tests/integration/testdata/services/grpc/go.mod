@@ -12,30 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-syntax = "proto3";
+module mosn.io/htnn/api/tests/integration/testdata/services/grpc
 
-package api.tests.integration;
+go 1.21
 
-option go_package = "mosn.io/htnn/api/tests/integration";
+require (
+	google.golang.org/grpc v1.67.1
+	google.golang.org/protobuf v1.35.1
+)
 
-message Config {
-  bool need_buffer = 1;
-  bool decode = 2;
-  bool encode = 3;
-  bool headers = 4;
-  bool data = 5;
-  bool trailers = 6;
-  string reply_msg = 7;
-  bool in_grpc_mode = 8;
-}
-
-message BadPluginConfig {
-  bool panic_in_factory = 1;
-  bool panic_in_parse = 2;
-  bool error_in_init = 3;
-  bool panic_in_init = 4;
-}
-
-message ConsumerConfig {
-  string name = 1;
-}
+require (
+	golang.org/x/net v0.28.0 // indirect
+	golang.org/x/sys v0.24.0 // indirect
+	golang.org/x/text v0.17.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20240814211410-ddb44dafa142 // indirect
+)

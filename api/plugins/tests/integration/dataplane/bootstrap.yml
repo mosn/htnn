@@ -197,6 +197,10 @@ static_resources:
                                   end
                                   function envoy_on_response(handle)
                                   end
+                        - match:
+                            prefix: /api.tests.
+                          route:
+                            cluster: grpc_backend
     - name: dynamic_config
       internal_listener: {}
       filter_chains:
@@ -242,6 +246,19 @@ static_resources:
                 socket_address:
                   address: 127.0.0.1
                   port_value: 10001
+    - name: grpc_backend
+      type: strict_dns
+      lb_policy: round_robin
+      http2_protocol_options: {}
+      load_assignment:
+        cluster_name: grpc_backend
+        endpoints:
+        - lb_endpoints:
+          - endpoint:
+              address:
+                socket_address:
+                  address: grpc
+                  port_value: 50051
     - name: config_server
       connect_timeout: 0.25s
       type: strict_dns

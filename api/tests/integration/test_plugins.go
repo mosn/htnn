@@ -131,7 +131,7 @@ func (f *bufferFilter) EncodeResponse(headers api.ResponseHeaderMap, buf api.Buf
 	api.LogInfof("traceback: %s", string(debug.Stack()))
 	headers.Add("run", "buffer")
 	headers.Del("content-length")
-	if buf != nil && f.config.Encode {
+	if buf != nil && f.config.Encode && !f.config.InGrpcMode {
 		buf.AppendString("buffer\n")
 	}
 	if trailers != nil && f.config.Encode {
