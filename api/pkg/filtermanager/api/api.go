@@ -34,7 +34,7 @@ type EncodeWholeResponseFilter interface {
 	// EncodeResponse processes the whole response once when WaitAllData is returned from EncodeHeaders
 	// headers: the response headers
 	// data: the whole response body, nil if the response doesn't have body
-	// trailers: the response trailers, nil if the response doesn't have trailers
+	// trailers: the response trailers, current it's nil because of a bug in Envoy
 	EncodeResponse(headers ResponseHeaderMap, data BufferInstance, trailers ResponseTrailerMap) ResultAction
 }
 
