@@ -46,13 +46,21 @@ func TestPassThrough(t *testing.T) {
 		m.DecodeHeaders(hdr, false)
 		cb.WaitContinued()
 		buf := envoy.NewBufferInstance([]byte{})
-		m.DecodeData(buf, true)
+		m.DecodeData(buf, false)
 		cb.WaitContinued()
+		trailer := envoy.NewRequestTrailerMap(http.Header{})
+		m.DecodeTrailers(trailer)
+		cb.WaitContinued()
+
 		respHdr := envoy.NewResponseHeaderMap(http.Header{})
 		m.EncodeHeaders(respHdr, false)
 		cb.WaitContinued()
-		m.EncodeData(buf, true)
+		m.EncodeData(buf, false)
 		cb.WaitContinued()
+		respTrailer := envoy.NewResponseTrailerMap(http.Header{})
+		m.EncodeTrailers(respTrailer)
+		cb.WaitContinued()
+
 		m.OnLog(hdr, nil, respHdr, nil)
 	}
 }
@@ -352,6 +360,11 @@ func (f *addReqFilter) DecodeHeaders(headers api.RequestHeaderMap, endStream boo
 	return api.Continue
 }
 
+func (f *addReqFilter) DecodeTrailers(trailers api.RequestTrailerMap) api.ResultAction {
+	trailers.Set(f.conf.hdrName, "htnn")
+	return api.Continue
+}
+
 func TestSkipMethodWhenThereAreMultiFilters(t *testing.T) {
 	cb := envoy.NewCAPIFilterCallbackHandler()
 	config := initFilterManagerConfig("ns")
@@ -374,6 +387,8 @@ func TestSkipMethodWhenThereAreMultiFilters(t *testing.T) {
 		assert.Equal(t, false, m.canSkipOnLog)
 		assert.Equal(t, false, m.canSkipDecodeHeaders)
 		assert.Equal(t, true, m.canSkipDecodeData)
+		assert.Equal(t, false, m.canSkipDecodeTrailers)
+		assert.Equal(t, true, m.canSkipEncodeTrailers)
 	}
 }
 
@@ -571,6 +586,26 @@ func TestDoNotRecycleInUsedFilterManager(t *testing.T) {
 	}
 	wg.Wait()
 
+	// DecodeTrailers
+	wg.Add(n)
+	for i := 0; i < n; i++ {
+		go func(i int) {
+			cb := envoy.NewCAPIFilterCallbackHandler()
+			m := unwrapFilterManager(FilterManagerFactory(config, cb))
+			h := http.Header{}
+			hdr := envoy.NewRequestHeaderMap(h)
+			m.DecodeHeaders(hdr, false)
+			cb.WaitContinued()
+			m.DecodeData(nil, true)
+			cb.WaitContinued()
+			trailer := envoy.NewRequestTrailerMap(h)
+			m.DecodeTrailers(trailer)
+			m.OnLog(hdr, nil, nil, nil)
+			wg.Done()
+		}(i)
+	}
+	wg.Wait()
+
 	// EncodeHeaders
 	wg.Add(n)
 	for i := 0; i < n; i++ {
@@ -604,6 +639,29 @@ func TestDoNotRecycleInUsedFilterManager(t *testing.T) {
 			cb.WaitContinued()
 			m.EncodeData(nil, true)
 			m.OnLog(hdr, nil, hdr2, nil)
+			wg.Done()
+		}(i)
+	}
+	wg.Wait()
+
+	// EncodeTrailers
+	wg.Add(n)
+	for i := 0; i < n; i++ {
+		go func(i int) {
+			cb := envoy.NewCAPIFilterCallbackHandler()
+			m := unwrapFilterManager(FilterManagerFactory(config, cb))
+			h := http.Header{}
+			hdr := envoy.NewRequestHeaderMap(h)
+			m.DecodeHeaders(hdr, true)
+			cb.WaitContinued()
+			hdr2 := envoy.NewResponseHeaderMap(h)
+			m.EncodeHeaders(hdr2, true)
+			cb.WaitContinued()
+			m.EncodeData(nil, true)
+			cb.WaitContinued()
+			trailer := envoy.NewRequestTrailerMap(h)
+			m.EncodeTrailers(trailer)
+			m.OnLog(hdr, nil, hdr2, trailer)
 			wg.Done()
 		}(i)
 	}

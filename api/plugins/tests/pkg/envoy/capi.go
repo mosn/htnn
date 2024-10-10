@@ -330,6 +330,18 @@ func (bi *BufferInstance) AppendString(s string) error {
 	return bi.Append([]byte(s))
 }
 
+func NewRequestTrailerMap(hdr http.Header) api.RequestTrailerMap {
+	return &HeaderMap{
+		Header: hdr,
+	}
+}
+
+func NewResponseTrailerMap(hdr http.Header) api.ResponseTrailerMap {
+	return &HeaderMap{
+		Header: hdr,
+	}
+}
+
 type DynamicMetadata struct {
 	store map[string]map[string]interface{}
 }

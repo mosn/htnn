@@ -40,7 +40,7 @@ func (m *filterManager) OnLog(_ capi.RequestHeaderMap, _ capi.RequestTrailerMap,
 	rspHdr = m.rspHdr
 	m.hdrLock.Unlock()
 
-	m.runOnLogPhase(reqHdr, rspHdr)
+	m.runOnLogPhase(reqHdr, nil, rspHdr, nil)
 }
 
 type filterManagerWrapper struct {

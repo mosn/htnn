@@ -1,0 +1,12 @@
+services:
+  # names in alphabetical order
+  grpc:
+    build: ./grpc
+    ports:
+    - "50051:50051"
+    networks:
+      service:
+
+
+networks:
+  service:

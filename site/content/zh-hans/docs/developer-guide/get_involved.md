@@ -112,10 +112,12 @@ spec:
 `filter` 里主要定义下面的方法：
 
 1. DecodeHeaders
-2. DecodeData
-3. EncodeHeaders
-4. EncodeData
-5. OnLog
+2. DecodeData（如果存在 request body）
+3. DecodeTrailers（如果存在 request trailer）
+4. EncodeHeaders
+5. EncodeData（如果存在 response body）
+6. EncodeTrailers（如果存在 response trailer）
+7. OnLog
 
 正常情况下，会从上到下执行上述方法。但存在以下特例：
 

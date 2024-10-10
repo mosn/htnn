@@ -66,6 +66,10 @@ jobs:
     - name: Unit test
       run: make unit-test
 
+    - name: Set up services
+      run: |
+        make start-service
+
     - name: Build
       run: make build-test-so
     - name: Integration test

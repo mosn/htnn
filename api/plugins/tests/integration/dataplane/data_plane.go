@@ -368,6 +368,10 @@ func (dp *DataPlane) Post(path string, header http.Header, body io.Reader) (*htt
 	return dp.do("POST", path, header, body)
 }
 
+func (dp *DataPlane) PostWithTrailer(path string, header http.Header, body io.Reader, trailer http.Header) (*http.Response, error) {
+	return dp.doWithTrailer("POST", path, header, body, trailer)
+}
+
 func (dp *DataPlane) Put(path string, header http.Header, body io.Reader) (*http.Response, error) {
 	return dp.do("PUT", path, header, body)
 }
@@ -417,6 +421,39 @@ func (dp *DataPlane) do(method string, path string, header http.Header, body io.
 	}
 	resp, err := client.Do(req)
 	return resp, err
+}
+
+func (dp *DataPlane) doWithTrailer(method string, path string, header http.Header, body io.Reader, trailer http.Header) (*http.Response, error) {
+	req, err := http.NewRequest(method, "http://localhost:10000"+path, body)
+	if err != nil {
+		return nil, err
+	}
+	req.Header = header
+	req.Header.Add("TE", "trailers")
+	req.Trailer = trailer
+	req.TransferEncoding = []string{"chunked"}
+	tr := &http.Transport{
+		DialContext: func(ctx context.Context, proto, addr string) (conn net.Conn, err error) {
+			return net.DialTimeout("tcp", ":10000", 1*time.Second)
+		},
+	}
+
+	client := &http.Client{Transport: tr,
+		Timeout: 10 * time.Second,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+	resp, err := client.Do(req)
+	return resp, err
+}
+
+// Use grpcurl so that the caller can specify the proto file without building the Go code.
+// TODO: we can rewrite this in Go.
+func (dp *DataPlane) Grpcurl(importPath, protoFile, fullMethodName, req string) ([]byte, error) {
+	cmd := exec.Command("grpcurl", "-v", "-format-error", "-import-path", importPath, "-proto", protoFile, "-plaintext", "-d", req, ":10000", fullMethodName)
+	dp.t.Logf("run grpcurl command: %s", cmd.String())
+	return cmd.CombinedOutput()
 }
 
 func (dp *DataPlane) Configured() bool {
