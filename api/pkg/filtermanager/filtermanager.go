@@ -636,6 +636,7 @@ func (m *filterManager) DecodeData(buf capi.BufferInstance, endStream bool) capi
 		// Otherwise, streaming processing is used. It's simple and already satisfies our
 		// most demand, so we choose this way for now.
 
+		status := capi.Continue
 		n := len(m.filters)
 		if m.decodeIdx == -1 {
 			// every filter doesn't need buffered body
@@ -646,16 +647,17 @@ func (m *filterManager) DecodeData(buf capi.BufferInstance, endStream bool) capi
 					return
 				}
 			}
-		} else if endStream || !supportBufferingWithTrailers {
+		} else if endStream {
 			conti := m.DecodeRequest(m.reqHdr, buf, nil)
 			if !conti {
 				return
 			}
 		} else {
 			m.reqBuf = buf
+			status = capi.StopAndBuffer
 		}
 
-		m.callbacks.Continue(capi.Continue, true)
+		m.callbacks.Continue(status, true)
 	}()
 
 	return capi.Running
@@ -673,7 +675,7 @@ func (m *filterManager) DecodeTrailers(trailers capi.RequestTrailerMap) capi.Sta
 		defer m.callbacks.DecoderFilterCallbacks().RecoverPanic()
 		var res api.ResultAction
 
-		if m.decodeIdx == -1 || !supportBufferingWithTrailers {
+		if m.decodeIdx == -1 {
 			for _, f := range m.filters {
 				res = f.DecodeTrailers(trailers)
 				if m.handleAction(res, phaseDecodeTrailers, f) {
@@ -838,6 +840,7 @@ func (m *filterManager) EncodeData(buf capi.BufferInstance, endStream bool) capi
 		defer m.callbacks.EncoderFilterCallbacks().RecoverPanic()
 		var res api.ResultAction
 
+		status := capi.Continue
 		n := len(m.filters)
 		if m.encodeIdx == -1 {
 			// every filter doesn't need buffered body
@@ -848,16 +851,17 @@ func (m *filterManager) EncodeData(buf capi.BufferInstance, endStream bool) capi
 					return
 				}
 			}
-		} else if endStream || !supportBufferingWithTrailers {
+		} else if endStream {
 			conti := m.EncodeResponse(m.rspHdr, buf, nil)
 			if !conti {
 				return
 			}
 		} else {
 			m.rspBuf = buf
+			status = capi.StopAndBuffer
 		}
 
-		m.callbacks.Continue(capi.Continue, false)
+		m.callbacks.Continue(status, false)
 	}()
 
 	return capi.Running
@@ -875,7 +879,7 @@ func (m *filterManager) EncodeTrailers(trailers capi.ResponseTrailerMap) capi.St
 		defer m.callbacks.EncoderFilterCallbacks().RecoverPanic()
 		var res api.ResultAction
 
-		if m.encodeIdx == -1 || !supportBufferingWithTrailers {
+		if m.encodeIdx == -1 {
 			for _, f := range m.filters {
 				res = f.EncodeTrailers(trailers)
 				if m.handleAction(res, phaseEncodeTrailers, f) {

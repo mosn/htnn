@@ -21,9 +21,7 @@ import (
 )
 
 const (
-	// FIXME: set header/buffer fails because of "invalid phase" error. We need to fix it.
-	supportBufferingWithTrailers = false
-	supportGettingHeadersOnLog   = true
+	supportGettingHeadersOnLog = true
 )
 
 func (m *filterManager) OnLog(reqHdr capi.RequestHeaderMap, reqTrailer capi.RequestTrailerMap, rspHdr capi.ResponseHeaderMap, rspTrailer capi.ResponseTrailerMap) {

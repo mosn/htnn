@@ -26,7 +26,7 @@ type DecodeWholeRequestFilter interface {
 	// DecodeRequest processes the whole request once when WaitAllData is returned from DecodeHeaders
 	// headers: the request headers
 	// data: the whole request body, nil if the request doesn't have body
-	// trailers: the request trailers, nil if the request doesn't have trailers or on Envoy < 1.32
+	// trailers: the request trailers, nil if the request doesn't have trailers
 	DecodeRequest(headers RequestHeaderMap, data BufferInstance, trailers RequestTrailerMap) ResultAction
 }
 
@@ -34,7 +34,7 @@ type EncodeWholeResponseFilter interface {
 	// EncodeResponse processes the whole response once when WaitAllData is returned from EncodeHeaders
 	// headers: the response headers
 	// data: the whole response body, nil if the response doesn't have body
-	// trailers: the response trailers, nil if the response doesn't have trailers or on Envoy < 1.32
+	// trailers: the response trailers, nil if the response doesn't have trailers
 	EncodeResponse(headers ResponseHeaderMap, data BufferInstance, trailers ResponseTrailerMap) ResultAction
 }
 
