@@ -190,13 +190,23 @@ lint-markdown:
 	@# ignore markdown under 'external/istio'
 	markdownlint '{*.md,site/**/*.md}' --disable MD012 MD013 MD029 MD033 MD034 MD036 MD041
 
+# We don’t use if ! command -v yamllint because some environments might have a pre-installed Python version.
+# Checking the specific path ensures we're using the Node.js version to avoid conflicts.
+.PHONY: lint-yaml
+lint-yaml:
+	YAML_LINT="$$(npm config get prefix)/bin/yamllint"; \
+	if ! test -x "$${YAML_LINT}"; then \
+		npm install -g yaml-lint; \
+	fi; \
+	"$${YAML_LINT}" "**/*.(yaml|yml)" --ignore="manifests/charts/*/templates/**/*.(yaml|yml)" --ignore="manifests/charts/*/files/**/*.(yaml|yml)"
+
 .PHONY: lint-remain
 lint-remain:
 	grep '>>>>>>' $(shell git ls-files .) | grep -v 'Makefile:' && exit 1 || true
 	cd tools && go run cmd/linter/main.go
 
 .PHONY: lint
-lint: lint-go lint-proto lint-license lint-spell lint-editorconfig lint-cjk lint-remain lint-markdown
+lint: lint-go lint-proto lint-license lint-spell lint-editorconfig lint-cjk lint-remain lint-markdown lint-yaml
 
 .PHONY: fmt
 fmt: fmt-go fmt-proto fix-spell fix-cjk
