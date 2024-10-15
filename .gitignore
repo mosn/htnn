@@ -26,6 +26,7 @@ site/static/images
 site/.hugo_build.lock
 site/tmp
 # dev files
+api/tests/integration/testdata/services/grpc/grpc
 controller/**/cache
 controller/**/log
 !controller/internal/log

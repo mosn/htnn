@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package api.tests.integration.testdata.services.grpc;
+option go_package = "mosn.io/htnn/api/tests/integration/testdata/services/grpc/main";
+
+// Run `go generate` once we change this file
+
+service Sample {
+  rpc SayHello(HelloRequest) returns (HelloResponse) {
+  }
+  rpc Ouch(HelloRequest) returns (HelloResponse) {
+  }
+}
+
+message HelloRequest {
+  string name = 1;
+}
+
+message HelloResponse {
+  string message = 1;
+}

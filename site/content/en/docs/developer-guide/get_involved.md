@@ -112,15 +112,17 @@ In plugin development, features related to each request should be placed in `fil
 `filter` mainly defines the following methods:
 
 1. DecodeHeaders
-2. DecodeData
-3. EncodeHeaders
-4. EncodeData
-5. OnLog
+2. DecodeData (if request body exists)
+3. DecodeTrailers (if request trailers exists)
+4. EncodeHeaders
+5. EncodeData (if response body exists)
+6. EncodeTrailers (if response trailers exists)
+7. OnLog
 
 Normally, the above methods are executed from top to bottom. However, there are exceptions:
 
-1. If there is no body, the corresponding DecodeData and EncodeData methods will not be executed.
-2. Since the OnLog operation is triggered by the client interrupting the request, OnLog may execute concurrently with other methods if the client interrupts prematurely.
-3. In requests like bidirectional streams, it is possible to handle the request body and upstream response at the same time, so DecodeData may execute concurrently with EncodeHeaders or EncodeData.
+* If there is no body, the corresponding DecodeData and EncodeData methods will not be executed. The same as trailers and DecodeTrailers/EncodeTrailers.
+* Since the OnLog operation is triggered by the client interrupting the request, OnLog may execute concurrently with other methods if the client interrupts prematurely.
+* In requests like bidirectional streams, it is possible to handle the request body and upstream response at the same time, so DecodeData may execute concurrently with EncodeHeaders or EncodeData.
 
 So, when reading and writing `filter`, there is a risk of concurrent access and lock consideration is necessary.

@@ -86,10 +86,12 @@ Assumed we have three plugins called `A`, `B` and `C`.
 For each plugin, the calling order of callbacks is:
 
 1. DecodeHeaders
-2. DecodeData
-3. EncodeHeaders
-4. EncodeData
-5. OnLog
+2. DecodeData (if request body exists)
+3. DecodeTrailers (if request trailers exists)
+4. EncodeHeaders
+5. EncodeData (if response body exists)
+6. EncodeTrailers (if response trailers exists)
+7. OnLog
 
 Between plugins, the order of invocation is determined by the order of the plugins. Suppose plugin `A` is in the `Authn` group, `B` is in `Authz`, and `C` is in `Traffic`.
 
@@ -108,6 +110,7 @@ When logging requests, the call order is `Authn -> Authz -> Traffic`.
 Note that this picture shows the main path. The execution path may have slight differences. For example,
 
 * If the request doesn't have body, the `DecodeData` won't be called.
+* If the request contains trailers, the `DecodeTrailers` will be called after the body is handled.
 * If the request is replied by Envoy before being sent to the upstream, we will leave the Decode path and enter the Encode path.
 For example, if the plugin B rejects the request with some custom headers, the Decode path is `A -> B` and the Encode path is `C -> B -> A`.
 The custom headers will be rewritten by the plugins. This behavior is equal to Envoy.
@@ -128,17 +131,17 @@ Therefore, we introduce a group of new types:
 If `WaitAllData` is returned from `DecodeHeaders`, we will:
 
 1. buffer the whole body
-2. execute the `DecodeData` of previous plugins
+2. execute the `DecodeData` and `DecodeTrailers` of previous plugins
 3. execute the `DecodeRequest` of this plugin
 4. back to the original path, continue to execute the `DecodeHeaders` of the next plugin
 
 ![filter manager, with DecodeWholeRequestFilter, buffer the whole request](/images/filtermanager_sub_path.jpg)
 
-Note: `DecodeRequest` is only executed if `DecodeHeaders` returns `WaitAllData`. So if `DecodeRequest` is defined, `DecodeHeaders` must be defined as well. When both `DecodeRequest` and `DecodeData` are defined in the plugin: if `DecodeHeaders` returns `WaitAllData`, only `DecodeRequest` is executed, otherwise, only `DecodeData` is executed.
+Note: `DecodeRequest` is only executed if `DecodeHeaders` returns `WaitAllData`. So if `DecodeRequest` is defined, `DecodeHeaders` must be defined as well. When both `DecodeRequest` and `DecodeData/DecodeTrailers` are defined in the plugin: if `DecodeHeaders` returns `WaitAllData`, only `DecodeRequest` is executed, otherwise, only `DecodeData/DecodeTrailers` is executed.
 
 The same process applies to the Encode path in a reverse order, and the method is slightly different. This time it requires `EncodeHeaders` to return `WaitAllData` to invoke `EncodeResponse`.
 
-Note: `EncodeResponse` is only executed if `EncodeHeaders` returns `WaitAllData`. So if `EncodeResponse` is defined, `EncodeHeaders` must be defined as well. When both `EncodeResponse` and `EncodeData` are defined in the plugin: if `EncodeHeaders` returns `WaitAllData`, only `EncodeResponse` is executed, otherwise, only `EncodeData` is executed.
+Note: `EncodeResponse` is only executed if `EncodeHeaders` returns `WaitAllData`. So if `EncodeResponse` is defined, `EncodeHeaders` must be defined as well. When both `EncodeResponse` and `EncodeData/EncodeTrailers` are defined in the plugin: if `EncodeHeaders` returns `WaitAllData`, only `EncodeResponse` is executed, otherwise, only `EncodeData/EncodeTrailers` is executed.
 
 Currently, `DecodeRequest` is not supported by plugins whose order is `Access` or `Authn`.
 
