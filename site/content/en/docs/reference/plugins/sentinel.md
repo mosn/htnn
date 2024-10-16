@@ -12,10 +12,11 @@ The `sentinel` plugin utilizes [sentinel-golang](https://github.com/alibaba/sent
 
 ## Attribute
 
-|       |         |
-|-------|---------|
-| Type  | Traffic |
-| Order | Traffic |
+|        |              |
+|--------|--------------|
+| Type   | Traffic      |
+| Order  | Traffic      |
+| Status | Experimental |
 
 ## Configuration
 
@@ -23,13 +24,13 @@ The configuration fields are largely consistent with sentinel-golang v1.0.4, wit
 
 For detailed configuration instructions, please refer to the [sentinel-golang official documentation](https://sentinelguard.io/zh-cn/docs/golang/quick-start.html).
 
-| Name           | Type                              | Required | Validation | Description                                                                                      |
-|----------------|-----------------------------------|----------|------------|--------------------------------------------------------------------------------------------------|
-| resource       | [Source](#source)                 | True     |            | Source of traffic control rule name                                                              |
-| flow           | [Flow](#flow)                     | False    |            | Flow traffic control                                                                             |
-| hotSpot        | [HotSpot](#hotspot)               | False    |            | Hot spot traffic control                                                                         |
-| circuitBreaker | [CircuitBreaker](#circuitbreaker) | False    |            | Circuit breaker and degradation                                                                  |
-| logDir         | string                            | False    |            | Directory where the traffic control plugin logs are stored. The default value is `/tmp/sentinel` |
+| Name           | Type                              | Required | Validation | Description                                                                                                              |
+|----------------|-----------------------------------|----------|------------|--------------------------------------------------------------------------------------------------------------------------|
+| resource       | [Source](#source)                 | True     |            | Source of traffic control rule name                                                                                      |
+| flow           | [Flow](#flow)                     | False    |            | Flow traffic control                                                                                                     |
+| hotSpot        | [HotSpot](#hotspot)               | False    |            | Hot spot traffic control                                                                                                 |
+| circuitBreaker | [CircuitBreaker](#circuitbreaker) | False    |            | Circuit breaker and degradation                                                                                          |
+| logDir         | string                            | False    |            | Directory where the traffic control plugin logs are stored. The default value is empty, i.e., log will output to console |
 
 At least one of `flow`, `hotSpot`, or `circuitBreaker` must be provided.
 
@@ -118,11 +119,11 @@ At least one of `params` or `attachments` must be provided.
 
 ### BlockResponse
 
-| Name       | Type                | Required | Validation | Description                                             |
-|------------|---------------------|----------|------------|---------------------------------------------------------|
-| message    | string              | False    |            | Response message, default is "sentinel traffic control" |
-| statusCode | uint32              | False    |            | Response status code, default is 429                    |
-| headers    | map<string, string> | False    |            | Response headers                                        |
+| Name       | Type                | Required | Validation | Description                                                                                                                         |
+|------------|---------------------|----------|------------|-------------------------------------------------------------------------------------------------------------------------------------|
+| message    | string              | False    |            | Response message, default is "blocked by sentinel traffic control"                                                                  |
+| statusCode | uint32              | False    |            | Response status code, default is 429                                                                                                |
+| headers    | map<string, string> | False    |            | Response headers, you can use commas `,` to separate multiple headers with the same name, e.g., the value of `h1` header is `a,b,c` |
 
 ## Usage
 

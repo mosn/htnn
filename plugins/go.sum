@@ -635,15 +635,11 @@ honnef.co/go/tools v0.0.0-20180728063816-88497007e858/go.mod h1:rf3lG4BRIbNafJWh
 honnef.co/go/tools v0.0.0-20190102054323-c2f93a96b099/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
 honnef.co/go/tools v0.0.0-20190523083050-ea95bdfd59fc/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
 honnef.co/go/tools v0.0.1-2019.2.3/go.mod h1:a3bituU0lyd329TUQxRnasdCoJDkEUEAqEt0JzvZhAg=
-mosn.io/htnn/api v0.3.2 h1:3j63WhEkurhqCcly5PxDQkrP59AbIt2Qn0DwpsukQnU=
-mosn.io/htnn/api v0.3.2/go.mod h1:DumqbmMou8J1/DzEDaRIZWpan82bOqxGceWxTju7WkU=
-mosn.io/htnn/types v0.3.2 h1:pGm1kuXn0xb0ki6QapMdg0tgTtjHFmUGD/N6ZCe+dLc=
-mosn.io/htnn/types v0.3.2/go.mod h1:Jg4JZG+OK34J0gqXrEYzq4ZLoJ8mOyMz3+yR0o2G5P0=
-sigs.k8s.io/yaml v1.1.0/go.mod h1:UJmg0vDUVViEyp3mgSv9WPwZCDxu4rQW1olrI1uml+o=
 mosn.io/htnn/api v0.4.0 h1:LAvDpTQlBQWX+O/hpYex5wcZeem5AZVD8ceAywUPG/Y=
 mosn.io/htnn/api v0.4.0/go.mod h1:LuQVGTOQos5tOLl7c+z4ukFO1eOfm/Q3GNQ+8OnlIhE=
 mosn.io/htnn/types v0.4.0 h1:HM/Oc0UTr18X9nbu2bY3+KJ7otY4OYMo6uMnTZOqo/0=
 mosn.io/htnn/types v0.4.0/go.mod h1:YOL3isYyKslxC4h5JDwaWt6E504Q9gKITfJP3NMm7ls=
+sigs.k8s.io/yaml v1.1.0/go.mod h1:UJmg0vDUVViEyp3mgSv9WPwZCDxu4rQW1olrI1uml+o=
 sigs.k8s.io/yaml v1.4.0 h1:Mk1wCc2gy/F0THH0TAp1QYyJNzRm2KCLy3o5ASXVI5E=
 sigs.k8s.io/yaml v1.4.0/go.mod h1:Ejl7/uTz7PSA4eKMyQCUTnhZYNmLIl+5c2lQPGR2BPY=
 sourcegraph.com/sourcegraph/appdash v0.0.0-20190731080439-ebfcffb1b5c0/go.mod h1:hI742Nqp5OhwiqlzhgfbWU4mW4yO10fP+LoT9WOswdU=

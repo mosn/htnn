@@ -12,10 +12,11 @@ title: Sentinel
 
 ## 属性
 
-|       |         |
-|-------|---------|
-| Type  | Traffic |
-| Order | Traffic |
+|        |              |
+|--------|--------------|
+| Type   | Traffic      |
+| Order  | Traffic      |
+| Status | Experimental |
 
 ## 配置
 
@@ -23,13 +24,13 @@ title: Sentinel
 
 详细配置说明请额外参考 [sentinel-golang 官方文档](https://sentinelguard.io/zh-cn/docs/golang/quick-start.html)
 
-| 名称             | 类型                                | 必选 | 校验规则 | 说明                              |
-|----------------|-----------------------------------|----|------|---------------------------------|
-| resource       | [Source](#source)                 | 是  |      | 流控规则名称来源                        |
-| flow           | [Flow](#flow)                     | 否  |      | flow 流量控制                       |
-| hotSpot        | [HotSpot](#hotspot)               | 否  |      | hot spot 热点参数流控                 |
-| circuitBreaker | [CircuitBreaker](#circuitbreaker) | 否  |      | circuit breaker 熔断降级            |
-| logDir         | string                            | 否  |      | 流控插件日志存储目录，默认值为 `/tmp/sentinel` |
+| 名称             | 类型                                | 必选 | 校验规则 | 说明                      |
+|----------------|-----------------------------------|----|------|-------------------------|
+| resource       | [Source](#source)                 | 是  |      | 流控规则名称来源                |
+| flow           | [Flow](#flow)                     | 否  |      | flow 流量控制               |
+| hotSpot        | [HotSpot](#hotspot)               | 否  |      | hot spot 热点参数流控         |
+| circuitBreaker | [CircuitBreaker](#circuitbreaker) | 否  |      | circuit breaker 熔断降级    |
+| logDir         | string                            | 否  |      | 流控插件日志存储目录，默认为空，即输出到控制台 |
 
 `flow`, `hotSpot`, `circuitBreaker` 三者至少有一项
 
@@ -118,11 +119,11 @@ WARMUP 详见：[sentinel-golang 流量控制策略](https://sentinelguard.io/zh
 
 ### BlockResponse
 
-| 名称         | 类型                  | 必选 | 校验规则 | 说明                                |
-|------------|---------------------|----|------|-----------------------------------|
-| message    | string              | 否  |      | 响应信息，默认为 sentinel traffic control |
-| statusCode | uint32              | 否  |      | 响应状态码，默认为 429                     |
-| headers    | map<string, string> | 否  |      | 响应头部                              |
+| 名称         | 类型                  | 必选 | 校验规则 | 说明                                             |
+|------------|---------------------|----|------|------------------------------------------------|
+| message    | string              | 否  |      | 响应信息，默认为 "blocked by sentinel traffic control" |
+| statusCode | uint32              | 否  |      | 响应状态码，默认为 429                                  |
+| headers    | map<string, string> | 否  |      | 响应头部，可以使用逗号 `,` 分隔同名头部值，例如 `h1` 头部的值为 `a,b,c`  |
 
 ## 用法
 

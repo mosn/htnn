@@ -57,8 +57,18 @@ type res2RuleMap struct {
 
 func (conf *config) Init(cb api.ConfigCallbackHandler) error {
 	sc := sentinelConf.NewDefaultConfig()
-	sc.Sentinel.Log.Logger = logging.NewConsoleLogger()
+
+	// Sentinel-golang logs come in two types: metric and record the log.
+	// See https://sentinelguard.io/zh-cn/docs/golang/logging.html.
 	sc.Sentinel.Log.Dir = conf.GetLogDir()
+	if conf.GetLogDir() == "" {
+		// When we want the log output to the console, set Dir = "" and Logger = logging.NewConsoleLogger() to
+		// output the record log to the console as expected, but the metric log will still be output to the default
+		// directory (~/logs/csp), so we should set Metric.FlushIntervalSec == 0 to disable metric log.
+		sc.Sentinel.Log.Logger = logging.NewConsoleLogger()
+		sc.Sentinel.Log.Metric.FlushIntervalSec = 0
+	}
+
 	if err := sentinelApi.InitWithConfig(sc); err != nil {
 		return err
 	}

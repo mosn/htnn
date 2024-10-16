@@ -17,6 +17,7 @@ package sentinel
 import (
 	"fmt"
 	"strings"
+	"sync/atomic"
 
 	sentinel "github.com/alibaba/sentinel-golang/api"
 	"github.com/alibaba/sentinel-golang/core/base"
@@ -37,7 +38,7 @@ type filter struct {
 
 	callbacks api.FilterCallbackHandler
 	config    *config
-	entry     *base.SentinelEntry
+	entry     atomic.Pointer[base.SentinelEntry]
 }
 
 func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {
@@ -103,27 +104,38 @@ func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api
 		}
 	}
 
-	f.entry = e
+	f.entry.Store(e)
 	api.LogDebugf("passed, resource: %s", res)
 
 	return api.Continue
 }
 
-func (f *filter) EncodeHeaders(headers api.ResponseHeaderMap, endStream bool) api.ResultAction {
-	// the reason to Exit during the response phase is that the Circuit Breaker needs the response status code to ensure
-	// that it works properly, rather than waiting for the entire request/response to complete.
-	e := f.entry
+func (f *filter) OnLog(reqHeaders api.RequestHeaderMap, reqTrailers api.RequestTrailerMap,
+	respHeaders api.ResponseHeaderMap, respTrailers api.ResponseTrailerMap) {
+	e := f.entry.Load()
 	if e == nil {
-		return api.Continue
+		return
 	}
+	// Although only CircuitBreaker rules need to do Exit in response phase,
+	// the statistics of metrics of Flow and HotSpot rules are completed in request phase (DecodeHeaders).
+	// However, considering the boundary problems such as memory leakage caused by client interrupting the request,
+	// we do Exit in OnLog after response phase.
+	// See site/content/en/docs/developer-guide/get_involved.md#filter.
 	defer e.Exit()
 
-	gotSC, ok := headers.Status()
+	if respHeaders == nil {
+		api.LogError("response headers is nil")
+		return
+	}
+
+	gotSC, ok := respHeaders.Status()
 	if !ok {
-		return api.Continue
+		api.LogWarn("failed to get response status code")
+		return
 	}
 
 	for res, rule := range f.config.m.cb {
+		// TODO(WeixinX): TriggeredByStatusCodes slice -> map, improve performance
 		for _, triggeredSC := range rule.GetTriggeredByStatusCodes() {
 			if gotSC == int(triggeredSC) {
 				sentinel.TraceError(e, fmt.Errorf("circuit breaker [%s] triggered by status code: %d", res, triggeredSC))
@@ -131,8 +143,6 @@ func (f *filter) EncodeHeaders(headers api.ResponseHeaderMap, endStream bool) ap
 			}
 		}
 	}
-
-	return api.Continue
 }
 
 func (f *filter) getSource(s *types.Source, headers api.RequestHeaderMap) string {

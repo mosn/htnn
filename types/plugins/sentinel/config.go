@@ -73,10 +73,6 @@ func (conf *CustomConfig) Validate() error {
 		return err
 	}
 
-	if conf.GetLogDir() == "" {
-		conf.LogDir = "/tmp/sentinel"
-	}
-
 	return nil
 }
 
