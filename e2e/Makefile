@@ -45,12 +45,14 @@ delete-cluster: kind
 .PHONY: e2e-prepare-controller-image
 e2e-prepare-controller-image: kind
 	cd ../manifests/ && CONTROLLER_IMAGE=htnn/controller:e2e CONTROLLER_BASE_IMAGE=$(DOCKER_MIRROR)docker.io/istio/pilot:$(ISTIO_VERSION) \
+		GO_BUILD_BASE_IMAGE=$(DOCKER_MIRROR)docker.io/golang:1.21 \
 		make build-controller-image
 	$(KIND) load docker-image -n htnn htnn/controller:e2e
 
 .PHONY: e2e-prepare-data-plane-image
 e2e-prepare-data-plane-image: kind
 	cd ../manifests/ && PROXY_BASE_IMAGE=$(DOCKER_MIRROR)docker.io/istio/proxyv2:$(ISTIO_VERSION) \
+		GO_BUILD_BASE_IMAGE=$(DOCKER_MIRROR)docker.io/golang:1.21 \
 		PROXY_IMAGE=htnn/gateway:e2e make build-proxy-image
 	$(KIND) load docker-image htnn/gateway:e2e --name htnn
 

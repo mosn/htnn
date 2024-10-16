@@ -92,9 +92,11 @@ const (
 func translateFilterManagerConfigToPolicyInRDS(fmc *filtermanager.FilterManagerConfig,
 	nsName *types.NamespacedName, virtualHost *model.VirtualHost) map[string]interface{} {
 
-	config := map[string]interface{}{}
+	nativeFilters := map[string]map[string]*fmModel.FilterConfig{
+		model.CategoryRoute:       {},
+		model.CategoryRouteFilter: {},
+	}
 
-	nativeFilters := []*fmModel.FilterConfig{}
 	goFilterManager := &filtermanager.FilterManagerConfig{
 		Plugins: []*fmModel.FilterConfig{},
 	}
@@ -143,9 +145,14 @@ func translateFilterManagerConfigToPolicyInRDS(fmc *filtermanager.FilterManagerC
 				m = wrapper.ToRouteConfig(m)
 			}
 
-			m["@type"] = url
 			plugin.Config = m
-			nativeFilters = append(nativeFilters, plugin)
+			if url != "" {
+				filterName := fmt.Sprintf("htnn.filters.http.%s", plugin.Name)
+				m["@type"] = url
+				nativeFilters[model.CategoryRouteFilter][filterName] = plugin
+			} else {
+				nativeFilters[model.CategoryRoute][name] = plugin
+			}
 		}
 
 		_, ok = p.(plugins.ConsumerPlugin)
@@ -173,26 +180,29 @@ func translateFilterManagerConfigToPolicyInRDS(fmc *filtermanager.FilterManagerC
 
 		golangFilterName := "htnn.filters.http.golang"
 		if ctrlcfg.EnableLDSPluginViaECDS() {
-			golangFilterName = virtualHost.ECDSResourceName + "-" + model.CategoryGolangPlugins
+			golangFilterName = virtualHost.ECDSResourceName + "-" + model.ECDSGolangPlugins
 		}
-		config[golangFilterName] = map[string]interface{}{
-			"@type": "type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.ConfigsPerRoute",
-			"plugins_config": map[string]interface{}{
-				"fm": map[string]interface{}{
-					"config": map[string]interface{}{
-						"@type": "type.googleapis.com/xds.type.v3.TypedStruct",
-						"value": v,
+		golangFilterPlugin := &fmModel.FilterConfig{
+			Config: map[string]interface{}{
+				"@type": "type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.ConfigsPerRoute",
+				"plugins_config": map[string]interface{}{
+					"fm": map[string]interface{}{
+						"config": map[string]interface{}{
+							"@type": "type.googleapis.com/xds.type.v3.TypedStruct",
+							"value": v,
+						},
 					},
 				},
 			},
 		}
+		nativeFilters[model.CategoryRouteFilter][golangFilterName] = golangFilterPlugin
 	}
 
-	for _, filter := range nativeFilters {
-		name := fmt.Sprintf("htnn.filters.http.%s", filter.Name)
-		config[name] = filter.Config
+	// satisfy the requirement of the returned type
+	config := map[string]interface{}{}
+	for k, v := range nativeFilters {
+		config[k] = v
 	}
-
 	return config
 }
 

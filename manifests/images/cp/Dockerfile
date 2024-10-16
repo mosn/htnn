@@ -14,8 +14,10 @@
 
 # Dockerfile has specific requirement to put this ARG at the beginning:
 # https://docs.docker.com/engine/reference/builder/#understand-how-arg-and-from-interact
+ARG GO_BUILD_BASE_IMAGE
 ARG CONTROLLER_BASE_IMAGE
-FROM golang:1.21 as builder
+# hadolint ignore=DL3006
+FROM ${GO_BUILD_BASE_IMAGE} as builder
 ARG TARGETOS
 ARG TARGETARCH
 ARG GOPROXY
