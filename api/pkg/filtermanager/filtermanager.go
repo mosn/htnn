@@ -334,7 +334,7 @@ func (m *filterManager) localReply(v *api.LocalResponse, decoding bool) {
 }
 
 func (m *filterManager) DecodeHeaders(headers capi.RequestHeaderMap, endStream bool) capi.StatusType {
-	if !supportGettingHeadersOnLog && m.DebugModeEnabled() {
+	if supportGettingHeadersOnLog {
 		// Ensure the headers are cached on the Go side.
 		headers.Get("test")
 		headers := &filterManagerRequestHeaderMap{
