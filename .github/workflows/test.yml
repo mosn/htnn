@@ -215,7 +215,7 @@ jobs:
 
     - name: Set up services
       run: |
-        make start-controller-service
+        make start-service
 
     - name: Ensure benchmark is runnable
       run: |
