@@ -119,7 +119,7 @@ fmt-proto: dev-tools
 
 .PHONY: fmt-proto-local
 fmt-proto-local:
-	find . -name '*.proto' | grep -v './external' | xargs clang-format -i
+	find . -name '*.proto' | xargs clang-format -i
 
 
 LICENSE_CHECKER_VERSION = 0.6.0
@@ -144,7 +144,7 @@ lint-spell: dev-tools
 		${DEV_TOOLS_IMAGE} \
 		make lint-spell-local
 
-CODESPELL = codespell --skip '.ignore_words,test-envoy,go.mod,go.sum,*.svg,*.patch,./site/public/**,external,.git,.idea,go.work.sum' --check-filenames --check-hidden --ignore-words ./.ignore_words .
+CODESPELL = codespell --skip '.ignore_words,test-envoy,go.mod,go.sum,*.svg,*.patch,./site/public/**,.git,.idea,go.work.sum' --check-filenames --check-hidden --ignore-words ./.ignore_words .
 .PHONY: lint-spell-local
 lint-spell-local:
 	$(CODESPELL)
@@ -187,8 +187,7 @@ lint-website: $(LOCALBIN)
 .PHONY: lint-markdown
 lint-markdown:
 	if ! command -v markdownlint >/dev/null 2>&1; then npm install -g markdownlint-cli; fi
-	@# ignore markdown under 'external/istio'
-	markdownlint '{*.md,site/**/*.md}' --disable MD012 MD013 MD029 MD033 MD034 MD036 MD041
+	markdownlint '**/*.md' --disable MD012 MD013 MD029 MD033 MD034 MD036 MD041
 
 # We don’t use if ! command -v yamllint because some environments might have a pre-installed Python version.
 # Checking the specific path ensures we're using the Node.js version to avoid conflicts.
@@ -215,7 +214,8 @@ fmt: fmt-go fmt-proto fix-spell fix-cjk
 verify-example:
 	cd ./examples/dev_your_plugin && ./verify.sh
 
-TARGET_ISTIO_DIR ?= $(shell pwd)/external/istio
+# use a path outside repo so the linters won't lint the istio files
+TARGET_ISTIO_DIR ?= $(shell pwd)/../istio
 
 .PHONY: prebuild
 prebuild:
