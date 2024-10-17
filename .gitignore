@@ -33,7 +33,6 @@ controller/**/log
 !controller/pkg/registry/log
 controller/tests/testdata/crd/
 go.work.sum
-external/*
 e2e/log
 .idea
 # helm charts
