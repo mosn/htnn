@@ -47,9 +47,14 @@ type VirtualHost struct {
 }
 
 const (
-	CategoryECDSGolang    = "ecds_golang"
-	CategoryECDSListener  = "ecds_listener"
-	CategoryECDSNetwork   = "ecds_network"
-	CategoryListener      = "listener"
-	CategoryGolangPlugins = "golang-filter"
+	CategoryECDSGolang   = "ecds_golang"
+	CategoryECDSListener = "ecds_listener"
+	CategoryECDSNetwork  = "ecds_network"
+	CategoryListener     = "listener"
+
+	CategoryRoute       = "route"
+	CategoryRouteFilter = "route_filter"
+
+	// This constant is used in the resource name which doesn't support '_' in the name
+	ECDSGolangPlugins = "golang-filter"
 )
