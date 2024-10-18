@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	supportGettingHeadersOnLog = false
+	supportGettingHeadersOnLog = true
 )
 
 func (m *filterManager) OnLog(_ capi.RequestHeaderMap, _ capi.RequestTrailerMap, _ capi.ResponseHeaderMap, _ capi.ResponseTrailerMap) {
