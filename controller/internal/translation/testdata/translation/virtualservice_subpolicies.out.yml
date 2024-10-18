@@ -28,14 +28,14 @@
                     value:
                       plugins:
                       - config:
+                          average: 1
+                        name: limitReq
+                      - config:
                           pet: goldfish
                         name: animal
                       - config:
                           hostName: John
                         name: demo
-                      - config:
-                          average: 1
-                        name: limitReq
     - applyTo: HTTP_ROUTE
       match:
         routeConfiguration:
@@ -57,16 +57,16 @@
                       namespace: default
                       plugins:
                       - config:
-                          pet: fish
-                        name: animal
-                      - config:
-                          hostName: John
-                        name: demo
-                      - config:
                           keys:
                           - name: Authorization
                         name: keyAuth
                       - config:
                           average: 1
                         name: limitReq
+                      - config:
+                          pet: fish
+                        name: animal
+                      - config:
+                          hostName: John
+                        name: demo
   status: {}
