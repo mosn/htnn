@@ -28,7 +28,7 @@ import (
 )
 
 var (
-	//go:embed ext_auth_route.yml
+	//go:embed testdata/ext_auth_route.yml
 	extAuthRoute string
 )
 
