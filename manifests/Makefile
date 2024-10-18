@@ -24,10 +24,12 @@ PROXY_IMAGE ?= htnn/proxy:latest
 PROXY_BASE_IMAGE ?= istio/proxyv2:$(ISTIO_VERSION)
 CONTROLLER_IMAGE ?= htnn/controller:latest
 CONTROLLER_BASE_IMAGE ?= docker.io/istio/pilot:$(ISTIO_VERSION)
+GO_BUILD_BASE_IMAGE ?= golang:1.21
 
 .PHONY: build-proxy-image
 build-proxy-image:
 	cd .. && $(CONTAINER_TOOL) build -t ${PROXY_IMAGE} --build-arg GOPROXY=${GOPROXY} --build-arg PROXY_BASE_IMAGE=${PROXY_BASE_IMAGE} \
+		--build-arg GO_BUILD_BASE_IMAGE=${GO_BUILD_BASE_IMAGE} \
 		-f manifests/images/dp/Dockerfile .
 
 # If you wish to build the controller image targeting other platforms you can use the --platform flag.
@@ -37,6 +39,7 @@ build-proxy-image:
 build-controller-image:
 	cd .. && $(CONTAINER_TOOL) build -t ${CONTROLLER_IMAGE} \
 		--build-arg GOPROXY=${GOPROXY} --build-arg CONTROLLER_BASE_IMAGE=${CONTROLLER_BASE_IMAGE} \
+		--build-arg GO_BUILD_BASE_IMAGE=${GO_BUILD_BASE_IMAGE} \
 		-f manifests/images/cp/Dockerfile .
 
 # PLATFORMS defines the target platforms for the image be built to provide support to multiple
@@ -54,6 +57,7 @@ docker-buildx: ## Build and push docker image for cross-platform support
 	$(CONTAINER_TOOL) buildx use project-v3-builder && \
 	$(CONTAINER_TOOL) buildx build --push --platform=$(PLATFORMS) --tag ${CONTROLLER_IMAGE} \
 		--build-arg GOPROXY=${GOPROXY} --build-arg CONTROLLER_BASE_IMAGE=${CONTROLLER_BASE_IMAGE} \
+		--build-arg GO_BUILD_BASE_IMAGE=${GO_BUILD_BASE_IMAGE} \
 		-f /tmp/Dockerfile.cross . ; \
 	$(CONTAINER_TOOL) buildx rm project-v3-builder
 	rm /tmp/Dockerfile.cross

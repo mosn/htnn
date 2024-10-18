@@ -202,8 +202,8 @@ func ComparePluginOrder(a, b string) bool {
 }
 
 func ComparePluginOrderInt(a, b string) int {
-	pa := plugins[a]
-	pb := plugins[b]
+	pa := pluginTypes[a]
+	pb := pluginTypes[b]
 	if pa == nil || pb == nil {
 		// The caller should guarantee the a, b are valid plugin name, so this case only happens
 		// in test.
