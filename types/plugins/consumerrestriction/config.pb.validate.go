@@ -412,6 +412,19 @@ func (m *Config) validate(all bool) error {
 			}
 		}
 
+	case *Config_DenyIfNoConsumer:
+		if v == nil {
+			err := ConfigValidationError{
+				field:  "ConfigType",
+				reason: "oneof value cannot be a typed-nil",
+			}
+			if !all {
+				return err
+			}
+			errors = append(errors, err)
+		}
+		oneofConfigTypePresent = true
+		// no validation rules for DenyIfNoConsumer
 	default:
 		_ = v // ensures v is used
 	}
