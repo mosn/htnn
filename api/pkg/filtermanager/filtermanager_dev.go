@@ -29,17 +29,11 @@ func (m *filterManager) OnLog(reqHdr capi.RequestHeaderMap, reqTrailer capi.Requ
 		return
 	}
 
-	m.hdrLock.Lock()
-	if m.reqHdr == nil {
-		m.reqHdr = &filterManagerRequestHeaderMap{
-			RequestHeaderMap: reqHdr,
-		}
-	} else {
-		// In our benchmark BenchmarkFilterManagerRegular, reuse the request header wrapper is 5% faster than create a new one,
-		// even the reusage requires holding the lock though it is running on fast path.
-		h, _ := m.reqHdr.(*filterManagerRequestHeaderMap)
-		h.RequestHeaderMap = reqHdr
+	wrappedReqHdr := &filterManagerRequestHeaderMap{
+		RequestHeaderMap: reqHdr,
 	}
+	m.hdrLock.Lock()
+	m.reqHdr = wrappedReqHdr
 	m.hdrLock.Unlock()
 	m.runOnLogPhase(m.reqHdr, reqTrailer, rspHdr, rspTrailer)
 }
