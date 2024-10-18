@@ -21,6 +21,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"mosn.io/htnn/api/pkg/filtermanager"
+	"mosn.io/htnn/api/pkg/filtermanager/model"
 	"mosn.io/htnn/api/plugins/tests/integration/controlplane"
 	"mosn.io/htnn/api/plugins/tests/integration/dataplane"
 )
@@ -51,10 +52,21 @@ func TestKeyAuth(t *testing.T) {
 	}{
 		{
 			name: "key in the header",
-			config: controlplane.NewSinglePluginConfig("keyAuth", map[string]interface{}{
-				"keys": []interface{}{
-					map[string]interface{}{
-						"name": "Authorization",
+			config: controlplane.NewPluginConfig([]*model.FilterConfig{
+				{
+					Name: "keyAuth",
+					Config: map[string]interface{}{
+						"keys": []interface{}{
+							map[string]interface{}{
+								"name": "Authorization",
+							},
+						},
+					},
+				},
+				{
+					Name: "consumerRestriction",
+					Config: map[string]interface{}{
+						"deny_if_no_consumer": true,
 					},
 				},
 			}),
@@ -72,15 +84,26 @@ func TestKeyAuth(t *testing.T) {
 		},
 		{
 			name: "key in the query",
-			config: controlplane.NewSinglePluginConfig("keyAuth", map[string]interface{}{
-				"keys": []interface{}{
-					map[string]interface{}{
-						"name":   "Authorization",
-						"source": "HEADER",
+			config: controlplane.NewPluginConfig([]*model.FilterConfig{
+				{
+					Name: "keyAuth",
+					Config: map[string]interface{}{
+						"keys": []interface{}{
+							map[string]interface{}{
+								"name":   "Authorization",
+								"source": "HEADER",
+							},
+							map[string]interface{}{
+								"name":   "ak",
+								"source": "QUERY",
+							},
+						},
 					},
-					map[string]interface{}{
-						"name":   "ak",
-						"source": "QUERY",
+				},
+				{
+					Name: "consumerRestriction",
+					Config: map[string]interface{}{
+						"deny_if_no_consumer": true,
 					},
 				},
 			}),

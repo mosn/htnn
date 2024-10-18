@@ -57,10 +57,21 @@ func TestHmacAuth(t *testing.T) {
 	}{
 		{
 			name: "sanity",
-			config: controlplane.NewSinglePluginConfig("hmacAuth", map[string]interface{}{
-				"signatureHeader": "x-sign-hdr",
-				"accessKeyHeader": "x-ak",
-				"dateHeader":      "x-date",
+			config: controlplane.NewPluginConfig([]*model.FilterConfig{
+				{
+					Name: "hmacAuth",
+					Config: map[string]interface{}{
+						"signatureHeader": "x-sign-hdr",
+						"accessKeyHeader": "x-ak",
+						"dateHeader":      "x-date",
+					},
+				},
+				{
+					Name: "consumerRestriction",
+					Config: map[string]interface{}{
+						"deny_if_no_consumer": true,
+					},
+				},
 			}),
 			run: func(t *testing.T) {
 				hdr := http.Header{}

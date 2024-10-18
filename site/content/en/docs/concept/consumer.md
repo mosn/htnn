@@ -92,7 +92,7 @@ Each Consumer plugin configured on the Route will proceed through the following 
    1. If the match is unsuccessful, return a 401 HTTP status code.
    2. If the match is successful, move on to the next plugin.
 
-If no Consumer is matched after all the Consumer plugins have been executed, a 401 HTTP status code will be returned.
+Unlike Kong/APISIX, requests that do not match a Consumer are not interrupted. If you want to ensure that only authenticated consumers can access backend services, we need to use it in conjunction with the [consumerRestriction plugin](../reference/plugins/consumer_restriction.md).
 
 In addition to that, we can configure additional plugins for consumers under the `filters` field. These plugins are only executed after the consumer has been authenticated. Take the following configuration as an example:
 

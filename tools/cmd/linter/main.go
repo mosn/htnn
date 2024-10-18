@@ -487,7 +487,8 @@ func lintConfigurationByCategory(category string) error {
 		}
 
 		name := filepath.Base(path)[:len(filepath.Base(path))-len(ext)]
-		pb := filepath.Join("types", category, name, "config.proto")
+		goPkgName := strings.ReplaceAll(name, "_", "")
+		pb := filepath.Join("types", category, goPkgName, "config.proto")
 		ms, err := readProto(pb)
 		if err != nil {
 			return err

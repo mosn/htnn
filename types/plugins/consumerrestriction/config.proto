@@ -35,5 +35,6 @@ message Config {
     option (validate.required) = true;
     Rules allow = 1;
     Rules deny = 2;
+    bool deny_if_no_consumer = 3;
   }
 }
