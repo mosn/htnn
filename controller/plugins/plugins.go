@@ -24,6 +24,7 @@ import (
 	_ "mosn.io/htnn/controller/plugins/localratelimit"
 	_ "mosn.io/htnn/controller/plugins/lua"
 	_ "mosn.io/htnn/controller/plugins/networkrbac"
+	_ "mosn.io/htnn/controller/plugins/routepatch"
 	_ "mosn.io/htnn/controller/plugins/tlsinspector"
 	_ "mosn.io/htnn/types/plugins"
 )

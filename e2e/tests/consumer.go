@@ -16,6 +16,7 @@ package tests
 
 import (
 	"context"
+	"errors"
 	"net/http"
 	"strings"
 	"testing"
@@ -48,7 +49,13 @@ func init() {
 			err = retry.Do(
 				func() error {
 					rsp, err = suite.Get("/echo", hdrWithKey("rick"))
-					return err
+					if err != nil {
+						return err
+					}
+					if rsp.StatusCode == 401 {
+						return errors.New("consumer not synced")
+					}
+					return nil
 				},
 				retry.RetryIf(func(err error) bool {
 					return true
