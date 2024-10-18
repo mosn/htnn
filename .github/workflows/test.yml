@@ -311,12 +311,6 @@ jobs:
       run: |
         make delete-cluster create-cluster
 
-    - name: Prepare code
-      run: |
-        pushd ..
-        make prebuild
-        popd
-
     - name: Prepare controller
       run: |
         make e2e-prepare-controller-image
