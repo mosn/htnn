@@ -136,6 +136,7 @@ func (suite *Suite) waitDeployments(t *testing.T) {
 	} {
 		cmdline := fmt.Sprintf("kubectl wait --timeout=5m -n %s deployment/%s --for=condition=Available",
 			cond.ns, cond.name)
+		t.Logf("start waiting for deployment %s in namespace %s, cmd: %s", cond.name, cond.ns, cmdline)
 		cmd := strings.Fields(cmdline)
 		wait := exec.Command(cmd[0], cmd[1:]...)
 		err := wait.Run()

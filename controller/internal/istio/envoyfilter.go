@@ -184,6 +184,28 @@ func GenerateRouteFilter(host *model.VirtualHost, route string, config map[strin
 		},
 	}
 
+	routeConfig := map[string]interface{}{}
+	routeFilters, _ := config[model.CategoryRouteFilter].(map[string]*fmModel.FilterConfig)
+	extraRouteConfig, _ := config[model.CategoryRoute].(map[string]*fmModel.FilterConfig)
+	if routeFilters == nil || extraRouteConfig == nil {
+		// bug in the code
+		panic("route filter and route config must be provided")
+	}
+
+	if len(routeFilters) > 0 {
+		plainCfg := map[string]interface{}{}
+		for k, v := range routeFilters {
+			plainCfg[k] = v.Config
+		}
+		routeConfig["typed_per_filter_config"] = plainCfg
+	}
+	for _, filter := range extraRouteConfig {
+		fields, _ := filter.Config.(map[string]interface{})
+		for k, v := range fields {
+			routeConfig[k] = v
+		}
+	}
+
 	return &istiov1a3.EnvoyFilter{
 		// We don't set ObjectMeta here because this EnvoyFilter will be merged later
 		Spec: istioapi.EnvoyFilter{
@@ -199,9 +221,7 @@ func GenerateRouteFilter(host *model.VirtualHost, route string, config map[strin
 					},
 					Patch: &istioapi.EnvoyFilter_Patch{
 						Operation: istioapi.EnvoyFilter_Patch_MERGE,
-						Value: MustNewStruct(map[string]interface{}{
-							"typed_per_filter_config": config,
-						}),
+						Value:     MustNewStruct(routeConfig),
 					},
 				},
 			},
@@ -334,7 +354,7 @@ func GenerateLDSFilter(key string, ldsName string, hasHCM bool, config map[strin
 		if cfg == nil {
 			cfg = map[string]interface{}{}
 		}
-		ecdsName := key + "-" + model.CategoryGolangPlugins
+		ecdsName := key + "-" + model.ECDSGolangPlugins
 		ef.Spec.ConfigPatches = append(ef.Spec.ConfigPatches,
 			&istioapi.EnvoyFilter_EnvoyConfigObjectPatch{
 				ApplyTo: istioapi.EnvoyFilter_HTTP_FILTER,

@@ -1,0 +1,69 @@
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: vs
+  namespace: istio-system
+spec:
+  gateways:
+  - default
+  hosts:
+  - "default.local"
+  http:
+  - match:
+    - uri:
+        prefix: /echo
+    route:
+    - destination:
+        host: backend
+        port:
+          number: 8080
+  - match:
+    - uri:
+        prefix: /echo2
+    route:
+    - destination:
+        host: backend
+        port:
+          number: 8080
+  - match:
+    - uri:
+        prefix: /
+    name: last
+    route:
+    - destination:
+        host: backend
+        port:
+          number: 8080
+---
+apiVersion: htnn.mosn.io/v1
+kind: FilterPolicy
+metadata:
+  name: policy
+  namespace: istio-system
+spec:
+  targetRef:
+    group: networking.istio.io
+    kind: VirtualService
+    name: vs
+  filters:
+    routePatch:
+      config:
+        directResponse:
+          status: 403
+---
+apiVersion: htnn.mosn.io/v1
+kind: FilterPolicy
+metadata:
+  name: policy2
+  namespace: istio-system
+spec:
+  targetRef:
+    group: networking.istio.io
+    kind: VirtualService
+    name: vs
+    sectionName: last
+  filters:
+    routePatch:
+      config:
+        directResponse:
+          status: 405

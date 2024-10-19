@@ -29,7 +29,7 @@ spec:
     spec:
       containers:
       - name: nacos
-        image: nacos/nacos-server:v1.4.6-slim
+        image: m.daocloud.io/docker.io/nacos/nacos-server:v1.4.6-slim
         ports:
         - containerPort: 8848
         env:
