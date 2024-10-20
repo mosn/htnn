@@ -24,17 +24,17 @@ import (
 
 type DecodeWholeRequestFilter interface {
 	// DecodeRequest processes the whole request once when WaitAllData is returned from DecodeHeaders
-	// headers: the request header
+	// headers: the request headers
 	// data: the whole request body, nil if the request doesn't have body
-	// trailers: TODO, just a placeholder
+	// trailers: the request trailers, nil if the request doesn't have trailers
 	DecodeRequest(headers RequestHeaderMap, data BufferInstance, trailers RequestTrailerMap) ResultAction
 }
 
 type EncodeWholeResponseFilter interface {
 	// EncodeResponse processes the whole response once when WaitAllData is returned from EncodeHeaders
-	// headers: the response header
+	// headers: the response headers
 	// data: the whole response body, nil if the response doesn't have body
-	// trailers: TODO, just a placeholder
+	// trailers: the response trailers, current it's nil because of a bug in Envoy
 	EncodeResponse(headers ResponseHeaderMap, data BufferInstance, trailers ResponseTrailerMap) ResultAction
 }
 
@@ -51,7 +51,7 @@ type Filter interface {
 	// DecodeData might be called multiple times during handling the request body.
 	// The endStream is true when handling the last piece of the body.
 	DecodeData(data BufferInstance, endStream bool) ResultAction
-	// TODO, just a placeholder. DecodeTrailers is not called yet
+	// DecodeTrailers processes request trailers. It doesn't fully work on Envoy < 1.31.
 	DecodeTrailers(trailers RequestTrailerMap) ResultAction
 	DecodeWholeRequestFilter
 
@@ -62,12 +62,12 @@ type Filter interface {
 	// EncodeData might be called multiple times during handling the response body.
 	// The endStream is true when handling the last piece of the body.
 	EncodeData(data BufferInstance, endStream bool) ResultAction
-	// TODO, just a placeholder. EncodeTrailers is not called yet
+	// EncodeTrailers processes response trailers. It doesn't fully work on Envoy < 1.31.
 	EncodeTrailers(trailers ResponseTrailerMap) ResultAction
 	EncodeWholeResponseFilter
 
 	// OnLog is called when the HTTP stream is ended on HTTP Connection Manager filter.
-	// TODO: the trailers here are just placeholders.
+	// The trailers here are always nil on Envoy < 1.32.
 	OnLog(reqHeaders RequestHeaderMap, reqTrailers RequestTrailerMap,
 		respHeaders ResponseHeaderMap, respTrailers ResponseTrailerMap)
 }

@@ -108,10 +108,10 @@ envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
 $(ENVTEST): $(LOCALBIN)
 	test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
 
-.PHONY: start-controller-service
-start-controller-service:
+.PHONY: start-service
+start-service:
 	cd ./tests/testdata/services && docker compose up -d
 
-.PHONY: stop-controller-service
-stop-controller-service:
+.PHONY: stop-service
+stop-service:
 	cd ./tests/testdata/services && docker compose down

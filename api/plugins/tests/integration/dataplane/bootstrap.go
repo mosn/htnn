@@ -33,12 +33,14 @@ type bootstrap struct {
 	consumers        map[string]map[string]interface{}
 	httpFilterGolang map[string]interface{}
 	accessLogFormat  string
+	clusters         []map[string]interface{}
 }
 
 func Bootstrap() *bootstrap {
 	return &bootstrap{
 		backendRoutes: []map[string]interface{}{},
 		consumers:     map[string]map[string]interface{}{},
+		clusters:      []map[string]interface{}{},
 	}
 }
 
@@ -78,6 +80,16 @@ func (b *bootstrap) SetFilterGolang(cfg map[string]interface{}) *bootstrap {
 
 func (b *bootstrap) SetAccessLogFormat(fmt string) *bootstrap {
 	b.accessLogFormat = fmt
+	return b
+}
+
+func (b *bootstrap) AddCluster(s string) *bootstrap {
+	var n map[string]interface{}
+	err := yaml.Unmarshal([]byte(s), &n)
+	if err != nil {
+		panic(err)
+	}
+	b.clusters = append(b.clusters, n)
 	return b
 }
 
@@ -135,6 +147,13 @@ func (b *bootstrap) buildConfiguration() (map[string]interface{}, error) {
 		}
 	}
 
+	staticResources := root["static_resources"].(map[string]interface{})
+	clusters := staticResources["clusters"].([]interface{})
+	newClusters := []interface{}{}
+	for _, c := range b.clusters {
+		newClusters = append(newClusters, c)
+	}
+	staticResources["clusters"] = append(clusters, newClusters...)
 	return root, nil
 }
 

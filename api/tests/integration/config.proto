@@ -19,12 +19,14 @@ package api.tests.integration;
 option go_package = "mosn.io/htnn/api/tests/integration";
 
 message Config {
-  bool need = 1;
+  bool need_buffer = 1;
   bool decode = 2;
   bool encode = 3;
   bool headers = 4;
   bool data = 5;
-  string reply_msg = 6;
+  bool trailers = 6;
+  string reply_msg = 7;
+  bool in_grpc_mode = 8;
 }
 
 message BadPluginConfig {

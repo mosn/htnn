@@ -32,8 +32,8 @@ func TestFilterPlugin(t *testing.T) {
 				map[string]interface{}{
 					"name": "buffer",
 					"config": map[string]interface{}{
-						"decode": true,
-						"need":   true,
+						"decode":      true,
+						"need_buffer": true,
 					},
 				},
 			},
@@ -76,8 +76,8 @@ func TestFilterMergeIntoRoute(t *testing.T) {
 				map[string]interface{}{
 					"name": "buffer",
 					"config": map[string]interface{}{
-						"decode": true,
-						"need":   false,
+						"decode":      true,
+						"need_buffer": false,
 					},
 				},
 				map[string]interface{}{
@@ -132,8 +132,8 @@ func TestFilterMergeIntoRoute(t *testing.T) {
 		{
 			name: "override",
 			config: controlplane.NewSinglePluginConfig("buffer", map[string]interface{}{
-				"decode": true,
-				"need":   true,
+				"decode":      true,
+				"need_buffer": true,
 			}),
 			run: func(t *testing.T) {
 				resp, _ := dp.Get("/echo", nil)

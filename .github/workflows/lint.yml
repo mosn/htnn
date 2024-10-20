@@ -122,3 +122,6 @@ jobs:
 
     - name: lint markdown
       run: make lint-markdown
+
+    - name: lint yaml
+      run: make lint-yaml

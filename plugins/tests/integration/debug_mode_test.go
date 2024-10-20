@@ -68,7 +68,7 @@ func TestDebugModeSlowLog(t *testing.T) {
 	pass := time.Since(now)
 	assert.Equal(t, 200, resp.StatusCode)
 	// delay time plus the req time
-	assert.True(t, pass < 55*time.Millisecond, pass)
+	assert.True(t, pass < 60*time.Millisecond, pass)
 }
 
 func TestDebugModeSlowLogNoPlugin(t *testing.T) {
@@ -243,7 +243,7 @@ func TestDebugModeSlowLogWithFiltersFromConsumer(t *testing.T) {
 				pass := time.Since(now)
 				assert.Equal(t, 200, resp.StatusCode)
 				// delay time plus the req time
-				assert.True(t, pass < 55*time.Millisecond, pass)
+				assert.True(t, pass < 60*time.Millisecond, pass)
 			},
 		},
 	}

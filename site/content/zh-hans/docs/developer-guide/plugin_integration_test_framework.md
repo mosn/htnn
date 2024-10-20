@@ -4,7 +4,7 @@ title: 插件集成测试框架
 
 ## 如何运行测试
 
-假设您位于 `./plugins`：
+假设您位于本项目的 `./plugins` 或 `./api` 目录下：
 
 1. 运行 `make build-test-so` 构建 Go 插件。
 2. 运行 `go test -v ./tests/integration -run TestPluginXX` 来运行选定的测试。
@@ -14,7 +14,9 @@ title: 插件集成测试框架
 
 一些测试需要第三方服务。您可以通过在 `./tests/integration/testdata/services` 下运行 `docker compose up $service` 来启动它们。
 
-默认情况下，测试框架通过镜像 `envoyproxy/envoy` 启动 Envoy。你可以通过设置环境变量 `PROXY_IMAGE` 来指定其他镜像。例如，`PROXY_IMAGE=envoyproxy/envoy:contrib-v1.29.4 go test -v ./tests/integration/ -run TestLimitCountRedis` 将使用 `envoyproxy/envoy:contrib-v1.29.4` 镜像。
+默认情况下，测试框架通过镜像 `envoyproxy/envoy:contrib-$latest` 启动 Envoy。你可以通过设置环境变量 `PROXY_IMAGE` 来指定其他镜像。例如，`PROXY_IMAGE=envoyproxy/envoy:contrib-v1.29.4 go test -tags envoy1.29 -v ./tests/integration/ -run TestLimitCountRedis` 将使用 `envoyproxy/envoy:contrib-v1.29.4` 镜像。
+
+您可能已经注意到，在执行 `go test` 时，我们添加了 `-tags envoy1.29`。这是因为不同版本 Envoy 接口存在差异。在这种情况下，我们指定了 Envoy 1.29 版本的标签。具体见 [HTNN 的 Envoy 多版本支持](./dataplane_support.md)。注意运行的 Envoy 版本，以及 `go test` 命令中的 `-tags` 参数，和 `make build-test-so` 时依赖的 Envoy 接口版本应该保持一致。
 
 ## 端口使用
 
