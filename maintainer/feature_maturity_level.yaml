@@ -79,6 +79,9 @@ plugins:
   - name: outer_lua
     status: experimental
     experimental_since: 0.4.0
+  - name: route_patch
+    status: experimental
+    experimental_since: 0.4.1
   - name: tls_inspector
     status: experimental
     experimental_since: 0.4.0
