@@ -43,7 +43,6 @@ header:
     - 'site/layouts/**'
     - 'api/internal/cookie/cookie.go'
     - 'controller/registries/nacos/config.go'
-    - 'external/**'
   comment: on-failure
 
 dependency:
