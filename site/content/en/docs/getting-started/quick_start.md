@@ -49,7 +49,7 @@ To learn more about the release, try:
   $ helm get all htnn-controller -n istio-system
 ```
 
-check the installed components by this command `helm get all htnn-controller -n istio-system`
+Check the installed components by this command `helm get all htnn-controller -n istio-system`
 
 **Note**: we will install more resource in this step, please make sure you are in a clean k8s cluster or there will be no resource conflict. Here we will pull the `m.daocloud.io/ghcr.io/mosn/htnn-controller` image, if there is a network problem, you need to configure the network proxy or manually download this image.
 
