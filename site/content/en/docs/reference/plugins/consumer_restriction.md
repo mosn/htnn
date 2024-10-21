@@ -4,7 +4,7 @@ title: Consumer Restriction
 
 ## Description
 
-The `consumerRestriction` plugin determines whether the current consumer has access permission based on the configuration. If there is no current consumer or the consumer does not have access permission, a 403 HTTP status code is returned.
+The `consumerRestriction` plugin determines whether the current consumer has access permission based on the configuration. If there is no current consumer, a 401 HTTP status code is returned. If the consumer does not have access permission, a 403 HTTP status code is returned.
 
 ## Attribute
 
@@ -16,12 +16,13 @@ The `consumerRestriction` plugin determines whether the current consumer has acc
 
 ## Configuration
 
-| Name  | Type  | Required | Validation | Description                          |
-|-------|-------|----------|------------|--------------------------------------|
-| allow | Rules | False    |            | List of rules allowing access access |
-| deny  | Rules | False    |            | List of rules denying access access  |
+| Name             | Type  | Required | Validation | Description                                  |
+|------------------|-------|----------|------------|----------------------------------------------|
+| allow            | Rules | False    |            | List of rules allowing access access         |
+| deny             | Rules | False    |            | List of rules denying access access          |
+| denyIfNoConsumer | bool  | False    |            | Deny request if there is no matched consumer |
 
-Only one of `allow` or `deny` can be configured.
+Only one of `allow` or `deny` or `denyIfNoConsumer` can be configured.
 
 ### Rules
 

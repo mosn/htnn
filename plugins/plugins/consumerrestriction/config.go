@@ -49,6 +49,10 @@ type Rule struct {
 }
 
 func (conf *config) Init(cb api.ConfigCallbackHandler) error {
+	if conf.GetDenyIfNoConsumer() {
+		return nil
+	}
+
 	rules := conf.GetDeny()
 	if rules == nil {
 		rules = conf.GetAllow()

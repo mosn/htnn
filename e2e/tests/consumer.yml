@@ -68,3 +68,6 @@ spec:
       config:
         keys:
         - name: Authorization
+    consumerRestriction:
+      config:
+        denyIfNoConsumer: true
