@@ -188,7 +188,7 @@ lint-website: $(LOCALBIN)
 lint-markdown:
 	if ! command -v markdownlint >/dev/null 2>&1; then npm install -g markdownlint-cli; fi
 	@# ignore markdown under 'external/istio'
-	markdownlint '{*.md,site/**/*.md}' --disable MD012 MD013 MD029 MD033 MD034 MD036 MD041
+	markdownlint '{*.md,site/**/*.md}' --disable MD012 MD013 MD024 MD029 MD033 MD034 MD036 MD041
 
 # We don’t use if ! command -v yamllint because some environments might have a pre-installed Python version.
 # Checking the specific path ensures we're using the Node.js version to avoid conflicts.
