@@ -38,5 +38,6 @@ import (
 	_ "mosn.io/htnn/types/plugins/oidc"
 	_ "mosn.io/htnn/types/plugins/opa"
 	_ "mosn.io/htnn/types/plugins/routepatch"
+	_ "mosn.io/htnn/types/plugins/sentinel"
 	_ "mosn.io/htnn/types/plugins/tlsinspector"
 )

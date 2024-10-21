@@ -347,6 +347,30 @@ func parseField(fs map[string]Field, field *parser.Field) {
 	fs[snakeToCamel(field.FieldName)] = f
 }
 
+func parseMapField(fs map[string]Field, field *parser.MapField) {
+	f := Field{}
+	if len(field.Comments) > 0 {
+		if strings.Contains(field.Comments[0].Lines()[0], "[#do_not_document]") {
+			return
+		}
+	}
+
+	if len(field.FieldOptions) > 0 {
+		for _, option := range field.FieldOptions {
+			if option.OptionName == "(validate.rules).repeated" {
+				f.Required = true
+			}
+			if strings.Contains(option.Constant, "required:true") {
+				f.Required = true
+			}
+			if strings.Contains(option.Constant, "ignore_empty:true") {
+				f.Required = false
+			}
+		}
+	}
+	fs[snakeToCamel(field.MapName)] = f
+}
+
 func parseMessage(ms map[string]Message, msg *parser.Message) {
 	m := Message{
 		Fields: map[string]Field{},
@@ -355,6 +379,8 @@ func parseMessage(ms map[string]Message, msg *parser.Message) {
 		switch field := body.(type) {
 		case *parser.Field:
 			parseField(m.Fields, field)
+		case *parser.MapField:
+			parseMapField(m.Fields, field)
 		case *parser.Message:
 			parseMessage(ms, field)
 		case *parser.Oneof:
