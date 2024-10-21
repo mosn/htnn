@@ -15,7 +15,6 @@
 package sentinel
 
 import (
-	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -92,7 +91,6 @@ func TestConfig(t *testing.T) {
 				err = conf.Init(nil)
 				assert.Nil(t, err)
 			} else {
-				fmt.Println(err)
 				assert.ErrorContains(t, err, tt.err)
 			}
 		})
