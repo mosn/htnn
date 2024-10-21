@@ -37,6 +37,44 @@ REVISION: 1
 TEST SUITE: None
 ```
 
+查看安装的组件：
+
+```shell
+$ helm status htnn-controller -n istio-system                                                                                                                                            ─╯
+NAME: htnn-controller
+LAST DEPLOYED: Tue Oct  8 20:13:59 2024
+NAMESPACE: istio-system
+STATUS: deployed
+REVISION: 1
+TEST SUITE: None
+NOTES:
+To learn more about the release, try:
+  $ helm status htnn-controller -n istio-system
+  $ helm get all htnn-controller -n istio-system
+```
+
+还可以通过该命令查看安装了哪些 k8s 资源 `helm get all htnn-controller -n istio-system`
+
+**注意**: 这里会部署很多资源，请确保你是一个干净 k8s 集群或者不会产生资源冲突。这里会拉取 `m.daocloud.io/ghcr.io/mosn/htnn-controller` 镜像，有可能会存在网络问题导致拉取失败，有必要请自行配置网络代理或者手动下载该镜像。
+
+```shell
+$ kubectl get all -n istio-system                                                                                                                                                              ─╯
+NAME                                        READY   STATUS             RESTARTS   AGE
+pod/istiod-586df46dcb-t25s2                 1/1     Running            0          14h
+
+NAME                           TYPE           CLUSTER-IP     EXTERNAL-IP   PORT(S)                                      AGE
+service/istiod                 ClusterIP      10.96.76.196   <none>        15010/TCP,15012/TCP,443/TCP,15014/TCP        14h
+
+NAME                                   READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/istiod                 1/1     1            1           14h
+
+NAME                                              DESIRED   CURRENT   READY   AGE
+replicaset.apps/istiod-586df46dcb                 1         1         1       14h
+
+NAME                                                       REFERENCE                         TARGETS         MINPODS   MAXPODS   REPLICAS   AGE
+horizontalpodautoscaler.autoscaling/istiod                 Deployment/istiod                 <unknown>/80%   1         5         1          14h
+```
+
 3. 安装数据面组件：
 
 ```shell
@@ -52,6 +90,45 @@ TEST SUITE: None
 ```
 
 这里我们没有使用 `--wait` 参数，而是使用 `kubectl wait` 命令等待 `istio-ingressgateway` 部署完成。因为 `kind` 默认不支持 LoadBalancer 类型的 Service，所以 Service `istio-ingressgateway` 的 ExternalIP 会一直处于 `Pending` 状态。这不影响我们的上手体验。如果你对此感兴趣，可以参考 [kind 官方文档](https://kind.sigs.k8s.io/docs/user/loadbalancer/) 以及安装 metallb。
+
+查看安装的组件：
+
+```shell
+$ helm status htnn-gateway -n istio-system                                                                                                                                               ─╯
+NAME: htnn-gateway
+LAST DEPLOYED: Tue Oct  8 17:02:12 2024
+NAMESPACE: istio-system
+STATUS: deployed
+REVISION: 1
+TEST SUITE: None
+NOTES:
+To learn more about the release, try:
+  $ helm status htnn-gateway -n istio-system
+  $ helm get all htnn-gateway -n istio-system
+```
+
+```shell
+$ kubectl get all -n istio-system                                                                                                                                                        ─╯
+NAME                                        READY   STATUS    RESTARTS   AGE
+pod/istio-ingressgateway-67d7cd6587-qv9vv   1/1     Running   0          14m
+pod/istiod-586df46dcb-t25s2                 1/1     Running   0          16h
+
+NAME                           TYPE           CLUSTER-IP     EXTERNAL-IP   PORT(S)                                      AGE
+service/istio-ingressgateway   LoadBalancer   10.96.96.229   <pending>     15021:30251/TCP,80:31122/TCP,443:30790/TCP   21m
+service/istiod                 ClusterIP      10.96.76.196   <none>        15010/TCP,15012/TCP,443/TCP,15014/TCP        16h
+
+NAME                                   READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/istio-ingressgateway   1/1     1            1           21m
+deployment.apps/istiod                 1/1     1            1           16h
+
+NAME                                              DESIRED   CURRENT   READY   AGE
+replicaset.apps/istio-ingressgateway-67d7cd6587   1         1         1       21m
+replicaset.apps/istiod-586df46dcb                 1         1         1       16h
+
+NAME                                                       REFERENCE                         TARGETS         MINPODS   MAXPODS   REPLICAS   AGE
+horizontalpodautoscaler.autoscaling/istio-ingressgateway   Deployment/istio-ingressgateway   <unknown>/80%   1         5         1          21m
+horizontalpodautoscaler.autoscaling/istiod                 Deployment/istiod                 <unknown>/80%   1         5         1          16h
+```
 
 ## 配置路由
 
