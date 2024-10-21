@@ -18,6 +18,7 @@ package integration
 
 import (
 	"bytes"
+	_ "embed"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -30,6 +31,13 @@ import (
 	"mosn.io/htnn/api/pkg/filtermanager/model"
 	"mosn.io/htnn/api/plugins/tests/integration/dataplane"
 	"mosn.io/htnn/api/plugins/tests/integration/helper"
+)
+
+var (
+	//go:embed testdata/grpc_route.yml
+	grpcRoute string
+	//go:embed testdata/grpc_backend.yml
+	grpcBackend string
 )
 
 func TestFilterManagerTrailers(t *testing.T) {
@@ -224,6 +232,9 @@ func grpcurl(dp *dataplane.DataPlane, fullMethodName, req string) ([]byte, error
 func TestFilterManagerTrailersWithGrpcBackend(t *testing.T) {
 	dp, err := dataplane.StartDataPlane(t, &dataplane.Option{
 		LogLevel: "debug",
+		Bootstrap: dataplane.Bootstrap().
+			AddBackendRoute(grpcRoute).
+			AddCluster(grpcBackend),
 	})
 	if err != nil {
 		t.Fatalf("failed to start data plane: %v", err)

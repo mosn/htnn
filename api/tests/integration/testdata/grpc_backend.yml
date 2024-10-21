@@ -1,0 +1,13 @@
+name: grpc_backend
+type: strict_dns
+lb_policy: round_robin
+http2_protocol_options: {}
+load_assignment:
+  cluster_name: grpc_backend
+  endpoints:
+  - lb_endpoints:
+    - endpoint:
+        address:
+          socket_address:
+            address: grpc
+            port_value: 50051
