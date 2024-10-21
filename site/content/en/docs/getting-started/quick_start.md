@@ -33,6 +33,44 @@ REVISION: 1
 TEST SUITE: None
 ```
 
+Check the installed components：
+
+```shell
+$ helm status htnn-controller -n istio-system                                                                                                                                            ─╯
+NAME: htnn-controller
+LAST DEPLOYED: Tue Oct  8 20:13:59 2024
+NAMESPACE: istio-system
+STATUS: deployed
+REVISION: 1
+TEST SUITE: None
+NOTES:
+To learn more about the release, try:
+  $ helm status htnn-controller -n istio-system
+  $ helm get all htnn-controller -n istio-system
+```
+
+Check the installed components by this command `helm get all htnn-controller -n istio-system`
+
+**Note**: we will install many resources in this step, please make sure you are in a clean k8s cluster or there will be no resource conflict. Here we will pull the `ghcr.io/mosn/htnn-controller` image, if there is a network problem, you need to configure the network proxy or manually download this image.
+
+```shell
+$ kubectl get all -n istio-system                                                                                                                                                              ─╯
+NAME                                        READY   STATUS             RESTARTS   AGE
+pod/istiod-586df46dcb-t25s2                 1/1     Running            0          14h
+
+NAME                           TYPE           CLUSTER-IP     EXTERNAL-IP   PORT(S)                                      AGE
+service/istiod                 ClusterIP      10.96.76.196   <none>        15010/TCP,15012/TCP,443/TCP,15014/TCP        14h
+
+NAME                                   READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/istiod                 1/1     1            1           14h
+
+NAME                                              DESIRED   CURRENT   READY   AGE
+replicaset.apps/istiod-586df46dcb                 1         1         1       14h
+
+NAME                                                       REFERENCE                         TARGETS         MINPODS   MAXPODS   REPLICAS   AGE
+horizontalpodautoscaler.autoscaling/istiod                 Deployment/istiod                 <unknown>/80%   1         5         1          14h
+```
+
 3. Install the data plane component:
 
 ```shell
@@ -48,6 +86,45 @@ TEST SUITE: None
 ```
 
 Here we have not used the `--wait` parameter, instead, we used the `kubectl wait` command to wait for the `istio-ingressgateway` deployment to complete. Because `kind` does not support LoadBalancer type of Service by default, the ExternalIP for Service `istio-ingressgateway` will remain in `Pending` status. This does not affect our hands-on experience. If you're interested in this, refer to the [kind official documentation](https://kind.sigs.k8s.io/docs/user/loadbalancer/) and consider installing metallb.
+
+Check the installed components：
+
+```shell
+$ helm status htnn-gateway -n istio-system                                                                                                                                               ─╯
+NAME: htnn-gateway
+LAST DEPLOYED: Tue Oct  8 17:02:12 2024
+NAMESPACE: istio-system
+STATUS: deployed
+REVISION: 1
+TEST SUITE: None
+NOTES:
+To learn more about the release, try:
+  $ helm status htnn-gateway -n istio-system
+  $ helm get all htnn-gateway -n istio-system
+```
+
+```shell
+$ kubectl get all -n istio-system                                                                                                                                                        ─╯
+NAME                                        READY   STATUS    RESTARTS   AGE
+pod/istio-ingressgateway-67d7cd6587-qv9vv   1/1     Running   0          14m
+pod/istiod-586df46dcb-t25s2                 1/1     Running   0          16h
+
+NAME                           TYPE           CLUSTER-IP     EXTERNAL-IP   PORT(S)                                      AGE
+service/istio-ingressgateway   LoadBalancer   10.96.96.229   <pending>     15021:30251/TCP,80:31122/TCP,443:30790/TCP   21m
+service/istiod                 ClusterIP      10.96.76.196   <none>        15010/TCP,15012/TCP,443/TCP,15014/TCP        16h
+
+NAME                                   READY   UP-TO-DATE   AVAILABLE   AGE
+deployment.apps/istio-ingressgateway   1/1     1            1           21m
+deployment.apps/istiod                 1/1     1            1           16h
+
+NAME                                              DESIRED   CURRENT   READY   AGE
+replicaset.apps/istio-ingressgateway-67d7cd6587   1         1         1       21m
+replicaset.apps/istiod-586df46dcb                 1         1         1       16h
+
+NAME                                                       REFERENCE                         TARGETS         MINPODS   MAXPODS   REPLICAS   AGE
+horizontalpodautoscaler.autoscaling/istio-ingressgateway   Deployment/istio-ingressgateway   <unknown>/80%   1         5         1          21m
+horizontalpodautoscaler.autoscaling/istiod                 Deployment/istiod                 <unknown>/80%   1         5         1          16h
+```
 
 ## Configuring Routes
 

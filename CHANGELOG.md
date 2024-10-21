@@ -1,6 +1,19 @@
 ## Table of Contents
 
+- [0.4.1](#041)
 - [0.4.0](#040)
+
+## 0.4.1
+
+### Features
+
+- add basic trailer processing: [#762](https://github.com/mosn/htnn/pull/762)
+- add routePatch plugin: [#769](https://github.com/mosn/htnn/pull/769)
+
+### Fixes
+
+- support getting headers in OnLog phase by every plugin: [#770](https://github.com/mosn/htnn/pull/770)
+- the plugin order sent from controller may be wrong [#774](https://github.com/mosn/htnn/pull/774)
 
 ## 0.4.0
 
