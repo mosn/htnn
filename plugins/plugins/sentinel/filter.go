@@ -120,13 +120,8 @@ func (f *filter) OnLog(reqHeaders api.RequestHeaderMap, reqTrailers api.RequestT
 	// the statistics of metrics of Flow and HotSpot rules are completed in request phase (DecodeHeaders).
 	// However, considering the boundary problems such as memory leakage caused by client interrupting the request,
 	// we do Exit in OnLog after response phase.
-	// See site/content/en/docs/developer-guide/get_involved.md#filter.
+	// See https://github.com/mosn/htnn/blob/main/site/content/en/docs/developer-guide/get_involved.md#filter
 	defer e.Exit()
-
-	if respHeaders == nil {
-		api.LogError("response headers is nil")
-		return
-	}
 
 	gotSC, ok := respHeaders.Status()
 	if !ok {
