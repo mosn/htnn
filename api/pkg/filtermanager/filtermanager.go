@@ -384,16 +384,7 @@ func (m *filterManager) DecodeHeaders(headers capi.RequestHeaderMap, endStream b
 			// we check consumer at the end of authn filters, so we can have multiple authn filters
 			// configured and the consumer will be set by any of them
 			c, ok := m.callbacks.consumer.(*consumer.Consumer)
-			if !ok {
-				api.LogInfo("reject for consumer not found")
-				m.localReply(&api.LocalResponse{
-					Code: 401,
-					Msg:  "consumer not found",
-				}, true)
-				return
-			}
-
-			if len(c.FilterConfigs) > 0 {
+			if ok && len(c.FilterConfigs) > 0 {
 				api.LogDebugf("merge filters from consumer: %s", c.Name())
 
 				c.InitOnce.Do(func() {

@@ -32,15 +32,15 @@ type filter struct {
 	config    *config
 }
 
-func (f *filter) reject(msg string) api.ResultAction {
-	return &api.LocalResponse{Code: 403, Msg: msg}
-}
-
 func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {
 	consumer := f.callbacks.GetConsumer()
 	if consumer == nil {
 		api.LogInfo("consumerRestriction: consumer not found")
-		return f.reject("consumer not found")
+		return &api.LocalResponse{Code: 401, Msg: "consumer not found"}
+	}
+
+	if f.config.GetDenyIfNoConsumer() {
+		return api.Continue
 	}
 
 	consumerName := consumer.Name()
@@ -49,7 +49,7 @@ func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api
 
 	if methodMatched != f.config.allow {
 		api.LogInfof("consumerRestriction: consumer %s not allowed", consumerName)
-		return f.reject("consumer not allowed")
+		return &api.LocalResponse{Code: 403, Msg: "consumer not allowed"}
 	}
 
 	return api.Continue
