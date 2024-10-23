@@ -20,9 +20,10 @@ You may have noticed that when executing `go test`, we added `-tags envoy1.29`. 
 
 ## Port usage
 
-The test framework will use:
+The test framework will occupy the following ports on the host machine:
 
-* `:2023` to represent invalid port
-* `:9999` for the control plane
-* `:10000` for the Envoy proxy
-* `:10001` for the backend server and mock external server
+* `:9998` for the Envoy's Admin API, which can be modified by the environment variable `TEST_ENVOY_ADMIN_API_PORT`
+* `:9999` for the control plane, which can be modified by the environment variable `TEST_ENVOY_CONTROL_PLANE_PORT`
+* `:10000` for the Envoy proxy, which can be modified by the environment variable `TEST_ENVOY_DATA_PLANE_PORT`
+
+For example, `TEST_ENVOY_CONTROL_PLANE_PORT=19999 go test -v ./tests/integration -run TestPluginXX` will use `:19999` as the control plane port.

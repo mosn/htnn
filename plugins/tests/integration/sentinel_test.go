@@ -15,11 +15,9 @@
 package integration
 
 import (
-	"context"
 	_ "embed"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"net/url"
 	"sync"
@@ -38,28 +36,12 @@ var (
 	sentinelRoute string
 )
 
-func doGet(respStatus int, header http.Header, query url.Values) (*http.Response, error) {
-	u := fmt.Sprintf("http://localhost:10000/sentinel/status/%d", respStatus)
+func doGet(dp *dataplane.DataPlane, respStatus int, header http.Header, query url.Values) (*http.Response, error) {
+	u := fmt.Sprintf("/sentinel/status/%d", respStatus)
 	if query != nil {
 		u += "?" + query.Encode()
 	}
-	req, err := http.NewRequest(http.MethodGet, u, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header = header
-	tr := &http.Transport{DialContext: func(ctx context.Context, proto, addr string) (conn net.Conn, err error) {
-		return net.DialTimeout("tcp", ":10000", 1*time.Second)
-	}}
-
-	client := &http.Client{Transport: tr,
-		Timeout: 10 * time.Second,
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			return http.ErrUseLastResponse
-		},
-	}
-	resp, err := client.Do(req)
-	return resp, err
+	return dp.Get(u, header)
 }
 
 func TestSentinelFlow(t *testing.T) {
@@ -107,12 +89,12 @@ func TestSentinelFlow(t *testing.T) {
 				hdr := http.Header{}
 				hdr.Add("X-Sentinel", "f1")
 
-				resp, err := doGet(200, hdr, nil)
+				resp, err := doGet(dp, 200, hdr, nil)
 				assert.NoError(t, err)
 				assert.Equal(t, 200, resp.StatusCode)
 				assert.Equal(t, "", resp.Header.Get("X-Sentinel-Blocked"))
 
-				resp, err = doGet(200, hdr, nil)
+				resp, err = doGet(dp, 200, hdr, nil)
 				assert.NoError(t, err)
 				assert.Equal(t, 503, resp.StatusCode)
 				assert.Equal(t, "true", resp.Header.Get("X-Sentinel-Blocked"))
@@ -122,7 +104,7 @@ func TestSentinelFlow(t *testing.T) {
 
 				time.Sleep(1100 * time.Millisecond)
 
-				resp, err = doGet(200, hdr, nil)
+				resp, err = doGet(dp, 200, hdr, nil)
 				assert.NoError(t, err)
 				assert.Equal(t, 200, resp.StatusCode)
 				assert.Equal(t, "", resp.Header.Get("X-Sentinel-Blocked"))
@@ -154,10 +136,10 @@ func TestSentinelFlow(t *testing.T) {
 			run: func(t *testing.T) {
 				query := url.Values{}
 				query.Set("query", "f2")
-				resp, _ := doGet(200, nil, query)
+				resp, _ := doGet(dp, 200, nil, query)
 				assert.Equal(t, 200, resp.StatusCode)
 
-				resp, _ = doGet(200, nil, query)
+				resp, _ = doGet(dp, 200, nil, query)
 				assert.Equal(t, 503, resp.StatusCode)
 				b, _ := io.ReadAll(resp.Body)
 				assert.Equal(t, "{\"msg\":\"custom block resp: f2\"}", string(b))
@@ -192,7 +174,7 @@ func TestSentinelFlow(t *testing.T) {
 				m := make(map[int64]int)
 				mLock := sync.Mutex{}
 				for i := 0; i < 20; i++ {
-					resp, _ := doGet(200, hdr, nil)
+					resp, _ := doGet(dp, 200, hdr, nil)
 					if resp.StatusCode == 200 {
 						k := time.Now().UnixMilli() / 100 // interval is 100ms
 						mLock.Lock()
@@ -242,10 +224,10 @@ func TestSentinelFlow(t *testing.T) {
 				hdr := http.Header{}
 				hdr.Add("X-Sentinel", "f4")
 
-				resp, _ := doGet(200, hdr, nil)
+				resp, _ := doGet(dp, 200, hdr, nil)
 				assert.Equal(t, 200, resp.StatusCode)
 
-				resp, _ = doGet(200, hdr, nil)
+				resp, _ = doGet(dp, 200, hdr, nil)
 				assert.Equal(t, 503, resp.StatusCode)
 				b, err := io.ReadAll(resp.Body)
 				assert.NoError(t, err)
@@ -258,7 +240,7 @@ func TestSentinelFlow(t *testing.T) {
 
 				// when f3 triggers the traffic limiting, f4 also triggers the traffic limiting,
 				// because the two resources are related
-				resp, _ = doGet(200, hdr, nil)
+				resp, _ = doGet(dp, 200, hdr, nil)
 				assert.Equal(t, 503, resp.StatusCode)
 				b, err = io.ReadAll(resp.Body)
 				assert.NoError(t, err)
@@ -323,12 +305,12 @@ func TestSentinelHotSpot(t *testing.T) {
 				hdr := http.Header{}
 				hdr.Add("X-Sentinel", "hs1")
 
-				resp, err := doGet(200, hdr, nil)
+				resp, err := doGet(dp, 200, hdr, nil)
 				assert.NoError(t, err)
 				assert.Equal(t, 200, resp.StatusCode)
 				assert.Equal(t, "", resp.Header.Get("X-Sentinel-Blocked"))
 
-				resp, err = doGet(200, hdr, nil)
+				resp, err = doGet(dp, 200, hdr, nil)
 				assert.NoError(t, err)
 				assert.Equal(t, 503, resp.StatusCode)
 				assert.Equal(t, "true", resp.Header.Get("X-Sentinel-Blocked"))
@@ -337,7 +319,7 @@ func TestSentinelHotSpot(t *testing.T) {
 
 				time.Sleep(1100 * time.Millisecond)
 
-				resp, err = doGet(200, hdr, nil)
+				resp, err = doGet(dp, 200, hdr, nil)
 				assert.NoError(t, err)
 				assert.Equal(t, 200, resp.StatusCode)
 				assert.Equal(t, "", resp.Header.Get("X-Sentinel-Blocked"))
@@ -382,10 +364,10 @@ func TestSentinelHotSpot(t *testing.T) {
 				hdr.Add("X-Sentinel", "hs2")
 				hdr.Add("X-A1", "test")
 
-				resp, _ := doGet(200, hdr, nil)
+				resp, _ := doGet(dp, 200, hdr, nil)
 				assert.Equal(t, 200, resp.StatusCode)
 
-				resp, _ = doGet(200, hdr, nil)
+				resp, _ = doGet(dp, 200, hdr, nil)
 				assert.Equal(t, 503, resp.StatusCode)
 
 				// attachment from query a2, but attachment key is `X-A1`, so there's no traffic control
@@ -394,7 +376,7 @@ func TestSentinelHotSpot(t *testing.T) {
 				query := url.Values{}
 				query.Add("a2", "test")
 				for i := 0; i < 5; i++ {
-					resp, _ = doGet(200, hdr, query)
+					resp, _ = doGet(dp, 200, hdr, query)
 					assert.Equal(t, 200, resp.StatusCode)
 				}
 			},
@@ -428,11 +410,11 @@ func TestSentinelHotSpot(t *testing.T) {
 				hdr := http.Header{}
 				hdr.Add("X-Sentinel", "hs3")
 
-				resp, _ := doGet(200, hdr, nil)
+				resp, _ := doGet(dp, 200, hdr, nil)
 				assert.Equal(t, 200, resp.StatusCode)
 
 				// although the threshold is 10, the threshold for `abc` is specified to be 1 through `specificItems`
-				resp, _ = doGet(200, hdr, nil)
+				resp, _ = doGet(dp, 200, hdr, nil)
 				assert.Equal(t, 503, resp.StatusCode)
 			},
 		},
@@ -497,7 +479,7 @@ func TestSentinelCircuitBreaker(t *testing.T) {
 				isBreakerOpened := false
 				// 10 requests, 5 of them will trigger the circuit breaker
 				for i := 0; i < 10; i++ {
-					resp, err := doGet(500, hdr, nil)
+					resp, err := doGet(dp, 500, hdr, nil)
 					assert.NoError(t, err)
 					b, _ := io.ReadAll(resp.Body)
 					if resp.StatusCode == 503 &&
@@ -512,7 +494,7 @@ func TestSentinelCircuitBreaker(t *testing.T) {
 				time.Sleep(3100 * time.Millisecond)
 
 				for i := 0; i < 3; i++ {
-					resp, err := doGet(200, hdr, nil)
+					resp, err := doGet(dp, 200, hdr, nil)
 					assert.NoError(t, err)
 					assert.Equal(t, 200, resp.StatusCode)
 					assert.Equal(t, "", resp.Header.Get("X-Sentinel-Blocked"))
@@ -611,10 +593,10 @@ func TestSentinelMixture(t *testing.T) {
 	hdr := http.Header{}
 	hdr.Add("X-Sentinel", "flow")
 
-	resp, _ := doGet(200, hdr, nil)
+	resp, _ := doGet(dp, 200, hdr, nil)
 	assert.Equal(t, 200, resp.StatusCode)
 
-	resp, _ = doGet(200, hdr, nil)
+	resp, _ = doGet(dp, 200, hdr, nil)
 	assert.Equal(t, 503, resp.StatusCode)
 	assert.Equal(t, "flow", resp.Header.Get("X-Sentinel-Type"))
 	b, _ := io.ReadAll(resp.Body)
@@ -622,7 +604,7 @@ func TestSentinelMixture(t *testing.T) {
 
 	time.Sleep(1100 * time.Millisecond)
 
-	resp, _ = doGet(200, hdr, nil)
+	resp, _ = doGet(dp, 200, hdr, nil)
 	assert.Equal(t, 200, resp.StatusCode)
 	// flow end
 
@@ -630,10 +612,10 @@ func TestSentinelMixture(t *testing.T) {
 	hdr = http.Header{}
 	hdr.Add("X-Sentinel", "hotspot")
 
-	resp, _ = doGet(200, hdr, nil)
+	resp, _ = doGet(dp, 200, hdr, nil)
 	assert.Equal(t, 200, resp.StatusCode)
 
-	resp, _ = doGet(200, hdr, nil)
+	resp, _ = doGet(dp, 200, hdr, nil)
 	assert.Equal(t, 503, resp.StatusCode)
 	assert.Equal(t, "hotspot", resp.Header.Get("X-Sentinel-Type"))
 	b, _ = io.ReadAll(resp.Body)
@@ -641,7 +623,7 @@ func TestSentinelMixture(t *testing.T) {
 
 	time.Sleep(1100 * time.Millisecond)
 
-	resp, _ = doGet(200, hdr, nil)
+	resp, _ = doGet(dp, 200, hdr, nil)
 	assert.Equal(t, 200, resp.StatusCode)
 	// hot spot end
 
@@ -652,7 +634,7 @@ func TestSentinelMixture(t *testing.T) {
 	isBreakerOpened := false
 	// 10 requests, 5 of them will trigger the circuit breaker
 	for i := 0; i < 10; i++ {
-		resp, _ = doGet(500, hdr, nil)
+		resp, _ = doGet(dp, 500, hdr, nil)
 		b, _ = io.ReadAll(resp.Body)
 		if resp.StatusCode == 503 &&
 			resp.Header.Get("X-Sentinel-Type") == "circuitbreaker" &&
@@ -666,7 +648,7 @@ func TestSentinelMixture(t *testing.T) {
 	time.Sleep(3100 * time.Millisecond)
 
 	for i := 0; i < 3; i++ {
-		resp, _ = doGet(200, hdr, nil)
+		resp, _ = doGet(dp, 200, hdr, nil)
 		assert.Equal(t, 200, resp.StatusCode)
 	}
 	// circuit breaker end

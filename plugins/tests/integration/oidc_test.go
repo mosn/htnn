@@ -17,6 +17,7 @@ package integration
 import (
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/url"
 	"os/exec"
@@ -41,7 +42,7 @@ func TestOIDC(t *testing.T) {
 
 	helper.WaitServiceUp(t, ":4444", "hydra")
 
-	redirectURL := "http://127.0.0.1:10000/echo"
+	redirectURL := fmt.Sprintf("http://127.0.0.1:%d/echo", dp.Port())
 	hydraCmd := "hydra create client --response-type code,id_token " +
 		"--grant-type authorization_code,refresh_token -e http://127.0.0.1:4445 " +
 		"--redirect-uri " + redirectURL + " --format json"
@@ -89,7 +90,7 @@ func TestOIDC(t *testing.T) {
 	encodedURL := strings.Split(u.Query().Get("state"), ".")[1]
 	b, _ := base64.URLEncoding.DecodeString(encodedURL)
 	originURL := string(b)
-	require.Equal(t, "http://localhost:10000/echo?a=1", originURL)
+	require.Equal(t, fmt.Sprintf("http://localhost:%d/echo?a=1", dp.Port()), originURL)
 	require.NotEmpty(t, u.Query().Get("nonce"))
 	require.NotEmpty(t, u.Query().Get("code_challenge"))
 	cookie := resp.Header.Get("Set-Cookie")

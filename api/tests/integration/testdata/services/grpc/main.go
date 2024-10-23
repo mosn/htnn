@@ -30,7 +30,7 @@ func (s *sampleServer) Ouch(ctx context.Context, req *HelloRequest) (*HelloRespo
 
 func main() {
 	// Create a TCP listener
-	lis, err := net.Listen("tcp", ":50051")
+	lis, err := net.Listen("tcp", ":50001")
 	if err != nil {
 		log.Fatalf("Failed to listen: %v", err)
 	}
@@ -42,7 +42,7 @@ func main() {
 	RegisterSampleServer(s, &sampleServer{})
 
 	// Start the server
-	fmt.Println("Server started. Listening on port :50051")
+	fmt.Println("Server started. Listening on port :50001")
 	if err := s.Serve(lis); err != nil {
 		log.Fatalf("Failed to serve: %v", err)
 	}
