@@ -34,8 +34,22 @@ COPY api/ api/
 COPY types/ types/
 COPY plugins/ plugins/
 COPY controller/ controller/
-# Remember to run `make prebuild` before building the image
-COPY external/istio/ external/istio/
+# Copy files used by `make prebuild`
+COPY Makefile common.mk ./
+COPY patch/ patch/
+# Download istio to external/istio
+# Note that if we switch to non-debian base image these commands will break...
+RUN cat <<_EOF > /etc/apt/sources.list.d/debian.sources
+Types: deb
+URIs: https://mirrors.tuna.tsinghua.edu.cn/debian
+Suites: bookworm bookworm-updates bookworm-backports
+Components: main contrib non-free non-free-firmware
+Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg
+_EOF
+
+# hadolint ignore=DL3008
+RUN apt-get update && apt-get install -y patch --no-install-recommends
+RUN TARGET_ISTIO_DIR=$(pwd)/external/istio make prebuild
 WORKDIR /workspace/external/istio
 RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -C pilot/cmd/pilot-discovery -a -o /workspace/pilot-discovery
 
