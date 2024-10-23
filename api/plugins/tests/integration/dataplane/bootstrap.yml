@@ -258,6 +258,7 @@ static_resources:
                 socket_address:
                   address: host.docker.internal
                   port_value: 9999
+      dns_lookup_family: V4_ONLY
 
 admin:
   address:
