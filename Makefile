@@ -215,7 +215,7 @@ verify-example:
 	cd ./examples/dev_your_plugin && ./verify.sh
 
 # use a path outside repo so the linters won't lint the istio files
-TARGET_ISTIO_DIR ?= $(shell pwd)/../istio
+TARGET_ISTIO_DIR = $(shell pwd)/../istio
 
 .PHONY: prebuild
 prebuild:

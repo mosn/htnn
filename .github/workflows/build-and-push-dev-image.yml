@@ -44,7 +44,6 @@ jobs:
       # https://github.com/mosn/htnn/pkgs/container/htnn-proxy
       - name: Build and push Docker image
         run: |
-          make prebuild
           cd ./manifests
           # push image with the dev tag
           export PROXY_IMAGE=${{ env.PROXY_IMAGE_NAME }}:dev

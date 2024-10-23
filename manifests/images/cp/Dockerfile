@@ -23,12 +23,12 @@ ARG TARGETARCH
 ARG GOPROXY
 ENV GOPROXY=$GOPROXY
 
-WORKDIR /workspace
+WORKDIR /htnn
 
 # Copy the source
 
 COPY go.* ./
-RUN sed -i 's/.\/site/.\/external\/istio/' go.work && sed -i '/.\/e2e/d' go.work && sed -i '/.\/tools/d' go.work
+RUN sed -i '/.\/site/d' go.work && sed -i '/.\/e2e/d' go.work && sed -i '/.\/tools/d' go.work
 # use single layer to copy only works on files, so we have to list all the directories
 COPY api/ api/
 COPY types/ types/
@@ -49,9 +49,9 @@ _EOF
 
 # hadolint ignore=DL3008
 RUN apt-get update && apt-get install -y patch --no-install-recommends
-RUN TARGET_ISTIO_DIR=$(pwd)/external/istio make prebuild
-WORKDIR /workspace/external/istio
-RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -C pilot/cmd/pilot-discovery -a -o /workspace/pilot-discovery
+RUN make prebuild
+WORKDIR /istio
+RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -C pilot/cmd/pilot-discovery -a -o /htnn/pilot-discovery
 
 # hadolint ignore=DL3006
 FROM ${CONTROLLER_BASE_IMAGE}
@@ -62,4 +62,4 @@ LABEL org.opencontainers.image.source=https://github.com/mosn/htnn
 LABEL org.opencontainers.image.description="This is image used in the HTNN control plane."
 LABEL org.opencontainers.image.licenses="Apache-2.0"
 
-COPY --from=builder /workspace/pilot-discovery /usr/local/bin/
+COPY --from=builder /htnn/pilot-discovery /usr/local/bin/
