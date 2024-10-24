@@ -20,9 +20,10 @@ title: 插件集成测试框架
 
 ## 端口使用
 
-测试框架将使用：
+测试框架将占用 host 上的下述端口：
 
-* `:2023` 用于表示错误的端口
-* `:9999` 用于控制平面
-* `:10000` 用于数据面
-* `:10001` 用于后端服务器和模拟外部服务器
+* `:9998` 用于 Envoy 管理 API，可通过环境变量 `TEST_ENVOY_ADMIN_API_PORT` 修改
+* `:9999` 用于控制平面，可通过环境变量 `TEST_ENVOY_CONTROL_PLANE_PORT` 修改
+* `:10000` 用于数据面，可通过环境变量 `TEST_ENVOY_DATA_PLANE_PORT` 修改
+
+例如，`TEST_ENVOY_CONTROL_PLANE_PORT=19999 go test -v ./tests/integration -run TestPluginXX` 将使用 `:19999` 端口作为控制平面端口。

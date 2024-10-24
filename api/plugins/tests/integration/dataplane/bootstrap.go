@@ -149,6 +149,20 @@ func (b *bootstrap) buildConfiguration() (map[string]interface{}, error) {
 
 	staticResources := root["static_resources"].(map[string]interface{})
 	clusters := staticResources["clusters"].([]interface{})
+
+	port := "9999"
+	portEnv := os.Getenv("TEST_ENVOY_CONTROL_PLANE_PORT")
+	if portEnv != "" {
+		port = portEnv
+	}
+	for _, c := range clusters {
+		if c.(map[string]interface{})["name"] == "config_server" {
+			load := c.(map[string]interface{})["load_assignment"].(map[string]interface{})["endpoints"].([]interface{})[0].(map[string]interface{})["lb_endpoints"].([]interface{})[0].(map[string]interface{})["endpoint"].(map[string]interface{})["address"].(map[string]interface{})["socket_address"].(map[string]interface{})
+			load["port_value"] = port
+			break
+		}
+	}
+
 	newClusters := []interface{}{}
 	for _, c := range b.clusters {
 		newClusters = append(newClusters, c)

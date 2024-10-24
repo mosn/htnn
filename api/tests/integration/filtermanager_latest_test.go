@@ -242,7 +242,7 @@ func TestFilterManagerTrailersWithGrpcBackend(t *testing.T) {
 	}
 	defer dp.Stop()
 
-	helper.WaitServiceUp(t, ":50051", "grpc")
+	helper.WaitServiceUp(t, ":50001", "grpc")
 
 	s := &filtermanager.FilterManagerConfig{
 		Plugins: []*model.FilterConfig{

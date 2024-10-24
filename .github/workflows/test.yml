@@ -153,6 +153,11 @@ jobs:
   plugins-integration-test:
     timeout-minutes: 10
     runs-on: ubuntu-latest
+    env:
+      # to test the custom port feature
+      TEST_ENVOY_ADMIN_API_PORT: 9901
+      TEST_ENVOY_CONTROL_PLANE_PORT: 9902
+      TEST_ENVOY_DATA_PLANE_PORT: 9903
     defaults:
       run:
         working-directory: ./plugins

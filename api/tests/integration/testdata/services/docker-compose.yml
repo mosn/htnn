@@ -3,7 +3,7 @@ services:
   grpc:
     build: ./grpc
     ports:
-    - "50051:50051"
+    - "50001:50001"
     restart: unless-stopped
     networks:
       service:

@@ -10,4 +10,4 @@ load_assignment:
         address:
           socket_address:
             address: grpc
-            port_value: 50051
+            port_value: 50001
