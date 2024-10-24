@@ -32,10 +32,7 @@ func (m *filterManager) OnLog(reqHdr capi.RequestHeaderMap, reqTrailer capi.Requ
 	wrappedReqHdr := &filterManagerRequestHeaderMap{
 		RequestHeaderMap: reqHdr,
 	}
-	m.hdrLock.Lock()
-	m.reqHdr = wrappedReqHdr
-	m.hdrLock.Unlock()
-	m.runOnLogPhase(m.reqHdr, reqTrailer, rspHdr, rspTrailer)
+	m.runOnLogPhase(wrappedReqHdr, reqTrailer, rspHdr, rspTrailer)
 }
 
 func wrapFilterManager(fm *filterManager) capi.StreamFilter {
