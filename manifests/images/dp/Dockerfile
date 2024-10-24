@@ -23,12 +23,12 @@ ARG TARGETARCH
 ARG GOPROXY
 ENV GOPROXY=$GOPROXY
 
-WORKDIR /workspace
+WORKDIR /htnn
 
 # Copy the source
 
 COPY go.* ./
-RUN sed -i 's/.\/site/.\/external\/istio/' go.work && sed -i '/.\/e2e/d' go.work && sed -i '/.\/tools/d' go.work
+RUN sed -i '/.\/site/d' go.work && sed -i '/.\/e2e/d' go.work && sed -i '/.\/tools/d' go.work
 COPY api/ api/
 COPY types/ types/
 COPY plugins/ plugins/
@@ -48,7 +48,7 @@ _EOF
 
 # hadolint ignore=DL3008
 RUN apt-get update && apt-get install -y patch --no-install-recommends
-RUN TARGET_ISTIO_DIR=$(pwd)/external/istio make prebuild
+RUN make prebuild
 
 COPY patch/switch-envoy-go-version.sh patch/switch-envoy-go-version.sh
 COPY common.mk common.mk
@@ -57,8 +57,8 @@ RUN ./patch/switch-envoy-go-version.sh 1.29.5 && \
     cd plugins/ && \
     ENVOY_API_VERSION=1.29 make build-so-local
 
-WORKDIR /workspace/external/istio
-RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -C pilot/cmd/pilot-agent -a -o /workspace/pilot-agent
+WORKDIR /istio
+RUN CGO_ENABLED=0 GOOS=${TARGETOS:-linux} GOARCH=${TARGETARCH} go build -C pilot/cmd/pilot-agent -a -o /htnn/pilot-agent
 
 # hadolint ignore=DL3006
 FROM ${PROXY_BASE_IMAGE}
@@ -69,6 +69,6 @@ LABEL org.opencontainers.image.source=https://github.com/mosn/htnn
 LABEL org.opencontainers.image.description="This is image used in the HTNN data plane."
 LABEL org.opencontainers.image.licenses="Apache-2.0"
 
-COPY --from=builder /workspace/pilot-agent /usr/local/bin/
-COPY --from=builder /workspace/plugins/libgolang.so /etc/libgolang.so
+COPY --from=builder /htnn/pilot-agent /usr/local/bin/
+COPY --from=builder /htnn/plugins/libgolang.so /etc/libgolang.so
 CMD ["envoy"]

@@ -215,8 +215,10 @@ verify-example:
 	cd ./examples/dev_your_plugin && ./verify.sh
 
 # use a path outside repo so the linters won't lint the istio files
-TARGET_ISTIO_DIR ?= $(shell pwd)/../istio
+TARGET_ISTIO_DIR = $(shell pwd)/../istio
 
+# When you run `prebuild`, please ensure the HTNN is downloaded as `./htnn`, so the patch can work correctly.
+# And if the `istio` exists, ensure it is in the correct $ISTIO_VERSION. Otherwise, the patch may not be applied correctly.
 .PHONY: prebuild
 prebuild:
 	if [[ ! -d $(TARGET_ISTIO_DIR) ]]; then \

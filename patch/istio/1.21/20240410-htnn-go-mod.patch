@@ -12,9 +12,9 @@ index e7f308e890..def9507093 100644
 +)
 +
 +replace (
-+	mosn.io/htnn/api => ../../api
-+	mosn.io/htnn/controller => ../../controller
-+	mosn.io/htnn/types => ../../types
++	mosn.io/htnn/api => ../htnn/api
++	mosn.io/htnn/controller => ../htnn/controller
++	mosn.io/htnn/types => ../htnn/types
 +)
 +
 +// Downgrade some deps to match the one used in istio
