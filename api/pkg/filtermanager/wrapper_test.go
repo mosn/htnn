@@ -35,13 +35,14 @@ func TestDebugFilter(t *testing.T) {
 
 	f2.DecodeHeaders(nil, true)
 	f1.DecodeHeaders(nil, true)
-	records := cb.PluginState().Get("debugMode", "executionRecords").([]model.ExecutionRecord)
+	records := cb.PluginState().Get("debugMode", "executionRecords").([]*model.ExecutionRecord)
 	t.Logf("get records %+v\n", records) // for debug when test failed
 	assert.Equal(t, 2, len(records))
 	assert.Equal(t, "two", records[0].PluginName)
-	assert.True(t, records[0].Record["DecodeHeaders"] > 0)
+	assert.True(t, records[0].Record > 0)
 	assert.Equal(t, "one", records[1].PluginName)
-	assert.True(t, records[1].Record["DecodeHeaders"] > 0)
+	assert.True(t, records[1].Record > 0)
+	decodeHeadersCost := records[1].Record
 
 	patches := gomonkey.ApplyMethodFunc(raw1, "DecodeData", func(data api.BufferInstance, endStream bool) api.ResultAction {
 		time.Sleep(100 * time.Millisecond)
@@ -52,12 +53,12 @@ func TestDebugFilter(t *testing.T) {
 	f1.DecodeData(nil, false)
 	f1.DecodeData(nil, true)
 
-	records = cb.PluginState().Get("debugMode", "executionRecords").([]model.ExecutionRecord)
+	records = cb.PluginState().Get("debugMode", "executionRecords").([]*model.ExecutionRecord)
 	t.Logf("get records %+v\n", records) // for debug when test failed
 	assert.Equal(t, 2, len(records))
 	assert.Equal(t, "one", records[1].PluginName)
 	// Should be the sum of multiple calls
 	delta := 10 * time.Millisecond
-	rec := records[1].Record["DecodeData"]
+	rec := records[1].Record - decodeHeadersCost
 	assert.True(t, 200*time.Millisecond-delta < rec && rec < 200*time.Millisecond+delta, rec)
 }

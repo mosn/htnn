@@ -129,57 +129,57 @@ func NewDebugFilter(name string, internal api.Filter, callbacks api.FilterCallba
 	}
 }
 
-func (f *debugFilter) recordExecution(start time.Time, method string) {
+func (f *debugFilter) recordExecution(start time.Time) {
 	duration := time.Since(start)
 	executionRecords := f.callbacks.PluginState().Get("debugMode", "executionRecords")
 	if executionRecords == nil {
-		executionRecords = []model.ExecutionRecord{}
+		executionRecords = []*model.ExecutionRecord{}
 		f.callbacks.PluginState().Set("debugMode", "executionRecords", executionRecords)
 	}
 
-	records, ok := executionRecords.([]model.ExecutionRecord)
+	records, ok := executionRecords.([]*model.ExecutionRecord)
 	if !ok {
 		panic(fmt.Sprintf("unexpected type: %s", reflect.TypeOf(executionRecords)))
 	}
 	for _, record := range records {
 		if record.PluginName == f.name {
-			record.Record[method] += duration
+			record.Record += duration
 			return
 		}
 	}
-	f.callbacks.PluginState().Set("debugMode", "executionRecords", append(records, model.ExecutionRecord{
+	f.callbacks.PluginState().Set("debugMode", "executionRecords", append(records, &model.ExecutionRecord{
 		PluginName: f.name,
-		Record:     map[string]time.Duration{method: duration},
+		Record:     duration,
 	}))
 }
 
 func (f *debugFilter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {
-	defer f.recordExecution(time.Now(), "DecodeHeaders")
+	defer f.recordExecution(time.Now())
 	return f.internal.DecodeHeaders(headers, endStream)
 }
 
 func (f *debugFilter) DecodeData(data api.BufferInstance, endStream bool) api.ResultAction {
-	defer f.recordExecution(time.Now(), "DecodeData")
+	defer f.recordExecution(time.Now())
 	return f.internal.DecodeData(data, endStream)
 }
 
 func (f *debugFilter) DecodeTrailers(trailers api.RequestTrailerMap) api.ResultAction {
-	defer f.recordExecution(time.Now(), "DecodeTrailers")
+	defer f.recordExecution(time.Now())
 	return f.internal.DecodeTrailers(trailers)
 }
 
 func (f *debugFilter) EncodeHeaders(headers api.ResponseHeaderMap, endStream bool) api.ResultAction {
-	defer f.recordExecution(time.Now(), "EncodeHeaders")
+	defer f.recordExecution(time.Now())
 	return f.internal.EncodeHeaders(headers, endStream)
 }
 
 func (f *debugFilter) EncodeData(data api.BufferInstance, endStream bool) api.ResultAction {
-	defer f.recordExecution(time.Now(), "EncodeData")
+	defer f.recordExecution(time.Now())
 	return f.internal.EncodeData(data, endStream)
 }
 
 func (f *debugFilter) EncodeTrailers(trailers api.ResponseTrailerMap) api.ResultAction {
-	defer f.recordExecution(time.Now(), "EncodeTrailers")
+	defer f.recordExecution(time.Now())
 	return f.internal.EncodeTrailers(trailers)
 }
 
@@ -191,11 +191,11 @@ func (f *debugFilter) OnLog(reqHeaders api.RequestHeaderMap, reqTrailers api.Req
 }
 
 func (f *debugFilter) DecodeRequest(headers api.RequestHeaderMap, data api.BufferInstance, trailers api.RequestTrailerMap) api.ResultAction {
-	defer f.recordExecution(time.Now(), "DecodeRequest")
+	defer f.recordExecution(time.Now())
 	return f.internal.DecodeRequest(headers, data, trailers)
 }
 
 func (f *debugFilter) EncodeResponse(headers api.ResponseHeaderMap, data api.BufferInstance, trailers api.ResponseTrailerMap) api.ResultAction {
-	defer f.recordExecution(time.Now(), "EncodeResponse")
+	defer f.recordExecution(time.Now())
 	return f.internal.EncodeResponse(headers, data, trailers)
 }

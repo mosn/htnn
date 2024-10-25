@@ -31,7 +31,7 @@ func TestDebugModeSlowLog(t *testing.T) {
 	dp, err := dataplane.StartDataPlane(t, &dataplane.Option{
 		NoErrorLogCheck: true,
 		ExpectLogPattern: []string{
-			`slow log report:.+"executed_plugins":\[.+"name":"limitReq","per_phase_cost_seconds":\{"DecodeHeaders":.+`,
+			`slow log report:.+"executed_plugins":\[.+"name":"limitReq","cost_seconds":.+`,
 		},
 	})
 	if err != nil {
@@ -75,7 +75,7 @@ func TestDebugModeSlowLogNoPlugin(t *testing.T) {
 	dp, err := dataplane.StartDataPlane(t, &dataplane.Option{
 		NoErrorLogCheck: true,
 		ExpectNoLogPattern: []string{
-			`slow log report:.+"executed_plugins":\[.+"name":"limitReq","per_phase_cost_seconds":\{"DecodeHeaders":.+`,
+			`slow log report:.+"executed_plugins":\[.+"name":"limitReq","cost_seconds":.+`,
 		},
 		ExpectLogPattern: []string{
 			`slow log report:.+"server":\["envoy"\]`,
@@ -196,7 +196,7 @@ func TestDebugModeSlowLogWithFiltersFromConsumer(t *testing.T) {
 		LogLevel:        "debug",
 		NoErrorLogCheck: true,
 		ExpectLogPattern: []string{
-			`slow log report:.+"executed_plugins":\[.+"name":"limitReq","per_phase_cost_seconds":\{"DecodeHeaders":.+`,
+			`slow log report:.+"executed_plugins":\[.+"name":"limitReq","cost_seconds":.+`,
 		},
 	})
 	if err != nil {

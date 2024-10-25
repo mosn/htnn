@@ -38,8 +38,8 @@ type filter struct {
 }
 
 type executionPlugin struct {
-	Name                string             `json:"name"`
-	PerPhaseCostSeconds map[string]float64 `json:"per_phase_cost_seconds"`
+	Name        string  `json:"name"`
+	CostSeconds float64 `json:"cost_seconds"`
 }
 
 type SlowLogReport struct {
@@ -104,14 +104,11 @@ func (f *filter) OnLog(reqHeaders api.RequestHeaderMap, reqTrailers api.RequestT
 			// This is a private API and we don't guarantee its stablibity
 			r := f.callbacks.PluginState().Get("debugMode", "executionRecords")
 			if r != nil {
-				executionRecords := r.([]model.ExecutionRecord)
+				executionRecords := r.([]*model.ExecutionRecord)
 				for _, record := range executionRecords {
 					p := executionPlugin{
-						Name: record.PluginName,
-					}
-					p.PerPhaseCostSeconds = make(map[string]float64)
-					for k, v := range record.Record {
-						p.PerPhaseCostSeconds[k] = v.Seconds()
+						Name:        record.PluginName,
+						CostSeconds: record.Record.Seconds(),
 					}
 					report.ExecutedPlugins = append(report.ExecutedPlugins, p)
 				}

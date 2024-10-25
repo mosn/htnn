@@ -51,5 +51,5 @@ func NewFilterWrapper(name string, f api.Filter) *FilterWrapper {
 
 type ExecutionRecord struct {
 	PluginName string
-	Record     map[string]time.Duration
+	Record     time.Duration
 }
