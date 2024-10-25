@@ -49,9 +49,19 @@ func TestDebugFilter(t *testing.T) {
 		return api.Continue
 
 	})
+	patches.ApplyMethodFunc(raw1, "EncodeHeaders", func(headers api.ResponseHeaderMap, endStream bool) api.ResultAction {
+		time.Sleep(50 * time.Millisecond)
+		return api.Continue
+	})
+	patches.ApplyMethodFunc(raw1, "EncodeData", func(data api.BufferInstance, endStream bool) api.ResultAction {
+		time.Sleep(20 * time.Millisecond)
+		return api.Continue
+	})
 	defer patches.Reset()
 	f1.DecodeData(nil, false)
 	f1.DecodeData(nil, true)
+	f1.EncodeHeaders(nil, false)
+	f1.EncodeData(nil, true)
 
 	records = cb.PluginState().Get("debugMode", "executionRecords").([]*model.ExecutionRecord)
 	t.Logf("get records %+v\n", records) // for debug when test failed
@@ -60,5 +70,5 @@ func TestDebugFilter(t *testing.T) {
 	// Should be the sum of multiple calls
 	delta := 10 * time.Millisecond
 	rec := records[1].Record - decodeHeadersCost
-	assert.True(t, 200*time.Millisecond-delta < rec && rec < 200*time.Millisecond+delta, rec)
+	assert.True(t, 270*time.Millisecond-delta < rec && rec < 270*time.Millisecond+delta, rec)
 }
