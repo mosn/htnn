@@ -99,7 +99,18 @@ func (cp *ControlPlane) Start() {
 		// only use it on Linux.
 	}
 
-	lis, _ := net.Listen("tcp", host+":9999")
+	port := ":9999"
+	portEnv := os.Getenv("TEST_ENVOY_CONTROL_PLANE_PORT")
+	if portEnv != "" {
+		port = ":" + portEnv
+	}
+
+	lis, err := net.Listen("tcp", host+port)
+	if err != nil {
+		logger.Error(err, "failed to listen")
+		return
+	}
+
 	if err := cp.grpcServer.Serve(lis); err != nil {
 		logger.Error(err, "failed to start control plane")
 	}

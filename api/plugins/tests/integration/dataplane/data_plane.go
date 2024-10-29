@@ -30,6 +30,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -54,6 +55,9 @@ type DataPlane struct {
 	t    *testing.T
 	opt  *Option
 	done chan error
+
+	dataPlanePort string
+	adminAPIPort  string
 }
 
 type Option struct {
@@ -189,6 +193,20 @@ func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 		return nil, err
 	}
 
+	adminAPIPort := "9998"
+	adminAPIPortEnv := os.Getenv("TEST_ENVOY_ADMIN_API_PORT")
+	if adminAPIPortEnv != "" {
+		adminAPIPort = adminAPIPortEnv
+	}
+	dp.adminAPIPort = adminAPIPort
+
+	dataPlanePort := "10000"
+	dataPlanePortEnv := os.Getenv("TEST_ENVOY_DATA_PLANE_PORT")
+	if dataPlanePortEnv != "" {
+		dataPlanePort = dataPlanePortEnv
+	}
+	dp.dataPlanePort = dataPlanePort
+
 	cmdline := "docker run" +
 		" --name " + containerName +
 		" --network " + networkName +
@@ -199,7 +217,8 @@ func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 		" -v /tmp:/tmp" +
 		" -e GOCOVERDIR=" + coverDir +
 		" " + strings.Join(envs, " ") +
-		" -p 10000:10000 -p 9998:9998 " + hostAddr + " " +
+		" -p " + dataPlanePort + ":10000 -p " + adminAPIPort + ":9998 " +
+		hostAddr + " " +
 		image
 
 	content, _ := os.ReadFile(cfgFile.Name())
@@ -256,7 +275,7 @@ func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 		go func() { done <- cmd.Wait() }()
 	}()
 
-	helper.WaitServiceUp(t, ":10000", "")
+	helper.WaitServiceUp(t, ":"+dataPlanePort, "")
 
 	select {
 	case err := <-done:
@@ -381,7 +400,7 @@ func (dp *DataPlane) Patch(path string, header http.Header, body io.Reader) (*ht
 }
 
 func (dp *DataPlane) SendAndCancelRequest(path string, after time.Duration) error {
-	conn, err := net.DialTimeout("tcp", ":10000", 1*time.Second)
+	conn, err := net.DialTimeout("tcp", ":"+dp.dataPlanePort, 1*time.Second)
 	if err != nil {
 		return err
 	}
@@ -404,13 +423,13 @@ func (dp *DataPlane) SendAndCancelRequest(path string, after time.Duration) erro
 }
 
 func (dp *DataPlane) do(method string, path string, header http.Header, body io.Reader) (*http.Response, error) {
-	req, err := http.NewRequest(method, "http://localhost:10000"+path, body)
+	req, err := http.NewRequest(method, "http://localhost:"+dp.dataPlanePort+path, body)
 	if err != nil {
 		return nil, err
 	}
 	req.Header = header
 	tr := &http.Transport{DialContext: func(ctx context.Context, proto, addr string) (conn net.Conn, err error) {
-		return net.DialTimeout("tcp", ":10000", 1*time.Second)
+		return net.DialTimeout("tcp", ":"+dp.dataPlanePort, 1*time.Second)
 	}}
 
 	client := &http.Client{Transport: tr,
@@ -424,7 +443,7 @@ func (dp *DataPlane) do(method string, path string, header http.Header, body io.
 }
 
 func (dp *DataPlane) doWithTrailer(method string, path string, header http.Header, body io.Reader, trailer http.Header) (*http.Response, error) {
-	req, err := http.NewRequest(method, "http://localhost:10000"+path, body)
+	req, err := http.NewRequest(method, "http://localhost:"+dp.dataPlanePort+path, body)
 	if err != nil {
 		return nil, err
 	}
@@ -434,7 +453,7 @@ func (dp *DataPlane) doWithTrailer(method string, path string, header http.Heade
 	req.TransferEncoding = []string{"chunked"}
 	tr := &http.Transport{
 		DialContext: func(ctx context.Context, proto, addr string) (conn net.Conn, err error) {
-			return net.DialTimeout("tcp", ":10000", 1*time.Second)
+			return net.DialTimeout("tcp", ":"+dp.dataPlanePort, 1*time.Second)
 		},
 	}
 
@@ -451,7 +470,7 @@ func (dp *DataPlane) doWithTrailer(method string, path string, header http.Heade
 // Use grpcurl so that the caller can specify the proto file without building the Go code.
 // TODO: we can rewrite this in Go.
 func (dp *DataPlane) Grpcurl(importPath, protoFile, fullMethodName, req string) ([]byte, error) {
-	cmd := exec.Command("grpcurl", "-v", "-format-error", "-import-path", importPath, "-proto", protoFile, "-plaintext", "-d", req, ":10000", fullMethodName)
+	cmd := exec.Command("grpcurl", "-v", "-format-error", "-import-path", importPath, "-proto", protoFile, "-plaintext", "-d", req, ":"+dp.dataPlanePort, fullMethodName)
 	dp.t.Logf("run grpcurl command: %s", cmd.String())
 	return cmd.CombinedOutput()
 }
@@ -479,7 +498,7 @@ func (dp *DataPlane) FlushCoverage() error {
 }
 
 func (dp *DataPlane) SetLogLevel(loggerName string, level string) error {
-	req, err := http.NewRequest("POST", fmt.Sprintf("http://0.0.0.0:9998/logging?%s=%s", loggerName, level), bytes.NewReader([]byte{}))
+	req, err := http.NewRequest("POST", fmt.Sprintf("http://0.0.0.0:%s/logging?%s=%s", dp.adminAPIPort, loggerName, level), bytes.NewReader([]byte{}))
 	if err != nil {
 		return err
 	}
@@ -496,4 +515,14 @@ func (dp *DataPlane) SetLogLevel(loggerName string, level string) error {
 	}
 
 	return nil
+}
+
+func (dp *DataPlane) AdminAPIPort() int {
+	p, _ := strconv.Atoi(dp.adminAPIPort)
+	return p
+}
+
+func (dp *DataPlane) Port() int {
+	p, _ := strconv.Atoi(dp.dataPlanePort)
+	return p
 }
