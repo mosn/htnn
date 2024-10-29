@@ -5,7 +5,7 @@
 # See https://github.com/orgs/community/discussions/23042
 
 # Plugins
-
+/*/plugins/sentinel @WeixinX
 
 # Registries
 /*/registries/consul @lyt122
