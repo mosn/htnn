@@ -28,7 +28,7 @@ PROJECT_NAME    = mosn.io/htnn
 DOCKER_MIRROR   = m.daocloud.io/
 
 # Both images use glibc 2.31. Ensure libc in the images match each other.
-BUILD_IMAGE     ?= $(DOCKER_MIRROR)docker.io/library/golang:1.21-bullseye
+BUILD_IMAGE     ?= $(DOCKER_MIRROR)docker.io/library/golang:1.22-bullseye
 ENVOY_API_VERSION ?= 1.31
 PROXY_IMAGE     ?= $(DOCKER_MIRROR)docker.io/envoyproxy/envoy:contrib-v1.31.2
 # We also support other Envoy versions. See https://github.com/mosn/htnn/tree/main/site/content/en/docs/developer-guide/dataplane_support.md

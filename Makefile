@@ -77,7 +77,7 @@ build-dev-tools:
 build-dev-tools-local:
 	docker build --network=host --build-arg GOPROXY=${GOPROXY} -t ${DEV_TOOLS_IMAGE} -f tools/Dockerfile.dev ./tools
 
-GOLANGCI_LINT_VERSION = 1.56.1
+GOLANGCI_LINT_VERSION = 1.61.0
 .PHONY: lint-go
 lint-go:
 	if ! test -x $(LOCALBIN)/golangci-lint || ! $(LOCALBIN)/golangci-lint --version | grep $(GOLANGCI_LINT_VERSION) >/dev/null; then \

@@ -43,7 +43,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
-        go-version: '1.21'
+        go-version: '1.22'
         cache-dependency-path: "**/*.sum"
     - name: Choose the Envoy API
       run: |
@@ -112,7 +112,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
-        go-version: '1.21'
+        go-version: '1.22'
         cache-dependency-path: "**/*.sum"
 
     - name: Unit test
@@ -138,7 +138,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
-        go-version: '1.21'
+        go-version: '1.22'
         cache-dependency-path: "**/*.sum"
 
     - name: Test
@@ -167,7 +167,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
-        go-version: '1.21'
+        go-version: '1.22'
         cache-dependency-path: "**/*.sum"
 
     - name: Set up services
@@ -209,7 +209,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
-        go-version: '1.21'
+        go-version: '1.22'
         cache-dependency-path: "**/*.sum"
 
     - name: binary cache
@@ -273,7 +273,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
-        go-version: '1.21'
+        go-version: '1.22'
         cache-dependency-path: "**/*.sum"
 
     - name: Example
@@ -297,7 +297,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v5
       with:
-        go-version: '1.21'
+        go-version: '1.22'
         cache-dependency-path: "**/*.sum"
 
     - name: binary cache

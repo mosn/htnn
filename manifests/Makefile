@@ -24,7 +24,7 @@ PROXY_IMAGE ?= htnn/proxy:latest
 PROXY_BASE_IMAGE ?= istio/proxyv2:$(ISTIO_VERSION)
 CONTROLLER_IMAGE ?= htnn/controller:latest
 CONTROLLER_BASE_IMAGE ?= docker.io/istio/pilot:$(ISTIO_VERSION)
-GO_BUILD_BASE_IMAGE ?= golang:1.21
+GO_BUILD_BASE_IMAGE ?= golang:1.22
 
 .PHONY: build-proxy-image
 build-proxy-image:
