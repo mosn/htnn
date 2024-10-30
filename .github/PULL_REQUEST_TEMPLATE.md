@@ -1,12 +1,11 @@
 <!--
-Please change the [issue] below to the number of issue which is addressed by this
-pull request if there is one.
+Please uncomment and change the [issue] below to the number of issue which is
+addressed by this pull request if there is one.
 If the pull request references an issue X but does not close it, please change the
 prompt to "Ref #X".
-If there is no issue, please remove this prompt.
 -->
 
-Fix #[issue]
+<!--Fix #[issue]-->
 
 <!--
 Before submitting a pull request, please make sure the following is done:
