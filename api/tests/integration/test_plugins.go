@@ -532,6 +532,48 @@ func (f *beforeConsumerAndHasOtherMethodFilter) EncodeHeaders(headers api.Respon
 	return api.Continue
 }
 
+type beforeConsumerAndHasDecodeRequestPlugin struct {
+	plugins.PluginMethodDefaultImpl
+}
+
+func (p *beforeConsumerAndHasDecodeRequestPlugin) Order() plugins.PluginOrder {
+	return plugins.PluginOrder{
+		Position: plugins.OrderPositionAccess,
+	}
+}
+
+func (p *beforeConsumerAndHasDecodeRequestPlugin) Config() api.PluginConfig {
+	return &Config{}
+}
+
+func (p *beforeConsumerAndHasDecodeRequestPlugin) Factory() api.FilterFactory {
+	return beforeConsumerAndHasDecodeRequestFactory
+}
+
+func beforeConsumerAndHasDecodeRequestFactory(c interface{}, callbacks api.FilterCallbackHandler) api.Filter {
+	return &beforeConsumerAndHasDecodeRequestFilter{
+		callbacks: callbacks,
+		config:    c.(*Config),
+	}
+}
+
+type beforeConsumerAndHasDecodeRequestFilter struct {
+	api.PassThroughFilter
+
+	callbacks api.FilterCallbackHandler
+	config    *Config
+}
+
+func (f *beforeConsumerAndHasDecodeRequestFilter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {
+	headers.Add("run", "beforeConsumerAndHasDecodeRequest")
+	return api.Continue
+}
+
+func (f *beforeConsumerAndHasDecodeRequestFilter) DecodeRequest(headers api.RequestHeaderMap, data api.BufferInstance, trailers api.RequestTrailerMap) api.ResultAction {
+	headers.Add("run", "beforeConsumerAndHasDecodeRequest:DecodeRequest")
+	return api.Continue
+}
+
 type onLogPlugin struct {
 	plugins.PluginMethodDefaultImpl
 }
@@ -587,5 +629,6 @@ func init() {
 	plugins.RegisterPlugin("benchmark", &benchmarkPlugin{})
 	plugins.RegisterPlugin("benchmark2", &benchmarkPlugin{})
 	plugins.RegisterPlugin("beforeConsumerAndHasOtherMethod", &beforeConsumerAndHasOtherMethodPlugin{})
+	plugins.RegisterPlugin("beforeConsumerAndHasDecodeRequest", &beforeConsumerAndHasDecodeRequestPlugin{})
 	plugins.RegisterPlugin("onLog", &onLogPlugin{})
 }

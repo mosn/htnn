@@ -195,11 +195,13 @@ func FilterManagerFactory(c interface{}, cb capi.FilterCallbackHandler) (streamF
 					api.LogErrorf("plugin %s has DecodeRequest but not DecodeHeaders. To run DecodeRequest, we need to return api.WaitAllData from DecodeHeaders", fc.Name)
 				}
 
-				p := pkgPlugins.LoadPluginType(fc.Name)
-				if p != nil {
-					order := p.Order()
-					if order.Position <= pkgPlugins.OrderPositionAuthn {
-						api.LogErrorf("plugin %s has DecodeRequest which is not supported because the order of plugin", fc.Name)
+				if conf.consumerFiltersEndAt != 0 {
+					p := pkgPlugins.LoadPluginType(fc.Name)
+					if p != nil {
+						order := p.Order()
+						if order.Position <= pkgPlugins.OrderPositionAuthn {
+							api.LogErrorf("plugin %s has DecodeRequest which is not supported because the order of plugin", fc.Name)
+						}
 					}
 				}
 			}
