@@ -225,3 +225,54 @@ func TestConsumerFilterNotAfterConsumerRunInLaterPhase(t *testing.T) {
 		})
 	}
 }
+
+func TestConsumerFilterNotAfterConsumerRunDecodeRequest(t *testing.T) {
+	dp, err := dataplane.StartDataPlane(t, &dataplane.Option{
+		Bootstrap: dataplane.Bootstrap().AddConsumer("marvin", map[string]interface{}{
+			"auth": map[string]interface{}{
+				"consumer": `{"name":"marvin"}`,
+			},
+		}),
+		NoErrorLogCheck: true,
+		ExpectLogPattern: []string{
+			`plugin beforeConsumerAndHasDecodeRequest has DecodeRequest which is not supported because the order of plugin`,
+		},
+	})
+	if err != nil {
+		t.Fatalf("failed to start data plane: %v", err)
+		return
+	}
+	defer dp.Stop()
+
+	tests := []struct {
+		name   string
+		config *filtermanager.FilterManagerConfig
+		run    func(t *testing.T)
+	}{
+		{
+			name: "authn & exec",
+			config: controlplane.NewPluginConfig([]*model.FilterConfig{
+				{
+					Name:   "beforeConsumerAndHasDecodeRequest",
+					Config: map[string]interface{}{},
+				},
+				{
+					Name:   "consumer",
+					Config: map[string]interface{}{},
+				},
+			}),
+			run: func(t *testing.T) {
+				resp, _ := dp.Get("/echo", http.Header{"Authorization": []string{"marvin"}})
+				assert.Equal(t, 200, resp.StatusCode)
+				assert.Equal(t, []string{"beforeConsumerAndHasDecodeRequest"}, resp.Header.Values("Echo-Run"))
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			controlPlane.UseGoPluginConfig(t, tt.config, dp)
+			tt.run(t)
+		})
+	}
+}

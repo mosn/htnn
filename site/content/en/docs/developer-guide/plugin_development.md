@@ -143,7 +143,7 @@ The same process applies to the Encode path in a reverse order, and the method i
 
 Note: `EncodeResponse` is only executed if `EncodeHeaders` returns `WaitAllData`. So if `EncodeResponse` is defined, `EncodeHeaders` must be defined as well. When both `EncodeResponse` and `EncodeData/EncodeTrailers` are defined in the plugin: if `EncodeHeaders` returns `WaitAllData`, only `EncodeResponse` is executed, otherwise, only `EncodeData/EncodeTrailers` is executed.
 
-Currently, `DecodeRequest` is not supported by plugins whose order is `Access` or `Authn`.
+Currently, if Consumer plugins are configured, `DecodeRequest` is not supported by plugins whose order is `Access` or `Authn`.
 
 ## Consumer Plugins
 

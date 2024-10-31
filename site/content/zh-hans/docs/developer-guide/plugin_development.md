@@ -138,7 +138,7 @@ filter manager 实现了以下特性：
 
 注意：`EncodeResponse` 仅在 `EncodeHeaders` 返回 `WaitAllData` 时才被执行。所以如果定义了 `EncodeResponse`，一定要定义 `EncodeHeaders`。当插件里同时定义了 `EncodeResponse` 和 `EncodeData/EncodeTrailers`：如果 `EncodeHeaders` 返回 `WaitAllData`，只有 `EncodeResponse` 会运行，否则只有 `EncodeData/EncodeTrailers` 会运行。
 
-目前顺序为 `Access` 或 `Authn` 的插件不支持 `DecodeRequest` 方法。
+目前如果配置了消费者插件，顺序为 `Access` 或 `Authn` 的插件的 `DecodeRequest` 方法将不会被执行。
 
 ## 消费者插件
 
