@@ -149,7 +149,7 @@ func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 		// Since we only care about the coverage in CI, it is fine so far.
 	}
 
-	image := "m.daocloud.io/docker.io/envoyproxy/envoy:contrib-v1.31.2"
+	image := "m.daocloud.io/docker.io/envoyproxy/envoy:contrib-v1.32.0"
 
 	specifiedImage := os.Getenv("PROXY_IMAGE")
 	if specifiedImage != "" {

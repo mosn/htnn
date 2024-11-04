@@ -520,7 +520,6 @@ func (r *FilterPolicyReconciler) policyToTranslationState(ctx context.Context,
 		return nil, fmt.Errorf("failed to list HTTPFilterPolicy: %w", err)
 	}
 	for _, p := range httpfilterpolicies.Items {
-		p := p // avoid capturing loop variable
 		policies.Items = append(policies.Items, mosniov1.ConvertHTTPFilterPolicyToFilterPolicy(&p))
 	}
 
@@ -834,7 +833,6 @@ func (r *FilterPolicyReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		predicate.AnnotationChangedPredicate{},
 	)
 	for name, idxer := range r.indexers {
-		idxer := idxer
 		ss := strings.Split(name, "/")
 		group := ss[0]
 		kind := ss[1]

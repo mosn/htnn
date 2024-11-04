@@ -29,13 +29,13 @@ if [[ ! "$envoy_version" =~ ^[0-9]+\.[0-9]+\. ]]; then
     exit 1
 fi
 
-if [[ "$envoy_version" =~ ^1\.31\.[0-9]+$ ]]; then
+if [[ "$envoy_version" =~ ^1\.32\.[0-9]+$ ]]; then
     # patch version should not matter
     echo "Envoy version $envoy_version is already in used"
     exit 0
 fi
 
-if [[ ! "$envoy_version" =~ ^1\.(29|31)\. ]]; then
+if [[ ! "$envoy_version" =~ ^1\.(29|31|32)\. ]]; then
     echo "Unsupported envoy version $envoy_version"
     exit 1
 fi

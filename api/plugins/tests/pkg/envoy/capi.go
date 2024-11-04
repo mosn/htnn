@@ -558,6 +558,9 @@ func (i *filterCallbackHandler) GetProperty(key string) (string, error) {
 func (i *filterCallbackHandler) ClearRouteCache() {
 }
 
+func (i *filterCallbackHandler) RefreshRouteCache() {
+}
+
 func (i *filterCallbackHandler) LookupConsumer(_, _ string) (api.Consumer, bool) {
 	return nil, false
 }

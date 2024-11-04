@@ -31,7 +31,8 @@ require (
 | 版本 | build tag                  |
 |------|----------------------------|
 | dev  | envoydev                   |
-| 1.31 | 最新版本，不需要 build tag |
+| 1.32 | 最新版本，不需要 build tag |
+| 1.31 | envoy1.31                  |
 | 1.29 | envoy1.29                  |
 
 举个例子，编译在 Envoy 1.29 上可运行的 shared library 需要执行下面命令：

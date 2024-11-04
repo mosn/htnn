@@ -37,7 +37,7 @@ func TestConfig(t *testing.T) {
 			input: `{
 				"keys": [{"name": "x", "source": "body"}]
 			}`,
-			err: `invalid value for enum type: "body"`,
+			err: `invalid value for enum field source: "body"`,
 		},
 	}
 

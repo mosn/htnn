@@ -213,6 +213,8 @@ type StreamFilterCallbacks interface {
 	// ClearRouteCache clears the route cache for the current request, and filtermanager will re-fetch the route in the next filter.
 	// Please be careful to invoke it, since filtermanager will raise an 404 route_not_found response when failed to re-fetch a route.
 	ClearRouteCache()
+	// RefreshRouteCache works like ClearRouteCache, but it will re-fetch the route immediately.
+	RefreshRouteCache()
 
 	// Methods added by HTNN
 

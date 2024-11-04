@@ -159,7 +159,6 @@ var _ = Describe("ServiceRegistry controller", func() {
 					return false
 				}
 				for _, item := range registries.Items {
-					item := item
 					if item.Name == "invalid" {
 						r = &item
 						cs = r.Status.Conditions
@@ -189,7 +188,6 @@ var _ = Describe("ServiceRegistry controller", func() {
 					return false
 				}
 				for _, item := range registries.Items {
-					item := item
 					if item.Name == "earth" {
 						r = &item
 						cs = r.Status.Conditions
@@ -258,7 +256,6 @@ var _ = Describe("ServiceRegistry controller", func() {
 					return false
 				}
 				for _, item := range registries.Items {
-					item := item
 					if item.Name == "moon" {
 						registryMoon = &item
 					} else if item.Name == "earth" {
@@ -324,7 +321,6 @@ var _ = Describe("ServiceRegistry controller", func() {
 					return false
 				}
 				for _, item := range registries.Items {
-					item := item
 					if item.Spec.Type != "test_counter" {
 						registry = &item
 					} else {

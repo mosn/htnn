@@ -81,7 +81,6 @@ var _ = Describe("Consumer controller", func() {
 				}
 				handled := len(consumers.Items) == 2
 				for _, item := range consumers.Items {
-					item := item
 					if item.Name == "spacewander" {
 						c = &item
 						cs = c.Status.Conditions

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build !envoy1.29
+//go:build !envoy1.29 && !envoy1.31
 
 package integration
 
@@ -308,4 +308,34 @@ Response trailers received:
 			tt.expect(t, resp)
 		})
 	}
+}
+
+func TestFilterManagerLogWithTrailers(t *testing.T) {
+	dp, err := dataplane.StartDataPlane(t, &dataplane.Option{
+		ExpectLogPattern: []string{
+			`receive request trailers: .*expires:Wed, 21 Oct 2015 07:28:00 GMT.*`,
+		},
+	})
+	if err != nil {
+		t.Fatalf("failed to start data plane: %v", err)
+		return
+	}
+	defer dp.Stop()
+
+	lp := &filtermanager.FilterManagerConfig{
+		Plugins: []*model.FilterConfig{
+			{
+				Name:   "onLog",
+				Config: &Config{},
+			},
+		},
+	}
+
+	controlPlane.UseGoPluginConfig(t, lp, dp)
+	hdr := http.Header{}
+	trailer := http.Header{}
+	trailer.Add("Expires", "Wed, 21 Oct 2015 07:28:00 GMT")
+	resp, err := dp.PostWithTrailer("/echo", hdr, bytes.NewReader([]byte("test")), trailer)
+	require.Nil(t, err)
+	assert.Equal(t, 200, resp.StatusCode)
 }

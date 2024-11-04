@@ -12,18 +12,16 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// We use go.work so that we don't need to update the sub go modules'
-// version during the development. We commit it to the repository to
-// reduce the bar of entry for the developers (now they don't need to
-// setup go.work by themselves).
-go 1.22
+//go:build !envoy1.29 && !envoydev
 
-use (
-	./api
-	./controller
-	./e2e
-	./plugins
-	./site
-	./tools
-	./types
+package filtermanager
+
+import (
+	"runtime/debug"
+
+	"mosn.io/htnn/api/pkg/filtermanager/api"
 )
+
+func (cb *filterManagerCallbackHandler) RefreshRouteCache() {
+	api.LogErrorf("RefreshRouteCache is not implemented: %s", debug.Stack())
+}
