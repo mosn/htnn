@@ -7,7 +7,7 @@ linters:
     - bodyclose
     - contextcheck
     - errcheck
-    - exportloopref
+    - exportloopref # replace it with copyloopref once we upgrade the minimal Go requirement to 1.22
     - forcetypeassert
     - gocheckcompilerdirectives
     - gocritic
@@ -31,6 +31,7 @@ linters-settings:
       - opinionated
   gosec:
     excludes:
+      - G115 # Ignore "integer overflow conversion int". Since we call the conversion explicitly, we know what we do.
       - G402 # TLS InsecureSkipVerify may be true.
   revive:
     rules:

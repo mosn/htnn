@@ -25,6 +25,6 @@ done
 
 pushd "$TARGET_ISTIO_DIR"
 go mod tidy
-go install golang.org/x/tools/cmd/goimports@v0.24.0 # required by codegen. Version higher than 0.24.0 doesn't support Go 1.21.
+go install golang.org/x/tools/cmd/goimports@v0.26.0
 go run pkg/config/schema/codegen/tools/collections.main.go
 popd
