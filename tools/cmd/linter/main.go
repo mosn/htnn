@@ -667,7 +667,7 @@ func lintFeatureMaturityLevel() error {
 					break
 				}
 			}
-			if !found && record.Name != "route_patch" { // FIXME: temporary workaround, we don't have time to write its doc yet
+			if !found {
 				return fmt.Errorf("feature maturity record of %s %s is missing in the documentation", category, record.Name)
 			}
 		}
