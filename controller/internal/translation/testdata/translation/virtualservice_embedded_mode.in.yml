@@ -1,0 +1,60 @@
+istioGateway:
+- apiVersion: networking.istio.io/v1beta1
+  kind: Gateway
+  metadata:
+    name: httpbin-gateway
+    namespace: default
+  spec:
+    selector:
+      istio: ingressgateway
+    servers:
+    - hosts:
+      - httpbin.example.com
+      port:
+        name: http
+        number: 80
+        protocol: HTTP
+virtualService:
+  httpbin-gateway:
+    - apiVersion: networking.istio.io/v1beta1
+      kind: VirtualService
+      metadata:
+        name: httpbin
+        namespace: default
+        annotations:
+          htnn.mosn.io/filterpolicy: |
+            {"apiVersion":"htnn.mosn.io/v1","kind":"FilterPolicy","metadata":{"name":"policy","namespace":"default"},"spec":{"filters":{"animal":{"config":{"hostName":"fish"}},"localReply":{"config":{"code":404}}}}}
+      spec:
+        gateways:
+        - httpbin-gateway
+        hosts:
+        - httpbin.example.com
+        http:
+        - match:
+          - uri:
+              prefix: /status
+          name: policy
+          route:
+          - destination:
+              host: httpbin
+              port:
+                number: 8000
+filterPolicy:
+  httpbin:
+  - apiVersion: htnn.mosn.io/v1
+    kind: FilterPolicy
+    metadata:
+      name: policy
+      namespace: default
+    spec:
+      targetRef:
+        group: networking.istio.io
+        kind: VirtualService
+        name: httpbin
+      filters:
+        animal:
+          config:
+            hostName: goldfish
+        demo:
+          config:
+            hostName: micky
