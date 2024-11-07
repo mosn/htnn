@@ -888,6 +888,17 @@ func (m *filterManager) EncodeTrailers(trailers capi.ResponseTrailerMap) capi.St
 func (m *filterManager) runOnLogPhase(reqHdr api.RequestHeaderMap, reqTrailer api.RequestTrailerMap,
 	rspHdr api.ResponseHeaderMap, rspTrailer api.ResponseTrailerMap) {
 
+	if m.DebugModeEnabled() {
+		executionRecords := model.NewExecutionRecords()
+		for _, f := range m.filters {
+			if df, ok := f.Filter.(*debugFilter); ok {
+				name, duration := df.reportExecution()
+				executionRecords.Record(name, duration)
+			}
+		}
+		m.callbacks.PluginState().Set("debugMode", "executionRecords", executionRecords)
+	}
+
 	// It is unsafe to access the f.callbacks in the goroutine, as the underlying request
 	// may be destroyed when the goroutine is running. So if people want to do some IO jobs,
 	// they need to copy the used data from the request to the Go side before kicking off

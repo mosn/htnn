@@ -56,7 +56,6 @@ type executionRecord struct {
 
 type ExecutionRecords struct {
 	records []*executionRecord
-	lock    sync.Mutex
 }
 
 func NewExecutionRecords() *ExecutionRecords {
@@ -65,16 +64,9 @@ func NewExecutionRecords() *ExecutionRecords {
 	}
 }
 
-func (e *ExecutionRecords) Record(name string, duration time.Duration) {
-	for _, record := range e.records {
-		if record.name == name {
-			record.duration += duration
-			return
-		}
-	}
+// Record & ForEach should only be called in OnLog phase
 
-	e.lock.Lock()
-	defer e.lock.Unlock()
+func (e *ExecutionRecords) Record(name string, duration time.Duration) {
 	e.records = append(e.records, &executionRecord{
 		name:     name,
 		duration: duration,
@@ -82,8 +74,6 @@ func (e *ExecutionRecords) Record(name string, duration time.Duration) {
 }
 
 func (e *ExecutionRecords) ForEach(f func(name string, duration time.Duration)) {
-	e.lock.Lock()
-	defer e.lock.Unlock()
 	for _, record := range e.records {
 		f(record.name, record.duration)
 	}
