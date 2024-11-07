@@ -133,24 +133,15 @@ func (f *debugFilter) recordExecution(start time.Time) {
 	duration := time.Since(start)
 	executionRecords := f.callbacks.PluginState().Get("debugMode", "executionRecords")
 	if executionRecords == nil {
-		executionRecords = []*model.ExecutionRecord{}
+		executionRecords = model.NewExecutionRecords()
 		f.callbacks.PluginState().Set("debugMode", "executionRecords", executionRecords)
 	}
 
-	records, ok := executionRecords.([]*model.ExecutionRecord)
+	records, ok := executionRecords.(*model.ExecutionRecords)
 	if !ok {
 		panic(fmt.Sprintf("unexpected type: %s", reflect.TypeOf(executionRecords)))
 	}
-	for _, record := range records {
-		if record.PluginName == f.name {
-			record.Record += duration
-			return
-		}
-	}
-	f.callbacks.PluginState().Set("debugMode", "executionRecords", append(records, &model.ExecutionRecord{
-		PluginName: f.name,
-		Record:     duration,
-	}))
+	records.Record(f.name, duration)
 }
 
 func (f *debugFilter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {

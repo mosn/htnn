@@ -35,7 +35,25 @@ func TestDebugFilter(t *testing.T) {
 
 	f2.DecodeHeaders(nil, true)
 	f1.DecodeHeaders(nil, true)
-	records := cb.PluginState().Get("debugMode", "executionRecords").([]*model.ExecutionRecord)
+
+	type RecordWrapper struct {
+		PluginName string
+		Record     time.Duration
+	}
+
+	getRecords := func(executionRecords *model.ExecutionRecords) []RecordWrapper {
+		records := []RecordWrapper{}
+		executionRecords.ForEach(func(name string, duration time.Duration) {
+			r := RecordWrapper{
+				PluginName: name,
+				Record:     duration,
+			}
+			records = append(records, r)
+		})
+		return records
+	}
+	executionRecords := cb.PluginState().Get("debugMode", "executionRecords").(*model.ExecutionRecords)
+	records := getRecords(executionRecords)
 	t.Logf("get records %+v\n", records) // for debug when test failed
 	assert.Equal(t, 2, len(records))
 	assert.Equal(t, "two", records[0].PluginName)
@@ -63,7 +81,8 @@ func TestDebugFilter(t *testing.T) {
 	f1.EncodeHeaders(nil, false)
 	f1.EncodeData(nil, true)
 
-	records = cb.PluginState().Get("debugMode", "executionRecords").([]*model.ExecutionRecord)
+	executionRecords = cb.PluginState().Get("debugMode", "executionRecords").(*model.ExecutionRecords)
+	records = getRecords(executionRecords)
 	t.Logf("get records %+v\n", records) // for debug when test failed
 	assert.Equal(t, 2, len(records))
 	assert.Equal(t, "one", records[1].PluginName)
