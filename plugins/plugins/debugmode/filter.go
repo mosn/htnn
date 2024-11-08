@@ -104,14 +104,14 @@ func (f *filter) OnLog(reqHeaders api.RequestHeaderMap, reqTrailers api.RequestT
 			// This is a private API and we don't guarantee its stablibity
 			r := f.callbacks.PluginState().Get("debugMode", "executionRecords")
 			if r != nil {
-				executionRecords := r.([]*model.ExecutionRecord)
-				for _, record := range executionRecords {
+				executionRecords := r.(*model.ExecutionRecords)
+				executionRecords.ForEach(func(name string, duration time.Duration) {
 					p := executionPlugin{
-						Name:        record.PluginName,
-						CostSeconds: record.Record.Seconds(),
+						Name:        name,
+						CostSeconds: duration.Seconds(),
 					}
 					report.ExecutedPlugins = append(report.ExecutedPlugins, p)
-				}
+				})
 			}
 
 			b, _ := json.Marshal(report)

@@ -49,7 +49,32 @@ func NewFilterWrapper(name string, f api.Filter) *FilterWrapper {
 	}
 }
 
-type ExecutionRecord struct {
-	PluginName string
-	Record     time.Duration
+type executionRecord struct {
+	name     string
+	duration time.Duration
+}
+
+type ExecutionRecords struct {
+	records []*executionRecord
+}
+
+func NewExecutionRecords() *ExecutionRecords {
+	return &ExecutionRecords{
+		records: make([]*executionRecord, 0, 8),
+	}
+}
+
+// Record & ForEach should only be called in OnLog phase
+
+func (e *ExecutionRecords) Record(name string, duration time.Duration) {
+	e.records = append(e.records, &executionRecord{
+		name:     name,
+		duration: duration,
+	})
+}
+
+func (e *ExecutionRecords) ForEach(f func(name string, duration time.Duration)) {
+	for _, record := range e.records {
+		f(record.name, record.duration)
+	}
 }

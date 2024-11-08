@@ -15,12 +15,9 @@
 package filtermanager
 
 import (
-	"fmt"
-	"reflect"
 	"time"
 
 	"mosn.io/htnn/api/pkg/filtermanager/api"
-	"mosn.io/htnn/api/pkg/filtermanager/model"
 )
 
 type logExecutionFilter struct {
@@ -119,6 +116,8 @@ type debugFilter struct {
 	name      string
 	internal  api.Filter
 	callbacks api.FilterCallbackHandler
+
+	record time.Duration
 }
 
 func NewDebugFilter(name string, internal api.Filter, callbacks api.FilterCallbackHandler) api.Filter {
@@ -131,26 +130,11 @@ func NewDebugFilter(name string, internal api.Filter, callbacks api.FilterCallba
 
 func (f *debugFilter) recordExecution(start time.Time) {
 	duration := time.Since(start)
-	executionRecords := f.callbacks.PluginState().Get("debugMode", "executionRecords")
-	if executionRecords == nil {
-		executionRecords = []*model.ExecutionRecord{}
-		f.callbacks.PluginState().Set("debugMode", "executionRecords", executionRecords)
-	}
+	f.record += duration
+}
 
-	records, ok := executionRecords.([]*model.ExecutionRecord)
-	if !ok {
-		panic(fmt.Sprintf("unexpected type: %s", reflect.TypeOf(executionRecords)))
-	}
-	for _, record := range records {
-		if record.PluginName == f.name {
-			record.Record += duration
-			return
-		}
-	}
-	f.callbacks.PluginState().Set("debugMode", "executionRecords", append(records, &model.ExecutionRecord{
-		PluginName: f.name,
-		Record:     duration,
-	}))
+func (f *debugFilter) reportExecution() (name string, duration time.Duration) {
+	return f.name, f.record
 }
 
 func (f *debugFilter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {

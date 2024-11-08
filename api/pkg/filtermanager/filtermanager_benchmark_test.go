@@ -15,6 +15,7 @@
 package filtermanager
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
 	"testing"
@@ -133,5 +134,37 @@ func BenchmarkFilterManagerConsumerWithFilter(b *testing.B) {
 		m.DecodeHeaders(reqHdrs[n%num], false)
 		cb.WaitContinued()
 		m.OnLog(reqHdrs[n%num], nil, nil, nil)
+	}
+}
+
+func BenchmarkFilterManagerDebugEnabled(b *testing.B) {
+	envoy.DisableLogInTest() // otherwise, there is too much output
+	cb := envoy.NewCAPIFilterCallbackHandler()
+	config := initFilterManagerConfig("ns")
+	pc := []*model.ParsedFilterConfig{}
+	for i := 0; i < 5; i++ {
+		pc = append(pc, &model.ParsedFilterConfig{
+			Name:    fmt.Sprintf("all-%d", i),
+			Factory: PassThroughFactory,
+		})
+	}
+	config.parsed = pc
+	config.enableDebugMode = true
+	reqHdr := envoy.NewRequestHeaderMap(http.Header{})
+	respHdr := envoy.NewResponseHeaderMap(http.Header{})
+	reqBuf := envoy.NewBufferInstance([]byte{})
+	respBuf := envoy.NewBufferInstance([]byte{})
+
+	for n := 0; n < b.N; n++ {
+		m := unwrapFilterManager(FilterManagerFactory(config, cb))
+		m.DecodeHeaders(reqHdr, false)
+		cb.WaitContinued()
+		m.DecodeData(reqBuf, true)
+		cb.WaitContinued()
+		m.EncodeHeaders(respHdr, false)
+		cb.WaitContinued()
+		m.EncodeData(respBuf, true)
+		cb.WaitContinued()
+		m.OnLog(reqHdr, nil, respHdr, nil)
 	}
 }

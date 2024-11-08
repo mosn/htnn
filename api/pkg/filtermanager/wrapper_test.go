@@ -35,9 +35,30 @@ func TestDebugFilter(t *testing.T) {
 
 	f2.DecodeHeaders(nil, true)
 	f1.DecodeHeaders(nil, true)
-	records := cb.PluginState().Get("debugMode", "executionRecords").([]*model.ExecutionRecord)
+
+	type RecordWrapper struct {
+		PluginName string
+		Record     time.Duration
+	}
+
+	getRecords := func(executionRecords *model.ExecutionRecords) []RecordWrapper {
+		records := []RecordWrapper{}
+		executionRecords.ForEach(func(name string, duration time.Duration) {
+			r := RecordWrapper{
+				PluginName: name,
+				Record:     duration,
+			}
+			records = append(records, r)
+		})
+		return records
+	}
+	executionRecords := model.NewExecutionRecords()
+	name, duration := f2.(*debugFilter).reportExecution()
+	executionRecords.Record(name, duration)
+	name, duration = f1.(*debugFilter).reportExecution()
+	executionRecords.Record(name, duration)
+	records := getRecords(executionRecords)
 	t.Logf("get records %+v\n", records) // for debug when test failed
-	assert.Equal(t, 2, len(records))
 	assert.Equal(t, "two", records[0].PluginName)
 	assert.True(t, records[0].Record > 0)
 	assert.Equal(t, "one", records[1].PluginName)
@@ -63,12 +84,13 @@ func TestDebugFilter(t *testing.T) {
 	f1.EncodeHeaders(nil, false)
 	f1.EncodeData(nil, true)
 
-	records = cb.PluginState().Get("debugMode", "executionRecords").([]*model.ExecutionRecord)
+	executionRecords = model.NewExecutionRecords()
+	name, duration = f1.(*debugFilter).reportExecution()
+	executionRecords.Record(name, duration)
+	records = getRecords(executionRecords)
 	t.Logf("get records %+v\n", records) // for debug when test failed
-	assert.Equal(t, 2, len(records))
-	assert.Equal(t, "one", records[1].PluginName)
 	// Should be the sum of multiple calls
 	delta := 10 * time.Millisecond
-	rec := records[1].Record - decodeHeadersCost
+	rec := records[0].Record - decodeHeadersCost
 	assert.True(t, 270*time.Millisecond-delta < rec && rec < 270*time.Millisecond+delta, rec)
 }
