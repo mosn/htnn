@@ -27,3 +27,17 @@ title: 插件集成测试框架
 * `:10000` 用于数据面，可通过环境变量 `TEST_ENVOY_DATA_PLANE_PORT` 修改
 
 例如，`TEST_ENVOY_CONTROL_PLANE_PORT=19999 go test -v ./tests/integration -run TestPluginXX` 将使用 `:19999` 端口作为控制平面端口。
+
+## 调试失败的测试用例
+
+Envoy 的应用日志和访问日志都会输出到 stdout，最终被写入到 `$test_dir/test-envoy/$test_name/stdout` 中找到。
+
+如果出现 Envoy 在启动时崩溃，通常是因为加载到 Go shared library 使用的 ABI 和测试框架启动的 Envoy 不一样。这种情况下需要通过设置 `PROXY_IMAGE` 环境变量来使用正确的 Envoy 版本。
+
+默认情况下测试框架会使用 `info` 级别的应用日志。如果想要调查和预期不一样的 Envoy 行为，推荐把日志等级降到 `debug`：
+
+```go
+dp, err := dataplane.StartDataPlane(t, &dataplane.Option{
+    LogLevel:        "debug",
+})
+```

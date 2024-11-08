@@ -156,3 +156,30 @@ A consumer plugin needs to meet the following conditions:
 * Defines the `DecodeHeaders` method, and in this method, it calls `LookupConsumer` and `SetConsumer` to complete the setting of the consumer.
 
 You can take the `keyAuth` plugin as an example to write your own consumer plugin.
+
+## Why is my plugin not being executed?
+
+First, ensure that the plugin has been loaded. Envoy will print the following log when loading the Go plugin:
+
+```text
+[plugins] "msg"="register plugin" "name"="casbin"
+```
+
+Second, when Envoy receives the Go plugin configuration and the log level is set to info or lower, it will print the following log:
+
+```text
+[2024-10-16 12:02:28.505][1][info][golang] [contrib/golang/common/log/cgo.cc:18] receive consumer configuration: {"auth":{"hmacAuth":"{\"accessKey\":\"ak\",\"secretKey\":\"sk\",\"signedHeaders\":[\"x-custom-a\"],\"algorithm\":\"HMAC_SHA256\"}","keyAuth":"{\"key\":\"rick\"}"}}
+...
+[2024-10-16 12:02:29.033][1][info][golang] [contrib/golang/common/log/cgo.cc:18] receive filtermanager config: {"namespace":"ns", "plugins":[{"config":{"keys":[{"name":"Authorization", "source":"HEADER"}, {"name":"ak", "source":"QUERY"}]}, "name":"keyAuth"}, {"config":{"deny_if_no_consumer":true}, "name":"consumerRestriction"}]}
+```
+
+Please check if it matches your expectations. The order of the plugins in the `filtermanager config` indicates the execution order of the plugins. If the plugin has been loaded and there is corresponding configuration info on the target route, but the plugin is not being executed, it may be because:
+
+* The method definitions of the plugin do not meet expectations, for example, if the `DecodeRequest` method is defined but `DecodeHeaders` does not return `WaitAllData`.
+* A plugin with a higher priority halted the request beforehand, such as a preceding authentication plugin returning 403.
+* There may be a bug in HTNN.
+
+You can check the executed plugins and their execution order through the following methods:
+
+* Reduce the log level to debug, and we will see the specific plugin execution logs: `finish running plugin coverage, method: DecodeHeaders`.
+* Set the debugMode plugin, and lower the slow threshold to 0. This way, each request will log the executed plugin information in the application logs.

@@ -54,7 +54,7 @@ This FilterPolicy contains a `targetRef`, which determines the kind of resource 
 
 The `sectionName` field is optional and is only effective when the `kind` is set to either VirtualService or Gateway.
 
-* When it applies to VirtualService, it can be used to specify which particular Route under VirtualService it will be effective for. In this case, `sectionName` must match the `name` field of a Route under VirtualService.
+* When it applies to VirtualService, it can be used to specify which route under the VirtualService it takes effect on. At this time, the sectionName needs to match the name field of a route under the VirtualService. Note that if multiple VirtualServices with the same domain name set routes with the same name, Istio will eventually generate multiple routes with the same name for that domain, leading to the FilterPolicy actually hitting another route with the same name on other VirtualServices. Therefore, for different VirtualServices under the same domain name, routes with the same name should be avoided.
 * When it applies to Gateway, it can be used to specify which particular Server or Listener under Gateway it will be effective for. In this case, `sectionName` must match the `name` field of a Server under the istio Gateway or a Listener under the k8s Gateway. Note that since the policy at the Gateway level currently only applies at the port level, it is, in effect, applicable to the port where the matched Server or Listener is located.
 
 For specific examples of using `sectionName`, see the following.
