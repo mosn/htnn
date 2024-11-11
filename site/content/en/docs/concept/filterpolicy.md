@@ -375,7 +375,9 @@ For example, to issue a policy for a particular Listener of a Gateway API's Gate
           average: 1
 ```
 
-Plugins configured by different FilterPolicies with overlapping scopes will merge and then execute in the order specified at the time the plugins were registered. If different levels of FilterPolicy configure the same plugin, the configuration on the smaller scoped FilterPolicy will override the broader scoped configuration, namely `SectionName` > `VirtualService/HTTPRoute` > `Gateway`. If the same plugin is configured by the same level of FilterPolicy, the FilterPolicy created earliest takes precedence; if the timings are the same, they are ordered by the namespace and name of the FilterPolicy.
+Plugins configured by different FilterPolicies with overlapping scopes will merge and then execute in the order specified at the time the plugins were registered. If different levels of FilterPolicy configure the same plugin, the configuration on the smaller scoped FilterPolicy will override the broader scoped configuration, namely `SectionName` > `VirtualService/HTTPRoute` > `Gateway`.
+
+If the same plugin is configured by the same level of FilterPolicy, then the FilterPolicy with the earlier creation time takes precedence (the creation time depends on the k8s auto-popopulated creationTimestamp field); if the times are the same, then the FilterPolicy is sorted by its namespace and name. Since FilterPolicy in embedded mode doesn't have auto-populated creationTimestamp field, FilterPolicy in embedded mode will always have the highest priority.
 
 ## The Relationship between FilterPolicy and Plugins
 

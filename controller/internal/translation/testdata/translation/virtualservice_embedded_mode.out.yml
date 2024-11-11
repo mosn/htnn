@@ -1,0 +1,39 @@
+- metadata:
+    annotations:
+      htnn.mosn.io/info: '{"filterpolicies":["default/embedded-virtualservice-httpbin","default/policy"]}'
+    creationTimestamp: null
+    labels:
+      htnn.mosn.io/created-by: FilterPolicy
+    name: htnn-h-httpbin.example.com
+    namespace: default
+  spec:
+    configPatches:
+    - applyTo: HTTP_ROUTE
+      match:
+        routeConfiguration:
+          vhost:
+            name: httpbin.example.com:80
+            route:
+              name: policy
+      patch:
+        operation: MERGE
+        value:
+          typed_per_filter_config:
+            htnn.filters.http.golang:
+              '@type': type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.ConfigsPerRoute
+              plugins_config:
+                fm:
+                  config:
+                    '@type': type.googleapis.com/xds.type.v3.TypedStruct
+                    value:
+                      plugins:
+                      - config:
+                          hostName: fish
+                        name: animal
+                      - config:
+                          hostName: micky
+                        name: demo
+                      - config:
+                          code: 404
+                        name: localReply
+  status: {}

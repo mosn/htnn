@@ -1,0 +1,91 @@
+istioGateway:
+- apiVersion: networking.istio.io/v1beta1
+  kind: Gateway
+  metadata:
+    name: httpbin-gateway
+    namespace: default
+  spec:
+    selector:
+      istio: ingressgateway
+    servers:
+    - hosts:
+      - httpbin.example.com
+      port:
+        name: http
+        number: 80
+        protocol: HTTP
+virtualService:
+  httpbin-gateway:
+    - apiVersion: networking.istio.io/v1beta1
+      kind: VirtualService
+      metadata:
+        name: httpbin
+        namespace: default
+      spec:
+        gateways:
+        - httpbin-gateway
+        hosts:
+        - httpbin.example.com
+        http:
+        - match:
+          - uri:
+              prefix: /status
+          name: policy
+          route:
+          - destination:
+              host: httpbin
+              port:
+                number: 8000
+filterPolicy:
+  httpbin:
+  - apiVersion: htnn.mosn.io/v1
+    kind: FilterPolicy
+    metadata:
+      name: policy_old
+      namespace: default
+      creationTimestamp: "2021-07-01T00:00:00Z"
+    spec:
+      targetRef:
+        group: networking.istio.io
+        kind: VirtualService
+        name: httpbin
+      filters:
+        animal:
+          config:
+            pet: fish
+  - apiVersion: htnn.mosn.io/v1
+    kind: FilterPolicy
+    metadata:
+      name: policy_new
+      namespace: default
+      creationTimestamp: "2024-07-01T00:00:00Z"
+    spec:
+      targetRef:
+        group: networking.istio.io
+        kind: VirtualService
+        name: httpbin
+      filters:
+        animal:
+          config:
+            pet: goldfish
+        localReply:
+          config:
+            code: 403
+  - apiVersion: htnn.mosn.io/v1
+    kind: FilterPolicy
+    metadata:
+      name: policy_old
+      namespace: other
+      creationTimestamp: "2021-07-01T00:00:00Z"
+    spec:
+      targetRef:
+        group: networking.istio.io
+        kind: VirtualService
+        name: httpbin
+      filters:
+        animal:
+          config:
+            pet: cat
+        localReply:
+          config:
+            code: 404

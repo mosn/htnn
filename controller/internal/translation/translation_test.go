@@ -16,6 +16,7 @@ package translation
 
 import (
 	"context"
+	"encoding/json"
 	"maps"
 	"os"
 	"path/filepath"
@@ -32,6 +33,7 @@ import (
 	"mosn.io/htnn/controller/internal/config"
 	"mosn.io/htnn/controller/internal/istio"
 	"mosn.io/htnn/controller/internal/log"
+	"mosn.io/htnn/controller/pkg/constant"
 	_ "mosn.io/htnn/controller/plugins"    // register plugins
 	_ "mosn.io/htnn/controller/registries" // register registries
 	mosniov1 "mosn.io/htnn/types/apis/v1"
@@ -213,6 +215,17 @@ func TestTranslate(t *testing.T) {
 					}
 					s.AddPolicyForVirtualService(fp, wrapper.vs, wrapper.gws)
 				}
+
+				ann := wrapper.vs.Annotations
+				if ann[constant.AnnotationFilterPolicy] != "" {
+					var policy mosniov1.FilterPolicy
+					err := json.Unmarshal([]byte(ann[constant.AnnotationFilterPolicy]), &policy)
+					require.NoError(t, err)
+					policy.Namespace = wrapper.vs.Namespace
+					// Name convention is "embedded-$kind-$name"
+					policy.Name = "embedded-virtualservice-" + wrapper.vs.Name
+					s.AddPolicyForVirtualService(&policy, wrapper.vs, wrapper.gws)
+				}
 			}
 
 			// For gateway-only cases
@@ -224,6 +237,17 @@ func TestTranslate(t *testing.T) {
 						fp.SetNamespace("default")
 					}
 					s.AddPolicyForIstioGateway(fp, gw)
+				}
+
+				ann := gw.Annotations
+				if ann[constant.AnnotationFilterPolicy] != "" {
+					var policy mosniov1.FilterPolicy
+					err := json.Unmarshal([]byte(ann[constant.AnnotationFilterPolicy]), &policy)
+					require.NoError(t, err)
+					policy.Namespace = gw.Namespace
+					// Name convention is "embedded-$kind-$name"
+					policy.Name = "embedded-gateway-" + gw.Name
+					s.AddPolicyForIstioGateway(&policy, gw)
 				}
 			}
 			if config.EnableLDSPluginViaECDS() {

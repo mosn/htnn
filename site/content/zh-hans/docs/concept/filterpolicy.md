@@ -377,7 +377,8 @@ status:
 
 生效范围重叠的不同的 FilterPolicy 配置的插件会合并，然后按注册插件时指定的顺序执行插件。
 如果不同级别的 FilterPolicy 配置了同一个插件，那么范围更小的 FilterPolicy 上的配置会覆盖掉范围更大的配置，即 `SectionName` > `VirtualService/HTTPRoute` > `Gateway`。
-如果同一级别的 FilterPolicy 配置了同一个插件，那么创建时间更早的 FilterPolicy 优先；如果时间都一样，则按 FilterPolicy 的 namespace 和 name 排序。
+
+如果同一级别的 FilterPolicy 配置了同一个插件，那么创建时间更早的 FilterPolicy 优先（创建时间取决于 k8s 自动填充的 creationTimestamp 字段）；如果时间都一样，则按 FilterPolicy 的 namespace 和 name 排序。因为 embedded mode 下的 FilterPolicy 不存在自动填充的 creationTimestamp 字段，所以 embedded mode 下的 FilterPolicy 总是最优先。
 
 ## 插件和 FilterPolicy 的对应关系
 
