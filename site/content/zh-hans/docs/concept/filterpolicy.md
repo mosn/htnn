@@ -54,7 +54,7 @@ status:
 
 `sectionName` 是可选的，仅在 `kind` 为 VirtualService 或 Gateway 时才生效。
 
-* 当它作用于 VirtualService 时，可用于指定针对 VirtualService 下面的哪条路由生效。此时，`sectionName` 需要和 VirtualService 下面的某个路由的 `name` 字段匹配。
+* 当它作用于 VirtualService 时，可用于指定针对 VirtualService 下面的哪条路由生效。此时，`sectionName` 需要和 VirtualService 下面的某个路由的 `name` 字段匹配。注意如果同一个域名的多个 VirtualService 都设置了同名的路由，那么 istio 最终也会给该域名生成多条同名的路由，导致 FilterPolicy 实际上会命中其他 VirtualService 上的同名路由。所以对于同一域名的不同 VirtualService，需要避免出现同名的路由。
 * 当它作用于 Gateway 时，可用于指定针对 Gateway 下面的哪个 Server 或者 Listener 生效。此时，`sectionName` 需要和 istio Gateway 下面的某个 Server 的 `name` 字段抑或 k8s Gateway 下面的某个 Listener 的 `name` 字段匹配。注意因为目前 Gateway 级策略的粒度最细到端口级别，所以实际上针对匹配到的 Server 或 Listener 所在的端口生效。
 
 使用 `sectionName` 的具体示例见下文。

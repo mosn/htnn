@@ -151,3 +151,30 @@ filter manager 实现了以下特性：
 * 定义 `DecodeHeaders` 方法，且在该方法里调用 `LookupConsumer` 和 `SetConsumer` 完成消费者的设置。
 
 您可以以 `keyAuth` 插件为例，编写自己的消费者插件。
+
+## 为什么我的插件没有被执行
+
+首先确保插件已经被加载。Envoy 在加载 Go 插件时会打印如下日志：
+
+```text
+[plugins] "msg"="register plugin" "name"="casbin"
+```
+
+其次，当 Envoy 收到 Go 插件配置时，且日志等级在 info 或以下时，会打印如下日志：
+
+```text
+[2024-10-16 12:02:28.505][1][info][golang] [contrib/golang/common/log/cgo.cc:18] receive consumer configuration: {"auth":{"hmacAuth":"{\"accessKey\":\"ak\",\"secretKey\":\"sk\",\"signedHeaders\":[\"x-custom-a\"],\"algorithm\":\"HMAC_SHA256\"}","keyAuth":"{\"key\":\"rick\"}"}}
+...
+[2024-10-16 12:02:29.033][1][info][golang] [contrib/golang/common/log/cgo.cc:18] receive filtermanager config: {"namespace":"ns", "plugins":[{"config":{"keys":[{"name":"Authorization", "source":"HEADER"}, {"name":"ak", "source":"QUERY"}]}, "name":"keyAuth"}, {"config":{"deny_if_no_consumer":true}, "name":"consumerRestriction"}]}
+```
+
+请检查和预期是否一致。其中 `filtermanager config` 里面的 plugins 里的插件顺序就是插件执行的顺序。如果插件已经加载，且在目标路由上有对应的配置信息，但是插件没有被执行，可能是因为：
+
+* 插件的方法定义不合预期，比如定义了 `DecodeRequest` 方法但 `DecodeHeaders` 没有返回 `WaitAllData`。
+* 优先级在该插件之前的插件提前中止了请求，比如前面的认证插件返回 403。
+* HTNN 的 bug。
+
+可以通过以下方法查看具体执行的插件和执行顺序：
+
+* 将日志等级降到 debug，我们将看到具体的插件执行日志： `finish running plugin coverage, method: DecodeHeaders`。
+* 设置 debugMode 插件，并将 slow threshold 降为 0。这样每个请求都会在应用日志中打印执行过的插件信息。

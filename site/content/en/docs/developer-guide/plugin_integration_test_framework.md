@@ -27,3 +27,17 @@ The test framework will occupy the following ports on the host machine:
 * `:10000` for the Envoy proxy, which can be modified by the environment variable `TEST_ENVOY_DATA_PLANE_PORT`
 
 For example, `TEST_ENVOY_CONTROL_PLANE_PORT=19999 go test -v ./tests/integration -run TestPluginXX` will use `:19999` as the control plane port.
+
+## Debugging Failed Test Cases
+
+The application logs and access logs of Envoy will be output to stdout, and can ultimately be found in `$test_dir/test-envoy/$test_name/stdout`.
+
+If Envoy crashes on startup, it is usually because the ABI used by the Go shared library loaded does not match the Envoy started by the testing framework. In this case, it is necessary to set the `PROXY_IMAGE` environment variable to use the correct version of Envoy.
+
+By default, the testing framework will use the `info` level for application logs. If you want to investigate unexpected behavior from Envoy, it is recommended to lower the log level to `debug`:
+
+```go
+dp, err := dataplane.StartDataPlane(t, &dataplane.Option{
+    LogLevel:        "debug",
+})
+```

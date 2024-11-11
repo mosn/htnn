@@ -682,7 +682,7 @@ func lintFeatureMaturityLevel() error {
 }
 
 func main() {
-	// change to the root directory so that we don't need to worry about why this tool locates
+	// change to the root directory so that we don't need to worry about where this tool locates
 	os.Chdir("..")
 
 	type linter func() error
