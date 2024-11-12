@@ -51,13 +51,13 @@ jobs:
         FULL_ENVOY_VERSION=${ENVOY_API_VERSION}.0
         if [[ $ENVOY_API_VERSION == dev ]]; then
           # update this once there are more breaking changes
-          FULL_ENVOY_VERSION=1.32.1-0.20241102031349-fcdc9d6d5a9d
-          # This is the envoy:contrib-dev image pull in 2024-11-04.
+          FULL_ENVOY_VERSION=1.32.1-0.20241112025658-4fd9bb670eeb
+          # This is the envoy:contrib-dev image pull in 2024-11-12.
           # Use docker inspect --format='{{index .RepoDigests 0}}' envoyproxy/envoy:contrib-dev to get the sha256 ID.
           # We don't use the envoy:contrib-dev tag directly because it will be rewritten by the latest commit and
           # our test suite uses IfPresent policy to pull image.
           # We don't use the CI to catch the breaking change from the upstream so far.
-          export PROXY_IMAGE=envoyproxy/envoy@sha256:d7e833bc15746ff10734cabfbe9211d637ce4ea1d4e1bb678ed13b91e602a647
+          export PROXY_IMAGE=envoyproxy/envoy@sha256:0eec2cbd45c2055ea37c2321e8b83f6907a95e98c250492b48ad9dab6a20a8cb
           echo PROXY_IMAGE=$PROXY_IMAGE >> $GITHUB_ENV
         fi
         pushd ..

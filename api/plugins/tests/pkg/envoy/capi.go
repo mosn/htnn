@@ -561,6 +561,9 @@ func (i *filterCallbackHandler) ClearRouteCache() {
 func (i *filterCallbackHandler) RefreshRouteCache() {
 }
 
+func (i *filterCallbackHandler) AddData([]byte, bool) {
+}
+
 func (i *filterCallbackHandler) LookupConsumer(_, _ string) (api.Consumer, bool) {
 	return nil, false
 }
