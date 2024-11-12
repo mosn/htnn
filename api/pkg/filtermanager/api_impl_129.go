@@ -37,12 +37,24 @@ func (cb *filterManagerCallbackHandler) RefreshRouteCache() {
 	api.LogErrorf("RefreshRouteCache is not implemented: %s", debug.Stack())
 }
 
+type filterCallbackHandlerWrapper struct {
+	capi.FilterCallbackHandler
+}
+
+func NewFilterCallbackHandlerWrapper(h capi.FilterCallbackHandler) capi.FilterCallbackHandler {
+	return &filterCallbackHandlerWrapper{FilterCallbackHandler: h}
+}
+
+func (w *filterCallbackHandlerWrapper) AddData([]byte, bool) {
+	api.LogErrorf("AddData is not implemented: %s", debug.Stack())
+}
+
 func (cb *filterManagerCallbackHandler) DecoderFilterCallbacks() api.DecoderFilterCallbacks {
-	return cb.FilterCallbackHandler
+	return NewFilterCallbackHandlerWrapper(cb.FilterCallbackHandler)
 }
 
 func (cb *filterManagerCallbackHandler) EncoderFilterCallbacks() api.EncoderFilterCallbacks {
-	return cb.FilterCallbackHandler
+	return NewFilterCallbackHandlerWrapper(cb.FilterCallbackHandler)
 }
 
 func (cb *filterManagerCallbackHandler) Continue(st capi.StatusType, _ bool) {
