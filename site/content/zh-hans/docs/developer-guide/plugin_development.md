@@ -118,8 +118,8 @@ filter manager 实现了以下特性：
 因此，我们引入了一组新类型：
 
 * `WaitAllData`: 由 `DecodeHeaders` 或 `EncodeHeaders` 返回的 `ResultAction`
-* `DecodeRequest(headers api.RequestHeaderMap, data api.BufferInstance, trailers api.RequestTrailerMap) ResultAction`
-* `EncodeResponse(headers ResponseHeaderMap, data BufferInstance, trailers ResponseTrailerMap) ResultAction`
+* `DecodeRequest(headers api.RequestHeaderMap, data api.BufferInstance, trailers api.RequestTrailerMap) api.ResultAction`
+* `EncodeResponse(headers api.ResponseHeaderMap, data api.BufferInstance, trailers api.ResponseTrailerMap) api.ResultAction`
 
 `WaitAllData` 可用于根据配置和 headers 决定是否需要缓冲 body。
 
