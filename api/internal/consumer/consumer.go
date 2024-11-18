@@ -94,10 +94,10 @@ func (c *Consumer) InitConfigs() error {
 		}
 
 		c.FilterConfigs[name] = &fmModel.ParsedFilterConfig{
-			Name:         name,
-			ParsedConfig: conf,
-			Factory:      p.Factory,
-			CanSyncRun:   p.ConfigParser.IsNonBlocking(),
+			Name:          name,
+			ParsedConfig:  conf,
+			Factory:       p.Factory,
+			SyncRunPhases: p.ConfigParser.NonBlockingPhases(),
 		}
 	}
 

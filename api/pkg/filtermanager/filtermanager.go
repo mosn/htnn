@@ -122,19 +122,6 @@ func (m *filterManager) DebugModeEnabled() bool {
 	return m.config.enableDebugMode
 }
 
-type phase int
-
-const (
-	phaseDecodeHeaders phase = iota
-	phaseDecodeData
-	phaseDecodeTrailers
-	phaseDecodeRequest
-	phaseEncodeHeaders
-	phaseEncodeData
-	phaseEncodeTrailers
-	phaseEncodeResponse
-)
-
 func newSkipMethodsMap() map[string]bool {
 	return map[string]bool{
 		"DecodeHeaders":  true,
@@ -222,7 +209,7 @@ func FilterManagerFactory(c interface{}, cb capi.FilterCallbackHandler) (streamF
 
 				if overridden {
 					// canSkipMethod contains canSyncRunMethod so we can safely check it in the same loop
-					canSyncRunMethod[meth] = canSyncRunMethod[meth] && fc.CanSyncRun
+					canSyncRunMethod[meth] = canSyncRunMethod[meth] && fc.SyncRunPhases.Contains(api.MethodToPhase(meth))
 				}
 			}
 
@@ -295,14 +282,14 @@ func (m *filterManager) recordLocalReplyPluginName(name string) {
 	// off a goroutine and the goroutine panics.
 }
 
-func (m *filterManager) handleAction(res api.ResultAction, phase phase, filter *model.FilterWrapper) (needReturn bool) {
+func (m *filterManager) handleAction(res api.ResultAction, phase api.Phase, filter *model.FilterWrapper) (needReturn bool) {
 	if res == api.Continue {
 		return false
 	}
 	if res == api.WaitAllData {
-		if phase == phaseDecodeHeaders {
+		if phase == api.PhaseDecodeHeaders {
 			m.decodeRequestNeeded = true
-		} else if phase == phaseEncodeHeaders {
+		} else if phase == api.PhaseEncodeHeaders {
 			m.encodeResponseNeeded = true
 		} else {
 			api.LogErrorf("WaitAllData only allowed when processing headers, phase: %v. "+
@@ -314,7 +301,7 @@ func (m *filterManager) handleAction(res api.ResultAction, phase phase, filter *
 	switch v := res.(type) {
 	case *api.LocalResponse:
 		m.recordLocalReplyPluginName(filter.Name)
-		m.localReply(v, phase < phaseEncodeHeaders)
+		m.localReply(v, phase < api.PhaseEncodeHeaders)
 		return true
 	default:
 		api.LogErrorf("unknown result action: %+v", v)
@@ -440,7 +427,7 @@ func (m *filterManager) decodeHeaders(headers capi.RequestHeaderMap, endStream b
 			f := m.filters[i]
 			// We don't support DecodeRequest for now
 			res = f.DecodeHeaders(m.reqHdr, endStream)
-			if m.handleAction(res, phaseDecodeHeaders, f) {
+			if m.handleAction(res, api.PhaseDecodeHeaders, f) {
 				return capi.LocalReply
 			}
 		}
@@ -493,7 +480,7 @@ func (m *filterManager) decodeHeaders(headers capi.RequestHeaderMap, endStream b
 						canSkipMethod[meth] = canSkipMethod[meth] && !overridden
 
 						if overridden {
-							canSyncRunMethod[meth] = canSyncRunMethod[meth] && fc.CanSyncRun
+							canSyncRunMethod[meth] = canSyncRunMethod[meth] && fc.SyncRunPhases.Contains(api.MethodToPhase(meth))
 						}
 					}
 				}
@@ -565,7 +552,7 @@ func (m *filterManager) decodeHeaders(headers capi.RequestHeaderMap, endStream b
 	for i := m.config.consumerFiltersEndAt; i < len(m.filters); i++ {
 		f := m.filters[i]
 		res = f.DecodeHeaders(m.reqHdr, endStream)
-		if m.handleAction(res, phaseDecodeHeaders, f) {
+		if m.handleAction(res, api.PhaseDecodeHeaders, f) {
 			return capi.LocalReply
 		}
 
@@ -580,7 +567,7 @@ func (m *filterManager) decodeHeaders(headers capi.RequestHeaderMap, endStream b
 
 			// no body and no trailers
 			res = f.DecodeRequest(m.reqHdr, nil, nil)
-			if m.handleAction(res, phaseDecodeRequest, f) {
+			if m.handleAction(res, api.PhaseDecodeRequest, f) {
 				return capi.LocalReply
 			}
 		}
@@ -600,7 +587,7 @@ func (m *filterManager) DecodeRequest(headers api.RequestHeaderMap, buf capi.Buf
 		for i := 0; i < m.decodeIdx; i++ {
 			f := m.filters[i]
 			res = f.DecodeData(buf, endStreamInBody)
-			if m.handleAction(res, phaseDecodeData, f) {
+			if m.handleAction(res, api.PhaseDecodeData, f) {
 				return false
 			}
 		}
@@ -611,7 +598,7 @@ func (m *filterManager) DecodeRequest(headers api.RequestHeaderMap, buf capi.Buf
 		for i := 0; i < m.decodeIdx; i++ {
 			f := m.filters[i]
 			res = f.DecodeTrailers(trailers)
-			if m.handleAction(res, phaseDecodeTrailers, f) {
+			if m.handleAction(res, api.PhaseDecodeTrailers, f) {
 				return false
 			}
 		}
@@ -619,7 +606,7 @@ func (m *filterManager) DecodeRequest(headers api.RequestHeaderMap, buf capi.Buf
 
 	f := m.filters[m.decodeIdx]
 	res = f.DecodeRequest(headers, buf, trailers)
-	if m.handleAction(res, phaseDecodeRequest, f) {
+	if m.handleAction(res, api.PhaseDecodeRequest, f) {
 		return false
 	}
 
@@ -631,7 +618,7 @@ func (m *filterManager) DecodeRequest(headers api.RequestHeaderMap, buf capi.Buf
 			// The endStream in DecodeHeaders indicates whether there is a body.
 			// The body always exists when we hit this path.
 			res = f.DecodeHeaders(headers, false)
-			if m.handleAction(res, phaseDecodeHeaders, f) {
+			if m.handleAction(res, api.PhaseDecodeHeaders, f) {
 				return false
 			}
 			if m.decodeRequestNeeded {
@@ -646,7 +633,7 @@ func (m *filterManager) DecodeRequest(headers api.RequestHeaderMap, buf capi.Buf
 			for j := m.decodeIdx + 1; j < i; j++ {
 				f := m.filters[j]
 				res = f.DecodeData(buf, endStreamInBody)
-				if m.handleAction(res, phaseDecodeData, f) {
+				if m.handleAction(res, api.PhaseDecodeData, f) {
 					return false
 				}
 			}
@@ -656,7 +643,7 @@ func (m *filterManager) DecodeRequest(headers api.RequestHeaderMap, buf capi.Buf
 			for j := m.decodeIdx + 1; j < i; j++ {
 				f := m.filters[j]
 				res = f.DecodeTrailers(trailers)
-				if m.handleAction(res, phaseDecodeTrailers, f) {
+				if m.handleAction(res, api.PhaseDecodeTrailers, f) {
 					return false
 				}
 			}
@@ -667,7 +654,7 @@ func (m *filterManager) DecodeRequest(headers api.RequestHeaderMap, buf capi.Buf
 			m.decodeIdx = i
 			f := m.filters[m.decodeIdx]
 			res = f.DecodeRequest(headers, buf, trailers)
-			if m.handleAction(res, phaseDecodeRequest, f) {
+			if m.handleAction(res, api.PhaseDecodeRequest, f) {
 				return false
 			}
 			i++
@@ -724,7 +711,7 @@ func (m *filterManager) decodeData(buf capi.BufferInstance, endStream bool) capi
 		for i := 0; i < n; i++ {
 			f := m.filters[i]
 			res = f.DecodeData(buf, endStream)
-			if m.handleAction(res, phaseDecodeData, f) {
+			if m.handleAction(res, api.PhaseDecodeData, f) {
 				return capi.LocalReply
 			}
 		}
@@ -771,7 +758,7 @@ func (m *filterManager) decodeTrailers(trailers capi.RequestTrailerMap) capi.Sta
 	if m.decodeIdx == -1 {
 		for _, f := range m.filters {
 			res = f.DecodeTrailers(trailers)
-			if m.handleAction(res, phaseDecodeTrailers, f) {
+			if m.handleAction(res, api.PhaseDecodeTrailers, f) {
 				return capi.LocalReply
 			}
 		}
@@ -825,7 +812,7 @@ func (m *filterManager) encodeHeaders(headers capi.ResponseHeaderMap, endStream 
 	for i := n - 1; i >= 0; i-- {
 		f := m.filters[i]
 		res = f.EncodeHeaders(headers, endStream)
-		if m.handleAction(res, phaseEncodeHeaders, f) {
+		if m.handleAction(res, api.PhaseEncodeHeaders, f) {
 			return capi.LocalReply
 		}
 
@@ -838,7 +825,7 @@ func (m *filterManager) encodeHeaders(headers capi.ResponseHeaderMap, endStream 
 
 			// no body
 			res = f.EncodeResponse(headers, nil, nil)
-			if m.handleAction(res, phaseEncodeResponse, f) {
+			if m.handleAction(res, api.PhaseEncodeResponse, f) {
 				return capi.LocalReply
 			}
 		}
@@ -858,7 +845,7 @@ func (m *filterManager) EncodeResponse(headers api.ResponseHeaderMap, buf capi.B
 		for i := n - 1; i > m.encodeIdx; i-- {
 			f := m.filters[i]
 			res = f.EncodeData(buf, endStreamInBody)
-			if m.handleAction(res, phaseEncodeData, f) {
+			if m.handleAction(res, api.PhaseEncodeData, f) {
 				return false
 			}
 		}
@@ -868,7 +855,7 @@ func (m *filterManager) EncodeResponse(headers api.ResponseHeaderMap, buf capi.B
 		for i := n - 1; i > m.encodeIdx; i-- {
 			f := m.filters[i]
 			res = f.EncodeTrailers(trailers)
-			if m.handleAction(res, phaseEncodeTrailers, f) {
+			if m.handleAction(res, api.PhaseEncodeTrailers, f) {
 				return false
 			}
 		}
@@ -876,7 +863,7 @@ func (m *filterManager) EncodeResponse(headers api.ResponseHeaderMap, buf capi.B
 
 	f := m.filters[m.encodeIdx]
 	res = f.EncodeResponse(m.rspHdr, buf, nil)
-	if m.handleAction(res, phaseEncodeResponse, f) {
+	if m.handleAction(res, api.PhaseEncodeResponse, f) {
 		return false
 	}
 
@@ -885,7 +872,7 @@ func (m *filterManager) EncodeResponse(headers api.ResponseHeaderMap, buf capi.B
 		for ; i >= 0; i-- {
 			f := m.filters[i]
 			res = f.EncodeHeaders(m.rspHdr, false)
-			if m.handleAction(res, phaseEncodeHeaders, f) {
+			if m.handleAction(res, api.PhaseEncodeHeaders, f) {
 				return false
 			}
 			if m.encodeResponseNeeded {
@@ -898,7 +885,7 @@ func (m *filterManager) EncodeResponse(headers api.ResponseHeaderMap, buf capi.B
 			for j := m.encodeIdx - 1; j > i; j-- {
 				f := m.filters[j]
 				res = f.EncodeData(buf, endStreamInBody)
-				if m.handleAction(res, phaseEncodeData, f) {
+				if m.handleAction(res, api.PhaseEncodeData, f) {
 					return false
 				}
 			}
@@ -908,7 +895,7 @@ func (m *filterManager) EncodeResponse(headers api.ResponseHeaderMap, buf capi.B
 			for j := m.encodeIdx - 1; j > i; j-- {
 				f := m.filters[j]
 				res = f.EncodeTrailers(trailers)
-				if m.handleAction(res, phaseEncodeTrailers, f) {
+				if m.handleAction(res, api.PhaseEncodeTrailers, f) {
 					return false
 				}
 			}
@@ -919,7 +906,7 @@ func (m *filterManager) EncodeResponse(headers api.ResponseHeaderMap, buf capi.B
 			m.encodeIdx = i
 			f := m.filters[m.encodeIdx]
 			res = f.EncodeResponse(m.rspHdr, buf, nil)
-			if m.handleAction(res, phaseEncodeResponse, f) {
+			if m.handleAction(res, api.PhaseEncodeResponse, f) {
 				return false
 			}
 			i--
@@ -963,7 +950,7 @@ func (m *filterManager) encodeData(buf capi.BufferInstance, endStream bool) capi
 		for i := n - 1; i >= 0; i-- {
 			f := m.filters[i]
 			res = f.EncodeData(buf, endStream)
-			if m.handleAction(res, phaseEncodeData, f) {
+			if m.handleAction(res, api.PhaseEncodeData, f) {
 				return capi.LocalReply
 			}
 		}
@@ -1009,7 +996,7 @@ func (m *filterManager) encodeTrailers(trailers capi.ResponseTrailerMap) capi.St
 	if m.encodeIdx == -1 {
 		for _, f := range m.filters {
 			res = f.EncodeTrailers(trailers)
-			if m.handleAction(res, phaseEncodeTrailers, f) {
+			if m.handleAction(res, api.PhaseEncodeTrailers, f) {
 				return capi.LocalReply
 			}
 		}

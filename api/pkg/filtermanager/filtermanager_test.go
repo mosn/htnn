@@ -459,7 +459,7 @@ func TestFiltersFromConsumer(t *testing.T) {
 					ParsedConfig: addRespConf{
 						hdrName: fmt.Sprintf("x-htnn-resp-%d", i),
 					},
-					CanSyncRun: true,
+					SyncRunPhases: api.PhaseEncodeHeaders,
 				},
 			},
 		}
@@ -708,12 +708,11 @@ func TestSyncRunWhenThereAreMultiFilters(t *testing.T) {
 			ParsedConfig: addReqConf{
 				hdrName: "x-htnn-route",
 			},
-			CanSyncRun: false,
 		},
 		{
-			Name:       "access_field_on_log",
-			Factory:    accessFieldOnLogFactory,
-			CanSyncRun: true,
+			Name:          "access_field_on_log",
+			Factory:       accessFieldOnLogFactory,
+			SyncRunPhases: api.AllPhases,
 		},
 	}
 

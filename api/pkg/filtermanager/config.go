@@ -232,10 +232,10 @@ func (p *FilterManagerConfigParser) Parse(any *anypb.Any, callbacks capi.ConfigC
 				})
 			} else {
 				conf.parsed = append(conf.parsed, &model.ParsedFilterConfig{
-					Name:         proto.Name,
-					ParsedConfig: config,
-					Factory:      plugin.Factory,
-					CanSyncRun:   plugin.ConfigParser.IsNonBlocking(),
+					Name:          proto.Name,
+					ParsedConfig:  config,
+					Factory:       plugin.Factory,
+					SyncRunPhases: plugin.ConfigParser.NonBlockingPhases(),
 				})
 
 				_, ok := pkgPlugins.LoadPlugin(name).(pkgPlugins.ConsumerPlugin)

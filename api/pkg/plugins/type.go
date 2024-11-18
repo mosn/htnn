@@ -142,7 +142,7 @@ type Plugin interface {
 	Type() PluginType
 	Order() PluginOrder
 	Merge(parent interface{}, child interface{}) interface{}
-	IsNonBlocking() bool
+	NonBlockingPhases() api.Phase
 }
 
 type Initer interface {

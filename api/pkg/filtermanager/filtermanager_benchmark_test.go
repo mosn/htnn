@@ -64,9 +64,9 @@ func BenchmarkFilterManagerAllPhaseCanSyncRun(b *testing.B) {
 	config := initFilterManagerConfig("ns")
 	config.parsed = []*model.ParsedFilterConfig{
 		{
-			Name:       "allPhase",
-			Factory:    PassThroughFactory,
-			CanSyncRun: true,
+			Name:          "allPhase",
+			Factory:       PassThroughFactory,
+			SyncRunPhases: api.AllPhases,
 		},
 	}
 	reqHdr := envoy.NewRequestHeaderMap(http.Header{})

@@ -51,7 +51,7 @@ func (p *Plugin) Order() plugins.PluginOrder {
 	}
 }
 
-// IsNonBlocking returns whether the plugin is non-blocking, default to false.
+// NonBlockingPhases returns the phases of the plugin which can be run non-blockingly, default to 0.
 // If the plugin's filter doesn't contain any blocking operation, it should return true.
 // A blocking operation can be:
 // 1. I/O operation
@@ -62,8 +62,10 @@ func (p *Plugin) Order() plugins.PluginOrder {
 //
 // If a phase only contains non-blocking plugins, it will be executed synchorously, which is
 // more effective.
-func (p *Plugin) IsNonBlocking() bool {
-	return true
+//
+// Phase OnLog is always be executed synchorously so we don't need to specify it here.
+func (p *Plugin) NonBlockingPhases() api.Phase {
+	return api.PhaseDecodeHeaders | api.PhaseEncodeHeaders
 }
 
 // Config returns api.PluginConfig's implementation used during configuration processing
