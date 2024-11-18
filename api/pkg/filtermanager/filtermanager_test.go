@@ -708,6 +708,7 @@ func TestSyncRunWhenThereAreMultiFilters(t *testing.T) {
 			ParsedConfig: addReqConf{
 				hdrName: "x-htnn-route",
 			},
+			SyncRunPhases: api.PhaseDecodeTrailers,
 		},
 		{
 			Name:          "access_field_on_log",
@@ -720,7 +721,7 @@ func TestSyncRunWhenThereAreMultiFilters(t *testing.T) {
 		m := unwrapFilterManager(FilterManagerFactory(config, cb))
 		assert.Equal(t, false, m.canSyncRunDecodeHeaders)
 		assert.Equal(t, true, m.canSyncRunDecodeData)
-		assert.Equal(t, false, m.canSyncRunDecodeTrailers)
+		assert.Equal(t, true, m.canSyncRunDecodeTrailers)
 		assert.Equal(t, true, m.canSyncRunEncodeHeaders)
 		assert.Equal(t, true, m.canSyncRunEncodeData)
 		assert.Equal(t, true, m.canSyncRunEncodeTrailers)
