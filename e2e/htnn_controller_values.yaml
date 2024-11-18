@@ -4,7 +4,6 @@ pilot:
     HTNN_ENABLE_LDS_PLUGIN_VIA_ECDS: "true"
     PILOT_ENABLE_ALPHA_GATEWAY_API: true
     UNSAFE_PILOT_ENABLE_RUNTIME_ASSERTIONS: "true"
-    UNSAFE_PILOT_ENABLE_DELTA_TEST: "true"
   volumes:
   - emptyDir:
       medium: Memory
