@@ -392,6 +392,27 @@ func TestSkipMethodWhenThereAreMultiFilters(t *testing.T) {
 	}
 }
 
+type addRespConf struct {
+	hdrName string
+}
+
+func addRespFactory(c interface{}, _ api.FilterCallbackHandler) api.Filter {
+	return &addRespFilter{
+		conf: c.(addRespConf),
+	}
+}
+
+type addRespFilter struct {
+	api.PassThroughFilter
+
+	conf addRespConf
+}
+
+func (f *addRespFilter) EncodeHeaders(headers api.ResponseHeaderMap, endStream bool) api.ResultAction {
+	headers.Set(f.conf.hdrName, "htnn")
+	return api.Continue
+}
+
 type setConsumerConf struct {
 	Consumers map[string]*internalConsumer.Consumer
 }
@@ -431,6 +452,14 @@ func TestFiltersFromConsumer(t *testing.T) {
 					ParsedConfig: addReqConf{
 						hdrName: fmt.Sprintf("x-htnn-consumer-%d", i),
 					},
+				},
+				"4_add_resp": {
+					Name:    "4_add_resp",
+					Factory: addRespFactory,
+					ParsedConfig: addRespConf{
+						hdrName: fmt.Sprintf("x-htnn-resp-%d", i),
+					},
+					CanSyncRun: true,
 				},
 			},
 		}
@@ -477,11 +506,12 @@ func TestFiltersFromConsumer(t *testing.T) {
 			cb.WaitContinued()
 			if idx%2 == 0 {
 				assert.Equal(t, false, m.canSkipOnLog)
-				assert.Equal(t, 3, len(m.filters))
+				assert.Equal(t, 4, len(m.filters))
 			} else {
 				assert.Equal(t, true, m.canSkipOnLog)
-				assert.Equal(t, 2, len(m.filters))
+				assert.Equal(t, 3, len(m.filters))
 			}
+			assert.Equal(t, true, m.canSyncRunEncodeHeaders)
 
 			_, ok := hdr.Get("x-htnn-route")
 			assert.False(t, ok)
@@ -666,4 +696,34 @@ func TestDoNotRecycleInUsedFilterManager(t *testing.T) {
 		}(i)
 	}
 	wg.Wait()
+}
+
+func TestSyncRunWhenThereAreMultiFilters(t *testing.T) {
+	cb := envoy.NewCAPIFilterCallbackHandler()
+	config := initFilterManagerConfig("ns")
+	config.parsed = []*model.ParsedFilterConfig{
+		{
+			Name:    "add_req",
+			Factory: addReqFactory,
+			ParsedConfig: addReqConf{
+				hdrName: "x-htnn-route",
+			},
+			CanSyncRun: false,
+		},
+		{
+			Name:       "access_field_on_log",
+			Factory:    accessFieldOnLogFactory,
+			CanSyncRun: true,
+		},
+	}
+
+	for i := 0; i < 2; i++ {
+		m := unwrapFilterManager(FilterManagerFactory(config, cb))
+		assert.Equal(t, false, m.canSyncRunDecodeHeaders)
+		assert.Equal(t, true, m.canSyncRunDecodeData)
+		assert.Equal(t, false, m.canSyncRunDecodeTrailers)
+		assert.Equal(t, true, m.canSyncRunEncodeHeaders)
+		assert.Equal(t, true, m.canSyncRunEncodeData)
+		assert.Equal(t, true, m.canSyncRunEncodeTrailers)
+	}
 }

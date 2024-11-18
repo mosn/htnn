@@ -35,6 +35,7 @@ type ParsedFilterConfig struct {
 	InitOnce     sync.Once
 	InitFailure  error
 	Factory      api.FilterFactory
+	CanSyncRun   bool
 }
 
 type FilterWrapper struct {

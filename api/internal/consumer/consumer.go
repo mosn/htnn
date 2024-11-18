@@ -45,10 +45,12 @@ type Consumer struct {
 	FilterConfigs   map[string]*fmModel.ParsedFilterConfig
 
 	// fields that generated from the configuration
-	CanSkipMethod     map[string]bool
 	FilterNames       []string
 	InitOnce          sync.Once
+	CanSkipMethod     map[string]bool
 	CanSkipMethodOnce sync.Once
+	CanSyncRunMethod  map[string]bool
+	// CanSyncRunMethod share the same sync.Once with CanSkipMethodOnce
 }
 
 func (c *Consumer) Unmarshal(s string) error {
@@ -95,6 +97,7 @@ func (c *Consumer) InitConfigs() error {
 			Name:         name,
 			ParsedConfig: conf,
 			Factory:      p.Factory,
+			CanSyncRun:   p.ConfigParser.IsNonBlocking(),
 		}
 	}
 

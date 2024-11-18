@@ -51,6 +51,21 @@ func (p *Plugin) Order() plugins.PluginOrder {
 	}
 }
 
+// IsNonBlocking returns whether the plugin is non-blocking, default to false.
+// If the plugin's filter doesn't contain any blocking operation, it should return true.
+// A blocking operation can be:
+// 1. I/O operation
+// 2. Sleep
+// 3. Blocking syscall
+// 4. Context switch like waiting on a channel
+// and more.
+//
+// If a phase only contains non-blocking plugins, it will be executed synchorously, which is
+// more effective.
+func (p *Plugin) IsNonBlocking() bool {
+	return true
+}
+
 // Config returns api.PluginConfig's implementation used during configuration processing
 func (p *Plugin) Config() api.PluginConfig {
 	return &Config{}

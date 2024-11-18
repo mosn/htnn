@@ -235,6 +235,7 @@ func (p *FilterManagerConfigParser) Parse(any *anypb.Any, callbacks capi.ConfigC
 					Name:         proto.Name,
 					ParsedConfig: config,
 					Factory:      plugin.Factory,
+					CanSyncRun:   plugin.ConfigParser.IsNonBlocking(),
 				})
 
 				_, ok := pkgPlugins.LoadPlugin(name).(pkgPlugins.ConsumerPlugin)
