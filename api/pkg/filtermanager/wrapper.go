@@ -15,6 +15,7 @@
 package filtermanager
 
 import (
+	"sync"
 	"time"
 
 	"mosn.io/htnn/api/pkg/filtermanager/api"
@@ -117,6 +118,7 @@ type debugFilter struct {
 	internal  api.Filter
 	callbacks api.FilterCallbackHandler
 
+	lock   sync.Mutex
 	record time.Duration
 }
 
@@ -129,11 +131,15 @@ func NewDebugFilter(name string, internal api.Filter, callbacks api.FilterCallba
 }
 
 func (f *debugFilter) recordExecution(start time.Time) {
+	f.lock.Lock()
+	defer f.lock.Unlock()
 	duration := time.Since(start)
 	f.record += duration
 }
 
 func (f *debugFilter) reportExecution() (name string, duration time.Duration) {
+	f.lock.Lock()
+	defer f.lock.Unlock()
 	return f.name, f.record
 }
 
