@@ -31,7 +31,8 @@ By default, the target API version of HTNN's data plane code is the latest offic
 | Version | build tag                           |
 |---------|-------------------------------------|
 | dev     | envoydev                            |
-| 1.31    | Latest version, no build tag needed |
+| 1.32    | Latest version, no build tag needed |
+| 1.31    | envoy1.31                           |
 | 1.29    | envoy1.29                           |
 
 For example, to compile a shared library that can run on Envoy 1.29, you need to execute the following commands:

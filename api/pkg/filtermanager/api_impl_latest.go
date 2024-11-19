@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build !envoy1.29
+//go:build envoydev
 
 package filtermanager
 

@@ -77,7 +77,6 @@ var _ = Describe("DynamicConfig controller", func() {
 				}
 				handled := len(configs.Items) == 1
 				for _, item := range configs.Items {
-					item := item
 					if item.Name == "test" {
 						c = &item
 						cs = c.Status.Conditions
@@ -118,7 +117,6 @@ var _ = Describe("DynamicConfig controller", func() {
 					return false
 				}
 				for _, item := range configs.Items {
-					item := item
 					if item.Name == "test" {
 						c = &item
 						cs = c.Status.Conditions
@@ -153,7 +151,6 @@ var _ = Describe("DynamicConfig controller", func() {
 					return false
 				}
 				for _, item := range configs.Items {
-					item := item
 					if item.Name == "test" {
 						c = &item
 						cs = c.Status.Conditions

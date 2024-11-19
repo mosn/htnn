@@ -693,7 +693,7 @@ func TestValidateConsumer(t *testing.T) {
 					},
 				},
 			},
-			err: "invalid value for string type",
+			err: "invalid value for string field",
 		},
 		{
 			name: "invalid config for filter",

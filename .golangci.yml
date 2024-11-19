@@ -7,7 +7,7 @@ linters:
     - bodyclose
     - contextcheck
     - errcheck
-    - exportloopref # replace it with copyloopref once we upgrade the minimal Go requirement to 1.22
+    - copyloopvar
     - forcetypeassert
     - gocheckcompilerdirectives
     - gocritic

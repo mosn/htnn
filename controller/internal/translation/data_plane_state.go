@@ -265,7 +265,6 @@ func toDataPlaneState(ctx *Ctx, state *InitState) (*FinalState, error) {
 		Proxies: make(map[Proxy]*proxyConfig),
 	}
 	for id, vsp := range state.VirtualServicePolicies {
-		id := id // the copied id will be referenced by address later
 		gws := vsp.Gateways
 		spec := &vsp.VirtualService.Spec
 		routeNsName := &types.NamespacedName{
@@ -294,7 +293,6 @@ func toDataPlaneState(ctx *Ctx, state *InitState) (*FinalState, error) {
 	}
 
 	for id, route := range state.HTTPRoutePolicies {
-		id := id // the copied id will be referenced by address later
 		gws := route.Gateways
 		spec := &route.HTTPRoute.Spec
 		routeNsName := &types.NamespacedName{
@@ -314,7 +312,6 @@ func toDataPlaneState(ctx *Ctx, state *InitState) (*FinalState, error) {
 				Name:      gw.Name,
 			}
 			for _, ls := range gw.Spec.Listeners {
-				ls := ls
 				matched := false
 				for _, ref := range route.HTTPRoute.Spec.ParentRefs {
 					if ref.Port != nil && *ref.Port != ls.Port {
@@ -354,7 +351,6 @@ func toDataPlaneState(ctx *Ctx, state *InitState) (*FinalState, error) {
 	}
 
 	for gs, gwp := range state.GatewayPolicies {
-		gs := gs // the copied id will be referenced by address later
 		// Port with Policies should be added first
 		addServerPortToProxy(&gs, *gwp.Port, s.Proxies, gwp.Policies)
 	}

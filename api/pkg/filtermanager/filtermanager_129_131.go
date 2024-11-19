@@ -12,34 +12,51 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build envoydev
+//go:build envoy1.29 || envoy1.31
 
 package filtermanager
 
 import (
 	capi "github.com/envoyproxy/envoy/contrib/golang/common/go/api"
+
+	"mosn.io/htnn/api/pkg/filtermanager/api"
 )
 
 const (
-	supportGettingHeadersOnLog = true
+	supportGettingHeadersOnLog = false
 )
 
-func (m *filterManager) OnLog(reqHdr capi.RequestHeaderMap, reqTrailer capi.RequestTrailerMap, rspHdr capi.ResponseHeaderMap, rspTrailer capi.ResponseTrailerMap) {
+func (m *filterManager) OnLog(_ capi.RequestHeaderMap, _ capi.RequestTrailerMap, _ capi.ResponseHeaderMap, _ capi.ResponseTrailerMap) {
 	if m.canSkipOnLog {
 		return
 	}
 
-	wrappedReqHdr := &filterManagerRequestHeaderMap{
-		RequestHeaderMap: reqHdr,
-	}
-	m.runOnLogPhase(wrappedReqHdr, reqTrailer, rspHdr, rspTrailer)
+	var reqHdr api.RequestHeaderMap
+	m.hdrLock.Lock()
+	reqHdr = m.reqHdr
+	m.hdrLock.Unlock()
+	var rspHdr api.ResponseHeaderMap
+	m.hdrLock.Lock()
+	rspHdr = m.rspHdr
+	m.hdrLock.Unlock()
+
+	m.runOnLogPhase(reqHdr, nil, rspHdr, nil)
+}
+
+type filterManagerWrapper struct {
+	*filterManager
+}
+
+func (w *filterManagerWrapper) OnLog() {
+	w.filterManager.OnLog(nil, nil, nil, nil)
 }
 
 func wrapFilterManager(fm *filterManager) capi.StreamFilter {
-	return fm
+	return &filterManagerWrapper{fm}
 }
 
-// This method is test only
+// This method is only for test
 func unwrapFilterManager(wrapper capi.StreamFilter) *filterManager {
-	return wrapper.(*filterManager)
+	fmw, _ := wrapper.(*filterManagerWrapper)
+	return fmw.filterManager
 }

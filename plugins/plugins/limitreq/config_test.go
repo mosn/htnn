@@ -42,7 +42,7 @@ func TestConfig(t *testing.T) {
 		{
 			name:  "invalid burst",
 			input: `{"average":1,"burst":-1}`,
-			err:   "invalid value for uint32 type",
+			err:   "invalid value for uint32 field",
 		},
 		{
 			name:  "bad expr",
