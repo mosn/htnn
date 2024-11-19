@@ -67,6 +67,9 @@ plugins:
   - name: local_ratelimit
     status: stable
     stable_since: 0.4.0
+  - name: network_rbac
+    status: experimental
+    experimental_since: 0.4.0
   - name: oidc
     status: experimental
     experimental_since: 0.4.0

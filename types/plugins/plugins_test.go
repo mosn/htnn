@@ -59,7 +59,13 @@ func TestCheckPluginAttributes(t *testing.T) {
 			return nil
 		}
 
-		plugin := snakeToCamel(filepath.Base(path)[:len(filepath.Base(path))-3])
+		var plugin string
+		filename := filepath.Base(path)[:len(filepath.Base(path))-3]
+		if filename == "network_rbac" {
+			plugin = "networkRBAC"
+		} else {
+			plugin = snakeToCamel(filename)
+		}
 		data, err := os.ReadFile(path)
 		if err != nil {
 			return err
