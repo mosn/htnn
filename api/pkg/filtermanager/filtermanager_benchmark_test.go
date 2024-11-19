@@ -58,6 +58,32 @@ func BenchmarkFilterManagerAllPhase(b *testing.B) {
 	}
 }
 
+func BenchmarkFilterManagerAllPhaseCanSyncRun(b *testing.B) {
+	envoy.DisableLogInTest() // otherwise, there is too much output
+	cb := envoy.NewCAPIFilterCallbackHandler()
+	config := initFilterManagerConfig("ns")
+	config.parsed = []*model.ParsedFilterConfig{
+		{
+			Name:          "allPhase",
+			Factory:       PassThroughFactory,
+			SyncRunPhases: api.AllPhases,
+		},
+	}
+	reqHdr := envoy.NewRequestHeaderMap(http.Header{})
+	respHdr := envoy.NewResponseHeaderMap(http.Header{})
+	reqBuf := envoy.NewBufferInstance([]byte{})
+	respBuf := envoy.NewBufferInstance([]byte{})
+
+	for n := 0; n < b.N; n++ {
+		m := unwrapFilterManager(FilterManagerFactory(config, cb))
+		m.DecodeHeaders(reqHdr, false)
+		m.DecodeData(reqBuf, true)
+		m.EncodeHeaders(respHdr, false)
+		m.EncodeData(respBuf, true)
+		m.OnLog(reqHdr, nil, respHdr, nil)
+	}
+}
+
 func regularFactory(c interface{}, callbacks api.FilterCallbackHandler) api.Filter {
 	return &regularFilter{}
 }

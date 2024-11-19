@@ -37,6 +37,7 @@ var (
 type FilterConfigParser interface {
 	Parse(input interface{}) (interface{}, error)
 	Merge(parentConfig interface{}, childConfig interface{}) interface{}
+	NonBlockingPhases() api.Phase
 }
 
 type FilterFactoryAndParser struct {
@@ -195,6 +196,10 @@ func (p *PluginMethodDefaultImpl) Order() PluginOrder {
 
 func (p *PluginMethodDefaultImpl) Merge(parent interface{}, child interface{}) interface{} {
 	return child
+}
+
+func (p *PluginMethodDefaultImpl) NonBlockingPhases() api.Phase {
+	return 0
 }
 
 func ComparePluginOrder(a, b string) bool {

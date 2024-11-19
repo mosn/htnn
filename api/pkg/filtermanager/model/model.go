@@ -30,11 +30,12 @@ type FilterConfig struct {
 }
 
 type ParsedFilterConfig struct {
-	Name         string
-	ParsedConfig interface{}
-	InitOnce     sync.Once
-	InitFailure  error
-	Factory      api.FilterFactory
+	Name          string
+	ParsedConfig  interface{}
+	InitOnce      sync.Once
+	InitFailure   error
+	Factory       api.FilterFactory
+	SyncRunPhases api.Phase
 }
 
 type FilterWrapper struct {
