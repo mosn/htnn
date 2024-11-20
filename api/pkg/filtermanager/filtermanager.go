@@ -56,7 +56,7 @@ type filterManager struct {
 	canSkipEncodeData     bool
 	canSkipEncodeTrailers bool
 	canSkipOnLog          bool
-	canSkipMethod         map[string]bool
+	canSkipMethods        map[string]bool
 
 	canSyncRunDecodeHeaders  bool
 	canSyncRunDecodeData     bool
@@ -64,7 +64,7 @@ type filterManager struct {
 	canSyncRunEncodeHeaders  bool
 	canSyncRunEncodeData     bool
 	canSyncRunEncodeTrailers bool
-	canSyncRunMethod         map[string]bool
+	canSyncRunMethods        map[string]bool
 
 	callbacks *filterManagerCallbackHandler
 	config    *filterManagerConfig
@@ -94,6 +94,7 @@ func (m *filterManager) Reset() {
 	m.canSkipEncodeData = false
 	m.canSkipEncodeTrailers = false
 	m.canSkipOnLog = false
+	// m.canSkipMethods is reused across filters in the same config
 
 	m.canSyncRunDecodeHeaders = false
 	m.canSyncRunDecodeData = false
@@ -101,7 +102,7 @@ func (m *filterManager) Reset() {
 	m.canSyncRunEncodeHeaders = false
 	m.canSyncRunEncodeData = false
 	m.canSyncRunEncodeTrailers = false
-	// m.canSyncRunMethod is reused across filters in the same config
+	// m.canSyncRunMethods is reused across filters in the same config
 
 	m.callbacks.Reset()
 }
@@ -120,33 +121,6 @@ func (m *filterManager) MarkRunningInGoThread(flag bool) {
 
 func (m *filterManager) DebugModeEnabled() bool {
 	return m.config.enableDebugMode
-}
-
-func newSkipMethodsMap() map[string]bool {
-	return map[string]bool{
-		"DecodeHeaders":  true,
-		"DecodeData":     true,
-		"DecodeRequest":  true,
-		"DecodeTrailers": true,
-		"EncodeHeaders":  true,
-		"EncodeData":     true,
-		"EncodeResponse": true,
-		"EncodeTrailers": true,
-		"OnLog":          true,
-	}
-}
-
-func newSyncRunMethodMap() map[string]bool {
-	return map[string]bool{
-		"DecodeHeaders":  true,
-		"DecodeData":     true,
-		"DecodeRequest":  true,
-		"DecodeTrailers": true,
-		"EncodeHeaders":  true,
-		"EncodeData":     true,
-		"EncodeResponse": true,
-		"EncodeTrailers": true,
-	}
 }
 
 func needLogExecution() bool {
@@ -179,11 +153,11 @@ func FilterManagerFactory(c interface{}, cb capi.FilterCallbackHandler) (streamF
 
 	fm.callbacks.FilterCallbackHandler = cb
 
-	canSkipMethod := fm.canSkipMethod
-	canSyncRunMethod := fm.canSyncRunMethod
-	if canSkipMethod == nil {
-		canSkipMethod = newSkipMethodsMap()
-		canSyncRunMethod = newSyncRunMethodMap()
+	canSkipMethods := fm.canSkipMethods
+	canSyncRunMethods := fm.canSyncRunMethods
+	if canSkipMethods == nil {
+		canSkipMethods = api.NewAllMethodsMap()
+		canSyncRunMethods = api.NewAllMethodsMap()
 	}
 
 	filters := make([]*model.FilterWrapper, len(parsedConfig))
@@ -193,23 +167,22 @@ func FilterManagerFactory(c interface{}, cb capi.FilterCallbackHandler) (streamF
 		config := fc.ParsedConfig
 		f := factory(config, fm.callbacks)
 		// Technically, the factory might create different f for different calls. We don't support this edge case for now.
-		if fm.canSkipMethod == nil {
-			definedMethod := make(map[string]bool, len(canSkipMethod))
-			for meth := range canSkipMethod {
+		if fm.canSkipMethods == nil {
+			definedMethod := make(map[string]bool, len(canSkipMethods))
+			for meth := range canSkipMethods {
 				definedMethod[meth] = false
 			}
-			for meth := range canSkipMethod {
+			for meth := range canSkipMethods {
 				overridden, err := reflectx.IsMethodOverridden(f, meth)
 				if err != nil {
 					api.LogErrorf("failed to check method %s in plugin %s: %v", meth, fc.Name, err)
-					// canSkipMethod[meth] will be false
+					// canSkipMethods[meth] will be false
 				}
-				canSkipMethod[meth] = canSkipMethod[meth] && !overridden
+				canSkipMethods[meth] = canSkipMethods[meth] && !overridden
 				definedMethod[meth] = overridden
 
 				if overridden {
-					// canSkipMethod contains canSyncRunMethod so we can safely check it in the same loop
-					canSyncRunMethod[meth] = canSyncRunMethod[meth] && fc.SyncRunPhases.Contains(api.MethodToPhase(meth))
+					canSyncRunMethods[meth] = canSyncRunMethods[meth] && fc.SyncRunPhases.Contains(api.MethodToPhase(meth))
 				}
 			}
 
@@ -244,9 +217,9 @@ func FilterManagerFactory(c interface{}, cb capi.FilterCallbackHandler) (streamF
 		}
 	}
 
-	if fm.canSkipMethod == nil {
-		fm.canSkipMethod = canSkipMethod
-		fm.canSyncRunMethod = canSyncRunMethod
+	if fm.canSkipMethods == nil {
+		fm.canSkipMethods = canSkipMethods
+		fm.canSyncRunMethods = canSyncRunMethods
 	}
 
 	// We can't cache the slice of filters as it may be changed by consumer
@@ -254,21 +227,21 @@ func FilterManagerFactory(c interface{}, cb capi.FilterCallbackHandler) (streamF
 
 	// The skip check is based on the compiled code. So if the DecodeRequest is defined,
 	// even it is not called, DecodeData will not be skipped. Same as EncodeResponse.
-	fm.canSkipDecodeHeaders = fm.canSkipMethod["DecodeHeaders"] && fm.canSkipMethod["DecodeRequest"] && fm.config.initOnce == nil
-	fm.canSkipDecodeData = fm.canSkipMethod["DecodeData"] && fm.canSkipMethod["DecodeRequest"]
-	fm.canSkipDecodeTrailers = fm.canSkipMethod["DecodeTrailers"] && fm.canSkipMethod["DecodeRequest"]
-	fm.canSkipEncodeHeaders = fm.canSkipMethod["EncodeHeaders"]
-	fm.canSkipEncodeData = fm.canSkipMethod["EncodeData"] && fm.canSkipMethod["EncodeResponse"]
-	fm.canSkipEncodeTrailers = fm.canSkipMethod["EncodeTrailers"] && fm.canSkipMethod["EncodeResponse"]
-	fm.canSkipOnLog = fm.canSkipMethod["OnLog"]
+	fm.canSkipDecodeHeaders = fm.canSkipMethods["DecodeHeaders"] && fm.canSkipMethods["DecodeRequest"] && fm.config.initOnce == nil
+	fm.canSkipDecodeData = fm.canSkipMethods["DecodeData"] && fm.canSkipMethods["DecodeRequest"]
+	fm.canSkipDecodeTrailers = fm.canSkipMethods["DecodeTrailers"] && fm.canSkipMethods["DecodeRequest"]
+	fm.canSkipEncodeHeaders = fm.canSkipMethods["EncodeHeaders"]
+	fm.canSkipEncodeData = fm.canSkipMethods["EncodeData"] && fm.canSkipMethods["EncodeResponse"]
+	fm.canSkipEncodeTrailers = fm.canSkipMethods["EncodeTrailers"] && fm.canSkipMethods["EncodeResponse"]
+	fm.canSkipOnLog = fm.canSkipMethods["OnLog"]
 
 	// Similar to the skip check
-	fm.canSyncRunDecodeHeaders = fm.canSyncRunMethod["DecodeHeaders"] && fm.canSyncRunMethod["DecodeRequest"] && fm.config.initOnce == nil
-	fm.canSyncRunDecodeData = fm.canSyncRunMethod["DecodeData"] && fm.canSyncRunMethod["DecodeRequest"]
-	fm.canSyncRunDecodeTrailers = fm.canSyncRunMethod["DecodeTrailers"] && fm.canSyncRunMethod["DecodeRequest"]
-	fm.canSyncRunEncodeHeaders = fm.canSyncRunMethod["EncodeHeaders"]
-	fm.canSyncRunEncodeData = fm.canSyncRunMethod["EncodeData"] && fm.canSyncRunMethod["EncodeResponse"]
-	fm.canSyncRunEncodeTrailers = fm.canSyncRunMethod["EncodeTrailers"] && fm.canSyncRunMethod["EncodeResponse"]
+	fm.canSyncRunDecodeHeaders = fm.canSyncRunMethods["DecodeHeaders"] && fm.canSyncRunMethods["DecodeRequest"] && fm.config.initOnce == nil
+	fm.canSyncRunDecodeData = fm.canSyncRunMethods["DecodeData"] && fm.canSyncRunMethods["DecodeRequest"]
+	fm.canSyncRunDecodeTrailers = fm.canSyncRunMethods["DecodeTrailers"] && fm.canSyncRunMethods["DecodeRequest"]
+	fm.canSyncRunEncodeHeaders = fm.canSyncRunMethods["EncodeHeaders"]
+	fm.canSyncRunEncodeData = fm.canSyncRunMethods["EncodeData"] && fm.canSyncRunMethods["EncodeResponse"]
+	fm.canSyncRunEncodeTrailers = fm.canSyncRunMethods["EncodeTrailers"] && fm.canSyncRunMethods["EncodeResponse"]
 
 	return wrapFilterManager(fm)
 }
@@ -465,27 +438,27 @@ func (m *filterManager) decodeHeaders(headers capi.RequestHeaderMap, endStream b
 				filterWrappers[i] = model.NewFilterWrapper(name, f)
 			}
 
-			c.CanSkipMethodOnce.Do(func() {
-				canSkipMethod := newSkipMethodsMap()
-				canSyncRunMethod := newSyncRunMethodMap()
+			c.CanSkipMethodsOnce.Do(func() {
+				canSkipMethods := api.NewAllMethodsMap()
+				canSyncRunMethods := api.NewAllMethodsMap()
 				for _, fw := range filterWrappers {
 					f := fw.Filter
 					fc := c.FilterConfigs[fw.Name]
-					for meth := range canSkipMethod {
+					for meth := range canSkipMethods {
 						overridden, err := reflectx.IsMethodOverridden(f, meth)
 						if err != nil {
 							api.LogErrorf("failed to check method %s in filter: %v", meth, err)
-							// canSkipMethod[meth] will be false
+							// canSkipMethods[meth] will be false
 						}
-						canSkipMethod[meth] = canSkipMethod[meth] && !overridden
+						canSkipMethods[meth] = canSkipMethods[meth] && !overridden
 
 						if overridden {
-							canSyncRunMethod[meth] = canSyncRunMethod[meth] && fc.SyncRunPhases.Contains(api.MethodToPhase(meth))
+							canSyncRunMethods[meth] = canSyncRunMethods[meth] && fc.SyncRunPhases.Contains(api.MethodToPhase(meth))
 						}
 					}
 				}
-				c.CanSkipMethod = canSkipMethod
-				c.CanSyncRunMethod = canSyncRunMethod
+				c.CanSkipMethods = canSkipMethods
+				c.CanSyncRunMethod = canSyncRunMethods
 			})
 
 			if needLogExecution() {
@@ -502,21 +475,21 @@ func (m *filterManager) decodeHeaders(headers capi.RequestHeaderMap, endStream b
 				}
 			}
 
-			canSkipMethod := c.CanSkipMethod
-			m.canSkipDecodeData = m.canSkipDecodeData && canSkipMethod["DecodeData"] && canSkipMethod["DecodeRequest"]
-			m.canSkipDecodeTrailers = m.canSkipDecodeTrailers && canSkipMethod["DecodeTrailers"] && canSkipMethod["DecodeRequest"]
-			m.canSkipEncodeHeaders = m.canSkipEncodeData && canSkipMethod["EncodeHeaders"]
-			m.canSkipEncodeData = m.canSkipEncodeData && canSkipMethod["EncodeData"] && canSkipMethod["EncodeResponse"]
-			m.canSkipEncodeTrailers = m.canSkipEncodeTrailers && canSkipMethod["EncodeTrailers"] && canSkipMethod["EncodeResponse"]
-			m.canSkipOnLog = m.canSkipOnLog && canSkipMethod["OnLog"]
+			canSkipMethods := c.CanSkipMethods
+			m.canSkipDecodeData = m.canSkipDecodeData && canSkipMethods["DecodeData"] && canSkipMethods["DecodeRequest"]
+			m.canSkipDecodeTrailers = m.canSkipDecodeTrailers && canSkipMethods["DecodeTrailers"] && canSkipMethods["DecodeRequest"]
+			m.canSkipEncodeHeaders = m.canSkipEncodeData && canSkipMethods["EncodeHeaders"]
+			m.canSkipEncodeData = m.canSkipEncodeData && canSkipMethods["EncodeData"] && canSkipMethods["EncodeResponse"]
+			m.canSkipEncodeTrailers = m.canSkipEncodeTrailers && canSkipMethods["EncodeTrailers"] && canSkipMethods["EncodeResponse"]
+			m.canSkipOnLog = m.canSkipOnLog && canSkipMethods["OnLog"]
 
 			// Similar to the skip check
-			canSyncRunMethod := c.CanSyncRunMethod
-			m.canSyncRunDecodeData = m.canSyncRunDecodeData && canSyncRunMethod["DecodeData"] && canSyncRunMethod["DecodeRequest"]
-			m.canSyncRunDecodeTrailers = m.canSyncRunDecodeTrailers && canSyncRunMethod["DecodeTrailers"] && canSyncRunMethod["DecodeRequest"]
-			m.canSyncRunEncodeHeaders = m.canSyncRunEncodeData && canSyncRunMethod["EncodeHeaders"]
-			m.canSyncRunEncodeData = m.canSyncRunEncodeData && canSyncRunMethod["EncodeData"] && canSyncRunMethod["EncodeResponse"]
-			m.canSyncRunEncodeTrailers = m.canSyncRunEncodeTrailers && canSyncRunMethod["EncodeTrailers"] && canSyncRunMethod["EncodeResponse"]
+			canSyncRunMethods := c.CanSyncRunMethod
+			m.canSyncRunDecodeData = m.canSyncRunDecodeData && canSyncRunMethods["DecodeData"] && canSyncRunMethods["DecodeRequest"]
+			m.canSyncRunDecodeTrailers = m.canSyncRunDecodeTrailers && canSyncRunMethods["DecodeTrailers"] && canSyncRunMethods["DecodeRequest"]
+			m.canSyncRunEncodeHeaders = m.canSyncRunEncodeData && canSyncRunMethods["EncodeHeaders"]
+			m.canSyncRunEncodeData = m.canSyncRunEncodeData && canSyncRunMethods["EncodeData"] && canSyncRunMethods["EncodeResponse"]
+			m.canSyncRunEncodeTrailers = m.canSyncRunEncodeTrailers && canSyncRunMethods["EncodeTrailers"] && canSyncRunMethods["EncodeResponse"]
 
 			// TODO: add field to control if merging is allowed
 			i := 0
