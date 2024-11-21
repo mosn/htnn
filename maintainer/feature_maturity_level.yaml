@@ -13,84 +13,91 @@
 # When adding a new feature, please set the experimental_since field to the next release.
 
 plugins:
-  - name: bandwidth_limit
+  # The order here is the same as the order of the plugin execution.
+  # This is guaranteed in the CI.
+  # TODO: This file only show the plugin's registried order. We should consider a fact that
+  # some plugins may not be executed in the DecodeHeaders phase. For example, a plugin called when
+  # processing response which is registried in an early place is executed after a plugin called
+  # when processing request which is registried in a later place.
+  - name: listenerPatch
+    status: experimental
+    experimental_since: 0.4.0
+  - name: tlsInspector
+    status: experimental
+    experimental_since: 0.4.0
+  - name: networkRBAC
+    status: experimental
+    experimental_since: 0.4.0
+  - name: bandwidthLimit
     status: experimental
     experimental_since: 0.4.0
   - name: buffer
     status: experimental
     experimental_since: 0.4.0
-  - name: casbin
+  - name: localRatelimit
+    status: stable
+    stable_since: 0.4.0
+  - name: outerExtProc
     status: experimental
     experimental_since: 0.4.0
-  - name: cel_script
-    status: experimental
-    experimental_since: 0.4.0
-  - name: consumer_restriction
+  - name: outerLua
     status: experimental
     experimental_since: 0.4.0
   - name: cors
     status: stable
     stable_since: 0.4.0
-  - name: debug_mode
-    status: experimental
-    experimental_since: 0.4.0
-  - name: demo
-    status: experimental
-    experimental_since: 0.4.0
-  - name: ext_auth
-    status: stable
-    stable_since: 0.4.0
   - name: fault
     status: stable
     stable_since: 0.4.0
-  - name: hmac_auth
+  - name: debugMode
     status: experimental
     experimental_since: 0.4.0
-  - name: inner_ext_proc
+  - name: hmacAuth
     status: experimental
     experimental_since: 0.4.0
-  - name: inner_lua
-    status: experimental
-    experimental_since: 0.4.0
-  - name: key_auth
+  - name: keyAuth
     status: stable
     stable_since: 0.4.0
-  - name: limit_count_redis
-    status: stable
-    stable_since: 0.4.0
-  - name: limit_req
-    status: experimental
-    experimental_since: 0.4.0
-  - name: listener_patch
-    status: experimental
-    experimental_since: 0.4.0
-  - name: local_ratelimit
-    status: stable
-    stable_since: 0.4.0
-  - name: network_rbac
-    status: experimental
-    experimental_since: 0.4.0
   - name: oidc
     status: experimental
     experimental_since: 0.4.0
+  - name: casbin
+    status: experimental
+    experimental_since: 0.4.0
+  - name: consumerRestriction
+    status: experimental
+    experimental_since: 0.4.0
+  - name: extAuth
+    status: stable
+    stable_since: 0.4.0
   - name: opa
     status: experimental
     experimental_since: 0.4.0
-  - name: outer_ext_proc
+  - name: celScript
     status: experimental
     experimental_since: 0.4.0
-  - name: outer_lua
+  - name: limitCountRedis
+    status: stable
+    stable_since: 0.4.0
+  - name: limitReq
     status: experimental
     experimental_since: 0.4.0
-  - name: route_patch
-    status: experimental
-    experimental_since: 0.4.1
   - name: sentinel
     status: experimental
     experimental_since: 0.5.0
-  - name: tls_inspector
+  - name: demo
     status: experimental
     experimental_since: 0.4.0
+  - name: innerExtProc
+    status: experimental
+    experimental_since: 0.4.0
+  - name: innerLua
+    status: experimental
+    experimental_since: 0.4.0
+  - name: routePatch
+    status: experimental
+    experimental_since: 0.4.1
+
 registries:
   - name: consul
     status: experimental
