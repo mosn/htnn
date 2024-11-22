@@ -235,13 +235,14 @@ func FilterManagerFactory(c interface{}, cb capi.FilterCallbackHandler) (streamF
 	fm.canSkipEncodeTrailers = fm.canSkipMethods["EncodeTrailers"] && fm.canSkipMethods["EncodeResponse"]
 	fm.canSkipOnLog = fm.canSkipMethods["OnLog"]
 
-	// Similar to the skip check
+	// Similar to the skip check, but the canSyncRun check is more granular as
+	// it will consider if the request/response is fully buffered.
 	fm.canSyncRunDecodeHeaders = fm.canSyncRunMethods["DecodeHeaders"] && fm.canSyncRunMethods["DecodeRequest"] && fm.config.initOnce == nil
-	fm.canSyncRunDecodeData = fm.canSyncRunMethods["DecodeData"] && fm.canSyncRunMethods["DecodeRequest"]
-	fm.canSyncRunDecodeTrailers = fm.canSyncRunMethods["DecodeTrailers"] && fm.canSyncRunMethods["DecodeRequest"]
-	fm.canSyncRunEncodeHeaders = fm.canSyncRunMethods["EncodeHeaders"]
-	fm.canSyncRunEncodeData = fm.canSyncRunMethods["EncodeData"] && fm.canSyncRunMethods["EncodeResponse"]
-	fm.canSyncRunEncodeTrailers = fm.canSyncRunMethods["EncodeTrailers"] && fm.canSyncRunMethods["EncodeResponse"]
+	fm.canSyncRunDecodeData = fm.canSyncRunMethods["DecodeData"]
+	fm.canSyncRunDecodeTrailers = fm.canSyncRunMethods["DecodeTrailers"]
+	fm.canSyncRunEncodeHeaders = fm.canSyncRunMethods["EncodeHeaders"] && fm.canSyncRunMethods["EncodeResponse"]
+	fm.canSyncRunEncodeData = fm.canSyncRunMethods["EncodeData"]
+	fm.canSyncRunEncodeTrailers = fm.canSyncRunMethods["EncodeTrailers"]
 
 	return wrapFilterManager(fm)
 }
@@ -483,13 +484,13 @@ func (m *filterManager) decodeHeaders(headers capi.RequestHeaderMap, endStream b
 			m.canSkipEncodeTrailers = m.canSkipEncodeTrailers && canSkipMethods["EncodeTrailers"] && canSkipMethods["EncodeResponse"]
 			m.canSkipOnLog = m.canSkipOnLog && canSkipMethods["OnLog"]
 
-			// Similar to the skip check
 			canSyncRunMethods := c.CanSyncRunMethod
-			m.canSyncRunDecodeData = m.canSyncRunDecodeData && canSyncRunMethods["DecodeData"] && canSyncRunMethods["DecodeRequest"]
-			m.canSyncRunDecodeTrailers = m.canSyncRunDecodeTrailers && canSyncRunMethods["DecodeTrailers"] && canSyncRunMethods["DecodeRequest"]
-			m.canSyncRunEncodeHeaders = m.canSyncRunEncodeData && canSyncRunMethods["EncodeHeaders"]
-			m.canSyncRunEncodeData = m.canSyncRunEncodeData && canSyncRunMethods["EncodeData"] && canSyncRunMethods["EncodeResponse"]
-			m.canSyncRunEncodeTrailers = m.canSyncRunEncodeTrailers && canSyncRunMethods["EncodeTrailers"] && canSyncRunMethods["EncodeResponse"]
+			m.canSyncRunDecodeHeaders = m.canSyncRunDecodeHeaders && canSyncRunMethods["DecodeHeaders"] && canSyncRunMethods["DecodeRequest"]
+			m.canSyncRunDecodeData = m.canSyncRunDecodeData && canSyncRunMethods["DecodeData"]
+			m.canSyncRunDecodeTrailers = m.canSyncRunDecodeTrailers && canSyncRunMethods["DecodeTrailers"]
+			m.canSyncRunEncodeHeaders = m.canSyncRunEncodeHeaders && canSyncRunMethods["EncodeHeaders"] && canSyncRunMethods["EncodeResponse"]
+			m.canSyncRunEncodeData = m.canSyncRunEncodeData && canSyncRunMethods["EncodeData"]
+			m.canSyncRunEncodeTrailers = m.canSyncRunEncodeTrailers && canSyncRunMethods["EncodeTrailers"]
 
 			// TODO: add field to control if merging is allowed
 			i := 0
@@ -642,7 +643,7 @@ func (m *filterManager) DecodeData(buf capi.BufferInstance, endStream bool) capi
 		return capi.Continue
 	}
 
-	if m.canSyncRunDecodeData {
+	if m.canSyncRunDecodeData && (m.decodeIdx == -1 || (m.canSyncRunDecodeHeaders && m.canSyncRunDecodeTrailers)) {
 		return m.decodeData(buf, endStream)
 	}
 
@@ -706,7 +707,7 @@ func (m *filterManager) DecodeTrailers(trailers capi.RequestTrailerMap) capi.Sta
 		return capi.Continue
 	}
 
-	if m.canSyncRunDecodeTrailers {
+	if m.canSyncRunDecodeTrailers && (m.decodeIdx == -1 || (m.canSyncRunDecodeHeaders && m.canSyncRunDecodeTrailers)) {
 		return m.decodeTrailers(trailers)
 	}
 
@@ -894,7 +895,7 @@ func (m *filterManager) EncodeData(buf capi.BufferInstance, endStream bool) capi
 		return capi.Continue
 	}
 
-	if m.canSyncRunEncodeData {
+	if m.canSyncRunEncodeData && (m.encodeIdx == -1 || (m.canSyncRunEncodeHeaders && m.canSyncRunEncodeTrailers)) {
 		return m.encodeData(buf, endStream)
 	}
 
@@ -944,7 +945,7 @@ func (m *filterManager) EncodeTrailers(trailers capi.ResponseTrailerMap) capi.St
 		return capi.Continue
 	}
 
-	if m.canSyncRunEncodeTrailers {
+	if m.canSyncRunEncodeTrailers && (m.encodeIdx == -1 || (m.canSyncRunEncodeHeaders && m.canSyncRunEncodeData)) {
 		return m.encodeTrailers(trailers)
 	}
 

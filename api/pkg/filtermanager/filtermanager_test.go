@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	"github.com/agiledragon/gomonkey/v2"
+	capi "github.com/envoyproxy/envoy/contrib/golang/common/go/api"
 	"github.com/stretchr/testify/assert"
 
 	internalConsumer "mosn.io/htnn/api/internal/consumer"
@@ -512,6 +513,7 @@ func TestFiltersFromConsumer(t *testing.T) {
 				assert.Equal(t, 3, len(m.filters))
 			}
 			assert.Equal(t, true, m.canSyncRunEncodeHeaders)
+			assert.Equal(t, false, m.canSyncRunDecodeTrailers)
 
 			_, ok := hdr.Get("x-htnn-route")
 			assert.False(t, ok)
@@ -726,4 +728,108 @@ func TestSyncRunWhenThereAreMultiFilters(t *testing.T) {
 		assert.Equal(t, true, m.canSyncRunEncodeData)
 		assert.Equal(t, true, m.canSyncRunEncodeTrailers)
 	}
+}
+
+func TestSyncRunWhenProcessingBufferedData(t *testing.T) {
+	cb := envoy.NewCAPIFilterCallbackHandler()
+	config := initFilterManagerConfig("ns")
+	config.parsed = []*model.ParsedFilterConfig{
+		{
+			Name:    "add_req",
+			Factory: addReqFactory,
+			ParsedConfig: addReqConf{
+				hdrName: "x-htnn-route",
+			},
+			SyncRunPhases: api.PhaseDecodeTrailers,
+		},
+		{
+			Name:          "access_field_on_log",
+			Factory:       accessFieldOnLogFactory,
+			SyncRunPhases: api.AllPhases,
+		},
+	}
+
+	m := unwrapFilterManager(FilterManagerFactory(config, cb))
+	assert.Equal(t, false, m.canSyncRunDecodeHeaders)
+	assert.Equal(t, true, m.canSyncRunDecodeData)
+	assert.Equal(t, true, m.canSyncRunDecodeTrailers)
+	assert.Equal(t, true, m.canSyncRunEncodeHeaders)
+	assert.Equal(t, true, m.canSyncRunEncodeData)
+	assert.Equal(t, true, m.canSyncRunEncodeTrailers)
+
+	m.decodeIdx = -1 // simulate processing request streamingly
+	buf := envoy.NewBufferInstance([]byte{})
+	res := m.DecodeData(buf, false)
+	assert.Equal(t, capi.Continue, res)
+	reqTrailer := envoy.NewRequestTrailerMap(http.Header{})
+	res = m.DecodeTrailers(reqTrailer)
+	assert.Equal(t, capi.Continue, res)
+
+	m.encodeIdx = -1 // simulate processing response streamingly
+	res = m.EncodeData(buf, false)
+	assert.Equal(t, capi.Continue, res)
+	rspTrailer := envoy.NewResponseTrailerMap(http.Header{})
+	res = m.EncodeTrailers(rspTrailer)
+	assert.Equal(t, capi.Continue, res)
+
+	m.decodeIdx = 0 // simulate processing buffered request
+	res = m.DecodeData(buf, false)
+	assert.Equal(t, capi.Running, res)
+	cb.WaitContinued()
+	res = m.DecodeTrailers(reqTrailer)
+	assert.Equal(t, capi.Running, res)
+	cb.WaitContinued()
+
+	m.encodeIdx = 0 // simulate processing buffered response
+	res = m.EncodeData(buf, false)
+	assert.Equal(t, capi.Continue, res)
+	res = m.EncodeTrailers(rspTrailer)
+	assert.Equal(t, capi.Continue, res)
+}
+
+func TestSyncRunWhenProcessingBufferedDataWithFiltersFromConsumer(t *testing.T) {
+	config := initFilterManagerConfig("ns")
+	config.consumerFiltersEndAt = 1
+
+	consumers := map[string]*internalConsumer.Consumer{}
+	c := internalConsumer.Consumer{
+		FilterConfigs: map[string]*model.ParsedFilterConfig{
+			"2_add_req": {
+				Name:          "2_add_req",
+				Factory:       addReqFactory,
+				ParsedConfig:  addReqConf{},
+				SyncRunPhases: api.PhaseDecodeTrailers,
+			},
+		},
+	}
+	consumers["0"] = &c
+	config.parsed = []*model.ParsedFilterConfig{
+		{
+			Name:    "1_set_consumer",
+			Factory: setConsumerFactory,
+			ParsedConfig: setConsumerConf{
+				Consumers: consumers,
+			},
+			SyncRunPhases: api.PhaseDecodeHeaders,
+		},
+	}
+
+	cb := envoy.NewCAPIFilterCallbackHandler()
+	m := unwrapFilterManager(FilterManagerFactory(config, cb))
+	assert.Equal(t, true, m.canSyncRunDecodeHeaders)
+	assert.Equal(t, true, m.canSyncRunDecodeTrailers)
+
+	h := http.Header{}
+	h.Add("consumer", "0")
+	hdr := envoy.NewRequestHeaderMap(h)
+	res := m.DecodeHeaders(hdr, false)
+	assert.Equal(t, capi.Continue, res)
+	assert.Equal(t, false, m.canSyncRunDecodeHeaders)
+	assert.Equal(t, true, m.canSyncRunDecodeTrailers)
+
+	m.decodeIdx = 0 // simulate processing buffered request
+	reqTrailer := envoy.NewRequestTrailerMap(http.Header{})
+	res = m.DecodeTrailers(reqTrailer)
+	assert.Equal(t, capi.Running, res)
+	cb.WaitContinued()
 }
