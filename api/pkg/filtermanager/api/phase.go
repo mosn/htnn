@@ -61,3 +61,17 @@ func MethodToPhase(meth string) Phase {
 		return 0
 	}
 }
+
+func NewAllMethodsMap() map[string]bool {
+	return map[string]bool{
+		"DecodeHeaders":  true,
+		"DecodeData":     true,
+		"DecodeRequest":  true,
+		"DecodeTrailers": true,
+		"EncodeHeaders":  true,
+		"EncodeData":     true,
+		"EncodeResponse": true,
+		"EncodeTrailers": true,
+		"OnLog":          true,
+	}
+}

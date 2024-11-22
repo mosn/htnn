@@ -45,11 +45,11 @@ type Consumer struct {
 	FilterConfigs   map[string]*fmModel.ParsedFilterConfig
 
 	// fields that generated from the configuration
-	FilterNames       []string
-	InitOnce          sync.Once
-	CanSkipMethod     map[string]bool
-	CanSkipMethodOnce sync.Once
-	CanSyncRunMethod  map[string]bool
+	FilterNames        []string
+	InitOnce           sync.Once
+	CanSkipMethods     map[string]bool
+	CanSkipMethodsOnce sync.Once
+	CanSyncRunMethod   map[string]bool
 	// CanSyncRunMethod share the same sync.Once with CanSkipMethodOnce
 }
 
