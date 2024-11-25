@@ -84,7 +84,7 @@ lint-go:
 		GOBIN=$(LOCALBIN) go install github.com/golangci/golangci-lint/cmd/golangci-lint@v$(GOLANGCI_LINT_VERSION); \
 	fi
 	$(foreach PKG, $(GO_PROD_MODULES), \
-		pushd ./${PKG} && $(LOCALBIN)/golangci-lint run --config=../.golangci.yml || exit 1; popd; \
+		pushd ./${PKG} && $(LOCALBIN)/golangci-lint run --config=../.golangci.yml --timeout=5m || exit 1; popd; \
 	)
 
 .PHONY: fmt-go
