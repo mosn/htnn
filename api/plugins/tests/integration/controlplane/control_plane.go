@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/rand"
 	"net"
 	"os"
 	"runtime"
@@ -75,6 +76,15 @@ func NewControlPlane() *ControlPlane {
 		grpcServer:    grpcServer,
 	}
 	return cp
+}
+
+func getRandomString(n int) string {
+	var Letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+	result := make([]rune, n)
+	for i := range result {
+		result[i] = Letters[rand.Intn(len(Letters))]
+	}
+	return string(result)
 }
 
 func isWsl() bool {
@@ -179,6 +189,7 @@ func (cp *ControlPlane) UseGoPluginConfig(t *testing.T, config *filtermanager.Fi
 						Domains: []string{"*"},
 						Routes: []*route.Route{
 							{
+								Name: getRandomString(8),
 								Match: &route.RouteMatch{
 									PathSpecifier: &route.RouteMatch_Path{
 										Path: "/detect_if_the_rds_takes_effect",
@@ -195,7 +206,7 @@ func (cp *ControlPlane) UseGoPluginConfig(t *testing.T, config *filtermanager.Fi
 											"fm": {
 												Override: &golang.RouterPlugin_Config{
 													Config: proto.MessageToAny(
-														FilterManagerConfigToTypedStruct(NewPluginConfig(nil))),
+														FilterManagerConfigToTypedStruct(NewSinglePluginConfig("detector", nil))),
 												},
 											},
 										},

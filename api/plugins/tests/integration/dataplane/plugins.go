@@ -15,6 +15,7 @@
 package dataplane
 
 import (
+	"net/http"
 	"runtime/coverage"
 
 	"mosn.io/htnn/api/pkg/filtermanager/api"
@@ -59,6 +60,35 @@ func (f *coverageFilter) DecodeHeaders(headers api.RequestHeaderMap, endStream b
 	return &api.LocalResponse{Code: 200}
 }
 
+type detectorPlugin struct {
+	plugins.PluginMethodDefaultImpl
+	basePlugin
+}
+
+func (p *detectorPlugin) Factory() api.FilterFactory {
+	return detectorFactory
+}
+
+func detectorFactory(c interface{}, callbacks api.FilterCallbackHandler) api.Filter {
+	return &detectorFilter{
+		callbacks: callbacks,
+	}
+}
+
+type detectorFilter struct {
+	api.PassThroughFilter
+
+	callbacks api.FilterCallbackHandler
+}
+
+func (f *detectorFilter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {
+	hdr := http.Header{}
+	name := f.callbacks.StreamInfo().GetRouteName()
+	hdr.Add("route-version", name)
+	return &api.LocalResponse{Code: 200, Header: hdr}
+}
+
 func init() {
 	plugins.RegisterPlugin("coverage", &coveragePlugin{})
+	plugins.RegisterPlugin("detector", &detectorPlugin{})
 }
