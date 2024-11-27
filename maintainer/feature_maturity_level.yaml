@@ -15,10 +15,10 @@
 plugins:
   # The order here is the same as the order of the plugin execution.
   # This is guaranteed in the CI.
-  # TODO: This file only show the plugin's registried order. We should consider a fact that
-  # some plugins may not be executed in the DecodeHeaders phase. For example, a plugin called when
-  # processing response which is registried in an early place is executed after a plugin called
-  # when processing request which is registried in a later place.
+  # Note: This file only shows the plugin's registered order. Some plugins may not be executed in
+  # the DecodeHeaders phase. For example, the plugin called when processing the response but is
+  # registered earlier is executed behind the plugin invoked when processing the request but is
+  # registered later.
   - name: listenerPatch
     status: experimental
     experimental_since: 0.4.0
