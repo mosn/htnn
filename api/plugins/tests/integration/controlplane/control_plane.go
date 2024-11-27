@@ -79,10 +79,10 @@ func NewControlPlane() *ControlPlane {
 }
 
 func getRandomString(n int) string {
-	var Letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
-	result := make([]rune, n)
+	const letters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	result := make([]byte, n)
 	for i := range result {
-		result[i] = Letters[rand.Intn(len(Letters))]
+		result[i] = letters[rand.Intn(len(letters))]
 	}
 	return string(result)
 }
