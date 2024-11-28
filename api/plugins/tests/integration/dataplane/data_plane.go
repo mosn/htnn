@@ -56,6 +56,8 @@ type DataPlane struct {
 	opt  *Option
 	done chan error
 
+	latestRouteVersion string
+
 	dataPlanePort string
 	adminAPIPort  string
 }
@@ -476,14 +478,19 @@ func (dp *DataPlane) Grpcurl(importPath, protoFile, fullMethodName, req string) 
 }
 
 func (dp *DataPlane) Configured() bool {
-	// TODO: this is fine for the first init of the envoy configuration.
-	// But it may be misleading when updating the configuration.
-	// Would be better to switch to Envoy's /config_dump API.
 	resp, err := dp.Head("/detect_if_the_rds_takes_effect", nil)
 	if err != nil {
 		return false
 	}
-	return resp.StatusCode == 200
+	if resp.StatusCode != 200 {
+		return false
+	}
+	name := resp.Header.Get("route-version")
+	if name == dp.latestRouteVersion {
+		return false
+	}
+	dp.latestRouteVersion = name
+	return true
 }
 
 func (dp *DataPlane) FlushCoverage() error {
