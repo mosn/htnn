@@ -18,6 +18,14 @@ By default, the test framework starts Envoy using the image `envoyproxy/envoy:co
 
 You may have noticed that when executing `go test`, we added `-tags envoy1.29`. This is because there are interface differences across different versions of Envoy. In this case, we specified the label for Envoy version 1.29. See [HTNN's Envoy multi-version support](./dataplane_support.md) for details. Note that the version of Envoy being run, the `-tags` parameter in the `go test` command, and the version of the Envoy interface that is depended upon when running `make build-test-so` should be consistent.
 
+We can also start Envoy via binary (also known as binary mode). Using binary mode requires configuring the environment variable `TEST_ENVOY_BINARY_PATH` to point to the path of the Envoy binary file. For example, `TEST_ENVOY_BINARY_PATH=$(which envoy) go test -v ./tests/integration -run TestPluginXX`. Note that the Envoy binary and the Go plugin compiled so files need to be compatible:
+
+* The compilation platforms must be consistent
+* The glibc versions must be compatible
+* The Envoy API versions used must be consistent (see [HTNN's Envoy multi-version support](./dataplane_support.md))
+
+By default, in binary mode, the testing framework will wait 1 second for Envoy to start. This time can be modified via the environment variable `TEST_ENVOY_WAIT_BINARY_TO_START_TIME`. For example, `TEST_ENVOY_BINARY_MODE_WAIT_TIME=2s TEST_ENVOY_BINARY_PATH=$(which envoy) go test -v ./tests/integration -run TestFilterManagerEncode`.
+
 ## Port usage
 
 The test framework will occupy the following ports on the host machine:

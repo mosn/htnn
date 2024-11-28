@@ -32,6 +32,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -60,6 +61,7 @@ type DataPlane struct {
 
 	dataPlanePort string
 	adminAPIPort  string
+	soPath        string
 }
 
 type Option struct {
@@ -70,6 +72,12 @@ type Option struct {
 	NoErrorLogCheck    bool
 	ExpectLogPattern   []string
 	ExpectNoLogPattern []string
+}
+
+func addEnvironemntVariables(cmd *exec.Cmd, envs map[string]string) {
+	for k, v := range envs {
+		cmd.Env = append(cmd.Env, k+"="+v)
+	}
 }
 
 func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
@@ -87,6 +95,8 @@ func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 		t:   t,
 		opt: opt,
 	}
+	opt.Bootstrap.SetDataPlane(dp)
+
 	err := dp.cleanup(t)
 	if err != nil {
 		return nil, err
@@ -95,47 +105,6 @@ func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 	dir := dp.root()
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return nil, err
-	}
-
-	cfgFilename := "envoy.yaml"
-	cfgFile, err := os.Create(filepath.Join(dir, cfgFilename))
-	if err != nil {
-		return nil, err
-	}
-
-	err = opt.Bootstrap.WriteTo(cfgFile)
-	cfgFile.Close()
-	if err != nil {
-		return nil, err
-	}
-
-	envoyCmd := "envoy -c /etc/envoy.yaml"
-	envoyValidateCmd := envoyCmd + " --mode validate -l critical"
-	if opt.LogLevel != "" {
-		envoyCmd += " -l " + opt.LogLevel
-	}
-
-	hostAddr := ""
-	if runtime.GOOS == "linux" {
-		// We use this special domain to access the control plane on host.
-		// It works with Docker for Win/Mac (--network host doesn't work).
-		// For Linux's Docker, a special option is used instead
-		hostAddr = "--add-host=host.docker.internal:host-gateway"
-	}
-
-	currentUser, err := user.Current()
-	if err != nil {
-		return nil, err
-	}
-
-	networkName := "services_service"
-	err = exec.Command("docker", "network", "inspect", networkName).Run()
-	if err != nil {
-		logger.Info("docker network used by test not found, create one")
-		err = exec.Command("docker", "network", "create", networkName).Run()
-		if err != nil {
-			return nil, err
-		}
 	}
 
 	coverDir := helper.CoverDir()
@@ -149,33 +118,6 @@ func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 		}
 		// When the integration test is run with `go test ...`, the previous coverage files are not removed.
 		// Since we only care about the coverage in CI, it is fine so far.
-	}
-
-	image := "m.daocloud.io/docker.io/envoyproxy/envoy:contrib-v1.32.0"
-
-	specifiedImage := os.Getenv("PROXY_IMAGE")
-	if specifiedImage != "" {
-		image = specifiedImage
-	}
-
-	b, err := exec.Command("docker", "images", image).Output()
-	if err != nil {
-		return nil, err
-	}
-	if len(strings.Split(string(b), "\n")) < 3 {
-		cmd := exec.Command("docker", "pull", image)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		logger.Info("pull envoy image", "cmdline", cmd.String())
-		err = cmd.Run()
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	envs := []string{}
-	for k, v := range opt.Envs {
-		envs = append(envs, "-e", k+"="+v)
 	}
 
 	pwd, _ := os.Getwd()
@@ -194,6 +136,7 @@ func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 			"shared library path", soPath)
 		return nil, err
 	}
+	dp.soPath = soPath
 
 	adminAPIPort := "9998"
 	adminAPIPortEnv := os.Getenv("TEST_ENVOY_ADMIN_API_PORT")
@@ -209,19 +152,99 @@ func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 	}
 	dp.dataPlanePort = dataPlanePort
 
-	cmdline := "docker run" +
-		" --name " + containerName +
-		" --network " + networkName +
-		" --user " + currentUser.Uid +
-		" --rm -t -v " +
-		cfgFile.Name() + ":/etc/envoy.yaml -v " +
-		soPath + ":/etc/libgolang.so" +
-		" -v /tmp:/tmp" +
-		" -e GOCOVERDIR=" + coverDir +
-		" " + strings.Join(envs, " ") +
-		" -p " + dataPlanePort + ":10000 -p " + adminAPIPort + ":9998 " +
-		hostAddr + " " +
-		image
+	cfgFilename := "envoy.yaml"
+	cfgFile, err := os.Create(filepath.Join(dir, cfgFilename))
+	if err != nil {
+		return nil, err
+	}
+
+	err = opt.Bootstrap.WriteTo(cfgFile)
+	cfgFile.Close()
+	if err != nil {
+		return nil, err
+	}
+
+	var cmdline, envoyCmd string
+
+	if isBinaryMode() {
+		envoyCmd = binaryPath + " -c " + cfgFile.Name()
+
+		if len(opt.Envs) == 0 {
+			opt.Envs = map[string]string{}
+		}
+		opt.Envs["GOCOVERDIR"] = coverDir
+
+	} else {
+		hostAddr := ""
+		if runtime.GOOS == "linux" {
+			// We use this special domain to access the control plane on host.
+			// It works with Docker for Win/Mac (--network host doesn't work).
+			// For Linux's Docker, a special option is used instead
+			hostAddr = "--add-host=host.docker.internal:host-gateway"
+		}
+
+		currentUser, err := user.Current()
+		if err != nil {
+			return nil, err
+		}
+
+		networkName := "services_service"
+		err = exec.Command("docker", "network", "inspect", networkName).Run()
+		if err != nil {
+			logger.Info("docker network used by test not found, create one")
+			err = exec.Command("docker", "network", "create", networkName).Run()
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		image := "m.daocloud.io/docker.io/envoyproxy/envoy:contrib-v1.32.0"
+
+		specifiedImage := os.Getenv("PROXY_IMAGE")
+		if specifiedImage != "" {
+			image = specifiedImage
+		}
+
+		b, err := exec.Command("docker", "images", image).Output()
+		if err != nil {
+			return nil, err
+		}
+		if len(strings.Split(string(b), "\n")) < 3 {
+			cmd := exec.Command("docker", "pull", image)
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			logger.Info("pull envoy image", "cmdline", cmd.String())
+			err = cmd.Run()
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		envs := []string{}
+		for k, v := range opt.Envs {
+			envs = append(envs, "-e", k+"="+v)
+		}
+
+		cmdline = "docker run" +
+			" --name " + containerName +
+			" --network " + networkName +
+			" --user " + currentUser.Uid +
+			" --rm -t -v " +
+			cfgFile.Name() + ":/etc/envoy.yaml -v " +
+			soPath + ":/etc/libgolang.so" +
+			" -v /tmp:/tmp" +
+			" -e GOCOVERDIR=" + coverDir +
+			" " + strings.Join(envs, " ") +
+			" -p " + dataPlanePort + ":" + dataPlanePort +
+			" -p " + adminAPIPort + ":" + adminAPIPort + " " +
+			hostAddr + " " +
+			image
+
+		envoyCmd = "envoy -c /etc/envoy.yaml"
+	}
+
+	// show why the configuration is invalid
+	envoyValidateCmd := envoyCmd + " --mode validate -l error"
 
 	content, _ := os.ReadFile(cfgFile.Name())
 	digest := md5.Sum(content)
@@ -234,7 +257,13 @@ func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 		validateCmd := cmdline + " " + envoyValidateCmd
 		cmds := strings.Fields(validateCmd)
 		logger.Info("run validate cmd", "cmdline", validateCmd)
-		out, err := exec.Command(cmds[0], cmds[1:]...).CombinedOutput()
+
+		cmd := exec.Command(cmds[0], cmds[1:]...)
+		if isBinaryMode() {
+			addEnvironemntVariables(cmd, opt.Envs)
+		}
+
+		out, err := cmd.CombinedOutput()
 		if err != nil {
 			logger.Info("bad envoy bootstrap configuration", "cmd", validateCmd, "output", string(out))
 			return nil, err
@@ -246,24 +275,49 @@ func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 		cfgFile.Write(content)
 	}
 
+	if opt.LogLevel != "" {
+		envoyCmd += " -l " + opt.LogLevel
+	}
+
 	cmdline = cmdline + " " + envoyCmd
 
 	logger.Info("run cmd", "cmdline", cmdline)
 
 	cmds := strings.Fields(cmdline)
 	cmd := exec.Command(cmds[0], cmds[1:]...)
-
-	stdout, err := os.Create(filepath.Join(dir, "stdout"))
-	if err != nil {
-		return nil, err
+	if isBinaryMode() {
+		addEnvironemntVariables(cmd, opt.Envs)
 	}
-	cmd.Stdout = stdout
 
-	stderr, err := os.Create(filepath.Join(dir, "stderr"))
-	if err != nil {
-		return nil, err
+	if isBinaryMode() {
+		// Like the standard mode, we use stdout file to store the log of Envoy
+		stdout, err := os.Create(filepath.Join(dir, "stdout"))
+		if err != nil {
+			return nil, err
+		}
+		cmd.Stdout = stdout
+
+		// We don't need stderr file, which is used to store docker output in the standard mode.
+		cmd.Stderr = stdout
+		// Just left an empty file here to keep the same structure.
+		_, err = os.Create(filepath.Join(dir, "stderr"))
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		stdout, err := os.Create(filepath.Join(dir, "stdout"))
+		if err != nil {
+			return nil, err
+		}
+		cmd.Stdout = stdout
+
+		stderr, err := os.Create(filepath.Join(dir, "stderr"))
+		if err != nil {
+			return nil, err
+		}
+		cmd.Stderr = stderr
 	}
-	cmd.Stderr = stderr
+
 	dp.cmd = cmd
 
 	done := make(chan error)
@@ -277,7 +331,19 @@ func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 		go func() { done <- cmd.Wait() }()
 	}()
 
-	helper.WaitServiceUp(t, ":"+dataPlanePort, "")
+	if isBinaryMode() {
+		// In binary mode, the port is open only after the control plane is up, which is called after
+		// the data plane is up. So we don't check if the port is open. Instead, we wait for a while
+		// to ensure the data plane can be started.
+		waitTime := 1 * time.Second
+		waitTimeEnv, _ := time.ParseDuration(os.Getenv("TEST_ENVOY_WAIT_BINARY_TO_START_TIME"))
+		if waitTimeEnv != 0 {
+			waitTime = waitTimeEnv
+		}
+		time.Sleep(waitTime)
+	} else {
+		helper.WaitServiceUp(t, ":"+dataPlanePort, "")
+	}
 
 	select {
 	case err := <-done:
@@ -297,10 +363,12 @@ func (dp *DataPlane) root() string {
 	return dir
 }
 
-func (dp *DataPlane) cleanup(t *testing.T) error {
-	cmd := exec.Command("docker", "stop", containerName)
-	// ignore error when the containerName is not left over
-	_ = cmd.Run()
+func (dp *DataPlane) cleanup(_ *testing.T) error {
+	if !isBinaryMode() {
+		cmd := exec.Command("docker", "stop", containerName)
+		// ignore error when the containerName is not left over
+		_ = cmd.Run()
+	}
 
 	dir := dp.root()
 	_, err := os.Stat(dir)
@@ -325,8 +393,13 @@ func (dp *DataPlane) Stop() {
 	}
 
 	logger.Info("stop envoy")
-	cmd := exec.Command("docker", "stop", containerName)
-	err = cmd.Run()
+
+	if isBinaryMode() {
+		dp.cmd.Process.Signal(syscall.SIGTERM)
+	} else {
+		cmd := exec.Command("docker", "stop", containerName)
+		err = cmd.Run()
+	}
 	if err != nil {
 		logger.Error(err, "failed to terminate envoy")
 		return
@@ -336,9 +409,12 @@ func (dp *DataPlane) Stop() {
 	<-dp.done
 	logger.Info("envoy stopped")
 
-	f := dp.cmd.Stderr.(*os.File)
-	f.Close()
-	f = dp.cmd.Stdout.(*os.File)
+	if !isBinaryMode() {
+		f := dp.cmd.Stderr.(*os.File)
+		f.Close()
+	}
+
+	f := dp.cmd.Stdout.(*os.File)
 	f.Seek(0, 0)
 	text, err := io.ReadAll(f)
 	defer f.Close()

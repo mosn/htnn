@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"math/rand"
 	"os"
+	"strconv"
 
 	"gopkg.in/yaml.v3"
 )
@@ -34,6 +35,8 @@ type bootstrap struct {
 	httpFilterGolang map[string]interface{}
 	accessLogFormat  string
 	clusters         []map[string]interface{}
+
+	dp *DataPlane
 }
 
 func Bootstrap() *bootstrap {
@@ -42,6 +45,10 @@ func Bootstrap() *bootstrap {
 		consumers:     map[string]map[string]interface{}{},
 		clusters:      []map[string]interface{}{},
 	}
+}
+
+func (b *bootstrap) SetDataPlane(dp *DataPlane) {
+	b.dp = dp
 }
 
 func (b *bootstrap) AddBackendRoute(s string) *bootstrap {
@@ -150,15 +157,19 @@ func (b *bootstrap) buildConfiguration() (map[string]interface{}, error) {
 	staticResources := root["static_resources"].(map[string]interface{})
 	clusters := staticResources["clusters"].([]interface{})
 
-	port := "9999"
-	portEnv := os.Getenv("TEST_ENVOY_CONTROL_PLANE_PORT")
-	if portEnv != "" {
+	port := 9999
+	portEnv, _ := strconv.Atoi(os.Getenv("TEST_ENVOY_CONTROL_PLANE_PORT"))
+	if portEnv != 0 {
 		port = portEnv
 	}
 	for _, c := range clusters {
 		if c.(map[string]interface{})["name"] == "config_server" {
 			load := c.(map[string]interface{})["load_assignment"].(map[string]interface{})["endpoints"].([]interface{})[0].(map[string]interface{})["lb_endpoints"].([]interface{})[0].(map[string]interface{})["endpoint"].(map[string]interface{})["address"].(map[string]interface{})["socket_address"].(map[string]interface{})
 			load["port_value"] = port
+
+			if isBinaryMode() {
+				load["address"] = "0.0.0.0"
+			}
 			break
 		}
 	}
@@ -168,6 +179,26 @@ func (b *bootstrap) buildConfiguration() (map[string]interface{}, error) {
 		newClusters = append(newClusters, c)
 	}
 	staticResources["clusters"] = append(clusters, newClusters...)
+
+	addr := root["admin"].(map[string]interface{})["address"].(map[string]interface{})["socket_address"].(map[string]interface{})
+	addr["port_value"] = b.dp.AdminAPIPort()
+	addr = staticResources["listeners"].([]interface{})[0].(map[string]interface{})["address"].(map[string]interface{})["socket_address"].(map[string]interface{})
+	addr["port_value"] = b.dp.Port()
+
+	if isBinaryMode() {
+		for _, l := range root["static_resources"].(map[string]interface{})["listeners"].([]interface{}) {
+			listener := l.(map[string]interface{})
+			hcm := listener["filter_chains"].([]interface{})[0].(map[string]interface{})["filters"].([]interface{})[0].(map[string]interface{})["typed_config"].(map[string]interface{})
+			httpFilters := hcm["http_filters"].([]interface{})
+			for _, hf := range httpFilters {
+				cfg := hf.(map[string]interface{})["typed_config"].(map[string]interface{})
+				if cfg["@type"] == "type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.Config" {
+					cfg["library_path"] = b.dp.soPath
+				}
+			}
+		}
+	}
+
 	return root, nil
 }
 
