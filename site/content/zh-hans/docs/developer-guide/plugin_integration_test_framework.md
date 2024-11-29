@@ -18,6 +18,14 @@ title: 插件集成测试框架
 
 您可能已经注意到，在执行 `go test` 时，我们添加了 `-tags envoy1.29`。这是因为不同版本 Envoy 接口存在差异。在这种情况下，我们指定了 Envoy 1.29 版本的标签。具体见 [HTNN 的 Envoy 多版本支持](./dataplane_support.md)。注意运行的 Envoy 版本，以及 `go test` 命令中的 `-tags` 参数，和 `make build-test-so` 时依赖的 Envoy 接口版本应该保持一致。
 
+我们也可以通过二进制来启动 Envoy（也即 binary mode）。使用 binary mode 需要配置环境变量 `TEST_ENVOY_BINARY_PATH`，指向 Envoy 的二进制文件路径。例如，`TEST_ENVOY_BINARY_PATH=$(which envoy) go test -v ./tests/integration -run TestPluginXX`。注意 Envoy 二进制和 Go 插件编译出来的 so 文件需要是兼容的：
+
+* 编译的平台要一致
+* glibc 版本要兼容
+* 使用的 Envoy 接口版本要一致（见 [HTNN 的 Envoy 多版本支持](./dataplane_support.md)）
+
+默认 binary mode 下，测试框架会花 1 秒等待 Envoy 启动。这个时间可以通过环境变量 `TEST_ENVOY_WAIT_BINARY_TO_START_TIME` 来修改。例如，`TEST_ENVOY_BINARY_MODE_WAIT_TIME=2s TEST_ENVOY_BINARY_PATH=$(which envoy) go test -v ./tests/integration -run TestFilterManagerEncode`。
+
 ## 端口使用
 
 测试框架将占用 host 上的下述端口：

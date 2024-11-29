@@ -52,6 +52,20 @@ integration-test:
 		go test -tags envoy${ENVOY_API_VERSION} -v ${PKG} || exit 1; \
 	)
 
+.PHONY: test-integration-framework-in-docker
+test-integration-framework-in-docker:
+	docker build -t test-integration-framework-in-docker \
+		--build-arg PROXY_BASE_IMAGE=${PROXY_IMAGE} \
+		--build-arg GO_BUILD_BASE_IMAGE=${BUILD_IMAGE} \
+		plugins/tests/integration/testdata
+	docker run --rm ${MOUNT_GOMOD_CACHE} \
+		-v $(PWD)/..:/go/src/${PROJECT_NAME} \
+		-w /go/src/${PROJECT_NAME}/api \
+		-e GOPROXY \
+		-e ENVOY_API_VERSION \
+		test-integration-framework-in-docker \
+		/go/src/${PROJECT_NAME}/api/plugins/tests/integration/test_binary_mode.sh
+
 # The benchmark running time can be controlled via env var HTNN_DATA_PLANE_BENCHMARK_DURATION
 .PHONY: benchmark
 benchmark:

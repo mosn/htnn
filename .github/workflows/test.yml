@@ -101,6 +101,12 @@ jobs:
         go install github.com/codesenberg/bombardier@latest
         HTNN_DATA_PLANE_BENCHMARK_DURATION=1s make benchmark
 
+    # this part is envoy version agnostic so we only run it once
+    - if: ${{ matrix.envoy_version == 'dev' }}
+      name: Test plugin integration test framework
+      run: |
+        make test-integration-framework-in-docker
+
   types-module-test:
     timeout-minutes: 10
     runs-on: ubuntu-latest
