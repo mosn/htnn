@@ -27,6 +27,29 @@ import (
 	_ "mosn.io/htnn/api/plugins/tests/pkg/envoy" // for log implementation
 )
 
+func TestIteratePluginType(t *testing.T) {
+	plugin := &MockPlugin{}
+	RegisterPlugin("test", plugin)
+	RegisterPluginType("test2", plugin)
+
+	names := []string{}
+	IteratePluginType(func(name string, p Plugin) bool {
+		names = append(names, name)
+		assert.Equal(t, p, plugin)
+		return true
+	})
+	assert.Contains(t, names, "test")
+	assert.Contains(t, names, "test2")
+
+	names = []string{}
+	IteratePluginType(func(name string, p Plugin) bool {
+		names = append(names, name)
+		return false
+	})
+	assert.Equal(t, 1, len(names))
+	// the order is not guaranteed, it can be "test" or "test2"
+}
+
 func TestIteratePlugin(t *testing.T) {
 	plugin := &MockPlugin{}
 	RegisterPlugin("test", plugin)

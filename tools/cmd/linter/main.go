@@ -25,13 +25,18 @@ import (
 	"path/filepath"
 	"reflect"
 	"slices"
+	"sort"
 	"strings"
 
+	"github.com/pmezard/go-difflib/difflib"
 	protoparser "github.com/yoheimuta/go-protoparser/v4"
 	"github.com/yoheimuta/go-protoparser/v4/parser"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 	"gopkg.in/yaml.v3"
+
+	"mosn.io/htnn/api/pkg/plugins"
+	_ "mosn.io/htnn/types/plugins"
 )
 
 // This tool does what the third party linters don't
@@ -255,6 +260,13 @@ func snakeToCamel(s string) string {
 		words[i] = cases.Title(language.Und, cases.NoLower).String(words[i])
 	}
 	return strings.Join(words, "")
+}
+
+func filenameToPluginName(name string) string {
+	if name == "network_rbac" {
+		return "networkRBAC"
+	}
+	return snakeToCamel(name)
 }
 
 func lintFilenameForDoc(root string) error {
@@ -594,7 +606,7 @@ func getFeatureMaturityLevel(category string) ([]maturityLevel, error) {
 
 		name := filepath.Base(path)[:len(filepath.Base(path))-len(ext)]
 		res = append(res, maturityLevel{
-			name:     name,
+			name:     filenameToPluginName(name),
 			maturity: status,
 		})
 		return nil
@@ -641,6 +653,29 @@ func lintFeatureMaturityLevel() error {
 		}
 	}
 
+	// also check the plugin execution order documented in this file
+	type pluginWrapper struct {
+		Name string
+		plugins.Plugin
+	}
+	var pluginList []pluginWrapper
+	plugins.IteratePluginType(func(name string, p plugins.Plugin) bool {
+		pluginList = append(pluginList, pluginWrapper{
+			Name:   name,
+			Plugin: p,
+		})
+		return true
+	})
+	sort.Slice(pluginList, func(i, j int) bool {
+		return plugins.ComparePluginOrder(pluginList[i].Name, pluginList[j].Name)
+	})
+
+	var recordedOrder []string
+	var runtimeOrder []string
+	for _, p := range pluginList {
+		runtimeOrder = append(runtimeOrder, p.Name+"\n")
+	}
+
 	for category, recs := range records {
 		for _, record := range recs {
 			if record.Status == "experimental" {
@@ -670,12 +705,32 @@ func lintFeatureMaturityLevel() error {
 			if !found {
 				return fmt.Errorf("feature maturity record of %s %s is missing in the documentation", category, record.Name)
 			}
+
+			if category == "plugins" {
+				name := record.Name + "\n"
+				recordedOrder = append(recordedOrder, name)
+			}
 		}
 	}
 	for _, category := range Categories {
 		if len(actualRecords[category]) > 0 {
 			return fmt.Errorf("%s %s is missing in the %s", category, actualRecords[category][0].Name, recordFile)
 		}
+	}
+
+	diff := difflib.UnifiedDiff{
+		A:        recordedOrder,
+		B:        runtimeOrder,
+		FromFile: "Expected",
+		ToFile:   "Actual",
+		Context:  3,
+	}
+	text, err := difflib.GetUnifiedDiffString(diff)
+	if err != nil {
+		return err
+	}
+	if text != "" {
+		return errors.New("Plugin order is not correct:\n" + text + ". Please fix the order in " + recordFile)
 	}
 
 	return nil

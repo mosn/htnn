@@ -82,6 +82,14 @@ func LoadPluginType(name string) Plugin {
 	return pluginTypes[name]
 }
 
+func IteratePluginType(f func(key string, value Plugin) bool) {
+	for k, v := range pluginTypes {
+		if !f(k, v) {
+			return
+		}
+	}
+}
+
 // We separate the plugin type storage and plugin storage, to avoid plugin type overrides the plugin by accident.
 
 func RegisterPlugin(name string, plugin Plugin) {
