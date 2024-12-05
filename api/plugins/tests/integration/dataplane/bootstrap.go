@@ -166,10 +166,6 @@ func (b *bootstrap) buildConfiguration() (map[string]interface{}, error) {
 		if c.(map[string]interface{})["name"] == "config_server" {
 			load := c.(map[string]interface{})["load_assignment"].(map[string]interface{})["endpoints"].([]interface{})[0].(map[string]interface{})["lb_endpoints"].([]interface{})[0].(map[string]interface{})["endpoint"].(map[string]interface{})["address"].(map[string]interface{})["socket_address"].(map[string]interface{})
 			load["port_value"] = port
-
-			if isBinaryMode() {
-				load["address"] = "0.0.0.0"
-			}
 			break
 		}
 	}
@@ -195,6 +191,13 @@ func (b *bootstrap) buildConfiguration() (map[string]interface{}, error) {
 				if cfg["@type"] == "type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.Config" {
 					cfg["library_path"] = b.dp.soPath
 				}
+			}
+		}
+
+		for _, c := range staticResources["clusters"].([]interface{}) {
+			load := c.(map[string]interface{})["load_assignment"].(map[string]interface{})["endpoints"].([]interface{})[0].(map[string]interface{})["lb_endpoints"].([]interface{})[0].(map[string]interface{})["endpoint"].(map[string]interface{})["address"].(map[string]interface{})["socket_address"].(map[string]interface{})
+			if load["address"] == "host.docker.internal" {
+				load["address"] = "0.0.0.0"
 			}
 		}
 	}
