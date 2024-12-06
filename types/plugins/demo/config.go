@@ -52,7 +52,12 @@ func (p *Plugin) Order() plugins.PluginOrder {
 }
 
 // NonBlockingPhases returns the phases of the plugin which can be run non-blockingly, default to 0.
-// If the plugin's filter doesn't contain any blocking operation, it should return true.
+// If a phase except OnLog only contains non-blocking plugins, it will be executed synchorously, which is
+// more effective.
+// Phase OnLog is always be executed synchorously so we don't need to specify it here.
+//
+// If the plugin's filter in a specific phase doesn't contain any blocking operation, we can mark this phase
+// as non-blocking phase.
 // A blocking operation can be:
 // 1. I/O operation
 // 2. Sleep
@@ -60,12 +65,15 @@ func (p *Plugin) Order() plugins.PluginOrder {
 // 4. Context switch like waiting on a channel
 // and more.
 //
-// If a phase only contains non-blocking plugins, it will be executed synchorously, which is
-// more effective.
+// Marking phases with blocking operations as non-blocking can lead to unexpected delays in worker scope.
+// We recommend marking as conservatively as possible, i.e.,
+// only marking phases with simple code logic. For example, in HTNN we only marks
 //
-// Phase OnLog is always be executed synchorously so we don't need to specify it here.
+// * PhaseDecodeData
+// * PhaseEncodeHeaders
+// * PhaseEncodeData
 func (p *Plugin) NonBlockingPhases() api.Phase {
-	return api.PhaseDecodeHeaders | api.PhaseEncodeHeaders
+	return api.PhaseEncodeHeaders
 }
 
 // Config returns api.PluginConfig's implementation used during configuration processing
