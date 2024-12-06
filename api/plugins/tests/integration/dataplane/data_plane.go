@@ -32,6 +32,7 @@ import (
 	"runtime"
 	"strconv"
 	"strings"
+	"sync"
 	"syscall"
 	"testing"
 	"time"
@@ -78,6 +79,22 @@ func addEnvironemntVariables(cmd *exec.Cmd, envs map[string]string) {
 	for k, v := range envs {
 		cmd.Env = append(cmd.Env, k+"="+v)
 	}
+}
+
+type serializableFileWriter struct {
+	*os.File
+
+	lock sync.Mutex
+}
+
+func (w *serializableFileWriter) Write(p []byte) (n int, err error) {
+	w.lock.Lock()
+	defer w.lock.Unlock()
+	return w.File.Write(p)
+}
+
+func (w *serializableFileWriter) Unbox() *os.File {
+	return w.File
 }
 
 func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
@@ -295,15 +312,18 @@ func StartDataPlane(t *testing.T, opt *Option) (*DataPlane, error) {
 		if err != nil {
 			return nil, err
 		}
-		cmd.Stdout = stdout
+
+		// wrap writer to ensure the stderr and stdout won't affect each other
+		w := &serializableFileWriter{File: stdout}
+		cmd.Stdout = w
 
 		// We don't need stderr file, which is used to store docker output in the standard mode.
-		cmd.Stderr = stdout
 		// Just left an empty file here to keep the same structure.
 		_, err = os.Create(filepath.Join(dir, "stderr"))
 		if err != nil {
 			return nil, err
 		}
+		cmd.Stderr = w
 	} else {
 		stdout, err := os.Create(filepath.Join(dir, "stdout"))
 		if err != nil {
@@ -409,12 +429,15 @@ func (dp *DataPlane) Stop() {
 	<-dp.done
 	logger.Info("envoy stopped")
 
+	var f *os.File
 	if !isBinaryMode() {
-		f := dp.cmd.Stderr.(*os.File)
+		f = dp.cmd.Stderr.(*os.File)
 		f.Close()
+		f = dp.cmd.Stdout.(*os.File)
+	} else {
+		f = dp.cmd.Stdout.(*serializableFileWriter).Unbox()
 	}
 
-	f := dp.cmd.Stdout.(*os.File)
 	f.Seek(0, 0)
 	text, err := io.ReadAll(f)
 	defer f.Close()
