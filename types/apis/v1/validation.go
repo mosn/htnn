@@ -228,7 +228,21 @@ func validateFilterPolicy(policy *FilterPolicy, strict bool) error {
 		}
 	}
 
-	for _, policy := range policy.Spec.SubPolicies {
+	names := map[string]struct{}{}
+	for i, policy := range policy.Spec.SubPolicies {
+		if policy.SectionName == "" {
+			return fmt.Errorf("sectionName in SubPolicies[%d] is required", i)
+		}
+		if len(policy.Filters) == 0 {
+			return fmt.Errorf("filters in SubPolicies[%d] is required", i)
+		}
+
+		if _, ok := names[string(policy.SectionName)]; ok {
+			return fmt.Errorf("multiple SubPolicies should not have same sectionName %s", policy.SectionName)
+		}
+
+		names[string(policy.SectionName)] = struct{}{}
+
 		for name, filter := range policy.Filters {
 			err := validateFilter(name, filter, strict, targetGateway)
 			if err != nil {
