@@ -1102,3 +1102,28 @@ func TestFilterManagerRecordLocalReplyPlugin(t *testing.T) {
 	require.Nil(t, err)
 	assert.Equal(t, 206, resp.StatusCode, resp)
 }
+
+func TestFilterManagerLocalReply(t *testing.T) {
+	dp, err := dataplane.StartDataPlane(t, &dataplane.Option{
+		Bootstrap: dataplane.Bootstrap().SetAccessLogFormat(
+			`access_log: %RESPONSE_CODE% details: %RESPONSE_CODE_DETAILS%`,
+		),
+		ExpectLogPattern: []string{
+			`access_log: 206 details: custom_details`,
+		},
+	})
+	if err != nil {
+		t.Fatalf("failed to start data plane: %v", err)
+		return
+	}
+	defer dp.Stop()
+
+	config := controlplane.NewSinglePluginConfig("localReply", map[string]interface{}{
+		"decode":  true,
+		"headers": true,
+	})
+	controlPlane.UseGoPluginConfig(t, config, dp)
+	resp, err := dp.Get("/echo", nil)
+	require.Nil(t, err)
+	assert.Equal(t, 206, resp.StatusCode, resp)
+}
