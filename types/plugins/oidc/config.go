@@ -41,6 +41,10 @@ func (p *Plugin) Order() plugins.PluginOrder {
 	}
 }
 
+func (p *Plugin) NonBlockingPhases() api.Phase {
+	return api.PhaseEncodeHeaders
+}
+
 func (p *Plugin) Config() api.PluginConfig {
 	return &Config{}
 }
