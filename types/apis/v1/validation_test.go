@@ -15,6 +15,7 @@
 package v1
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -270,6 +271,86 @@ func TestValidateFilterPolicy(t *testing.T) {
 			strictErr: "unknown http filter: property",
 		},
 		{
+			name: "bad subPolicy (no filters)",
+			policy: &FilterPolicy{
+				Spec: FilterPolicySpec{
+					TargetRef: &gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: "networking.istio.io",
+							Kind:  "VirtualService",
+						},
+					},
+					SubPolicies: []FilterSubPolicy{
+						{
+							SectionName: sectionName,
+						},
+					},
+				},
+			},
+			err: "filters in SubPolicies[0] is required",
+		},
+		{
+			name: "bad subPolicy (no sectionName)",
+			policy: &FilterPolicy{
+				Spec: FilterPolicySpec{
+					TargetRef: &gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: "networking.istio.io",
+							Kind:  "VirtualService",
+						},
+					},
+					SubPolicies: []FilterSubPolicy{
+						{
+							Filters: map[string]Plugin{
+								"animal": {
+									Config: runtime.RawExtension{
+										Raw: []byte(`{"pet":"cat"}`),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			err: "sectionName in SubPolicies[0] is required",
+		},
+		{
+			name: "bad subPolicy (repeated sectionName)",
+			policy: &FilterPolicy{
+				Spec: FilterPolicySpec{
+					TargetRef: &gwapiv1a2.PolicyTargetReferenceWithSectionName{
+						PolicyTargetReference: gwapiv1a2.PolicyTargetReference{
+							Group: "networking.istio.io",
+							Kind:  "VirtualService",
+						},
+					},
+					SubPolicies: []FilterSubPolicy{
+						{
+							SectionName: sectionName,
+							Filters: map[string]Plugin{
+								"animal": {
+									Config: runtime.RawExtension{
+										Raw: []byte(`{"pet":"cat"}`),
+									},
+								},
+							},
+						},
+						{
+							SectionName: sectionName,
+							Filters: map[string]Plugin{
+								"animal": {
+									Config: runtime.RawExtension{
+										Raw: []byte(`{"pet":"dog"}`),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			err: fmt.Sprintf("multiple SubPolicies should not have same sectionName %s", sectionName),
+		},
+		{
 			name: "targetRef.SectionName and SubPolicies can not be used together",
 			policy: &FilterPolicy{
 				Spec: FilterPolicySpec{
@@ -283,6 +364,13 @@ func TestValidateFilterPolicy(t *testing.T) {
 					SubPolicies: []FilterSubPolicy{
 						{
 							SectionName: sectionName,
+							Filters: map[string]Plugin{
+								"animal": {
+									Config: runtime.RawExtension{
+										Raw: []byte(`{"pet":"cat"}`),
+									},
+								},
+							},
 						},
 					},
 				},
