@@ -52,4 +52,8 @@ type LocalResponse struct {
 	// 4. Otherwise, the Msg will be sent directly.
 	Msg    string
 	Header http.Header
+
+	// Details allow user to specify a custom response code details.
+	// See https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/response_code_details.
+	Details string
 }

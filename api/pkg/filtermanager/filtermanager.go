@@ -338,7 +338,7 @@ func (m *filterManager) localReply(v *api.LocalResponse, decoding bool) {
 	} else {
 		cb = m.callbacks.EncoderFilterCallbacks()
 	}
-	cb.SendLocalReply(v.Code, msg, hdr, 0, "")
+	cb.SendLocalReply(v.Code, msg, hdr, 0, v.Details)
 }
 
 func (m *filterManager) DecodeHeaders(headers capi.RequestHeaderMap, endStream bool) capi.StatusType {

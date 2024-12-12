@@ -234,7 +234,7 @@ func (f *localReplyFilter) NewLocalResponse(reply string, decoding bool) *api.Lo
 	if f.config.ReplyMsg != "" {
 		msg = f.config.ReplyMsg
 	}
-	return &api.LocalResponse{Code: 206, Msg: msg, Header: hdr}
+	return &api.LocalResponse{Code: 206, Msg: msg, Header: hdr, Details: "custom_details"}
 }
 
 func (f *localReplyFilter) DecodeRequest(headers api.RequestHeaderMap, buf api.BufferInstance, trailer api.RequestTrailerMap) api.ResultAction {
