@@ -15,6 +15,8 @@
 package cors
 
 import (
+	"fmt"
+
 	cors "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/http/cors/v3"
 
 	"mosn.io/htnn/api/pkg/filtermanager/api"
@@ -44,6 +46,27 @@ func (p *Plugin) Order() plugins.PluginOrder {
 	}
 }
 
+type CustomConfig struct {
+	cors.CorsPolicy
+}
+
+func (conf *CustomConfig) Validate() error {
+	err := conf.CorsPolicy.Validate()
+	if err != nil {
+		return err
+	}
+
+	if len(conf.CorsPolicy.GetAllowOriginStringMatch()) == 0 {
+		return fmt.Errorf("cors allowOriginStringMatch is required")
+	}
+
+	if len(conf.CorsPolicy.GetAllowMethods()) == 0 {
+		return fmt.Errorf("cors allowMethods is required")
+	}
+
+	return nil
+}
+
 func (p *Plugin) Config() api.PluginConfig {
-	return &cors.CorsPolicy{}
+	return &CustomConfig{}
 }
