@@ -247,13 +247,17 @@ func FilterManagerFactory(c interface{}, cb capi.FilterCallbackHandler) (streamF
 	return wrapFilterManager(fm)
 }
 
-func (m *filterManager) recordLocalReplyPluginName(name string) {
+func (m *filterManager) recordLocalReplyPluginName(name string, code int) {
 	// We can get the plugin name which returns the local response from the dynamic metadata.
 	// For example, use %DYNAMIC_METADATA(htnn:local_reply_plugin_name)% in the access log format.
 	m.callbacks.StreamInfo().DynamicMetadata().Set("htnn", "local_reply_plugin_name", name)
 	// For now, we don't record when the local reply is caused by panic. As we can't always get
 	// the name of plugin which is the root of the panic correctly. For example, consider a plugin kicks
 	// off a goroutine and the goroutine panics.
+
+	// Also log it in the application log. In some situation, multiple plugins may send local reply.
+	// Via the application log, we can know all the calls.
+	api.LogInfof("local reply from plugin: %s, code: %d", name, code)
 }
 
 func (m *filterManager) handleAction(res api.ResultAction, phase api.Phase, filter *model.FilterWrapper) (needReturn bool) {
@@ -274,11 +278,11 @@ func (m *filterManager) handleAction(res api.ResultAction, phase api.Phase, filt
 
 	switch v := res.(type) {
 	case *api.LocalResponse:
-		m.recordLocalReplyPluginName(filter.Name)
+		m.recordLocalReplyPluginName(filter.Name, v.Code)
 		m.localReply(v, phase < api.PhaseEncodeHeaders)
 		return true
 	default:
-		api.LogErrorf("unknown result action: %+v", v)
+		api.LogErrorf("unknown result action: %+v returned from %s in phase %s", v, filter.Name, phase)
 		return false
 	}
 }
@@ -382,7 +386,7 @@ func (m *filterManager) decodeHeaders(headers capi.RequestHeaderMap, endStream b
 	m.config.InitOnce()
 	if m.config.initFailed {
 		api.LogErrorf("error in plugin %s: %s", m.config.initFailedPluginName, m.config.initFailure)
-		m.recordLocalReplyPluginName(m.config.initFailedPluginName)
+		m.recordLocalReplyPluginName(m.config.initFailedPluginName, 500)
 		m.localReply(&api.LocalResponse{
 			Code: 500,
 		}, true)
