@@ -287,10 +287,6 @@ func (m *filterManager) handleAction(res api.ResultAction, phase api.Phase, filt
 	}
 }
 
-type jsonReply struct {
-	Msg string `json:"msg"`
-}
-
 func (m *filterManager) localReply(v *api.LocalResponse, decoding bool) {
 	var hdr map[string][]string
 	if v.Header != nil {
@@ -326,7 +322,7 @@ func (m *filterManager) localReply(v *api.LocalResponse, decoding bool) {
 		}
 
 		if isJSON {
-			rsp := &jsonReply{Msg: msg}
+			rsp := &api.DefaultJSONResponse{Msg: msg}
 			data, _ := json.Marshal(rsp)
 			msg = string(data)
 			if hdr == nil {
