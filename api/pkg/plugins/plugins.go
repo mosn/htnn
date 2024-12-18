@@ -20,6 +20,8 @@ import (
 	"errors"
 	"runtime/debug"
 
+	capi "github.com/envoyproxy/envoy/contrib/golang/common/go/api"
+
 	"mosn.io/htnn/api/internal/proto"
 	"mosn.io/htnn/api/pkg/filtermanager/api"
 	"mosn.io/htnn/api/pkg/log"
@@ -31,6 +33,7 @@ var (
 	pluginTypes                = map[string]Plugin{}
 	plugins                    = map[string]Plugin{}
 	httpFilterFactoryAndParser = map[string]*FilterFactoryAndParser{}
+	metricsRegister            = map[string]func(capi.ConfigCallbacks){}
 )
 
 // Here we introduce extra struct to avoid cyclic import between pkg/filtermanager and pkg/plugins
@@ -186,6 +189,24 @@ func (cp *PluginConfigParser) Parse(any interface{}) (res interface{}, err error
 	}
 
 	return conf, nil
+}
+
+func RegisterMetricsCallback(pluginName string, registerMetricFunc func(capi.ConfigCallbacks)) {
+	if registerMetricFunc == nil {
+		panic("registerMetricFunc should not be nil")
+	}
+	if pluginName == "" {
+		panic("pluginName should not be empty")
+	}
+	if _, ok := metricsRegister[pluginName]; ok {
+		logger.Error(errors.New("metrics for plugin already registered, overriding"), "name", pluginName)
+	}
+	metricsRegister[pluginName] = registerMetricFunc
+	logger.Info("registered metrics for plugin", "name", pluginName)
+}
+
+func LoadMetricsCallback(pluginName string) func(capi.ConfigCallbacks) {
+	return metricsRegister[pluginName]
 }
 
 // PluginMethodDefaultImpl provides reasonable implementation for optional methods

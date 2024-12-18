@@ -21,6 +21,8 @@ import (
 	"strconv"
 	"strings"
 
+	capi "github.com/envoyproxy/envoy/contrib/golang/common/go/api"
+
 	"mosn.io/htnn/api/pkg/filtermanager/api"
 	"mosn.io/htnn/api/pkg/plugins"
 )
@@ -200,6 +202,7 @@ func (p *bufferPlugin) Factory() api.FilterFactory {
 type localReplyPlugin struct {
 	plugins.PluginMethodDefaultImpl
 	basePlugin
+	usageCounter capi.CounterMetric
 }
 
 func localReplyFactory(c interface{}, callbacks api.FilterCallbackHandler) api.Filter {
@@ -242,6 +245,9 @@ func (f *localReplyFilter) DecodeRequest(headers api.RequestHeaderMap, buf api.B
 	f.reqHdr = headers
 	f.runFilters = headers.Values("run")
 	if f.config.Decode {
+		if lrp.usageCounter != nil {
+			lrp.usageCounter.Increment(1)
+		}
 		return f.NewLocalResponse("reply", true)
 	}
 	return api.Continue
@@ -307,6 +313,11 @@ func (f *localReplyFilter) EncodeData(data api.BufferInstance, endStream bool) a
 
 func (p *localReplyPlugin) Factory() api.FilterFactory {
 	return localReplyFactory
+}
+
+func (p *localReplyPlugin) MetricsDefinition(c capi.ConfigCallbacks) {
+	p.usageCounter = c.DefineCounterMetric("localreply.usage.counter")
+	// Define more metrics here
 }
 
 type badPlugin struct {
@@ -619,10 +630,15 @@ func (f *onLogFilter) OnLog(reqHeaders api.RequestHeaderMap, reqTrailers api.Req
 	api.LogWarnf("receive request trailers: %+v", trailers)
 }
 
+var lrp = &localReplyPlugin{}
+
 func init() {
 	plugins.RegisterPlugin("stream", &streamPlugin{})
 	plugins.RegisterPlugin("buffer", &bufferPlugin{})
-	plugins.RegisterPlugin("localReply", &localReplyPlugin{})
+
+	plugins.RegisterPlugin("localReply", lrp)
+	plugins.RegisterMetricsCallback("localReply", lrp.MetricsDefinition)
+
 	plugins.RegisterPlugin("bad", &badPlugin{})
 	plugins.RegisterPlugin("consumer", &consumerPlugin{})
 	plugins.RegisterPlugin("init", &initPlugin{})
