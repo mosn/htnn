@@ -19,6 +19,7 @@ package integration
 import (
 	"bytes"
 	_ "embed"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -338,4 +339,51 @@ func TestFilterManagerLogWithTrailers(t *testing.T) {
 	resp, err := dp.PostWithTrailer("/echo", hdr, bytes.NewReader([]byte("test")), trailer)
 	require.Nil(t, err)
 	assert.Equal(t, 200, resp.StatusCode)
+}
+
+func TestMetricsEnabledPlugin(t *testing.T) {
+
+	dp, err := dataplane.StartDataPlane(t, &dataplane.Option{
+		LogLevel: "debug",
+		Bootstrap: dataplane.Bootstrap().AddAdditionalFilterGolang("lds.metrics", map[string]interface{}{
+			"plugins": []interface{}{
+				map[string]interface{}{
+					"name":   "metrics",
+					"config": map[string]interface{}{},
+				},
+			},
+		}),
+	})
+	if err != nil {
+		t.Fatalf("failed to start data plane: %v", err)
+		return
+	}
+	defer dp.Stop()
+
+	lp := &filtermanager.FilterManagerConfig{
+		Plugins: []*model.FilterConfig{
+			{
+				Name:   "metrics",
+				Config: &Config{},
+			},
+		},
+	}
+
+	t.Setenv("plugin_name_for_test", "lds.metrics")
+	controlPlane.UseGoPluginConfig(t, lp, dp)
+	hdr := http.Header{}
+	resp, err := dp.Get("/", hdr)
+	require.Nil(t, err)
+	body, err := io.ReadAll(resp.Body)
+	require.Nil(t, err)
+	assert.Equal(t, 200, resp.StatusCode, "response: %s", string(body))
+	resp.Body.Close()
+
+	resp, err = dp.GetAdmin("/stats")
+	require.Nil(t, err)
+	body, err = io.ReadAll(resp.Body)
+	require.Nil(t, err)
+	assert.Contains(t, string(body), "metrics-test.usage.counter 1")
+	assert.Contains(t, string(body), "metrics-test.usage.gauge 2")
+	//time.Sleep(5 * time.Minute)
 }

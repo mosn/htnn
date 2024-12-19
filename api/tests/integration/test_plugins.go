@@ -21,6 +21,8 @@ import (
 	"strconv"
 	"strings"
 
+	capi "github.com/envoyproxy/envoy/contrib/golang/common/go/api"
+
 	"mosn.io/htnn/api/pkg/filtermanager/api"
 	"mosn.io/htnn/api/pkg/plugins"
 )
@@ -619,6 +621,66 @@ func (f *onLogFilter) OnLog(reqHeaders api.RequestHeaderMap, reqTrailers api.Req
 	api.LogWarnf("receive request trailers: %+v", trailers)
 }
 
+type metricsConfig struct {
+	Config
+
+	usageCounter capi.CounterMetric
+	gauge        capi.GaugeMetric
+}
+
+func (m *metricsConfig) MetricsDefinition(c capi.ConfigCallbacks) {
+	if c == nil {
+		api.LogErrorf("metrics config callback is nil")
+		return
+	}
+	m.usageCounter = c.DefineCounterMetric("metrics-test.usage.counter")
+	m.gauge = c.DefineGaugeMetric("metrics-test.usage.gauge")
+	api.LogInfo("metrics config loaded for metrics-test")
+	// Define more metrics here
+}
+
+var _ plugins.MetricsRegister = &metricsConfig{}
+
+type metricsPlugin struct {
+	plugins.PluginMethodDefaultImpl
+}
+
+func (p *metricsPlugin) Config() api.PluginConfig {
+	return &metricsConfig{}
+}
+
+func (p *metricsPlugin) Factory() api.FilterFactory {
+	return metricsFactory
+}
+
+func metricsFactory(c interface{}, callbacks api.FilterCallbackHandler) api.Filter {
+	return &metricsFilter{
+		callbacks: callbacks,
+		config:    c.(*metricsConfig),
+	}
+}
+
+type metricsFilter struct {
+	api.PassThroughFilter
+
+	callbacks api.FilterCallbackHandler
+	config    *metricsConfig
+}
+
+func (f *metricsFilter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {
+	if f.config.usageCounter != nil {
+		f.config.usageCounter.Increment(1)
+	} else {
+		return &api.LocalResponse{Code: 500, Msg: "metrics config counter is nil"}
+	}
+	if f.config.gauge != nil {
+		f.config.gauge.Record(2)
+	} else {
+		return &api.LocalResponse{Code: 500, Msg: "metrics config gauge is nil"}
+	}
+	return &api.LocalResponse{Code: 200, Msg: "metrics works"}
+}
+
 func init() {
 	plugins.RegisterPlugin("stream", &streamPlugin{})
 	plugins.RegisterPlugin("buffer", &bufferPlugin{})
@@ -631,4 +693,5 @@ func init() {
 	plugins.RegisterPlugin("beforeConsumerAndHasOtherMethod", &beforeConsumerAndHasOtherMethodPlugin{})
 	plugins.RegisterPlugin("beforeConsumerAndHasDecodeRequest", &beforeConsumerAndHasDecodeRequestPlugin{})
 	plugins.RegisterPlugin("onLog", &onLogPlugin{})
+	plugins.RegisterPlugin("metrics", &metricsPlugin{})
 }
