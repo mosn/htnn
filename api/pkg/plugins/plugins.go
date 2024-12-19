@@ -191,24 +191,6 @@ func (cp *PluginConfigParser) Parse(any interface{}) (res interface{}, err error
 	return conf, nil
 }
 
-func RegisterMetricsCallback(pluginName string, registerMetricFunc func(capi.ConfigCallbacks)) {
-	if registerMetricFunc == nil {
-		panic("registerMetricFunc should not be nil")
-	}
-	if pluginName == "" {
-		panic("pluginName should not be empty")
-	}
-	if _, ok := metricsRegister[pluginName]; ok {
-		logger.Error(errors.New("metrics for plugin already registered, overriding"), "name", pluginName)
-	}
-	metricsRegister[pluginName] = registerMetricFunc
-	logger.Info("registered metrics for plugin", "name", pluginName)
-}
-
-func LoadMetricsCallback(pluginName string) func(capi.ConfigCallbacks) {
-	return metricsRegister[pluginName]
-}
-
 // PluginMethodDefaultImpl provides reasonable implementation for optional methods
 type PluginMethodDefaultImpl struct{}
 

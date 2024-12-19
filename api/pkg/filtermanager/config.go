@@ -177,6 +177,10 @@ func (conf *filterManagerConfig) InitOnce() {
 }
 
 func (p *FilterManagerConfigParser) Parse(any *anypb.Any, callbacks capi.ConfigCallbackHandler) (interface{}, error) {
+	if callbacks == nil {
+		api.LogErrorf("no config callback handler provided")
+		// the call back handler to be nil only affects plugin metrics, so we can continue
+	}
 	configStruct := &xds.TypedStruct{}
 
 	// No configuration
@@ -217,11 +221,6 @@ func (p *FilterManagerConfigParser) Parse(any *anypb.Any, callbacks capi.ConfigC
 	for _, proto := range plugins {
 		name := proto.Name
 
-		if registerMetrics := pkgPlugins.LoadMetricsCallback(name); registerMetrics != nil {
-			registerMetrics(callbacks)
-			api.LogInfof("loaded metrics definition for plugin %s", name)
-		}
-
 		if plugin := pkgPlugins.LoadHTTPFilterFactoryAndParser(name); plugin != nil {
 			config, err := plugin.ConfigParser.Parse(proto.Config)
 			if err != nil {
@@ -251,6 +250,10 @@ func (p *FilterManagerConfigParser) Parse(any *anypb.Any, callbacks capi.ConfigC
 
 				if _, ok := config.(pkgPlugins.Initer); ok {
 					needInit = true
+				}
+				if register, ok := config.(pkgPlugins.MetricsRegister); ok {
+					register.MetricsDefinition(callbacks)
+					api.LogInfof("loaded metrics definition for plugin: %s", name)
 				}
 
 				if name == "debugMode" {

@@ -20,7 +20,6 @@ import (
 	"testing"
 
 	"github.com/agiledragon/gomonkey/v2"
-	capi "github.com/envoyproxy/envoy/contrib/golang/common/go/api"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/types/known/anypb"
 
@@ -285,9 +284,4 @@ func TestRegisterPluginWithType(t *testing.T) {
 	RegisterPlugin("mock", &MockPlugin{})
 	assert.NotNil(t, LoadPlugin("mock"))
 	assert.NotNil(t, LoadPluginType("mock"))
-}
-
-func TestRegisterPluginMetrics(t *testing.T) {
-	RegisterMetricsCallback("mock", func(cc capi.ConfigCallbacks) {})
-	assert.NotNil(t, LoadMetricsCallback("mock"))
 }

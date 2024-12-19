@@ -202,7 +202,6 @@ func (p *bufferPlugin) Factory() api.FilterFactory {
 type localReplyPlugin struct {
 	plugins.PluginMethodDefaultImpl
 	basePlugin
-	usageCounter capi.CounterMetric
 }
 
 func localReplyFactory(c interface{}, callbacks api.FilterCallbackHandler) api.Filter {
@@ -245,9 +244,6 @@ func (f *localReplyFilter) DecodeRequest(headers api.RequestHeaderMap, buf api.B
 	f.reqHdr = headers
 	f.runFilters = headers.Values("run")
 	if f.config.Decode {
-		if lrp.usageCounter != nil {
-			lrp.usageCounter.Increment(1)
-		}
 		return f.NewLocalResponse("reply", true)
 	}
 	return api.Continue
@@ -313,11 +309,6 @@ func (f *localReplyFilter) EncodeData(data api.BufferInstance, endStream bool) a
 
 func (p *localReplyPlugin) Factory() api.FilterFactory {
 	return localReplyFactory
-}
-
-func (p *localReplyPlugin) MetricsDefinition(c capi.ConfigCallbacks) {
-	p.usageCounter = c.DefineCounterMetric("localreply.usage.counter")
-	// Define more metrics here
 }
 
 type badPlugin struct {
@@ -630,15 +621,70 @@ func (f *onLogFilter) OnLog(reqHeaders api.RequestHeaderMap, reqTrailers api.Req
 	api.LogWarnf("receive request trailers: %+v", trailers)
 }
 
-var lrp = &localReplyPlugin{}
+type metricsConfig struct {
+	Config
+
+	usageCounter capi.CounterMetric
+	gauge        capi.GaugeMetric
+}
+
+func (m *metricsConfig) MetricsDefinition(c capi.ConfigCallbacks) {
+	if c == nil {
+		api.LogErrorf("metrics config callback is nil")
+		return
+	}
+	m.usageCounter = c.DefineCounterMetric("metrics-test.usage.counter")
+	m.gauge = c.DefineGaugeMetric("metrics-test.usage.gauge")
+	api.LogInfo("metrics config loaded for metrics-test")
+	// Define more metrics here
+}
+
+var _ plugins.MetricsRegister = &metricsConfig{}
+
+type metricsPlugin struct {
+	plugins.PluginMethodDefaultImpl
+}
+
+func (p *metricsPlugin) Config() api.PluginConfig {
+	return &metricsConfig{}
+}
+
+func (p *metricsPlugin) Factory() api.FilterFactory {
+	return metricsFactory
+}
+
+func metricsFactory(c interface{}, callbacks api.FilterCallbackHandler) api.Filter {
+	return &metricsFilter{
+		callbacks: callbacks,
+		config:    c.(*metricsConfig),
+	}
+}
+
+type metricsFilter struct {
+	api.PassThroughFilter
+
+	callbacks api.FilterCallbackHandler
+	config    *metricsConfig
+}
+
+func (f *metricsFilter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {
+	if f.config.usageCounter != nil {
+		f.config.usageCounter.Increment(1)
+	} else {
+		return &api.LocalResponse{Code: 500, Msg: "metrics config counter is nil"}
+	}
+	if f.config.gauge != nil {
+		f.config.gauge.Record(2)
+	} else {
+		return &api.LocalResponse{Code: 500, Msg: "metrics config gauge is nil"}
+	}
+	return &api.LocalResponse{Code: 200, Msg: "metrics works"}
+}
 
 func init() {
 	plugins.RegisterPlugin("stream", &streamPlugin{})
 	plugins.RegisterPlugin("buffer", &bufferPlugin{})
-
-	plugins.RegisterPlugin("localReply", lrp)
-	plugins.RegisterMetricsCallback("localReply", lrp.MetricsDefinition)
-
+	plugins.RegisterPlugin("localReply", &localReplyPlugin{})
 	plugins.RegisterPlugin("bad", &badPlugin{})
 	plugins.RegisterPlugin("consumer", &consumerPlugin{})
 	plugins.RegisterPlugin("init", &initPlugin{})
@@ -647,4 +693,5 @@ func init() {
 	plugins.RegisterPlugin("beforeConsumerAndHasOtherMethod", &beforeConsumerAndHasOtherMethodPlugin{})
 	plugins.RegisterPlugin("beforeConsumerAndHasDecodeRequest", &beforeConsumerAndHasDecodeRequestPlugin{})
 	plugins.RegisterPlugin("onLog", &onLogPlugin{})
+	plugins.RegisterPlugin("metrics", &metricsPlugin{})
 }
