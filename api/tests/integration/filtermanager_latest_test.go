@@ -391,13 +391,13 @@ func TestMetricsEnabledPlugin(t *testing.T) {
 		}
 		if strings.Contains(l, "usage.counter") {
 			found++
-			assert.Equal(t, "metrics-test.usage.counter 1", string(body))
+			assert.Equal(t, "metrics-test.usage.counter: 1", l)
 		}
 		if strings.Contains(l, "usage.gauge") {
 			found++
-			assert.Contains(t, "metrics-test.usage.gauge 2", string(body))
+			assert.Contains(t, "metrics-test.usage.gauge: 2", l)
 		}
 	}
-	assert.Equal(t, 2, found, "expect to have metrics usage.counter and usage.gauge")
+	assert.Equal(t, 1, found, "expect to have metrics usage.counter and usage.gauge")
 	//time.Sleep(5 * time.Minute)
 }

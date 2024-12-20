@@ -21,8 +21,6 @@ import (
 	"strconv"
 	"strings"
 
-	capi "github.com/envoyproxy/envoy/contrib/golang/common/go/api"
-
 	"mosn.io/htnn/api/pkg/filtermanager/api"
 	"mosn.io/htnn/api/pkg/plugins"
 )
@@ -623,23 +621,7 @@ func (f *onLogFilter) OnLog(reqHeaders api.RequestHeaderMap, reqTrailers api.Req
 
 type metricsConfig struct {
 	Config
-
-	usageCounter capi.CounterMetric
-	gauge        capi.GaugeMetric
 }
-
-func (m *metricsConfig) MetricsDefinition(c capi.ConfigCallbacks) {
-	if c == nil {
-		api.LogErrorf("metrics config callback is nil")
-		return
-	}
-	m.usageCounter = c.DefineCounterMetric("metrics-test.usage.counter")
-	m.gauge = c.DefineGaugeMetric("metrics-test.usage.gauge")
-	api.LogInfo("metrics config loaded for metrics-test")
-	// Define more metrics here
-}
-
-var _ plugins.MetricsRegister = &metricsConfig{}
 
 type metricsPlugin struct {
 	plugins.PluginMethodDefaultImpl
@@ -668,18 +650,16 @@ type metricsFilter struct {
 }
 
 func (f *metricsFilter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {
-	if f.config.usageCounter != nil {
-		f.config.usageCounter.Increment(1)
+	usageCounter := plugins.LoadCounterMetric("metrics-test.usage.counter")
+	if usageCounter != nil {
+		usageCounter.Increment(1)
 	} else {
 		return &api.LocalResponse{Code: 500, Msg: "metrics config counter is nil"}
 	}
-	if f.config.gauge != nil {
-		f.config.gauge.Record(2)
-	} else {
-		return &api.LocalResponse{Code: 500, Msg: "metrics config gauge is nil"}
-	}
 	return &api.LocalResponse{Code: 200, Msg: "metrics works"}
 }
+
+var mp = &metricsPlugin{}
 
 func init() {
 	plugins.RegisterPlugin("stream", &streamPlugin{})
@@ -693,5 +673,10 @@ func init() {
 	plugins.RegisterPlugin("beforeConsumerAndHasOtherMethod", &beforeConsumerAndHasOtherMethodPlugin{})
 	plugins.RegisterPlugin("beforeConsumerAndHasDecodeRequest", &beforeConsumerAndHasDecodeRequestPlugin{})
 	plugins.RegisterPlugin("onLog", &onLogPlugin{})
-	plugins.RegisterPlugin("metrics", &metricsPlugin{})
+	// register plugin "metrics" for plugin execution
+	plugins.RegisterPlugin("metrics", mp)
+	// register metrics definition for plugin "metrics"
+	plugins.RegisterCounterMetrics("metrics-test.usage.counter")
+	// TODO(wonderflow): support gauge metric
+	// TODO(wonderflow): allow metrics to contains runtime information especially for listener name
 }
