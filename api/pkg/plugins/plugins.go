@@ -20,8 +20,6 @@ import (
 	"errors"
 	"runtime/debug"
 
-	capi "github.com/envoyproxy/envoy/contrib/golang/common/go/api"
-
 	"mosn.io/htnn/api/internal/proto"
 	"mosn.io/htnn/api/pkg/filtermanager/api"
 	"mosn.io/htnn/api/pkg/log"
@@ -33,7 +31,6 @@ var (
 	pluginTypes                = map[string]Plugin{}
 	plugins                    = map[string]Plugin{}
 	httpFilterFactoryAndParser = map[string]*FilterFactoryAndParser{}
-	metricsRegister            = map[string]func(capi.ConfigCallbacks){}
 )
 
 // Here we introduce extra struct to avoid cyclic import between pkg/filtermanager and pkg/plugins
