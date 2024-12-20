@@ -27,6 +27,18 @@ import (
 	pkgPlugins "mosn.io/htnn/api/pkg/plugins"
 )
 
+type metricsConfigFilter struct {
+	capi.PassThroughStreamFilter
+
+	callbacks capi.FilterCallbackHandler
+}
+
+func MetricsConfigFactory(_ interface{}, callbacks capi.FilterCallbackHandler) capi.StreamFilter {
+	return &metricsConfigFilter{
+		callbacks: callbacks,
+	}
+}
+
 type MetricsConfigParser struct {
 }
 
@@ -88,7 +100,7 @@ func (p *MetricsConfigParser) Parse(any *anypb.Any, callbacks capi.ConfigCallbac
 
 	}
 
-	return nil, nil
+	return any, nil
 }
 
 // just to satisfy the interface, no real merge
