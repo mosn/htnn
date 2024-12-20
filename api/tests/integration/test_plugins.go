@@ -619,6 +619,48 @@ func (f *onLogFilter) OnLog(reqHeaders api.RequestHeaderMap, reqTrailers api.Req
 	api.LogWarnf("receive request trailers: %+v", trailers)
 }
 
+type metricsConfig struct {
+	Config
+}
+
+type metricsPlugin struct {
+	plugins.PluginMethodDefaultImpl
+}
+
+func (p *metricsPlugin) Config() api.PluginConfig {
+	return &metricsConfig{}
+}
+
+func (p *metricsPlugin) Factory() api.FilterFactory {
+	return metricsFactory
+}
+
+func metricsFactory(c interface{}, callbacks api.FilterCallbackHandler) api.Filter {
+	return &metricsFilter{
+		callbacks: callbacks,
+		config:    c.(*metricsConfig),
+	}
+}
+
+type metricsFilter struct {
+	api.PassThroughFilter
+
+	callbacks api.FilterCallbackHandler
+	config    *metricsConfig
+}
+
+func (f *metricsFilter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {
+	usageCounter := plugins.LoadCounterMetric("metrics-test.usage.counter")
+	if usageCounter != nil {
+		usageCounter.Increment(1)
+	} else {
+		return &api.LocalResponse{Code: 500, Msg: "metrics config counter is nil"}
+	}
+	return &api.LocalResponse{Code: 200, Msg: "metrics works"}
+}
+
+var mp = &metricsPlugin{}
+
 func init() {
 	plugins.RegisterPlugin("stream", &streamPlugin{})
 	plugins.RegisterPlugin("buffer", &bufferPlugin{})
@@ -631,4 +673,10 @@ func init() {
 	plugins.RegisterPlugin("beforeConsumerAndHasOtherMethod", &beforeConsumerAndHasOtherMethodPlugin{})
 	plugins.RegisterPlugin("beforeConsumerAndHasDecodeRequest", &beforeConsumerAndHasDecodeRequestPlugin{})
 	plugins.RegisterPlugin("onLog", &onLogPlugin{})
+	// register plugin "metrics" for plugin execution
+	plugins.RegisterPlugin("metrics", mp)
+	// register metrics definition for plugin "metrics"
+	plugins.RegisterCounterMetrics("metrics-test.usage.counter")
+	// TODO(wonderflow): support gauge metric
+	// TODO(wonderflow): allow metrics to contains runtime information especially for listener name
 }
