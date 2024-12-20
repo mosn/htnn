@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -342,13 +343,12 @@ func TestFilterManagerLogWithTrailers(t *testing.T) {
 }
 
 func TestMetricsEnabledPlugin(t *testing.T) {
-
 	dp, err := dataplane.StartDataPlane(t, &dataplane.Option{
 		LogLevel: "debug",
-		Bootstrap: dataplane.Bootstrap().AddAdditionalFilterGolang("lds.metrics", map[string]interface{}{
+		Bootstrap: dataplane.Bootstrap().AddFilterForGoMetrics(map[string]interface{}{
 			"plugins": []interface{}{
 				map[string]interface{}{
-					"name":   "metrics",
+					"name":   "onLog",
 					"config": map[string]interface{}{},
 				},
 			},
@@ -369,7 +369,6 @@ func TestMetricsEnabledPlugin(t *testing.T) {
 		},
 	}
 
-	t.Setenv("plugin_name_for_test", "lds.metrics")
 	controlPlane.UseGoPluginConfig(t, lp, dp)
 	hdr := http.Header{}
 	resp, err := dp.Get("/", hdr)
@@ -383,7 +382,22 @@ func TestMetricsEnabledPlugin(t *testing.T) {
 	require.Nil(t, err)
 	body, err = io.ReadAll(resp.Body)
 	require.Nil(t, err)
-	assert.Contains(t, string(body), "metrics-test.usage.counter 1")
-	assert.Contains(t, string(body), "metrics-test.usage.gauge 2")
+	lines := strings.Split(string(body), "\n")
+
+	var found int
+	for _, l := range lines {
+		if !strings.Contains(l, "metrics-test") {
+			continue
+		}
+		if strings.Contains(l, "usage.counter") {
+			found++
+			assert.Equal(t, "metrics-test.usage.counter 1", string(body))
+		}
+		if strings.Contains(l, "usage.gauge") {
+			found++
+			assert.Contains(t, "metrics-test.usage.gauge 2", string(body))
+		}
+	}
+	assert.Equal(t, 2, found, "expect to have metrics usage.counter and usage.gauge")
 	//time.Sleep(5 * time.Minute)
 }

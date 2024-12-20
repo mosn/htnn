@@ -17,7 +17,6 @@ package dataplane
 import (
 	_ "embed"
 	"encoding/json"
-	"fmt"
 	"math/rand"
 	"os"
 	"strconv"
@@ -37,7 +36,7 @@ type bootstrap struct {
 	accessLogFormat  string
 	clusters         []map[string]interface{}
 
-	additionalFilterGolang map[string]map[string]interface{}
+	filterGolangForMetrics map[string]interface{}
 
 	dp *DataPlane
 }
@@ -48,7 +47,7 @@ func Bootstrap() *bootstrap {
 		consumers:     map[string]map[string]interface{}{},
 		clusters:      []map[string]interface{}{},
 
-		additionalFilterGolang: map[string]map[string]interface{}{},
+		filterGolangForMetrics: map[string]interface{}{},
 	}
 }
 
@@ -85,8 +84,8 @@ func (b *bootstrap) AddConsumer(name string, c map[string]interface{}) *bootstra
 	return b
 }
 
-func (b *bootstrap) AddAdditionalFilterGolang(name string, c map[string]interface{}) *bootstrap {
-	b.additionalFilterGolang[name] = c
+func (b *bootstrap) AddFilterForGoMetrics(c map[string]interface{}) *bootstrap {
+	b.filterGolangForMetrics = c
 	return b
 }
 
@@ -154,35 +153,23 @@ func (b *bootstrap) buildConfiguration() (map[string]interface{}, error) {
 			}
 		}
 	}
-	if b.additionalFilterGolang != nil {
-		fmt.Println("XXXXXXXXXXXX add additional filter")
-		var additionalFilters []interface{}
-		for name, cfg := range b.additionalFilterGolang {
-			var found = false
-			wrapper := map[string]interface{}{
-				"@type": "type.googleapis.com/xds.type.v3.TypedStruct",
-				"value": cfg,
-			}
-			for _, hf := range httpFilters {
-				if hf.(map[string]interface{})["name"] == name {
-					hf.(map[string]interface{})["disabled"] = false
-					hf.(map[string]interface{})["typed_config"].(map[string]interface{})["plugin_config"] = wrapper
-					found = true
-				}
-			}
-			if !found {
-				additionalFilters = append(additionalFilters, map[string]interface{}{
-					"name":     name,
-					"disabled": false,
-					"typed_config": map[string]interface{}{
-						"@type":         "type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.Config",
-						"library_path":  "/etc/libgolang.so",
-						"library_id":    "fm",
-						"plugin_name":   name,
-						"plugin_config": wrapper,
-					},
-				})
-			}
+	if b.filterGolangForMetrics != nil {
+		wrapper := map[string]interface{}{
+			"@type": "type.googleapis.com/xds.type.v3.TypedStruct",
+			"value": b.filterGolangForMetrics,
+		}
+		var additionalFilters []interface{} = []interface{}{
+			map[string]interface{}{
+				"name":     "htnn.go.metrics",
+				"disabled": false,
+				"typed_config": map[string]interface{}{
+					"@type":         "type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.Config",
+					"library_path":  "/etc/libgolang.so",
+					"library_id":    "fm-metrics",
+					"plugin_name":   "fm-metrics",
+					"plugin_config": wrapper,
+				},
+			},
 		}
 		httpFilters = append(additionalFilters, httpFilters...)
 		hcm["http_filters"] = httpFilters

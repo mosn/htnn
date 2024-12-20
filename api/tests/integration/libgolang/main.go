@@ -28,6 +28,7 @@ import (
 
 func init() {
 	http.RegisterHttpFilterFactoryAndConfigParser("fm", filtermanager.FilterManagerFactory, &filtermanager.FilterManagerConfigParser{})
+	http.RegisterHttpFilterFactoryAndConfigParser("fm-metrics", filtermanager.FilterManagerFactory, &filtermanager.MetricsConfigParser{})
 	http.RegisterHttpFilterFactoryAndConfigParser("cm", consumer.ConsumerManagerFactory, &consumer.ConsumerManagerConfigParser{})
 	http.RegisterHttpFilterFactoryAndConfigParser("dc", dynamicconfig.DynamicConfigFactory, &dynamicconfig.DynamicConfigParser{})
 }
