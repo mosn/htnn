@@ -15,8 +15,6 @@
 package plugins
 
 import (
-	capi "github.com/envoyproxy/envoy/contrib/golang/common/go/api"
-
 	"mosn.io/htnn/api/pkg/filtermanager/api"
 )
 
@@ -149,10 +147,6 @@ type Plugin interface {
 
 type Initer interface {
 	Init(cb api.ConfigCallbackHandler) error
-}
-
-type MetricsRegister interface {
-	MetricsDefinition(capi.ConfigCallbacks)
 }
 
 type NativePlugin interface {

@@ -153,7 +153,7 @@ func (b *bootstrap) buildConfiguration() (map[string]interface{}, error) {
 			}
 		}
 	}
-	if b.filterGolangForMetrics != nil {
+	if len(b.filterGolangForMetrics) > 0 {
 		wrapper := map[string]interface{}{
 			"@type": "type.googleapis.com/xds.type.v3.TypedStruct",
 			"value": b.filterGolangForMetrics,
@@ -161,7 +161,7 @@ func (b *bootstrap) buildConfiguration() (map[string]interface{}, error) {
 		var additionalFilters []interface{} = []interface{}{
 			map[string]interface{}{
 				"name":     "htnn.go.metrics",
-				"disabled": false,
+				"disabled": true,
 				"typed_config": map[string]interface{}{
 					"@type":         "type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.Config",
 					"library_path":  "/etc/libgolang.so",

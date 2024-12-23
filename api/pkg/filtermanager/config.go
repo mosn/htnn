@@ -28,6 +28,7 @@ import (
 
 	"mosn.io/htnn/api/pkg/filtermanager/api"
 	"mosn.io/htnn/api/pkg/filtermanager/model"
+	"mosn.io/htnn/api/pkg/plugins"
 	pkgPlugins "mosn.io/htnn/api/pkg/plugins"
 )
 
@@ -56,6 +57,8 @@ type filterManagerConfig struct {
 
 	parsed []*model.ParsedFilterConfig
 	pool   *sync.Pool
+
+	metricsWriters map[string]plugins.MetricsWriter
 
 	namespace string
 
@@ -91,6 +94,10 @@ func (conf *filterManagerConfig) Merge(another *filterManagerConfig) *filterMana
 	if ns == "" {
 		ns = another.namespace
 	}
+
+	// Pass LDS metrics writers to the merged config for golang filter to use at route level
+	capi.LogInfof("[metrics] merging http filter, filtermanager config: %+v", another.metricsWriters)
+	conf.metricsWriters = another.metricsWriters
 
 	// It's tough to do the data plane merge right. We don't use shallow copy, which may share
 	// data structure accidentally. We don't use deep copy all the fields, which may copy unexpected computed data.
@@ -179,9 +186,23 @@ func (conf *filterManagerConfig) InitOnce() {
 func (p *FilterManagerConfigParser) Parse(any *anypb.Any, callbacks capi.ConfigCallbackHandler) (interface{}, error) {
 	configStruct := &xds.TypedStruct{}
 
+	var metricsWriters = map[string]plugins.MetricsWriter{}
+
+	if callbacks != nil {
+		// If callbacks is not nil, it means this filter is configured in the LDS level.
+		// We need to initialize the metrics for all golang plugins here.
+		registers := plugins.GetMetricsDefinitions()
+		for pluginName, register := range registers {
+			api.LogInfof("initializing metrics for plugin %s", pluginName)
+			metricsWriters[pluginName] = register(callbacks)
+		}
+		capi.LogInfof("[metrics] initialized http filter, filtermanager config: %+v", metricsWriters)
+	}
+
 	// No configuration
 	if any.GetTypeUrl() == "" {
 		conf := initFilterManagerConfig("")
+		conf.metricsWriters = metricsWriters
 		return conf, nil
 	}
 
@@ -265,6 +286,7 @@ func (p *FilterManagerConfigParser) Parse(any *anypb.Any, callbacks capi.ConfigC
 	if needInit {
 		conf.initOnce = &sync.Once{}
 	}
+	conf.metricsWriters = metricsWriters
 
 	return conf, nil
 }
@@ -280,6 +302,7 @@ func (p *FilterManagerConfigParser) Merge(parent interface{}, child interface{})
 	}
 
 	if httpFilterCfg == nil || len(httpFilterCfg.parsed) == 0 {
+		routeCfg.metricsWriters = httpFilterCfg.metricsWriters
 		return routeCfg
 	}
 

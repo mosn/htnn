@@ -25,6 +25,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -345,14 +346,16 @@ func TestFilterManagerLogWithTrailers(t *testing.T) {
 func TestMetricsEnabledPlugin(t *testing.T) {
 	dp, err := dataplane.StartDataPlane(t, &dataplane.Option{
 		LogLevel: "debug",
-		Bootstrap: dataplane.Bootstrap().AddFilterForGoMetrics(map[string]interface{}{
-			"plugins": []interface{}{
-				map[string]interface{}{
-					"name":   "onLog",
-					"config": map[string]interface{}{},
+		/*
+			Bootstrap: dataplane.Bootstrap().AddFilterForGoMetrics(map[string]interface{}{
+				"plugins": []interface{}{
+					map[string]interface{}{
+						"name":   "onLog",
+						"config": map[string]interface{}{},
+					},
 				},
-			},
-		}),
+			}),
+		*/
 	})
 	if err != nil {
 		t.Fatalf("failed to start data plane: %v", err)
@@ -399,5 +402,5 @@ func TestMetricsEnabledPlugin(t *testing.T) {
 		}
 	}
 	assert.Equal(t, 1, found, "expect to have metrics usage.counter and usage.gauge")
-	//time.Sleep(5 * time.Minute)
+	time.Sleep(5 * time.Minute)
 }

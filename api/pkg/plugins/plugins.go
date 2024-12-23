@@ -34,6 +34,7 @@ var (
 	plugins                    = map[string]Plugin{}
 	httpFilterFactoryAndParser = map[string]*FilterFactoryAndParser{}
 	metricsCounters            = map[string]capi.CounterMetric{}
+	metricsDefinitions         = map[string]MetricsRegister{}
 )
 
 // Here we introduce extra struct to avoid cyclic import between pkg/filtermanager and pkg/plugins
@@ -236,6 +237,21 @@ func ComparePluginOrderInt(a, b string) int {
 		return int(aOrder.Operation - bOrder.Operation)
 	}
 	return cmp.Compare(a, b)
+}
+
+type MetricsWriter struct {
+	Counters map[string]capi.CounterMetric
+	Gaugers  map[string]capi.GaugeMetric
+}
+
+type MetricsRegister func(capi.ConfigCallbacks) MetricsWriter
+
+func RegisterMetricsDefinitions(pluginName string, definition MetricsRegister) {
+	metricsDefinitions[pluginName] = definition
+}
+
+func GetMetricsDefinitions() map[string]MetricsRegister {
+	return metricsDefinitions
 }
 
 func RegisterCounterMetrics(name string) {

@@ -21,6 +21,8 @@ import (
 	"strconv"
 	"strings"
 
+	capi "github.com/envoyproxy/envoy/contrib/golang/common/go/api"
+
 	"mosn.io/htnn/api/pkg/filtermanager/api"
 	"mosn.io/htnn/api/pkg/plugins"
 )
@@ -649,12 +651,32 @@ type metricsFilter struct {
 	config    *metricsConfig
 }
 
+const metricsUsageCounter = "metrics-test.usage.counter"
+const metricsGauge = "metrics-test.usage.guage"
+
+func RegisterMetrics(c capi.ConfigCallbacks) plugins.MetricsWriter {
+	writer := plugins.MetricsWriter{
+		Counters: map[string]capi.CounterMetric{},
+		Gaugers:  map[string]capi.GaugeMetric{},
+	}
+	writer.Counters[metricsUsageCounter] = c.DefineCounterMetric(metricsUsageCounter)
+	writer.Gaugers[metricsGauge] = c.DefineGaugeMetric(metricsGauge)
+	return writer
+}
+
 func (f *metricsFilter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {
-	usageCounter := plugins.LoadCounterMetric("metrics-test.usage.counter")
+	usageCounter := f.callbacks.GetCounterMetrics("metrics", metricsUsageCounter)
 	if usageCounter != nil {
 		usageCounter.Increment(1)
 	} else {
 		return &api.LocalResponse{Code: 500, Msg: "metrics config counter is nil"}
+	}
+
+	gauger := f.callbacks.GetGaugeMetrics("metrics", metricsGauge)
+	if gauger != nil {
+		gauger.Record(2)
+	} else {
+		return &api.LocalResponse{Code: 500, Msg: "metrics config gauge is nil"}
 	}
 	return &api.LocalResponse{Code: 200, Msg: "metrics works"}
 }
@@ -676,7 +698,6 @@ func init() {
 	// register plugin "metrics" for plugin execution
 	plugins.RegisterPlugin("metrics", mp)
 	// register metrics definition for plugin "metrics"
-	plugins.RegisterCounterMetrics("metrics-test.usage.counter")
-	// TODO(wonderflow): support gauge metric
+	plugins.RegisterMetricsDefinitions("metrics", RegisterMetrics)
 	// TODO(wonderflow): allow metrics to contains runtime information especially for listener name
 }
