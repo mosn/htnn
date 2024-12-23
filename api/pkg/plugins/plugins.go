@@ -33,7 +33,6 @@ var (
 	pluginTypes                = map[string]Plugin{}
 	plugins                    = map[string]Plugin{}
 	httpFilterFactoryAndParser = map[string]*FilterFactoryAndParser{}
-	metricsCounters            = map[string]capi.CounterMetric{}
 	metricsDefinitions         = map[string]MetricsRegister{}
 )
 
@@ -252,16 +251,4 @@ func RegisterMetricsDefinitions(pluginName string, definition MetricsRegister) {
 
 func GetMetricsDefinitions() map[string]MetricsRegister {
 	return metricsDefinitions
-}
-
-func RegisterCounterMetrics(name string) {
-	metricsCounters[name] = nil
-}
-
-func GetCounterMetricsForCallback() map[string]capi.CounterMetric {
-	return metricsCounters
-}
-
-func LoadCounterMetric(name string) capi.CounterMetric {
-	return metricsCounters[name]
 }

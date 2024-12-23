@@ -36,8 +36,6 @@ type bootstrap struct {
 	accessLogFormat  string
 	clusters         []map[string]interface{}
 
-	filterGolangForMetrics map[string]interface{}
-
 	dp *DataPlane
 }
 
@@ -46,8 +44,6 @@ func Bootstrap() *bootstrap {
 		backendRoutes: []map[string]interface{}{},
 		consumers:     map[string]map[string]interface{}{},
 		clusters:      []map[string]interface{}{},
-
-		filterGolangForMetrics: map[string]interface{}{},
 	}
 }
 
@@ -81,11 +77,6 @@ func (b *bootstrap) AddConsumer(name string, c map[string]interface{}) *bootstra
 		"v": rand.Intn(99999),
 		"d": string(by),
 	}
-	return b
-}
-
-func (b *bootstrap) AddFilterForGoMetrics(c map[string]interface{}) *bootstrap {
-	b.filterGolangForMetrics = c
 	return b
 }
 
@@ -152,27 +143,6 @@ func (b *bootstrap) buildConfiguration() (map[string]interface{}, error) {
 				hf.(map[string]interface{})["typed_config"].(map[string]interface{})["plugin_config"] = wrapper
 			}
 		}
-	}
-	if len(b.filterGolangForMetrics) > 0 {
-		wrapper := map[string]interface{}{
-			"@type": "type.googleapis.com/xds.type.v3.TypedStruct",
-			"value": b.filterGolangForMetrics,
-		}
-		var additionalFilters []interface{} = []interface{}{
-			map[string]interface{}{
-				"name":     "htnn.go.metrics",
-				"disabled": true,
-				"typed_config": map[string]interface{}{
-					"@type":         "type.googleapis.com/envoy.extensions.filters.http.golang.v3alpha.Config",
-					"library_path":  "/etc/libgolang.so",
-					"library_id":    "fm-metrics",
-					"plugin_name":   "fm-metrics",
-					"plugin_config": wrapper,
-				},
-			},
-		}
-		httpFilters = append(additionalFilters, httpFilters...)
-		hcm["http_filters"] = httpFilters
 	}
 
 	if b.accessLogFormat != "" {
