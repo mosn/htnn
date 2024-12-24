@@ -15,3 +15,4 @@ This list documents each patch:
     * 20240823-server-side-filter.patch: Add server-side filters to filter istio CRD.
     * 20240903-dynamic-configs.patch: Add DynamicConfig CRD.
     * 20240912-optimize-xds-generation.patch: Avoid unnecessary xDS generation for our CRD.
+    * 20241224-fix-proto-panic.patch: Fix crash due to shared mutable state in EnvoyFilter [#53594](https://github.com/istio/istio/issues/53590)
