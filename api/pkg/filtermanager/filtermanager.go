@@ -152,7 +152,7 @@ func FilterManagerFactory(c interface{}, cb capi.FilterCallbackHandler) (streamF
 	}
 
 	fm.callbacks.FilterCallbackHandler = cb
-	capi.LogInfof("[metrics] filter manager metrics Writers %v", conf.metricsWriters)
+
 	fm.callbacks.metrics = conf.metricsWriters
 
 	canSkipMethods := fm.canSkipMethods

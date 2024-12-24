@@ -377,6 +377,7 @@ func TestMetricsEnabledPlugin(t *testing.T) {
 	lines := strings.Split(string(body), "\n")
 
 	var found int
+
 	for _, l := range lines {
 		if !strings.Contains(l, "metrics-test") {
 			continue
@@ -390,5 +391,5 @@ func TestMetricsEnabledPlugin(t *testing.T) {
 			assert.Contains(t, "metrics-test.usage.gauge: 2", l)
 		}
 	}
-	assert.Equal(t, 1, found, "expect to have metrics usage.counter and usage.gauge")
+	assert.Equal(t, 2, found, "expect to have metrics usage.counter and usage.gauge")
 }

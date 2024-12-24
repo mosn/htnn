@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"reflect"
 	"sort"
+	"strings"
 	"sync"
 
 	xds "github.com/cncf/xds/go/xds/type/v3"
@@ -96,7 +97,6 @@ func (conf *filterManagerConfig) Merge(another *filterManagerConfig) *filterMana
 	}
 
 	// Pass LDS metrics writers to the merged config for golang filter to use at route level
-	capi.LogInfof("[metrics] merging http filter, filtermanager config: %+v", another.metricsWriters)
 	conf.metricsWriters = another.metricsWriters
 
 	// It's tough to do the data plane merge right. We don't use shallow copy, which may share
@@ -192,11 +192,13 @@ func (p *FilterManagerConfigParser) Parse(any *anypb.Any, callbacks capi.ConfigC
 		// If callbacks is not nil, it means this filter is configured in the LDS level.
 		// We need to initialize the metrics for all golang plugins here.
 		registers := plugins.GetMetricsDefinitions()
+		registeredPlugins := []string{}
 		for pluginName, register := range registers {
-			api.LogInfof("initializing metrics for plugin %s", pluginName)
+			api.LogInfof("registering metrics for golang plugin %s", pluginName)
 			metricsWriters[pluginName] = register(callbacks)
+			registeredPlugins = append(registeredPlugins, pluginName)
 		}
-		capi.LogInfof("[metrics] initialized http filter, filtermanager config: %+v", metricsWriters)
+		capi.LogInfof("metrics registered for plugins: [%s]", strings.Join(registeredPlugins, ", "))
 	}
 
 	// No configuration

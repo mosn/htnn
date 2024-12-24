@@ -215,10 +215,6 @@ func (cb *filterManagerCallbackHandler) GetCounterMetrics(pluginName, metricName
 		api.LogErrorf("metrics not exist or not initialized for plugin %s", pluginName)
 		return nil
 	}
-	api.LogInfo("[metrics] printing:")
-	for k, v := range cb.metrics {
-		api.LogInfof("[metrics] %s: %v", k, v)
-	}
 	writer, ok := cb.metrics[pluginName]
 	if !ok {
 		api.LogErrorf("metrics writer for plugin %s not found", pluginName)

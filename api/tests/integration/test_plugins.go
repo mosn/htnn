@@ -652,7 +652,7 @@ type metricsFilter struct {
 }
 
 const metricsUsageCounter = "metrics-test.usage.counter"
-const metricsGauge = "metrics-test.usage.guage"
+const metricsGauge = "metrics-test.usage.gauge"
 
 func RegisterMetrics(c capi.ConfigCallbacks) plugins.MetricsWriter {
 	writer := plugins.MetricsWriter{
@@ -699,5 +699,5 @@ func init() {
 	plugins.RegisterPlugin("metrics", mp)
 	// register metrics definition for plugin "metrics"
 	plugins.RegisterMetricsDefinitions("metrics", RegisterMetrics)
-	// TODO(wonderflow): allow metrics to contains runtime information especially for listener name
+	// TODO(wonderflow): allow metrics to contains runtime information especially for listener name, this require support from envoy upstream:  https://github.com/envoyproxy/envoy/issues/37808
 }

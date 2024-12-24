@@ -165,14 +165,10 @@ func (cp *ControlPlane) UseGoPluginConfig(t *testing.T, config *filtermanager.Fi
 		},
 	}
 	if config != nil {
-		pluginName := os.Getenv("plugin_name_for_test")
-		if pluginName == "" {
-			pluginName = "fm"
-		}
 		testRoute.TypedPerFilterConfig = map[string]*any1.Any{
 			"htnn.filters.http.golang": proto.MessageToAny(&golang.ConfigsPerRoute{
 				PluginsConfig: map[string]*golang.RouterPlugin{
-					pluginName: {
+					"fm": {
 						Override: &golang.RouterPlugin_Config{
 							Config: proto.MessageToAny(
 								FilterManagerConfigToTypedStruct(config)),
