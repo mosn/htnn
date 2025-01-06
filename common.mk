@@ -25,7 +25,7 @@ $(LOCALBIN):
 
 TARGET_SO       = libgolang.so
 PROJECT_NAME    = mosn.io/htnn
-DOCKER_MIRROR   = m.daocloud.io/
+DOCKER_MIRROR   ?= m.daocloud.io/
 
 # Both images use glibc 2.31. Ensure libc in the images match each other.
 BUILD_IMAGE     ?= $(DOCKER_MIRROR)docker.io/library/golang:1.22-bullseye
@@ -58,7 +58,7 @@ GO_TARGETS = $(patsubst %.proto,%.pb.go,$(PROTO_FILES))
 ENABLE_RACE ?= -race
 TEST_OPTION ?= -gcflags="all=-N -l" ${ENABLE_RACE} -covermode=atomic -coverprofile=cover.out -coverpkg=${PROJECT_NAME}/...
 
-MOUNT_GOMOD_CACHE = -v $(shell go env GOPATH):/go
+MOUNT_GOMOD_CACHE ?= -v $(shell go env GOPATH):/go
 ifeq ($(IN_CI), true)
 	# Mount go mod cache in the CI environment will cause 'Permission denied' error
 	# when accessing files on host in later phase because the mounted directory will
@@ -66,4 +66,5 @@ ifeq ($(IN_CI), true)
 	# Run as low privilege user in the Docker doesn't
 	# work because we also need root to create /.cache in the Docker.
 	MOUNT_GOMOD_CACHE =
+    DOCKER_MIRROR =
 endif
