@@ -48,6 +48,7 @@ type LocalResponse struct {
 	// The rule to generate body is:
 	// 1. If Content-Type is specified in the Header, the Msg will be sent directly.
 	// 2. If the response header is received, and the Content-Type is "application/json", the Msg is wrapped into a JSON like `{"msg": $MSG}`.
+	//    See the struct DefaultJSONResponse for more details.
 	// 3. If the request doesn't have Content-Type or the Content-Type is "application/json", the Msg is wrapped into a JSON.
 	// 4. Otherwise, the Msg will be sent directly.
 	Msg    string
@@ -56,4 +57,9 @@ type LocalResponse struct {
 	// Details allow user to specify a custom response code details.
 	// See https://www.envoyproxy.io/docs/envoy/latest/configuration/http/http_conn_man/response_code_details.
 	Details string
+}
+
+// DefaultJSONResponse is a default JSON response sent by LocalResponse. See the doc of LocalResponse's Msg field for more details.
+type DefaultJSONResponse struct {
+	Msg string `json:"msg"`
 }

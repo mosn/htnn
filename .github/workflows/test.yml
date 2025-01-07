@@ -18,6 +18,8 @@ concurrency:
 
 env:
   IN_CI: true
+  # default to the latest stable version
+  PROXY_IMAGE: envoyproxy/envoy:contrib-v1.32.0
 
 jobs:
   api-module-test:
@@ -253,7 +255,7 @@ jobs:
     - name: Download artifact
       uses: actions/download-artifact@v4
     - name: Upload to codecov
-      uses: codecov/codecov-action@v5.1.1
+      uses: codecov/codecov-action@v5.1.2
       with:
         fail_ci_if_error: true
         files: |
@@ -276,6 +278,9 @@ jobs:
   misc-test:
     timeout-minutes: 10
     runs-on: ubuntu-latest
+    env:
+      # TODO: remove this once the example uses the latest api module
+      PROXY_IMAGE: envoyproxy/envoy:contrib-v1.31.0
     steps:
     - uses: actions/checkout@v4
 

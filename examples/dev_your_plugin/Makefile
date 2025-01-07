@@ -16,7 +16,7 @@ SHELL = /bin/bash
 
 TARGET_SO       = libgolang.so
 PROJECT_NAME    = mosn.io/htnn/dev_your_plugin
-DOCKER_MIRROR   = m.daocloud.io/
+DOCKER_MIRROR   ?= m.daocloud.io/
 # Both images use glibc 2.31. Ensure libc in the images match each other.
 BUILD_IMAGE     ?= $(DOCKER_MIRROR)docker.io/library/golang:1.21-bullseye
 # We don't use istio/proxyv2 because it is not designed to be run separately (need to work around permission issue).
@@ -31,7 +31,7 @@ rwildcard=$(foreach d,$(wildcard $(addsuffix *,$(1))),$(call rwildcard,$d/,$(2))
 PROTO_FILES = $(call rwildcard,./,*.proto)
 GO_TARGETS = $(patsubst %.proto,%.pb.go,$(PROTO_FILES))
 
-MOUNT_GOMOD_CACHE = -v $(shell go env GOPATH):/go
+MOUNT_GOMOD_CACHE ?= -v $(shell go env GOPATH):/go
 ifeq ($(IN_CI), true)
 	# Mount go mod cache in the CI environment will cause 'Permission denied' error
 	# when accessing files on host in later phase because the mounted directory will
@@ -39,6 +39,7 @@ ifeq ($(IN_CI), true)
 	# Run as low privilege user in the Docker doesn't
 	# work because we also need root to create /.cache in the Docker.
 	MOUNT_GOMOD_CACHE =
+	DOCKER_MIRROR =
 endif
 
 .PHONY: dev-tools
