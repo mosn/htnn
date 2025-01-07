@@ -42,7 +42,7 @@ services:
     networks:
       service:
   consul:
-    image: docker.m.daocloud.io/library/consul:1.15.4
+    image: docker.io/library/consul:1.15.4
     restart: unless-stopped
     ports:
       - "8500:8500"
@@ -51,7 +51,7 @@ services:
     networks:
       service:
   consul1:
-    image: docker.m.daocloud.io/library/consul:1.15.4
+    image: docker.io/library/consul:1.15.4
     restart: unless-stopped
     ports:
       - "8501:8500"
