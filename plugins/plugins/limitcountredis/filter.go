@@ -161,8 +161,9 @@ func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api
 		remain := ress[2*i].(int64)
 		if remain < 0 {
 			hdr := http.Header{}
-			// TODO: add option to disable x-envoy-ratelimited
-			hdr.Set("x-envoy-ratelimited", "true")
+			if config.EnableLimitQuotaHeaders {
+				hdr.Set("x-envoy-ratelimited", "true")
+			}
 			status := 429
 			if config.RateLimitedStatus >= 400 { // follow the behavior of Envoy
 				status = int(config.RateLimitedStatus)
