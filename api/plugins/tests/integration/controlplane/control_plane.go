@@ -53,6 +53,9 @@ import (
 
 var (
 	logger = log.DefaultLogger.WithName("controlplane")
+
+	FeatureTestEnvoyDynamicCluster = "x-test-envoy-dynamic-cluster"
+	DynamicClusterHeader           = "Cluster-Name"
 )
 
 type ControlPlane struct {
@@ -150,7 +153,31 @@ func (cp *ControlPlane) updateConfig(t *testing.T, res Resources) {
 }
 
 func (cp *ControlPlane) UseGoPluginConfig(t *testing.T, config *filtermanager.FilterManagerConfig, dp *dataplane.DataPlane) {
+	testRouteDynamicCluster := &route.Route{
+		Name: "dynamic-cluster",
+		Match: &route.RouteMatch{
+			PathSpecifier: &route.RouteMatch_Prefix{
+				Prefix: "/",
+			},
+			Headers: []*route.HeaderMatcher{
+				{
+					Name: FeatureTestEnvoyDynamicCluster,
+					HeaderMatchSpecifier: &route.HeaderMatcher_PresentMatch{
+						PresentMatch: true,
+					},
+				},
+			},
+		},
+		Action: &route.Route_Route{
+			Route: &route.RouteAction{
+				ClusterSpecifier: &route.RouteAction_ClusterHeader{
+					ClusterHeader: DynamicClusterHeader,
+				},
+			},
+		},
+	}
 	testRoute := &route.Route{
+		Name: "default",
 		Match: &route.RouteMatch{
 			PathSpecifier: &route.RouteMatch_Prefix{
 				Prefix: "/",
@@ -164,18 +191,22 @@ func (cp *ControlPlane) UseGoPluginConfig(t *testing.T, config *filtermanager.Fi
 			},
 		},
 	}
+	routes := []*route.Route{testRouteDynamicCluster, testRoute}
+
 	if config != nil {
-		testRoute.TypedPerFilterConfig = map[string]*any1.Any{
-			"htnn.filters.http.golang": proto.MessageToAny(&golang.ConfigsPerRoute{
-				PluginsConfig: map[string]*golang.RouterPlugin{
-					"fm": {
-						Override: &golang.RouterPlugin_Config{
-							Config: proto.MessageToAny(
-								FilterManagerConfigToTypedStruct(config)),
+		for _, r := range routes {
+			r.TypedPerFilterConfig = map[string]*any1.Any{
+				"htnn.filters.http.golang": proto.MessageToAny(&golang.ConfigsPerRoute{
+					PluginsConfig: map[string]*golang.RouterPlugin{
+						"fm": {
+							Override: &golang.RouterPlugin_Config{
+								Config: proto.MessageToAny(
+									FilterManagerConfigToTypedStruct(config)),
+							},
 						},
 					},
-				},
-			}),
+				}),
+			}
 		}
 	}
 
@@ -187,7 +218,7 @@ func (cp *ControlPlane) UseGoPluginConfig(t *testing.T, config *filtermanager.Fi
 					{
 						Name:    "dynmamic_service",
 						Domains: []string{"*"},
-						Routes: []*route.Route{
+						Routes: append([]*route.Route{
 							{
 								Name: getRandomString(8),
 								Match: &route.RouteMatch{
@@ -237,8 +268,7 @@ func (cp *ControlPlane) UseGoPluginConfig(t *testing.T, config *filtermanager.Fi
 									}),
 								},
 							},
-							testRoute,
-						},
+						}, routes...),
 					},
 				},
 			},
