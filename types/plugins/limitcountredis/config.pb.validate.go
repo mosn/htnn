@@ -393,6 +393,8 @@ func (m *Config) validate(all bool) error {
 		errors = append(errors, err)
 	}
 
+	// no validation rules for DisableXEnvoyRatelimitedHeader
+
 	oneofSourcePresent := false
 	switch v := m.Source.(type) {
 	case *Config_Address:

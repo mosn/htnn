@@ -58,4 +58,6 @@ message Config {
 
   // There is no special reason to limit the length <=128, just to avoid too long string
   string prefix = 12 [(validate.rules).string = {min_len: 1, max_len: 128}];
+
+  bool disable_x_envoy_ratelimited_header = 13;
 }
