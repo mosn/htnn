@@ -17,6 +17,7 @@ package dataplane
 import (
 	_ "embed"
 	"encoding/json"
+	"io"
 	"math/rand"
 	"os"
 	"strconv"
@@ -29,21 +30,31 @@ var (
 	boostrapTemplate []byte
 )
 
+type HTTPFilterInsertOperation int
+
+const (
+	HTTPFilterInsertOperationBeforeRouter HTTPFilterInsertOperation = iota
+)
+
 type bootstrap struct {
-	backendRoutes    []map[string]interface{}
-	consumers        map[string]map[string]interface{}
-	httpFilterGolang map[string]interface{}
-	accessLogFormat  string
-	clusters         []map[string]interface{}
+	backendRoutes       []map[string]interface{}
+	consumers           map[string]map[string]interface{}
+	httpFilterGolang    map[string]interface{}
+	accessLogFormat     string
+	clusters            []map[string]interface{}
+	listeners           []map[string]interface{}
+	insertedHTTPFilters map[HTTPFilterInsertOperation][]interface{}
 
 	dp *DataPlane
 }
 
 func Bootstrap() *bootstrap {
 	return &bootstrap{
-		backendRoutes: []map[string]interface{}{},
-		consumers:     map[string]map[string]interface{}{},
-		clusters:      []map[string]interface{}{},
+		backendRoutes:       []map[string]interface{}{},
+		consumers:           map[string]map[string]interface{}{},
+		clusters:            []map[string]interface{}{},
+		listeners:           []map[string]interface{}{},
+		insertedHTTPFilters: map[HTTPFilterInsertOperation][]interface{}{},
 	}
 }
 
@@ -85,6 +96,11 @@ func (b *bootstrap) SetFilterGolang(cfg map[string]interface{}) *bootstrap {
 	return b
 }
 
+func (b *bootstrap) InsertHTTPFilter(cfg map[string]interface{}, op HTTPFilterInsertOperation) *bootstrap {
+	b.insertedHTTPFilters[op] = append(b.insertedHTTPFilters[op], cfg)
+	return b
+}
+
 func (b *bootstrap) SetAccessLogFormat(fmt string) *bootstrap {
 	b.accessLogFormat = fmt
 	return b
@@ -97,6 +113,16 @@ func (b *bootstrap) AddCluster(s string) *bootstrap {
 		panic(err)
 	}
 	b.clusters = append(b.clusters, n)
+	return b
+}
+
+func (b *bootstrap) AddListener(s string) *bootstrap {
+	var n map[string]interface{}
+	err := yaml.Unmarshal([]byte(s), &n)
+	if err != nil {
+		panic(err)
+	}
+	b.listeners = append(b.listeners, n)
 	return b
 }
 
@@ -130,6 +156,13 @@ func (b *bootstrap) buildConfiguration() (map[string]interface{}, error) {
 	consumers := cf["plugin_config"].(map[string]interface{})["value"].(map[string]interface{})["ns"].(map[string]interface{})
 	for name, c := range b.consumers {
 		consumers[name] = c
+	}
+
+	if len(b.insertedHTTPFilters) > 0 {
+		routerFilter := httpFilters[len(httpFilters)-1]
+		httpFilters = append(httpFilters[:len(httpFilters)-1], b.insertedHTTPFilters[HTTPFilterInsertOperationBeforeRouter]...)
+		httpFilters = append(httpFilters, routerFilter)
+		hcm["http_filters"] = httpFilters
 	}
 
 	if b.httpFilterGolang != nil {
@@ -176,6 +209,12 @@ func (b *bootstrap) buildConfiguration() (map[string]interface{}, error) {
 	}
 	staticResources["clusters"] = append(clusters, newClusters...)
 
+	newListeners := []interface{}{}
+	for _, l := range b.listeners {
+		newListeners = append(newListeners, l)
+	}
+	staticResources["listeners"] = append(staticResources["listeners"].([]interface{}), newListeners...)
+
 	addr := root["admin"].(map[string]interface{})["address"].(map[string]interface{})["socket_address"].(map[string]interface{})
 	addr["port_value"] = b.dp.AdminAPIPort()
 	addr = staticResources["listeners"].([]interface{})[0].(map[string]interface{})["address"].(map[string]interface{})["socket_address"].(map[string]interface{})
@@ -205,7 +244,7 @@ func (b *bootstrap) buildConfiguration() (map[string]interface{}, error) {
 	return root, nil
 }
 
-func (b *bootstrap) WriteTo(cfgFile *os.File) error {
+func (b *bootstrap) WriteTo(cfgFile io.Writer) error {
 	root, err := b.buildConfiguration()
 	if err != nil {
 		return err
