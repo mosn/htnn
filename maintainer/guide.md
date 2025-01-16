@@ -7,14 +7,16 @@ To release a new version, please follow the steps below:
 1. Create tag `api/v${version}`.
 2. Commit the changes below to the main branch (the CI will fail at this point):
     * Update those `go.mod` which depend on `mosn.io/htnn/$mod`.
+   You can refer to https://github.com/mosn/htnn/commit/d651fdf4e14dda6c769c468141d2b151c4c1b80f for an example.
 3. Create tag `types/v${version}` for `types` module. Then do the same with `controller` and `plugins`. Rerun the `test` workflow to verify the changes. Don't panic for "server response: not found" error. The sync of sum.golang.org might take half an hour or longer. Try again later.
 4. Create tag `image/v${version}` to trigger image building.
-5. Submit a new commit with the changes below (ensure the CI passes):
+5. Submit a new pull request with the changes below (ensure the CI passes):
     * Once the image is ready, update the version in the `manifests/charts/*/Chart.yaml`.
     * Update the `./examples/dev_your_plugin` to use the released version.
     * Run `make fmt-go`.
     * Promote the maturity of plugins that meet the criteria to stable by updating `maintainer/feature_maturity_level.yaml` and plugin documentation.
     * Update the `CHANGELOG.md`.
+   You can refer to https://github.com/mosn/htnn/pull/777/files for an example.
 6. Create a release branch `release/v${version}` from the main branch, like `release/v0.3.2`. The CI will create a new chart package.
 
 ## Upgrade components
