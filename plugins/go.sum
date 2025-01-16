@@ -99,8 +99,8 @@ github.com/eapache/go-resiliency v1.1.0/go.mod h1:kFI+JgMyC7bLPUVY133qvEBtVayf5m
 github.com/eapache/go-xerial-snappy v0.0.0-20180814174437-776d5712da21/go.mod h1:+020luEh2TKB4/GOp8oxxtq0Daoen/Cii55CzbTV6DU=
 github.com/eapache/queue v1.1.0/go.mod h1:6eCeP0CKFpHLu8blIFXhExK/dRa7WDZfr6jVFPTqq+I=
 github.com/edsrzf/mmap-go v1.0.0/go.mod h1:YO35OhQPt3KJa3ryjFM5Bs14WD66h8eGKpfaBNrHW5M=
-github.com/envoyproxy/envoy v1.31.0 h1:NsTo+medzu0bMffXAjl+zKaViLOShKuIZWQnKKYq0/4=
-github.com/envoyproxy/envoy v1.31.0/go.mod h1:ujBFxE543X8OePZG+FbeR9LnpBxTLu64IAU7A20EB9A=
+github.com/envoyproxy/envoy v1.32.0 h1:l3WDpm1VsQ+HuvTTKV01p+hIEvoRPB4Mndt9pAg5B2Y=
+github.com/envoyproxy/envoy v1.32.0/go.mod h1:KGS+IUehDX1mSIdqodPTWskKOo7bZMLLy3GHxvOKcJk=
 github.com/envoyproxy/go-control-plane v0.6.9/go.mod h1:SBwIajubJHhxtWwsL9s8ss4safvEdbitLhGGK48rN6g=
 github.com/envoyproxy/go-control-plane v0.9.1-0.20191026205805-5f8ba28d4473/go.mod h1:YTl/9mNaCwkRvm6d1a2C3ymFceY/DCBVvsKhRF0iEA4=
 github.com/envoyproxy/go-control-plane v0.12.1-0.20240621013728-1eb8caab5155 h1:IgJPqnrlY2Mr4pYB6oaMKvFvwJ9H+X6CCY5x1vCTcpc=
@@ -605,8 +605,8 @@ google.golang.org/protobuf v0.0.0-20200228230310-ab0ca4ff8a60/go.mod h1:cfTl7dwQ
 google.golang.org/protobuf v1.20.1-0.20200309200217-e05f789c0967/go.mod h1:A+miEFZTKqfCUM6K7xSMQL9OKL/b6hQv+e19PK+JZNE=
 google.golang.org/protobuf v1.21.0/go.mod h1:47Nbq4nVaFHyn7ilMalzfO3qCViNmqZ2kzikPIcrTAo=
 google.golang.org/protobuf v1.23.0/go.mod h1:EGpADcykh3NcUnDUJcl1+ZksZNG86OlYog2l/sGQquU=
-google.golang.org/protobuf v1.34.2 h1:6xV6lTsCfpGD21XK49h7MhtcApnLqkfYgPcdHftf6hg=
-google.golang.org/protobuf v1.34.2/go.mod h1:qYOHts0dSfpeUzUFpOMr/WGzszTmLH+DiWniOlNbLDw=
+google.golang.org/protobuf v1.35.1 h1:m3LfL6/Ca+fqnjnlqQXNpFPABW1UD7mjh8KO2mKFytA=
+google.golang.org/protobuf v1.35.1/go.mod h1:9fA7Ob0pmnwhb644+1+CVWFRbNajQ6iRojtC/QF5bRE=
 gopkg.in/alecthomas/kingpin.v2 v2.2.6/go.mod h1:FMv+mEhP44yOT+4EoQTLFTRgOQ1FBLkstjWtayDeSgw=
 gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
 gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=
@@ -635,10 +635,10 @@ honnef.co/go/tools v0.0.0-20180728063816-88497007e858/go.mod h1:rf3lG4BRIbNafJWh
 honnef.co/go/tools v0.0.0-20190102054323-c2f93a96b099/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
 honnef.co/go/tools v0.0.0-20190523083050-ea95bdfd59fc/go.mod h1:rf3lG4BRIbNafJWhAfAdb/ePZxsR/4RtNHQocxwk9r4=
 honnef.co/go/tools v0.0.1-2019.2.3/go.mod h1:a3bituU0lyd329TUQxRnasdCoJDkEUEAqEt0JzvZhAg=
-mosn.io/htnn/api v0.4.1 h1:8WJWk4u384wwDN8C49AKyqAZmp4isxhnnbiF9y9SJgs=
-mosn.io/htnn/api v0.4.1/go.mod h1:LuQVGTOQos5tOLl7c+z4ukFO1eOfm/Q3GNQ+8OnlIhE=
-mosn.io/htnn/types v0.4.1 h1:16UWyECDM7cIi4rBlBSYAtud/HSN4WYVPmL3fNYqmFc=
-mosn.io/htnn/types v0.4.1/go.mod h1:MOXUQ/TfUrrgrPsfrXapyxwJ3nonhVeXRiXKgqU7a6s=
+mosn.io/htnn/api v0.5.0 h1:+dpM2nHB2Zuz+G7amlfPzBNWAxpPDNqIO1PDJteARGw=
+mosn.io/htnn/api v0.5.0/go.mod h1:BI4MMqeXtzNtKpPvDHcOAsCG9I4pQrB59mInIWuTPXQ=
+mosn.io/htnn/types v0.5.0 h1:dJ1vOmJrKcuaqGBoH5lW8MdO3JssREG+0Ijy3HHehoY=
+mosn.io/htnn/types v0.5.0/go.mod h1:irALSpH0KlXrRUiJUlQLyPeAyvKnA3onpLPldbDfEzk=
 sigs.k8s.io/yaml v1.1.0/go.mod h1:UJmg0vDUVViEyp3mgSv9WPwZCDxu4rQW1olrI1uml+o=
 sigs.k8s.io/yaml v1.4.0 h1:Mk1wCc2gy/F0THH0TAp1QYyJNzRm2KCLy3o5ASXVI5E=
 sigs.k8s.io/yaml v1.4.0/go.mod h1:Ejl7/uTz7PSA4eKMyQCUTnhZYNmLIl+5c2lQPGR2BPY=
