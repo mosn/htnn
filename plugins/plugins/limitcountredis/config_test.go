@@ -66,6 +66,10 @@ func TestConfig(t *testing.T) {
 			name:  "pass",
 			input: `{"address":"127.0.0.1:6479", "rules":[{"count":1,"timeWindow":"1s"}], "prefix":"test"}`,
 		},
+		{
+			name:  "disable x-envoy-ratelimited header",
+			input: `{"address":"127.0.0.1:6479", "rules":[{"count":1,"timeWindow":"1s"}], "prefix":"test", "disable_x_envoy_ratelimited_header": true}`,
+		},
 	}
 
 	for _, tt := range tests {
