@@ -27,7 +27,7 @@ require (
 	github.com/avast/retry-go v3.0.0+incompatible
 	github.com/casbin/casbin/v2 v2.88.0
 	github.com/coreos/go-oidc/v3 v3.10.0
-	github.com/envoyproxy/envoy v1.31.0
+	github.com/envoyproxy/envoy v1.32.0
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/google/cel-go v0.20.1
 	github.com/gorilla/securecookie v1.1.2
@@ -37,7 +37,7 @@ require (
 	github.com/stretchr/testify v1.9.0
 	golang.org/x/oauth2 v0.21.0
 	golang.org/x/time v0.6.0
-	google.golang.org/protobuf v1.34.2
+	google.golang.org/protobuf v1.35.1
 	mosn.io/htnn/api v0.5.0
 	mosn.io/htnn/types v0.5.0
 )

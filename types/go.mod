@@ -31,7 +31,7 @@ require (
 	github.com/stretchr/testify v1.9.0
 	golang.org/x/text v0.17.0
 	google.golang.org/genproto/googleapis/api v0.0.0-20240701130421-f6361c86f094
-	google.golang.org/protobuf v1.34.2
+	google.golang.org/protobuf v1.35.1
 	istio.io/api v1.21.2
 	istio.io/client-go v1.21.2
 	k8s.io/apimachinery v0.29.3
@@ -51,7 +51,7 @@ require (
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
 	github.com/dustin/go-humanize v1.0.1 // indirect
 	github.com/emicklei/go-restful/v3 v3.11.0 // indirect
-	github.com/envoyproxy/envoy v1.31.0 // indirect
+	github.com/envoyproxy/envoy v1.32.0 // indirect
 	github.com/evanphx/json-patch v5.7.0+incompatible // indirect
 	github.com/go-ini/ini v1.67.0 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect

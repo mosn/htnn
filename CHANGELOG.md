@@ -1,7 +1,31 @@
 ## Table of Contents
 
+- [0.5.0](#050)
 - [0.4.1](#041)
 - [0.4.0](#040)
+
+## 0.5.0
+
+### Breaking Changes
+
+- upgrade the default Envoy version to 1.32: [#789](https://github.com/mosn/htnn/pull/789)
+- allow missing consumer for consumer plugins: [#773](https://github.com/mosn/htnn/pull/773)
+
+### Features
+
+- add sentinel plugin: [#740](https://github.com/mosn/htnn/pull/740)
+- limitCountRedis: add option to disable x-envoy-ratelimited header generation: [#835](https://github.com/mosn/htnn/pull/835)
+- support running Go code in synchronous way conditionally:
+  - [#800](https://github.com/mosn/htnn/pull/800)
+  - [#805](https://github.com/mosn/htnn/pull/805)
+  - [#811](https://github.com/mosn/htnn/pull/811)
+- support running integration test with envoy bin:
+  - [#810](https://github.com/mosn/htnn/pull/810)
+  - [#814](https://github.com/mosn/htnn/pull/814)
+
+### Fixes
+
+- fix(cors): allowOriginStringMatch & allowMethods are required [#823](https://github.com/mosn/htnn/pull/823)
 
 ## 0.4.1
 

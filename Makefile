@@ -59,6 +59,9 @@ gen-helm-schema: $(LOCALBIN)
 .PHONY: gen-helm
 gen-helm: gen-helm-docs gen-helm-schema
 
+.PHONY: gen-files
+gen-files: gen-proto gen-crd-code gen-manifests gen-helm
+
 .PHONY: dev-tools
 dev-tools:
 	@if ! docker images ${DEV_TOOLS_IMAGE} | grep dev-tools > /dev/null; then \

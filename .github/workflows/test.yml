@@ -278,9 +278,6 @@ jobs:
   misc-test:
     timeout-minutes: 10
     runs-on: ubuntu-latest
-    env:
-      # TODO: remove this once the example uses the latest api module
-      PROXY_IMAGE: envoyproxy/envoy:contrib-v1.31.0
     steps:
     - uses: actions/checkout@v4
 
