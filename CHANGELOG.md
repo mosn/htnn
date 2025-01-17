@@ -14,6 +14,7 @@
 ### Features
 
 - add sentinel plugin: [#740](https://github.com/mosn/htnn/pull/740)
+- limitCountRedis: add option to disable x-envoy-ratelimited header generation: [#835](https://github.com/mosn/htnn/pull/835)
 - support running Go code in synchronous way conditionally:
   - [#800](https://github.com/mosn/htnn/pull/800)
   - [#805](https://github.com/mosn/htnn/pull/805)
