@@ -42,7 +42,7 @@ GATEWAY_API_VERSION = 1.0.0
 MIN_K8S_VERSION = 1.26.0
 
 GO_PROD_MODULES = api types controller plugins # To make life simper, we only run linter on 'prod modules'
-GO_MODULES = $(GO_PROD_MODULES) e2e site tools ./examples/dev_your_plugin
+GO_MODULES = $(GO_PROD_MODULES) e2e site tools ./examples/dev_your_plugin api/tests/integration/testdata/services/grpc
 # Don't run `go mod tidy` with `site` module, as this module is managed by docsy build image
 GO_MODULES_EXCLUDE_SITE = $(filter-out site,$(GO_MODULES))
 
