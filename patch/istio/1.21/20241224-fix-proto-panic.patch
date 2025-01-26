@@ -5,7 +5,7 @@ index 3df18ce43b..469e83e61e 100644
 @@ -19,8 +19,6 @@ import (
  	"reflect"
  	"testing"
- 
+
 -	"google.golang.org/protobuf/proto"
 -
  	meshconfig "istio.io/api/mesh/v1alpha1"
@@ -17,7 +17,7 @@ index 3df18ce43b..469e83e61e 100644
  	"istio.io/istio/pkg/config/schema/gvk"
 +	"istio.io/istio/pkg/util/protomarshal"
  )
- 
+
  func TestAuthorizationPolicies_ListAuthorizationPolicies(t *testing.T) {
 @@ -53,14 +52,14 @@ func TestAuthorizationPolicies_ListAuthorizationPolicies(t *testing.T) {
  			},
@@ -39,19 +39,19 @@ index 3df18ce43b..469e83e61e 100644
 @@ -68,13 +67,13 @@ func TestAuthorizationPolicies_ListAuthorizationPolicies(t *testing.T) {
  		Namespace: "bar",
  	}
- 
+
 -	denyPolicy := proto.Clone(policy).(*authpb.AuthorizationPolicy)
 +	denyPolicy := protomarshal.Clone(policy)
  	denyPolicy.Action = authpb.AuthorizationPolicy_DENY
- 
+
 -	auditPolicy := proto.Clone(policy).(*authpb.AuthorizationPolicy)
 +	auditPolicy := protomarshal.Clone(policy)
  	auditPolicy.Action = authpb.AuthorizationPolicy_AUDIT
- 
+
 -	customPolicy := proto.Clone(policy).(*authpb.AuthorizationPolicy)
 +	customPolicy := protomarshal.Clone(policy)
  	customPolicy.Action = authpb.AuthorizationPolicy_CUSTOM
- 
+
  	cases := []struct {
 diff --git a/pilot/pkg/model/service.go b/pilot/pkg/model/service.go
 index c93bc91d9a..7d35833555 100644
@@ -62,7 +62,7 @@ index c93bc91d9a..7d35833555 100644
  	"github.com/google/go-cmp/cmp/cmpopts"
  	"github.com/mitchellh/copystructure"
 -	"google.golang.org/protobuf/proto"
- 
+
  	"istio.io/api/label"
  	"istio.io/istio/pilot/pkg/features"
 @@ -49,6 +48,7 @@ import (
@@ -74,7 +74,7 @@ index c93bc91d9a..7d35833555 100644
  	"istio.io/istio/pkg/workloadapi"
  	"istio.io/istio/pkg/workloadapi/security"
 @@ -975,7 +975,7 @@ func workloadResourceName(w *workloadapi.Workload) string {
- 
+
  func (i *WorkloadInfo) Clone() *WorkloadInfo {
  	return &WorkloadInfo{
 -		Workload:     proto.Clone(i).(*workloadapi.Workload),
@@ -83,7 +83,7 @@ index c93bc91d9a..7d35833555 100644
  		Source:       i.Source,
  		CreationTime: i.CreationTime,
 diff --git a/pilot/pkg/networking/core/v1alpha3/cluster_builder.go b/pilot/pkg/networking/core/v1alpha3/cluster_builder.go
-index 4222a2e89a..e9018c7345 100644
+index 5e7ee9e212..1148ba2620 100644
 --- a/pilot/pkg/networking/core/v1alpha3/cluster_builder.go
 +++ b/pilot/pkg/networking/core/v1alpha3/cluster_builder.go
 @@ -23,7 +23,6 @@ import (
@@ -101,14 +101,14 @@ index 4222a2e89a..e9018c7345 100644
 +	"istio.io/istio/pkg/util/protomarshal"
  	"istio.io/istio/pkg/util/sets"
  )
- 
+
 @@ -307,7 +307,7 @@ func (cb *ClusterBuilder) buildCluster(name string, discoveryType cluster.Cluste
  				c.DnsLookupFamily = cluster.Cluster_V4_ONLY
  			}
  		}
 -		c.DnsRefreshRate = cb.req.Push.Mesh.DnsRefreshRate
 +		c.DnsRefreshRate = protomarshal.ShallowClone(cb.req.Push.Mesh.DnsRefreshRate)
- 		c.RespectDnsTtl = features.AntClusterRespectDnsTtl
+ 		c.RespectDnsTtl = true
  		fallthrough
  	case cluster.Cluster_STATIC:
 @@ -480,7 +480,7 @@ func (cb *ClusterBuilder) buildBlackHoleCluster() *cluster.Cluster {
@@ -149,23 +149,23 @@ index 5291aa6c70..3d2133e975 100644
 -	"google.golang.org/protobuf/proto"
  	"google.golang.org/protobuf/types/known/durationpb"
  	"google.golang.org/protobuf/types/known/wrapperspb"
- 
+
 @@ -36,6 +35,7 @@ import (
  	"istio.io/istio/pilot/pkg/util/protoconv"
  	"istio.io/istio/pkg/config/protocol"
  	"istio.io/istio/pkg/log"
 +	"istio.io/istio/pkg/util/protomarshal"
  )
- 
+
  // applyTrafficPolicy applies the trafficPolicy defined within destinationRule,
 @@ -226,7 +226,7 @@ func shouldH2Upgrade(clusterName string, port *model.Port, mesh *meshconfig.Mesh
  }
- 
+
  func (cb *ClusterBuilder) applyDefaultConnectionPool(cluster *cluster.Cluster) {
 -	cluster.ConnectTimeout = proto.Clone(cb.req.Push.Mesh.ConnectTimeout).(*durationpb.Duration)
 +	cluster.ConnectTimeout = protomarshal.Clone(cb.req.Push.Mesh.ConnectTimeout)
  }
- 
+
  func applyLoadBalancer(c *cluster.Cluster, lb *networking.LoadBalancerSettings, port *model.Port,
 diff --git a/pilot/pkg/networking/core/v1alpha3/envoyfilter/rc_patch.go b/pilot/pkg/networking/core/v1alpha3/envoyfilter/rc_patch.go
 index ce74e5c174..f1d1b35fce 100644
@@ -178,10 +178,10 @@ index ce74e5c174..f1d1b35fce 100644
 +	"istio.io/istio/pkg/util/protomarshal"
  	"istio.io/istio/pkg/util/sets"
  )
- 
+
 @@ -388,5 +389,5 @@ func routeMatch(httpRoute *route.Route, rp *model.EnvoyFilterConfigPatchWrapper)
  }
- 
+
  func cloneVhostRouteByRouteIndex(virtualHost *route.VirtualHost, routeIndex int) {
 -	virtualHost.Routes[routeIndex] = proto.Clone(virtualHost.Routes[routeIndex]).(*route.Route)
 +	virtualHost.Routes[routeIndex] = protomarshal.Clone(virtualHost.Routes[routeIndex])
@@ -191,12 +191,12 @@ index d75e997c0d..48127e5533 100644
 --- a/pilot/pkg/networking/core/v1alpha3/envoyfilter/rc_patch_test.go
 +++ b/pilot/pkg/networking/core/v1alpha3/envoyfilter/rc_patch_test.go
 @@ -19,13 +19,13 @@ import (
- 
+
  	route "github.com/envoyproxy/go-control-plane/envoy/config/route/v3"
  	"github.com/google/go-cmp/cmp"
 -	"google.golang.org/protobuf/proto"
  	"google.golang.org/protobuf/testing/protocmp"
- 
+
  	networking "istio.io/api/networking/v1alpha3"
  	"istio.io/istio/pilot/pkg/model"
  	"istio.io/istio/pilot/pkg/serviceregistry/memory"
@@ -204,9 +204,9 @@ index d75e997c0d..48127e5533 100644
 +	"istio.io/istio/pkg/util/protomarshal"
  	"istio.io/istio/pkg/util/sets"
  )
- 
+
 @@ -1104,7 +1104,7 @@ func TestPatchHTTPRoute(t *testing.T) {
- 
+
  	for _, tt := range tests {
  		t.Run(tt.name, func(t *testing.T) {
 -			savedSharedVHost := proto.Clone(tt.args.sharedRoutesVHost).(*route.VirtualHost)
@@ -232,7 +232,7 @@ index 416c17015b..381b2bee81 100644
  	"istio.io/istio/pkg/test/util/assert"
 +	"istio.io/istio/pkg/util/protomarshal"
  )
- 
+
  func TestJwtFilter(t *testing.T) {
 @@ -1569,7 +1569,7 @@ func TestInboundMTLSSettings(t *testing.T) {
  		},
@@ -241,7 +241,7 @@ index 416c17015b..381b2bee81 100644
 -	tlsContextHTTP := proto.Clone(tlsContext).(*tls.DownstreamTlsContext)
 +	tlsContextHTTP := protomarshal.Clone(tlsContext)
  	tlsContextHTTP.CommonTlsContext.AlpnProtocols = []string{"h2", "http/1.1"}
- 
+
  	expectedStrict := MTLSSettings{
 diff --git a/pilot/pkg/serviceregistry/serviceentry/controller.go b/pilot/pkg/serviceregistry/serviceentry/controller.go
 index 1438e70303..ae8cfe7467 100644
@@ -249,14 +249,14 @@ index 1438e70303..ae8cfe7467 100644
 +++ b/pilot/pkg/serviceregistry/serviceentry/controller.go
 @@ -193,8 +193,7 @@ func ConvertServiceEntry(cfg config.Config) *networking.ServiceEntry {
  	}
- 
+
  	// shallow copy
 -	copied := &networking.ServiceEntry{}
 -	protomarshal.ShallowCopy(copied, se)
 +	copied := protomarshal.ShallowClone(se)
  	return copied
  }
- 
+
 @@ -208,8 +207,7 @@ func ConvertWorkloadEntry(cfg config.Config) *networking.WorkloadEntry {
  	// we will merge labels from metadata with spec, with precedence to the metadata
  	labels := maps.MergeCopy(wle.Labels, cfg.Labels)
@@ -272,12 +272,12 @@ index f8518c0e58..b6b3f2c7b5 100644
 --- a/pilot/pkg/xds/endpoints/ep_filters.go
 +++ b/pilot/pkg/xds/endpoints/ep_filters.go
 @@ -19,7 +19,6 @@ import (
- 
+
  	core "github.com/envoyproxy/go-control-plane/envoy/config/core/v3"
  	endpoint "github.com/envoyproxy/go-control-plane/envoy/config/endpoint/v3"
 -	"google.golang.org/protobuf/proto"
  	wrappers "google.golang.org/protobuf/types/known/wrapperspb"
- 
+
  	"istio.io/istio/pilot/pkg/model"
 @@ -29,6 +28,7 @@ import (
  	"istio.io/istio/pkg/config/labels"
@@ -285,7 +285,7 @@ index f8518c0e58..b6b3f2c7b5 100644
  	"istio.io/istio/pkg/network"
 +	"istio.io/istio/pkg/util/protomarshal"
  )
- 
+
  // EndpointsByNetworkFilter is a network filter function to support Split Horizon EDS - filter the endpoints based on the network
 @@ -80,7 +80,7 @@ func (b *EndpointBuilder) EndpointsByNetworkFilter(endpoints []*LocalityEndpoint
  			// result at the maximum value for uint32.
@@ -302,7 +302,7 @@ index 8f5de00aa4..ac2a9f99dc 100644
 +++ b/pkg/config/mesh/mesh.go
 @@ -20,7 +20,6 @@ import (
  	"time"
- 
+
  	"github.com/hashicorp/go-multierror"
 -	"google.golang.org/protobuf/proto"
  	"google.golang.org/protobuf/types/known/durationpb"
@@ -329,7 +329,7 @@ index b1edfaf50b..73a5a22fd0 100644
 +			return protomarshal.Clone(pb)
  		}
  	}
- 
+
 diff --git a/pkg/config/validation/validation.go b/pkg/config/validation/validation.go
 index f8835de511..e6141ab20d 100644
 --- a/pkg/config/validation/validation.go
@@ -355,10 +355,10 @@ index abdedcf33a..363265ecf8 100644
 +	protomarshal "istio.io/istio/pkg/util/protomarshal"
  	"istio.io/istio/pkg/wellknown"
  )
- 
+
 @@ -502,7 +503,7 @@ func TestValidateMeshConfigProxyConfig(t *testing.T) {
  	}
- 
+
  	modify := func(config *meshconfig.ProxyConfig, fieldSetter func(*meshconfig.ProxyConfig)) *meshconfig.ProxyConfig {
 -		clone := proto.Clone(config).(*meshconfig.ProxyConfig)
 +		clone := protomarshal.Clone(config)
@@ -370,20 +370,20 @@ index 2783b75171..c87184839f 100644
 --- a/pkg/dns/client/dns_test.go
 +++ b/pkg/dns/client/dns_test.go
 @@ -24,10 +24,10 @@ import (
- 
+
  	"github.com/miekg/dns"
  	"go.uber.org/atomic"
 -	"google.golang.org/protobuf/proto"
- 
+
  	dnsProto "istio.io/istio/pkg/dns/proto"
  	"istio.io/istio/pkg/test"
 +	"istio.io/istio/pkg/util/protomarshal"
  	"istio.io/istio/pkg/util/sets"
  )
- 
+
 @@ -94,7 +94,7 @@ func TestBuildAlternateHosts(t *testing.T) {
  	}
- 
+
  	nt := d.NameTable()
 -	nt = proto.Clone(nt).(*dnsProto.NameTable)
 +	nt = protomarshal.Clone(nt)
@@ -399,7 +399,7 @@ index 36d7d09d67..a8c78ed33a 100644
  	"google.golang.org/grpc"
  	"google.golang.org/grpc/credentials/insecure"
 -	"google.golang.org/protobuf/proto"
- 
+
  	mesh "istio.io/api/mesh/v1alpha1"
  	"istio.io/istio/pilot/cmd/pilot-agent/config"
 @@ -47,6 +46,7 @@ import (
@@ -439,7 +439,7 @@ index 8b5795e6eb..b16a120a55 100644
 @@ -196,7 +196,18 @@ func ApplyYAMLStrict(yml string, pb proto.Message) error {
  	return ApplyJSONStrict(string(js), pb)
  }
- 
+
 -func ShallowCopy(dst, src proto.Message) {
 +type ComparableMessage interface {
 +	comparable
