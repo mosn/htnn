@@ -17,7 +17,7 @@ module mosn.io/htnn/dev_your_plugin
 go 1.22
 
 require (
-	github.com/envoyproxy/envoy v1.32.0
+	github.com/envoyproxy/envoy v1.33.0
 	github.com/stretchr/testify v1.10.0
 	google.golang.org/protobuf v1.36.4
 	mosn.io/htnn/api v0.5.0
