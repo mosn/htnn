@@ -19,7 +19,7 @@ go 1.22
 require (
 	github.com/envoyproxy/envoy v1.32.0
 	github.com/stretchr/testify v1.10.0
-	google.golang.org/protobuf v1.36.4
+	google.golang.org/protobuf v1.36.5
 	mosn.io/htnn/api v0.5.0
 )
 
