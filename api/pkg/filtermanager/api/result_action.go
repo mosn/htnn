@@ -33,6 +33,9 @@ var (
 	// WaitAllData controls if the request/response body needs to be fully buffered during processing by Go plugin.
 	// If this action is returned, DecodeData/EncodeData will be called by DecodeRequest/EncodeResponse.
 	WaitAllData ResultAction = &isResultAction{typeid: 1}
+	// WaitData buffers the response header until the first response body is received.
+	// TODO: currently, we only support using WaitData in the EncodeHeader method.
+	WaitData ResultAction = &isResultAction{typeid: 2}
 	// LocalResponse controls if a local reply should be returned from Envoy instead of using the
 	// upstream response. See comments below for how to use it.
 )

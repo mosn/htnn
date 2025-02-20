@@ -833,3 +833,45 @@ func TestSyncRunWhenProcessingBufferedDataWithFiltersFromConsumer(t *testing.T) 
 	assert.Equal(t, capi.Running, res)
 	cb.WaitContinued()
 }
+
+func waitDataFactory(_ interface{}, callbacks api.FilterCallbackHandler) api.Filter {
+	return &waitDataFilter{
+		cb: callbacks,
+	}
+}
+
+type waitDataFilter struct {
+	api.PassThroughFilter
+
+	cb api.FilterCallbackHandler
+}
+
+func (f *waitDataFilter) DecodeHeaders(_ api.RequestHeaderMap, _ bool) api.ResultAction {
+	return api.WaitData
+}
+
+func (f *waitDataFilter) EncodeHeaders(_ api.ResponseHeaderMap, _ bool) api.ResultAction {
+	return api.WaitData
+}
+
+func TestWaitData(t *testing.T) {
+	cb := envoy.NewCAPIFilterCallbackHandler()
+	config := initFilterManagerConfig("ns")
+	config.parsed = []*model.ParsedFilterConfig{
+		{
+			Name:    "waitData",
+			Factory: waitDataFactory,
+		},
+	}
+
+	m := unwrapFilterManager(FilterManagerFactory(config, cb))
+	h := http.Header{}
+	hdr := envoy.NewRequestHeaderMap(h)
+	m.DecodeHeaders(hdr, false)
+	res := cb.WaitContinued()
+	assert.Equal(t, capi.Continue, res)
+	respHdr := envoy.NewResponseHeaderMap(h)
+	m.EncodeHeaders(respHdr, false)
+	res = cb.WaitContinued()
+	assert.Equal(t, capi.StopAndBufferWatermark, res)
+}
