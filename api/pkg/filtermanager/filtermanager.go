@@ -41,6 +41,7 @@ type filterManager struct {
 	reqBuf              capi.BufferInstance  // don't access it in Encode phases
 
 	encodeResponseNeeded bool
+	encodeWaitFirstData  bool
 	encodeIdx            int
 	rspHdr               api.ResponseHeaderMap
 	rspBuf               capi.BufferInstance
@@ -81,6 +82,7 @@ func (m *filterManager) Reset() {
 	m.reqBuf = nil
 
 	m.encodeResponseNeeded = false
+	m.encodeWaitFirstData = false
 	m.encodeIdx = -1
 	m.rspHdr = nil
 	m.rspBuf = nil
@@ -272,6 +274,14 @@ func (m *filterManager) handleAction(res api.ResultAction, phase api.Phase, filt
 		} else {
 			api.LogErrorf("WaitAllData only allowed when processing headers, phase: %v. "+
 				" In the mean time, use DecodeRequest /  EncodeResponse instead of DecodeData / EncodeData to handle fully buffered body.", phase)
+		}
+		return false
+	}
+	if res == api.WaitData {
+		if phase == api.PhaseEncodeHeaders {
+			m.encodeWaitFirstData = true
+		} else {
+			api.LogErrorf("WaitAllData only allowed when processing response headers, phase: %v.", phase)
 		}
 		return false
 	}
@@ -805,6 +815,9 @@ func (m *filterManager) encodeHeaders(headers capi.ResponseHeaderMap, endStream 
 		}
 	}
 
+	if m.encodeWaitFirstData {
+		return capi.StopAndBufferWatermark
+	}
 	return capi.Continue
 }
 

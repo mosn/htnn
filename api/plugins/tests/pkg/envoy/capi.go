@@ -493,7 +493,7 @@ type filterCallbackHandler struct {
 	resp        LocalResponse
 	consumer    api.Consumer
 	pluginState api.PluginState
-	ch          chan struct{}
+	ch          chan capi.StatusType
 }
 
 func NewFilterCallbackHandler() *filterCallbackHandler {
@@ -501,7 +501,7 @@ func NewFilterCallbackHandler() *filterCallbackHandler {
 		lock: &sync.RWMutex{},
 		// we create channel with buffer so the goroutine won't leak when we don't call WaitContinued
 		// manually. When running in Envoy, Envoy won't re-run the filter until Continue is called.
-		ch:         make(chan struct{}, 10),
+		ch:         make(chan capi.StatusType, 10),
 		streamInfo: &StreamInfo{},
 	}
 }
@@ -519,11 +519,11 @@ func (i *filterCallbackHandler) SetStreamInfo(data api.StreamInfo) {
 }
 
 func (i *filterCallbackHandler) Continue(status capi.StatusType) {
-	i.ch <- struct{}{}
+	i.ch <- status
 }
 
-func (i *filterCallbackHandler) WaitContinued() {
-	<-i.ch
+func (i *filterCallbackHandler) WaitContinued() capi.StatusType {
+	return <-i.ch
 }
 
 func (i *filterCallbackHandler) SendLocalReply(responseCode int, bodyText string, headers map[string][]string, grpcStatus int64, details string) {
