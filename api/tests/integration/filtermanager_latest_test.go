@@ -19,9 +19,11 @@ package integration
 import (
 	"bytes"
 	_ "embed"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -338,4 +340,56 @@ func TestFilterManagerLogWithTrailers(t *testing.T) {
 	resp, err := dp.PostWithTrailer("/echo", hdr, bytes.NewReader([]byte("test")), trailer)
 	require.Nil(t, err)
 	assert.Equal(t, 200, resp.StatusCode)
+}
+
+func TestMetricsEnabledPlugin(t *testing.T) {
+	dp, err := dataplane.StartDataPlane(t, &dataplane.Option{
+		LogLevel: "debug",
+	})
+	if err != nil {
+		t.Fatalf("failed to start data plane: %v", err)
+		return
+	}
+	defer dp.Stop()
+
+	lp := &filtermanager.FilterManagerConfig{
+		Plugins: []*model.FilterConfig{
+			{
+				Name:   "metrics",
+				Config: &Config{},
+			},
+		},
+	}
+
+	controlPlane.UseGoPluginConfig(t, lp, dp)
+	hdr := http.Header{}
+	resp, err := dp.Get("/", hdr)
+	require.Nil(t, err)
+	body, err := io.ReadAll(resp.Body)
+	require.Nil(t, err)
+	assert.Equal(t, 200, resp.StatusCode, "response: %s", string(body))
+	resp.Body.Close()
+
+	resp, err = dp.GetAdmin("/stats")
+	require.Nil(t, err)
+	body, err = io.ReadAll(resp.Body)
+	require.Nil(t, err)
+	lines := strings.Split(string(body), "\n")
+
+	var found int
+
+	for _, l := range lines {
+		if !strings.Contains(l, "metrics-test") {
+			continue
+		}
+		if strings.Contains(l, "usage.counter") {
+			found++
+			assert.Equal(t, "metrics-test.usage.counter: 1", l)
+		}
+		if strings.Contains(l, "usage.gauge") {
+			found++
+			assert.Contains(t, "metrics-test.usage.gauge: 2", l)
+		}
+	}
+	assert.Equal(t, 2, found, "expect to have metrics usage.counter and usage.gauge")
 }
