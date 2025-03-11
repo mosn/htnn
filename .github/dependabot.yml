@@ -61,13 +61,16 @@ updates:
           - "k8s.io/*" # client-go and her friends
   - package-ecosystem: "gomod"
     directory: "/tools"
+    open-pull-requests-limit: 0
     schedule:
       interval: "weekly"
   - package-ecosystem: "gomod"
     directory: "/site"
+    open-pull-requests-limit: 0
     schedule:
       interval: "weekly"
   - package-ecosystem: "gomod"
+    open-pull-requests-limit: 0
     directory: "/api/tests/integration/testdata/services/grpc"
     schedule:
       interval: "weekly"
@@ -76,6 +79,7 @@ updates:
     schedule:
       interval: "weekly"
   - package-ecosystem: "npm"
+    open-pull-requests-limit: 0
     directory: "/site"
     schedule:
       interval: "weekly"
