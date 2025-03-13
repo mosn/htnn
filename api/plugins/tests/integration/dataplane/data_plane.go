@@ -543,6 +543,27 @@ func (dp *DataPlane) do(method string, path string, header http.Header, body io.
 	return resp, err
 }
 
+func (dp *DataPlane) GetAdmin(path string) (*http.Response, error) {
+	req, err := http.NewRequest("GET", "http://localhost:"+dp.adminAPIPort+path, nil)
+	if err != nil {
+		return nil, err
+	}
+	tr := &http.Transport{
+		DialContext: func(ctx context.Context, proto, addr string) (conn net.Conn, err error) {
+			return net.DialTimeout("tcp", ":"+dp.adminAPIPort, 1*time.Second)
+		},
+	}
+
+	client := &http.Client{Transport: tr,
+		Timeout: 10 * time.Second,
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			return http.ErrUseLastResponse
+		},
+	}
+	resp, err := client.Do(req)
+	return resp, err
+}
+
 func (dp *DataPlane) doWithTrailer(method string, path string, header http.Header, body io.Reader, trailer http.Header) (*http.Response, error) {
 	req, err := http.NewRequest(method, "http://localhost:"+dp.dataPlanePort+path, body)
 	if err != nil {
