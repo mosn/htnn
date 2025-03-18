@@ -38,6 +38,13 @@ var _ GoPlugin = &MockPlugin{}
 
 type MockPluginConfig struct {
 	Config
+
+	parsed bool
+}
+
+func (c *MockPluginConfig) Parse(api.ConfigParsingCallbackHandler) error {
+	c.parsed = true
+	return nil
 }
 
 type MockConsumerPlugin struct {

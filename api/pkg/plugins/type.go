@@ -145,6 +145,10 @@ type Plugin interface {
 	NonBlockingPhases() api.Phase
 }
 
+type Parser interface {
+	Parse(cb api.ConfigParsingCallbackHandler) error
+}
+
 type Initer interface {
 	Init(cb api.ConfigCallbackHandler) error
 }

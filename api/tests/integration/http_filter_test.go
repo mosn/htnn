@@ -111,9 +111,11 @@ func TestFilterMergeIntoRoute(t *testing.T) {
 			run: func(t *testing.T) {
 				resp, _ := dp.Get("/echo", nil)
 				assert.Equal(t, 200, resp.StatusCode)
+				assert.Equal(t, "1", resp.Header.Get("Echo-ParseCounter"))
 				assert.Equal(t, "1", resp.Header.Get("Echo-InitCounter"))
 				resp, _ = dp.Get("/echo", nil)
 				assert.Equal(t, 200, resp.StatusCode)
+				assert.Equal(t, "1", resp.Header.Get("Echo-ParseCounter"))
 				assert.Equal(t, "1", resp.Header.Get("Echo-InitCounter"))
 			},
 		},
@@ -123,9 +125,11 @@ func TestFilterMergeIntoRoute(t *testing.T) {
 			run: func(t *testing.T) {
 				resp, _ := dp.Get("/echo", nil)
 				assert.Equal(t, 200, resp.StatusCode)
+				assert.Equal(t, "1", resp.Header.Get("Echo-ParseCounter"))
 				assert.Equal(t, "1", resp.Header.Get("Echo-InitCounter"))
 				resp, _ = dp.Get("/echo", nil)
 				assert.Equal(t, 200, resp.StatusCode)
+				assert.Equal(t, "1", resp.Header.Get("Echo-ParseCounter"))
 				assert.Equal(t, "1", resp.Header.Get("Echo-InitCounter"))
 			},
 		},

@@ -34,6 +34,7 @@ message BadPluginConfig {
   bool panic_in_parse = 2;
   bool error_in_init = 3;
   bool panic_in_init = 4;
+  bool error_in_parse = 5;
 }
 
 message ConsumerConfig {

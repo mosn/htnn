@@ -334,6 +334,13 @@ func (c *badPluginConfig) Init(cb api.ConfigCallbackHandler) error {
 	return nil
 }
 
+func (c *badPluginConfig) Parse(cb api.ConfigParsingCallbackHandler) error {
+	if c.ErrorInParse {
+		return errors.New("ouch")
+	}
+	return nil
+}
+
 func (p *badPlugin) Config() api.PluginConfig {
 	return &badPluginConfig{}
 }
@@ -421,8 +428,17 @@ func (f *consumerFilter) DecodeHeaders(headers api.RequestHeaderMap, endStream b
 type initConfig struct {
 	Config
 
-	initCounter int
+	parseCounter int
+	initCounter  int
 }
+
+func (c *initConfig) Parse(cb api.ConfigParsingCallbackHandler) error {
+	api.LogInfof("parse at %s", string(debug.Stack()))
+	c.parseCounter++
+	return nil
+}
+
+var _ plugins.Parser = &initConfig{}
 
 func (c *initConfig) Init(cb api.ConfigCallbackHandler) error {
 	api.LogInfof("init at %s", string(debug.Stack()))
@@ -459,6 +475,7 @@ type initFilter struct {
 }
 
 func (f *initFilter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {
+	headers.Add("ParseCounter", strconv.Itoa(f.config.parseCounter))
 	headers.Add("InitCounter", strconv.Itoa(f.config.initCounter))
 	return api.Continue
 }

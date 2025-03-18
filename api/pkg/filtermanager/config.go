@@ -243,6 +243,14 @@ func (p *FilterManagerConfigParser) Parse(any *anypb.Any, callbacks capi.ConfigC
 					consumerFiltersEndAt = i + 1
 				}
 
+				if parser, ok := config.(pkgPlugins.Parser); ok {
+					// For now, we have nothing to provide as config callbacks
+					if err := parser.Parse(nil); err != nil {
+						api.LogErrorf("%s during parsing plugin %s in filtermanager", err, name)
+						return nil, err
+					}
+				}
+
 				if _, ok := config.(pkgPlugins.Initer); ok {
 					needInit = true
 				}

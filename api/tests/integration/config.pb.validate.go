@@ -179,6 +179,8 @@ func (m *BadPluginConfig) validate(all bool) error {
 
 	// no validation rules for PanicInInit
 
+	// no validation rules for ErrorInParse
+
 	if len(errors) > 0 {
 		return BadPluginConfigMultiError(errors)
 	}
