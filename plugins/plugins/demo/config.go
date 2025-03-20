@@ -72,3 +72,13 @@ func (c *config) Init(cb api.ConfigCallbackHandler) error {
 	c.client = http.DefaultClient
 	return nil
 }
+
+// Parse provides a hook to deliver a signal that the configuration is given or updated.
+// This method is called once the new configuration is received. It's blocking so we can not do IO
+// operations in this method.
+//
+// This method is optional.
+func (c *config) Parse(cb api.ConfigParsingCallbackHandler) error {
+	api.LogInfof("receive a new configuration: %+v", c)
+	return nil
+}

@@ -153,6 +153,14 @@ func (cp *ControlPlane) updateConfig(t *testing.T, res Resources) {
 }
 
 func (cp *ControlPlane) UseGoPluginConfig(t *testing.T, config *filtermanager.FilterManagerConfig, dp *dataplane.DataPlane) {
+	cp.useGoPluginConfig(t, config, dp, false)
+}
+
+func (cp *ControlPlane) ShouldRejectGoPluginConfig(t *testing.T, config *filtermanager.FilterManagerConfig, dp *dataplane.DataPlane) {
+	cp.useGoPluginConfig(t, config, dp, true)
+}
+
+func (cp *ControlPlane) useGoPluginConfig(t *testing.T, config *filtermanager.FilterManagerConfig, dp *dataplane.DataPlane, willTimeout bool) {
 	testRouteDynamicCluster := &route.Route{
 		Name: "dynamic-cluster",
 		Match: &route.RouteMatch{
@@ -210,6 +218,57 @@ func (cp *ControlPlane) UseGoPluginConfig(t *testing.T, config *filtermanager.Fi
 		}
 	}
 
+	defaultRoutes := []*route.Route{
+		{
+			Name: getRandomString(8),
+			Match: &route.RouteMatch{
+				PathSpecifier: &route.RouteMatch_Path{
+					Path: "/detect_if_the_rds_takes_effect",
+				},
+			},
+			Action: &route.Route_DirectResponse{
+				DirectResponse: &route.DirectResponseAction{
+					Status: 200,
+				},
+			},
+			TypedPerFilterConfig: map[string]*any1.Any{
+				"htnn.filters.http.golang": proto.MessageToAny(&golang.ConfigsPerRoute{
+					PluginsConfig: map[string]*golang.RouterPlugin{
+						"fm": {
+							Override: &golang.RouterPlugin_Config{
+								Config: proto.MessageToAny(
+									FilterManagerConfigToTypedStruct(NewSinglePluginConfig("detector", nil))),
+							},
+						},
+					},
+				}),
+			},
+		},
+		{
+			Match: &route.RouteMatch{
+				PathSpecifier: &route.RouteMatch_Path{
+					Path: "/flush_coverage",
+				},
+			},
+			Action: &route.Route_DirectResponse{
+				DirectResponse: &route.DirectResponseAction{
+					Status: 200,
+				},
+			},
+			TypedPerFilterConfig: map[string]*any1.Any{
+				"htnn.filters.http.golang": proto.MessageToAny(&golang.ConfigsPerRoute{
+					PluginsConfig: map[string]*golang.RouterPlugin{
+						"fm": {
+							Override: &golang.RouterPlugin_Config{
+								Config: proto.MessageToAny(
+									FilterManagerConfigToTypedStruct(NewSinglePluginConfig("coverage", nil))),
+							},
+						},
+					},
+				}),
+			},
+		},
+	}
 	cp.updateConfig(t, Resources{
 		resource.RouteType: []types.Resource{
 			&route.RouteConfiguration{
@@ -218,62 +277,32 @@ func (cp *ControlPlane) UseGoPluginConfig(t *testing.T, config *filtermanager.Fi
 					{
 						Name:    "dynmamic_service",
 						Domains: []string{"*"},
-						Routes: append([]*route.Route{
-							{
-								Name: getRandomString(8),
-								Match: &route.RouteMatch{
-									PathSpecifier: &route.RouteMatch_Path{
-										Path: "/detect_if_the_rds_takes_effect",
-									},
-								},
-								Action: &route.Route_DirectResponse{
-									DirectResponse: &route.DirectResponseAction{
-										Status: 200,
-									},
-								},
-								TypedPerFilterConfig: map[string]*any1.Any{
-									"htnn.filters.http.golang": proto.MessageToAny(&golang.ConfigsPerRoute{
-										PluginsConfig: map[string]*golang.RouterPlugin{
-											"fm": {
-												Override: &golang.RouterPlugin_Config{
-													Config: proto.MessageToAny(
-														FilterManagerConfigToTypedStruct(NewSinglePluginConfig("detector", nil))),
-												},
-											},
-										},
-									}),
-								},
-							},
-							{
-								Match: &route.RouteMatch{
-									PathSpecifier: &route.RouteMatch_Path{
-										Path: "/flush_coverage",
-									},
-								},
-								Action: &route.Route_DirectResponse{
-									DirectResponse: &route.DirectResponseAction{
-										Status: 200,
-									},
-								},
-								TypedPerFilterConfig: map[string]*any1.Any{
-									"htnn.filters.http.golang": proto.MessageToAny(&golang.ConfigsPerRoute{
-										PluginsConfig: map[string]*golang.RouterPlugin{
-											"fm": {
-												Override: &golang.RouterPlugin_Config{
-													Config: proto.MessageToAny(
-														FilterManagerConfigToTypedStruct(NewSinglePluginConfig("coverage", nil))),
-												},
-											},
-										},
-									}),
-								},
-							},
-						}, routes...),
+						Routes:  append(defaultRoutes, routes...),
 					},
 				},
 			},
 		},
 	})
+
+	if willTimeout {
+		time.Sleep(1 * time.Second)
+		require.False(t, dp.Configured())
+
+		cp.updateConfig(t, Resources{
+			resource.RouteType: []types.Resource{
+				&route.RouteConfiguration{
+					Name: "dynamic_route",
+					VirtualHosts: []*route.VirtualHost{
+						{
+							Name:    "dynmamic_service",
+							Domains: []string{"*"},
+							Routes:  defaultRoutes,
+						},
+					},
+				},
+			},
+		})
+	}
 
 	// Wait for DP to use the configuration.
 	require.Eventually(t, func() bool {

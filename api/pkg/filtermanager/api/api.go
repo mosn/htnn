@@ -303,6 +303,11 @@ type ConfigCallbackHandler interface {
 	// So let's provide a placeholder here.
 }
 
+// ConfigParsingCallbackHandler provides API that is used during parsing configuration
+type ConfigParsingCallbackHandler interface {
+	// Let's provide a placeholder here for future extending.
+}
+
 type LogType = api.LogType
 
 var (

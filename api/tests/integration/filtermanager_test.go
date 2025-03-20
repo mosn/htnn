@@ -1047,6 +1047,34 @@ func TestFilterManagerPluginPanic(t *testing.T) {
 	assert.Equal(t, 500, resp.StatusCode, resp)
 }
 
+func TestFilterManagerPluginReturnsErrorInParsingCallback(t *testing.T) {
+	dp, err := dataplane.StartDataPlane(t, &dataplane.Option{
+		NoErrorLogCheck: true,
+		ExpectLogPattern: []string{
+			`ouch during parsing plugin bad in filtermanager`,
+		},
+	})
+	if err != nil {
+		t.Fatalf("failed to start data plane: %v", err)
+		return
+	}
+	defer dp.Stop()
+
+	config := &filtermanager.FilterManagerConfig{
+		Plugins: []*model.FilterConfig{
+			{
+				Name: "bad",
+				Config: &badPluginConfig{
+					BadPluginConfig: BadPluginConfig{
+						ErrorInParse: true,
+					},
+				},
+			},
+		},
+	}
+	controlPlane.ShouldRejectGoPluginConfig(t, config, dp)
+}
+
 func TestFilterManagerPluginIncorrectMethodDefinition(t *testing.T) {
 	dp, err := dataplane.StartDataPlane(t, &dataplane.Option{
 		LogLevel:        "debug",
