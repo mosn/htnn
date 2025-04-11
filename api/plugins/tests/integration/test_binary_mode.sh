@@ -16,4 +16,4 @@
 set -euo pipefail
 
 echo "Running tests in binary mode"
-TEST_ENVOY_BINARY_PATH=$(which envoy) go test -tags "envoy$(ENVOY_API_VERSION)" -v mosn.io/htnn/api/tests/integration -run TestFilterManagerEncode$
+TEST_ENVOY_BINARY_PATH=$(which envoy) go test -tags "envoy${ENVOY_API_VERSION}" -v mosn.io/htnn/api/tests/integration -run TestFilterManagerEncode$

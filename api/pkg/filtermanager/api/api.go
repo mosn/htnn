@@ -210,6 +210,8 @@ type StreamFilterCallbacks interface {
 	// * ErrSerializationFailure (Currently, fetching attributes in List/Map type are unsupported)
 	// * ErrValueNotFound
 	GetProperty(key string) (string, error)
+	SecretManager() SecretManager
+
 	// ClearRouteCache clears the route cache for the current request, and filtermanager will re-fetch the route in the next filter.
 	// Please be careful to invoke it, since filtermanager will raise an 404 route_not_found response when failed to re-fetch a route.
 	ClearRouteCache()
@@ -254,6 +256,8 @@ type FilterProcessCallbacks interface {
 	// For example, turn a headers only request into a request with a body, add more body when processing trailers, and so on.
 	// The second argument isStreaming supplies if this caller streams data or buffers the full body.
 	AddData(data []byte, isStreaming bool)
+	// InjectData inject the content of slice data via Envoy StreamXXFilterCallbacks's injectXXDataToFilterChaininjectData.
+	InjectData(data []byte)
 
 	// hide Continue() method from the user
 }

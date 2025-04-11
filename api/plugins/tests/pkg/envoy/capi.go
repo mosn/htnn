@@ -555,6 +555,11 @@ func (i *filterCallbackHandler) GetProperty(key string) (string, error) {
 	return "", nil
 }
 
+func (i *filterCallbackHandler) SecretManager() api.SecretManager {
+	// TODO: return a sanity value once we need SecretManager
+	return nil
+}
+
 func (i *filterCallbackHandler) ClearRouteCache() {
 }
 
@@ -562,6 +567,9 @@ func (i *filterCallbackHandler) RefreshRouteCache() {
 }
 
 func (i *filterCallbackHandler) AddData([]byte, bool) {
+}
+
+func (i *filterCallbackHandler) InjectData([]byte) {
 }
 
 func (i *filterCallbackHandler) LookupConsumer(_, _ string) (api.Consumer, bool) {

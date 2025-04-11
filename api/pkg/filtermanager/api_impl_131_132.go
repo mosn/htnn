@@ -24,11 +24,29 @@ import (
 	"mosn.io/htnn/api/pkg/filtermanager/api"
 )
 
+func (cb *filterManagerCallbackHandler) SecretManager() api.SecretManager {
+	api.LogErrorf("SecretManager is not implemented: %s", debug.Stack())
+	return nil
+}
+
 func (cb *filterManagerCallbackHandler) RefreshRouteCache() {
 	api.LogErrorf("RefreshRouteCache is not implemented: %s", debug.Stack())
 }
 
+type commonFilterCallbackHandlerWrapper struct {
+}
+
+func (w *commonFilterCallbackHandlerWrapper) AddData([]byte, bool) {
+	api.LogErrorf("AddData is not implemented: %s", debug.Stack())
+}
+
+func (w *commonFilterCallbackHandlerWrapper) InjectData([]byte) {
+	api.LogErrorf("InjectData is not implemented: %s", debug.Stack())
+}
+
 type decoderFilterCallbackHandlerWrapper struct {
+	commonFilterCallbackHandlerWrapper
+
 	capi.DecoderFilterCallbacks
 }
 
@@ -36,24 +54,18 @@ func NewDecoderFilterCallbackHandlerWrapper(h capi.DecoderFilterCallbacks) api.D
 	return &decoderFilterCallbackHandlerWrapper{DecoderFilterCallbacks: h}
 }
 
-func (w *decoderFilterCallbackHandlerWrapper) AddData([]byte, bool) {
-	api.LogErrorf("AddData is not implemented: %s", debug.Stack())
-}
-
 func (cb *filterManagerCallbackHandler) DecoderFilterCallbacks() api.DecoderFilterCallbacks {
 	return NewDecoderFilterCallbackHandlerWrapper(cb.FilterCallbackHandler.DecoderFilterCallbacks())
 }
 
 type encoderFilterCallbackHandlerWrapper struct {
+	commonFilterCallbackHandlerWrapper
+
 	capi.EncoderFilterCallbacks
 }
 
 func NewEncoderFilterCallbackHandlerWrapper(h capi.EncoderFilterCallbacks) api.EncoderFilterCallbacks {
 	return &encoderFilterCallbackHandlerWrapper{EncoderFilterCallbacks: h}
-}
-
-func (w *encoderFilterCallbackHandlerWrapper) AddData([]byte, bool) {
-	api.LogErrorf("AddData is not implemented: %s", debug.Stack())
 }
 
 func (cb *filterManagerCallbackHandler) EncoderFilterCallbacks() api.EncoderFilterCallbacks {

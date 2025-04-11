@@ -12,13 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build envoydev
+//go:build !envoy1.29 && !envoydev
 
 package api
 
-import (
-	"github.com/envoyproxy/envoy/contrib/golang/common/go/api"
-)
+import "github.com/envoyproxy/envoy/contrib/golang/common/go/api"
 
 var (
 	LogTrace     = api.LogTrace
@@ -37,5 +35,5 @@ var (
 	GetLogLevel = api.GetLogLevel
 )
 
-// SecretManager exports the managed secret
-type SecretManager = api.SecretManager
+type SecretManager interface {
+}
