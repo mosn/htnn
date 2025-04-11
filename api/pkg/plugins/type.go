@@ -177,6 +177,7 @@ type GoPlugin interface {
 	Plugin
 
 	Factory() api.FilterFactory
+	// TODO: add Destroy() support
 }
 
 type ConsumerPlugin interface {

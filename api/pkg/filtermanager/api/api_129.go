@@ -114,3 +114,6 @@ func LogCriticalf(format string, v ...any) {
 	}
 	api.LogCriticalf(format, v...)
 }
+
+type SecretManager interface {
+}

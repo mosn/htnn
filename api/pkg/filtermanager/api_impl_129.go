@@ -29,6 +29,11 @@ func (s *filterManagerStreamInfo) WorkerID() uint32 {
 	return 0
 }
 
+func (cb *filterManagerCallbackHandler) SecretManager() api.SecretManager {
+	api.LogErrorf("SecretManager is not implemented: %s", debug.Stack())
+	return nil
+}
+
 func (cb *filterManagerCallbackHandler) ClearRouteCache() {
 	api.LogErrorf("ClearRouteCache is not implemented: %s", debug.Stack())
 }
@@ -39,6 +44,10 @@ func (cb *filterManagerCallbackHandler) RefreshRouteCache() {
 
 func (cb *filterManagerCallbackHandler) AddData([]byte, bool) {
 	api.LogErrorf("AddData is not implemented: %s", debug.Stack())
+}
+
+func (cb *filterManagerCallbackHandler) InjectData([]byte) {
+	api.LogErrorf("InjectData is not implemented: %s", debug.Stack())
 }
 
 func (cb *filterManagerCallbackHandler) DecoderFilterCallbacks() api.DecoderFilterCallbacks {
