@@ -124,6 +124,37 @@ func TestConfig(t *testing.T) {
 			`,
 			err: "invalid Action.Name: value length must be at least 1 runes",
 		},
+		{
+			name: "validate exact match map",
+			input: `
+{
+  "statPrefix": "network_rbac",
+  "matcher": {
+    "matcherTree": {
+      "input": {
+        "name": "envoy.matching.inputs.source_ip",
+        "typedConfig": {
+          "@type": "type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.SourceIPInput"
+        }
+      },
+      "exactMatchMap": {
+        "map": {
+          "rule1": {
+            "action": {
+              "name": "envoy.filters.rbac.action",
+              "typedConfig": {
+                "@type": "type.googleapis.com/envoy.config.rbac.v3.Action"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+			`,
+			err: "action configuration is empty for rule rule1",
+		},
 	}
 
 	for _, tt := range tests {
