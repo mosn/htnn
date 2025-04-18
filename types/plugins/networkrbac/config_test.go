@@ -155,6 +155,77 @@ func TestConfig(t *testing.T) {
 			`,
 			err: "action configuration is empty for rule rule1",
 		},
+		{
+			name: "validate exact match map with multiple rules",
+			input: `
+{
+  "statPrefix": "network_rbac",
+  "matcher": {
+    "matcherTree": {
+      "input": {
+        "name": "envoy.matching.inputs.source_ip",
+        "typedConfig": {
+          "@type": "type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.SourceIPInput"
+        }
+      },
+      "exactMatchMap": {
+        "map": {
+          "rule1": {
+            "action": {
+              "name": "envoy.filters.rbac.action",
+              "typedConfig": {
+                "@type": "type.googleapis.com/envoy.config.rbac.v3.Action"
+              }
+            }
+          },
+          "rule2": {
+            "action": {
+              "name": "envoy.filters.rbac.action",
+              "typedConfig": {
+                "@type": "type.googleapis.com/envoy.config.rbac.v3.Action"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+			`,
+			err: "action configuration is empty for rule",
+		},
+		{
+			name: "validate exact match map with invalid action type",
+			input: `
+{
+  "statPrefix": "network_rbac",
+  "matcher": {
+    "matcherTree": {
+      "input": {
+        "name": "envoy.matching.inputs.source_ip",
+        "typedConfig": {
+          "@type": "type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.SourceIPInput"
+        }
+      },
+      "exactMatchMap": {
+        "map": {
+          "rule1": {
+            "action": {
+              "name": "envoy.filters.rbac.action",
+              "typedConfig": {
+                "@type": "type.googleapis.com/envoy.config.rbac.v3.Action",
+                "name": ""
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+			`,
+			err: "action configuration is empty for rule rule1",
+		},
 	}
 
 	for _, tt := range tests {
