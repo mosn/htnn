@@ -13,7 +13,7 @@
 # limitations under the License.
 
 # Use debian image for ARM64 support
-FROM floryn90/hugo:ext-debian@sha256:fee85ef1ff05dce85043b445fb7e1774594f35a943e7c019a378de345d91cf18
+FROM floryn90/hugo:ext-debian@sha256:d763fcd10b1f8d2fe317245f0e4ab400668b2c3c0e20fdd7d1bcf81a06f7c82a
 
 # hadolint ignore=DL3008
 RUN apt-get install -y --no-install-recommends git && \
