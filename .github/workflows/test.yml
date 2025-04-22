@@ -255,7 +255,7 @@ jobs:
     - name: Download artifact
       uses: actions/download-artifact@v4
     - name: Upload to codecov
-      uses: codecov/codecov-action@v5.4.0
+      uses: codecov/codecov-action@v5.4.2
       with:
         fail_ci_if_error: true
         files: |
