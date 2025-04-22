@@ -78,6 +78,9 @@ updates:
     directory: "/examples/dev_your_plugin"
     schedule:
       interval: "weekly"
+    ignore:
+      # the Envoy lib need to be fit with the Envoy we use. So let's disable auto-updates.
+      - dependency-name: "github.com/envoyproxy/*"
   - package-ecosystem: "npm"
     open-pull-requests-limit: 0
     directory: "/site"
