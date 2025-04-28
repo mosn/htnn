@@ -26,6 +26,9 @@ type logExecutionFilter struct {
 	name      string
 	internal  api.Filter
 	callbacks api.FilterCallbackHandler
+
+	cachedIDOnce sync.Once
+	cachedID     string
 }
 
 func NewLogExecutionFilter(name string, internal api.Filter, callbacks api.FilterCallbackHandler) api.Filter {
@@ -37,6 +40,13 @@ func NewLogExecutionFilter(name string, internal api.Filter, callbacks api.Filte
 }
 
 func (f *logExecutionFilter) id() string {
+	f.cachedIDOnce.Do(func() {
+		f.cachedID = f.computeID()
+	})
+	return f.cachedID
+}
+
+func (f *logExecutionFilter) computeID() string {
 	name := f.callbacks.StreamInfo().GetRouteName()
 	if name != "" {
 		return "route " + name
