@@ -15,36 +15,47 @@
 package oidc
 
 import (
+	"context"
+	"net/http"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
+	"golang.org/x/oauth2"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/types/known/durationpb"
 
 	"mosn.io/htnn/types/plugins/oidc"
 )
 
+func newProtoConfigForTest(protoConfigOpt func(*oidc.Config)) *config {
+	cfg := &config{}
+	protoConfigOpt(&cfg.CustomConfig.Config)
+	return cfg
+}
+
 func TestBadIssuer(t *testing.T) {
-	c := config{
-		Config: oidc.Config{
-			Issuer:  "http://1.1.1.1",
-			Timeout: &durationpb.Duration{Seconds: 1}, // quick fail
-		},
-	}
+	c := newProtoConfigForTest(func(cfg *oidc.Config) {
+		cfg.Issuer = "http://1.1.1.1"
+		cfg.Timeout = &durationpb.Duration{Seconds: 1}
+	})
 	err := c.Init(nil)
 	assert.Error(t, err)
 }
 
 func TestDefaultValue(t *testing.T) {
-	c := config{
-		Config: oidc.Config{
-			Issuer:  "http://1.1.1.1",
-			Timeout: &durationpb.Duration{Seconds: 1}, // quick fail
-		},
-	}
-	// we set default value before communicating with the issuer
+	c := newProtoConfigForTest(func(cfg *oidc.Config) {
+		cfg.Issuer = "http://1.1.1.1"
+		cfg.ClientId = "test-client"
+		cfg.ClientSecret = "test-secret"
+		cfg.RedirectUrl = "http://localhost/callback"
+		cfg.EnableUserinfoSupport = true
+		cfg.CookieEncryptionKey = "1234567890123456"
+		cfg.Timeout = &durationpb.Duration{Seconds: 1}
+	})
 	c.Init(nil)
-	assert.Equal(t, c.IdTokenHeader, "x-id-token")
+	assert.Equal(t, "x-id-token", c.IdTokenHeader)
+	assert.Equal(t, "x-userinfo", c.UserinfoHeader)
 }
 
 func TestConfig(t *testing.T) {
@@ -77,5 +88,108 @@ func TestConfig(t *testing.T) {
 				assert.ErrorContains(t, err, tt.err)
 			}
 		})
+	}
+}
+
+func TestCtxWithClient(t *testing.T) {
+	// Test configuration
+	conf := &config{
+		opTimeout: 30 * time.Second,
+	}
+
+	t.Run("should inject new client when no HTTPClient exists", func(t *testing.T) {
+		ctx := context.Background()
+
+		resultCtx := conf.ctxWithClient(ctx)
+
+		client, ok := resultCtx.Value(oauth2.HTTPClient).(*http.Client)
+		if !ok {
+			t.Fatal("Expected HTTPClient in context")
+		}
+
+		if client.Timeout != conf.opTimeout {
+			t.Errorf("Expected timeout %v, got %v", conf.opTimeout, client.Timeout)
+		}
+	})
+
+	t.Run("should preserve existing HTTPClient when present", func(t *testing.T) {
+		existingClient := &http.Client{Timeout: 10 * time.Second}
+		ctx := context.WithValue(context.Background(), oauth2.HTTPClient, existingClient)
+
+		resultCtx := conf.ctxWithClient(ctx)
+
+		retrievedClient := resultCtx.Value(oauth2.HTTPClient).(*http.Client)
+		if retrievedClient != existingClient {
+			t.Error("Should not replace existing HTTPClient")
+		}
+	})
+
+	t.Run("should skip injection for non-*http.Client values", func(t *testing.T) {
+		ctx := context.WithValue(context.Background(), oauth2.HTTPClient, "invalid-value")
+
+		resultCtx := conf.ctxWithClient(ctx)
+
+		val := resultCtx.Value(oauth2.HTTPClient)
+		if _, ok := val.(*http.Client); ok {
+			t.Error("Should not override non-client values")
+		}
+		if val != "invalid-value" {
+			t.Error("Should preserve original invalid value")
+		}
+	})
+}
+
+func TestUserinfo(t *testing.T) {
+	// without an encryption key
+	conf1 := newProtoConfigForTest(func(cfg *oidc.Config) {
+		cfg.Issuer = "http://1.1.1.1"
+		cfg.ClientId = "test-client"
+		cfg.ClientSecret = "test-secret"
+		cfg.RedirectUrl = "http://localhost/callback"
+		cfg.EnableUserinfoSupport = true
+		cfg.Timeout = &durationpb.Duration{Seconds: 1}
+	})
+	conf1.Init(nil)
+	err := conf1.Validate()
+	assert.ErrorContains(t, err, "value length must be 16, 24 or 32 bytes")
+
+	// with an invalid length encryption key
+	conf2 := newProtoConfigForTest(func(cfg *oidc.Config) {
+		cfg.Issuer = "http://1.1.1.1"
+		cfg.ClientId = "test-client"
+		cfg.ClientSecret = "test-secret"
+		cfg.RedirectUrl = "http://localhost/callback"
+		cfg.EnableUserinfoSupport = true
+		cfg.CookieEncryptionKey = "123"
+		cfg.Timeout = &durationpb.Duration{Seconds: 1}
+	})
+
+	conf2.Init(nil)
+	err = conf2.Validate()
+	assert.IsType(t, oidc.ConfigValidationError{}, err)
+
+	// with a valid length encryption key
+	validKeys := []string{
+		"1234567890123456",                 // AES-128
+		"123456789012345678901234",         // AES-192
+		"12345678901234567890123456789012", // AES-256
+	}
+
+	for _, key := range validKeys {
+		conf3 := newProtoConfigForTest(func(cfg *oidc.Config) {
+			cfg.Issuer = "http://1.1.1.1"
+			cfg.ClientId = "test-client"
+			cfg.ClientSecret = "test-secret"
+			cfg.RedirectUrl = "http://localhost/callback"
+			cfg.EnableUserinfoSupport = true
+			cfg.CookieEncryptionKey = key
+			cfg.Timeout = &durationpb.Duration{Seconds: 1}
+		})
+		err = conf3.Init(nil)
+		if err != nil {
+			assert.NotContains(t, err.Error(), "block key")
+		}
+		err = conf3.Validate()
+		assert.Nil(t, err)
 	}
 }

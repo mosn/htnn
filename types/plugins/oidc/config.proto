@@ -21,6 +21,12 @@ import "validate/validate.proto";
 
 option go_package = "mosn.io/htnn/types/plugins/oidc";
 
+enum UserinfoFormatEnums {
+  BASE64URL = 0;
+  BASE64 = 1;
+  RAW_JSON = 2;
+}
+
 message Config {
   string client_id = 1 [(validate.rules).string = {min_len: 1}];
   string client_secret = 2 [(validate.rules).string = {min_len: 1}];
@@ -51,4 +57,19 @@ message Config {
   google.protobuf.Duration access_token_refresh_leeway = 10 [(validate.rules).duration = {
     gte: {},
   }];
+
+  // Controls whether to enable userinfo support. When enabled, the plugin will be able to fetch
+  // The full object will inserted into a single HTTP header (default: x-userinfo).
+  // additional user information from the OIDC provider. Defaults to false.
+  bool enable_userinfo_support = 11;
+
+  // Default to "x-userinfo"
+  string userinfo_header = 12;
+
+  UserinfoFormatEnums userinfo_format = 13;
+
+  // AES-256 encryption key for securing cookies (must be 16, 24, or 32 bytes).
+  // should use a different key than client_secret.
+  string cookie_encryption_key = 14
+      [(validate.rules).string = {pattern: "^.{16}$|^.{24}$|^.{32}$", ignore_empty: true}];
 }
