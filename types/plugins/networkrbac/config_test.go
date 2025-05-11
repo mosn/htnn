@@ -122,10 +122,10 @@ func TestConfig(t *testing.T) {
   }
 }
 			`,
-			err: "invalid Action.Name: value length must be at least 1 runes",
+			err: "IPMatcher action validation failed: invalid Action.Name: value length must be at least 1 runes",
 		},
 		{
-			name: "validate exact match map",
+			name: "validate exactMatchMap action",
 			input: `
 {
   "statPrefix": "network_rbac",
@@ -139,11 +139,12 @@ func TestConfig(t *testing.T) {
       },
       "exactMatchMap": {
         "map": {
-          "rule1": {
+          "127.0.0.1": {
             "action": {
-              "name": "envoy.filters.rbac.action",
+              "name": "",
               "typedConfig": {
-                "@type": "type.googleapis.com/envoy.config.rbac.v3.Action"
+                "@type": "type.googleapis.com/envoy.config.rbac.v3.Action",
+                "action": "DENY"
               }
             }
           }
@@ -153,7 +154,105 @@ func TestConfig(t *testing.T) {
   }
 }
 			`,
-			err: "action configuration is empty for rule rule1",
+			err: "exactMatchMap action validation failed: invalid Action.Name: value length must be at least 1 runes",
+		},
+		{
+			name: "validate exactMatchMap with valid action",
+			input: `
+{
+  "statPrefix": "network_rbac",
+  "matcher": {
+    "matcherTree": {
+      "input": {
+        "name": "envoy.matching.inputs.source_ip",
+        "typedConfig": {
+          "@type": "type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.SourceIPInput"
+        }
+      },
+      "exactMatchMap": {
+        "map": {
+          "127.0.0.1": {
+            "action": {
+              "name": "valid.action.name",
+              "typedConfig": {
+                "@type": "type.googleapis.com/envoy.config.rbac.v3.Action",
+                "name": "valid.action.name",
+                "action": "DENY"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+			`,
+			err: "",
+		},
+		{
+			name: "validate prefixMatchMap action",
+			input: `
+{
+  "statPrefix": "network_rbac",
+  "matcher": {
+    "matcherTree": {
+      "input": {
+        "name": "envoy.matching.inputs.source_ip",
+        "typedConfig": {
+          "@type": "type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.SourceIPInput"
+        }
+      },
+      "prefixMatchMap": {
+        "map": {
+          "127.0.0": {
+            "action": {
+              "name": "",
+              "typedConfig": {
+                "@type": "type.googleapis.com/envoy.config.rbac.v3.Action",
+                "action": "ALLOW"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+			`,
+			err: "prefixMatchMap action validation failed: invalid Action.Name: value length must be at least 1 runes",
+		},
+		{
+			name: "validate prefixMatchMap with valid action",
+			input: `
+{
+  "statPrefix": "network_rbac",
+  "matcher": {
+    "matcherTree": {
+      "input": {
+        "name": "envoy.matching.inputs.source_ip",
+        "typedConfig": {
+          "@type": "type.googleapis.com/envoy.extensions.matching.common_inputs.network.v3.SourceIPInput"
+        }
+      },
+      "prefixMatchMap": {
+        "map": {
+          "127.0.0": {
+            "action": {
+              "name": "valid.action.name",
+              "typedConfig": {
+                "@type": "type.googleapis.com/envoy.config.rbac.v3.Action",
+                "name": "valid.action.name",
+                "action": "ALLOW"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+			`,
+			err: "",
 		},
 	}
 

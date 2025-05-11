@@ -17,6 +17,7 @@ package networkrbac
 import (
 	"fmt"
 
+	core "github.com/cncf/xds/go/xds/core/v3"
 	matcher "github.com/cncf/xds/go/xds/type/matcher/v3"
 	rbacconfig "github.com/envoyproxy/go-control-plane/envoy/config/rbac/v3"
 	rbac "github.com/envoyproxy/go-control-plane/envoy/extensions/filters/network/rbac/v3"
@@ -69,11 +70,6 @@ var matchingNetworkInputs = []string{
 }
 
 func (conf *CustomConfig) Validate() error {
-	err := conf.RBAC.Validate()
-	if err != nil {
-		return err
-	}
-
 	m := conf.RBAC.GetMatcher().GetMatcherTree()
 	typeURL := m.GetInput().GetTypedConfig().GetTypeUrl()
 	found := false
@@ -93,62 +89,94 @@ func (conf *CustomConfig) Validate() error {
 			return fmt.Errorf("matcher.matcherTree.customMatch.typedConfig.typeUrl must be type.googleapis.com/xds.type.matcher.v3.IPMatcher, got %s", typeURL)
 		}
 		v := m.GetCustomMatch().GetTypedConfig().GetValue()
-		matcher := &matcher.IPMatcher{}
+		ipMatcher := &matcher.IPMatcher{}
 		// We always call Validate after Unmarshal success
-		_ = proto.Unmarshal(v, matcher)
-		err := matcher.Validate()
+		_ = proto.Unmarshal(v, ipMatcher)
+		err := ipMatcher.Validate()
 		if err != nil {
 			return err
 		}
 
-		for _, rg := range matcher.GetRangeMatchers() {
+		for _, rg := range ipMatcher.GetRangeMatchers() {
+			if rg.GetOnMatch() == nil || rg.GetOnMatch().GetAction() == nil ||
+				rg.GetOnMatch().GetAction().GetTypedConfig() == nil {
+				return fmt.Errorf("IPMatcher: action or its typedConfig is nil")
+			}
+
 			v = rg.GetOnMatch().GetAction().GetTypedConfig().GetValue()
 			action := &rbacconfig.Action{}
-			_ = proto.Unmarshal(v, action)
-			err := action.Validate()
+			err := proto.Unmarshal(v, action)
 			if err != nil {
-				return err
+				return fmt.Errorf("IPMatcher: failed to unmarshal action: %w", err)
+			}
+
+			if action.GetName() == "" {
+				return fmt.Errorf("IPMatcher action validation failed: invalid Action.Name: value length must be at least 1 runes")
 			}
 		}
 	}
-	// TODO: validate the Action in the other matcher like ExactMatchMap
 
-	// validate ExactMatchMap
-	// Check if exact match configuration exists
-	exactMatchMap := m.GetExactMatchMap()
-	if exactMatchMap != nil {
-		// Get all exact match rules
-		ruleMap := exactMatchMap.GetMap()
-
-		// Loop through each rule
-		for ruleKey, ruleValue := range ruleMap {
-			// Get the action configuration from the rule
-			actionConfig := ruleValue.GetAction().GetTypedConfig()
-			if actionConfig == nil {
-				return fmt.Errorf("rule %s is missing action configuration", ruleKey)
-			}
-
-			// Get the actual configuration value
-			configValue := actionConfig.GetValue()
-			if len(configValue) == 0 {
-				return fmt.Errorf("action configuration is empty for rule %s", ruleKey)
-			}
-
-			// Create a new action object
-			action := &rbacconfig.Action{}
-
-			// Parse the configuration into the action object
-			if err := proto.Unmarshal(configValue, action); err != nil {
-				return fmt.Errorf("failed to parse action configuration for rule %s: %v", ruleKey, err)
-			}
-
-			// Validate if the action configuration is valid
-			if err := action.Validate(); err != nil {
-				return fmt.Errorf("invalid action configuration for rule %s: %v", ruleKey, err)
+	// Validate Action in ExactMatchMap
+	if m.GetExactMatchMap() != nil {
+		for _, match := range m.GetExactMatchMap().GetMap() {
+			err := validateTypedExtensionConfig(match.GetAction())
+			if err != nil {
+				return fmt.Errorf("exactMatchMap action validation failed: %w", err)
 			}
 		}
 	}
-	// Another TODO: do it more smartly
+
+	// Validate Action in PrefixMatchMap
+	if m.GetPrefixMatchMap() != nil {
+		for _, match := range m.GetPrefixMatchMap().GetMap() {
+			err := validateTypedExtensionConfig(match.GetAction())
+			if err != nil {
+				return fmt.Errorf("prefixMatchMap action validation failed: %w", err)
+			}
+		}
+	}
+
+	// After our custom validation, call the standard validation
+	return conf.RBAC.Validate()
+}
+
+// validateTypedExtensionConfig validates the action from a TypedExtensionConfig
+func validateTypedExtensionConfig(config *core.TypedExtensionConfig) error {
+	if config == nil || config.GetTypedConfig() == nil {
+		return fmt.Errorf("action or its typedConfig is nil")
+	}
+
+	v := config.GetTypedConfig().GetValue()
+	rbacAction := &rbacconfig.Action{}
+	err := proto.Unmarshal(v, rbacAction)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal action: %w", err)
+	}
+
+	if rbacAction.GetName() == "" {
+		return fmt.Errorf("invalid Action.Name: value length must be at least 1 runes")
+	}
+
+	return nil
+}
+
+// validateAction validates the given action from Matcher_OnMatch
+func validateAction(action *matcher.Matcher_OnMatch) error {
+	if action == nil || action.GetAction() == nil || action.GetAction().GetTypedConfig() == nil {
+		return fmt.Errorf("action or its typedConfig is nil")
+	}
+
+	v := action.GetAction().GetTypedConfig().GetValue()
+	rbacAction := &rbacconfig.Action{}
+	err := proto.Unmarshal(v, rbacAction)
+	if err != nil {
+		return fmt.Errorf("failed to unmarshal action: %w", err)
+	}
+
+	if rbacAction.GetName() == "" {
+		return fmt.Errorf("invalid Action.Name: value length must be at least 1 runes")
+	}
+
 	return nil
 }
 
