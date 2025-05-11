@@ -21,6 +21,17 @@ To release a new version, please follow the steps below:
 
 ## Upgrade components
 
+### Adapt latest Envoy
+
+To adapt the latest Envoy, please follow the steps below:
+
+1. Read the Envoy Golang filter's changes and see if there are any changes that need to be adapted.
+2. Update `patch/switch-envoy-go-version.sh` to support the latest Envoy version.
+3. Pull the latest Envoy contrib-dev image, and update the `.github/workflows/test.yml` to use the latest Envoy Go SDK (the `$FULL_ENVOY_VERSION`) and the image.
+4. Run `patch/switch-envoy-go-version.sh` to use the latest Envoy Go SDK. Update `api/pkg/filtermanager/api/` and `api/plugins/tests/pkg/envoy/` to make the test pass.
+
+We can refer to https://github.com/mosn/htnn/pull/886/files for an example.
+
 ### Upgrade Istio
 
 To upgrade Istio, please follow the steps below:
