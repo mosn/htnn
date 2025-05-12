@@ -47,7 +47,7 @@ func (p *plugin) Config() api.PluginConfig {
 }
 
 type config struct {
-	oidctype.Config
+	oidctype.CustomConfig
 
 	opTimeout      time.Duration
 	oauth2Config   *oauth2.Config
@@ -55,9 +55,13 @@ type config struct {
 	cookieEncoding *securecookie.SecureCookie
 	refreshLeeway  time.Duration
 	cookieEntryID  string
+	oidcProvider   *oidc.Provider
 }
 
 func (conf *config) ctxWithClient(ctx context.Context) context.Context {
+	if existing := ctx.Value(oauth2.HTTPClient); existing != nil {
+		return ctx
+	}
 	httpClient := &http.Client{Timeout: conf.opTimeout}
 	return context.WithValue(ctx, oauth2.HTTPClient, httpClient)
 }
@@ -65,6 +69,9 @@ func (conf *config) ctxWithClient(ctx context.Context) context.Context {
 func (conf *config) Init(cb api.ConfigCallbackHandler) error {
 	if conf.IdTokenHeader == "" {
 		conf.IdTokenHeader = "x-id-token"
+	}
+	if conf.EnableUserinfoSupport && conf.UserinfoHeader == "" {
+		conf.UserinfoHeader = "x-userinfo"
 	}
 
 	du := 3 * time.Second
@@ -87,6 +94,7 @@ func (conf *config) Init(cb api.ConfigCallbackHandler) error {
 	err = retry.Do(
 		func() error {
 			provider, err = oidc.NewProvider(ctx, conf.Issuer)
+			conf.oidcProvider = provider
 			return err
 		},
 		retry.RetryIf(func(err error) bool {
@@ -114,8 +122,14 @@ func (conf *config) Init(cb api.ConfigCallbackHandler) error {
 		// Discovery returns the OAuth2 endpoints.
 		Endpoint: provider.Endpoint(),
 	}
+
+	var blockKey []byte
+	if conf.CookieEncryptionKey != "" {
+		blockKey = []byte(conf.CookieEncryptionKey)
+	}
+	conf.cookieEncoding = securecookie.New([]byte(conf.ClientSecret), blockKey)
+
 	conf.verifier = provider.Verifier(&oidc.Config{ClientID: conf.ClientId})
-	conf.cookieEncoding = securecookie.New([]byte(conf.ClientSecret), nil)
 	conf.cookieEntryID = base64.RawURLEncoding.EncodeToString([]byte(conf.ClientId))
 	return nil
 }

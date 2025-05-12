@@ -15,11 +15,16 @@
 package oidc
 
 import (
+	"context"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"net/http"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
+	"unsafe"
 
 	"github.com/agiledragon/gomonkey/v2"
 	"github.com/coreos/go-oidc/v3/oidc"
@@ -34,17 +39,37 @@ import (
 
 func getCfg() *config {
 	return &config{
-		Config: oidctype.Config{
-			ClientId:      "9119df09-b20b-4c08-ba08-72472dda2cd2",
-			ClientSecret:  "dSYo5hBwjX_DC57_tfZHlfrDel",
-			RedirectUrl:   "http://127.0.0.1:10000",
-			IdTokenHeader: "my-id-token",
+		CustomConfig: oidctype.CustomConfig{
+			Config: oidctype.Config{
+				ClientId:              "9119df09-b20b-4c08-ba08-72472dda2cd2",
+				ClientSecret:          "dSYo5hBwjX_DC57_tfZHlfrDel",
+				RedirectUrl:           "http://127.0.0.1:10000",
+				IdTokenHeader:         "my-id-token",
+				EnableUserinfoSupport: true,
+				CookieEncryptionKey:   "1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p",
+			},
 		},
 		oauth2Config:   &oauth2.Config{},
 		verifier:       &oidc.IDTokenVerifier{},
-		cookieEncoding: securecookie.New([]byte("dSYo5hBwjX_DC57_tfZHlfrDel"), nil),
+		oidcProvider:   &oidc.Provider{},
+		cookieEncoding: securecookie.New([]byte("dSYo5hBwjX_DC57_tfZHlfrDel"), []byte("1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p")),
 		cookieEntryID:  "id",
 	}
+}
+
+const userInfoClaimsJSON = `{"sub": "1234567890","profile": "https://example.com/user/profile","email": "user@example.com","email_verified": true}`
+
+func getUserinfo() *oidc.UserInfo {
+	o := &oidc.UserInfo{
+		Subject:       "1234567890",
+		Profile:       "https://example.com/profile",
+		Email:         "user@example.com",
+		EmailVerified: true,
+	}
+	val := reflect.ValueOf(o).Elem()
+	field := val.FieldByName("claims")
+	reflect.NewAt(field.Type(), unsafe.Pointer(field.UnsafeAddr())).Elem().SetBytes([]byte(userInfoClaimsJSON))
+	return o
 }
 
 func TestInitRequest(t *testing.T) {
@@ -95,6 +120,7 @@ func TestCallback(t *testing.T) {
 				patches.ApplyMethodReturn(conf.verifier, "Verify", &oidc.IDToken{
 					Nonce: "xxx", Expiry: time.Now().Add(2 * time.Hour),
 				}, nil)
+				patches.ApplyMethodReturn(conf.oidcProvider, "UserInfo", getUserinfo(), nil)
 				return patches
 			},
 			checkRedirectClientBack: func(f *filter, headers http.Header) {
@@ -108,9 +134,64 @@ func TestCallback(t *testing.T) {
 				h := http.Header{}
 				hdr := envoy.NewRequestHeaderMap(h)
 				assert.Equal(t, api.Continue, f.attachInfo(hdr, v))
+
+				authData, ok := hdr.Get(conf.UserinfoHeader)
+				assert.True(t, ok, "Userinfo header should exist")
+				assert.NotEmpty(t, authData, "Userinfo header should not be empty")
+				data, err := base64.RawURLEncoding.DecodeString(authData)
+				assert.Nil(t, err, "base64 decode failed")
+
+				var js json.RawMessage
+				assert.Nil(t, json.Unmarshal(data, &js))
+				assert.JSONEq(t, userInfoClaimsJSON, string(js))
 				bearer, _ := hdr.Get("authorization")
 				assert.Equal(t, "Bearer accessToken", bearer)
 			},
+		},
+		{
+			name:   "userinfo support disabled",
+			state:  state,
+			cookie: "htnn_oidc_nonce_id=" + nonce,
+			mock: func() *gomonkey.Patches {
+				patches := gomonkey.ApplyMethodReturn(conf.oauth2Config, "Exchange", token, nil)
+				patches.ApplyMethodReturn(conf.verifier, "Verify", &oidc.IDToken{
+					Nonce: "xxx", Expiry: time.Now().Add(2 * time.Hour),
+				}, nil)
+				conf.EnableUserinfoSupport = false
+				return patches
+			},
+			checkRedirectClientBack: func(f *filter, headers http.Header) {
+				s := headers.Get("Location")
+				assert.Equal(t, "https://127.0.0.1:2379/x?y=1", s)
+				cookies := headers.Get("Set-Cookie")
+				assert.NotEmpty(t, cookies)
+				assert.Contains(t, cookies, "Max-Age=7199;")
+
+				// verify the cookies value
+				v := strings.SplitN(strings.Split(cookies, ";")[0], "=", 2)[1]
+				k := strings.SplitN(strings.Split(cookies, ";")[0], "=", 2)[0]
+
+				authData := &AuthData{}
+				cookieDecoder := securecookie.New([]byte(conf.ClientSecret), []byte(conf.CookieEncryptionKey))
+				err := cookieDecoder.Decode(k, v, authData)
+				assert.NoError(t, err)
+				assert.Empty(t, authData.UserInfoJSON)
+				conf.EnableUserinfoSupport = true
+			},
+		},
+		{
+			name:   "fetch userinfo endpoint failed",
+			state:  state,
+			cookie: "htnn_oidc_nonce_id=" + nonce,
+			mock: func() *gomonkey.Patches {
+				patches := gomonkey.ApplyMethodReturn(conf.oauth2Config, "Exchange", token, nil)
+				patches.ApplyMethodReturn(conf.verifier, "Verify", &oidc.IDToken{
+					Nonce: "xxx", Expiry: time.Now().Add(2 * time.Hour),
+				}, nil)
+				patches.ApplyMethodReturn(conf.oidcProvider, "UserInfo", nil, errors.New("test userinfo error"))
+				return patches
+			},
+			res: &api.LocalResponse{Code: 403, Msg: "failed to fetch userinfo"},
 		},
 		{
 			name:   "ttl with access token expiry",
@@ -127,6 +208,7 @@ func TestCallback(t *testing.T) {
 				patches.ApplyMethodReturn(conf.verifier, "Verify", &oidc.IDToken{
 					Nonce: "xxx", Expiry: time.Now().Add(2 * time.Hour),
 				}, nil)
+				patches.ApplyMethodReturn(conf.oidcProvider, "UserInfo", getUserinfo(), nil)
 				return patches
 			},
 			checkRedirectClientBack: func(f *filter, headers http.Header) {
@@ -226,7 +308,7 @@ func TestBadOIDCTokenCookie(t *testing.T) {
 	cb := envoy.NewFilterCallbackHandler()
 	f := factory(getCfg(), cb).(*filter)
 	h := http.Header{}
-	h.Set("Cookie", "htnn_oidc_token_id=xxx")
+	h.Set("Cookie", "htnn_oidc_auth_data_id=xxx")
 	hdr := envoy.NewRequestHeaderMap(h)
 	res := f.DecodeHeaders(hdr, true)
 	resp := res.(*api.LocalResponse)
@@ -241,6 +323,7 @@ func (m *mockTokenSource) Token() (*oauth2.Token, error) {
 	return nil, nil
 }
 
+// Note: If the patch does not work, try using -gcflags=all=-l to disable inlining optimizations.
 func TestAttachInfo(t *testing.T) {
 	conf := getCfg()
 	verifier := oauth2.GenerateVerifier()
@@ -263,6 +346,7 @@ func TestAttachInfo(t *testing.T) {
 	patches.ApplyMethodReturn(conf.verifier, "Verify", &oidc.IDToken{
 		Nonce: "xxx", Expiry: time.Now().Add(2 * time.Hour),
 	}, nil)
+	patches.ApplyMethodReturn(conf.oidcProvider, "UserInfo", getUserinfo(), nil)
 	defer patches.Reset()
 
 	cb := envoy.NewFilterCallbackHandler()
@@ -278,14 +362,14 @@ func TestAttachInfo(t *testing.T) {
 
 	v := strings.SplitN(strings.Split(cookie, ";")[0], "=", 2)[1]
 
-	expiredToken, _ := conf.cookieEncoding.Encode("htnn_oidc_token_id", Tokens{
+	expiredToken, _ := conf.cookieEncoding.Encode("htnn_oidc_auth_data_id", AuthData{
 		Oauth2Token: &oauth2.Token{
 			AccessToken:  "expiredToken",
 			Expiry:       time.Now().Add(-1 * time.Hour),
 			RefreshToken: refreshToken,
 		},
 	})
-	expiredAndUnrefreshableToken, _ := conf.cookieEncoding.Encode("htnn_oidc_token_id", Tokens{
+	expiredAndUnrefreshableToken, _ := conf.cookieEncoding.Encode("htnn_oidc_auth_data_id", AuthData{
 		Oauth2Token: &oauth2.Token{
 			AccessToken: "expiredToken",
 			Expiry:      time.Now().Add(-1 * time.Hour),
@@ -308,6 +392,7 @@ func TestAttachInfo(t *testing.T) {
 		authorization string
 		idTokenSet    string
 		checkCookie   func(cookie string)
+		checkHeader   func(hdr api.RequestHeaderMap)
 	}{
 		{
 			name:         "sanity",
@@ -320,6 +405,15 @@ func TestAttachInfo(t *testing.T) {
 			res:           api.Continue,
 			authorization: "Bearer accessToken",
 			idTokenSet:    rawIDToken,
+			checkHeader: func(hdr api.RequestHeaderMap) {
+				userInfoHeader, _ := hdr.Get(conf.UserinfoHeader)
+				assert.NotEmpty(t, userInfoHeader)
+				userinfoJSON, _ := base64.RawURLEncoding.DecodeString(userInfoHeader)
+				var raw json.RawMessage
+				err := getUserinfo().Claims(&raw)
+				assert.NoError(t, err)
+				assert.Equal(t, raw, json.RawMessage(userinfoJSON))
+			},
 		},
 		{
 			name:         "refresh token",
@@ -336,6 +430,21 @@ func TestAttachInfo(t *testing.T) {
 			checkCookie: func(cookie string) {
 				// A new cookie should be set
 				assert.Contains(t, cookie, "Max-Age=3599;")
+
+				v := strings.SplitN(strings.Split(cookie, ";")[0], "=", 2)[1]
+				var decoded AuthData
+				err := conf.cookieEncoding.Decode(f.CookieName("auth_data"), v, &decoded)
+				assert.NoError(t, err, "failed to decode cookie")
+				assert.NotEmpty(t, decoded.UserInfoJSON, "UserInfoJSON should not be empty")
+			},
+			checkHeader: func(hdr api.RequestHeaderMap) {
+				userInfoHeader, _ := hdr.Get(conf.UserinfoHeader)
+				assert.NotEmpty(t, userInfoHeader)
+				userinfoJSON, _ := base64.RawURLEncoding.DecodeString(userInfoHeader)
+				var raw json.RawMessage
+				err := getUserinfo().Claims(&raw)
+				assert.NoError(t, err)
+				assert.Equal(t, raw, json.RawMessage(userinfoJSON))
 			},
 		},
 		{
@@ -376,6 +485,9 @@ func TestAttachInfo(t *testing.T) {
 			assert.Equal(t, tt.authorization, bearer)
 			assert.Equal(t, tt.idTokenSet, idTokenSet)
 
+			if tt.checkHeader != nil {
+				tt.checkHeader(hdr)
+			}
 			if tt.checkCookie != nil {
 				h = http.Header{}
 				hdr := envoy.NewResponseHeaderMap(h)
@@ -385,4 +497,59 @@ func TestAttachInfo(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestFetchUserInfoIfEnabled(t *testing.T) {
+	conf := getCfg()
+	f := &filter{config: conf}
+	token := &oauth2.Token{AccessToken: "dummy"}
+	ctx := context.Background()
+
+	patches := gomonkey.ApplyMethodReturn(conf.oidcProvider, "UserInfo", getUserinfo(), nil)
+	defer patches.Reset()
+
+	t.Run("userinfoFormat raw json", func(t *testing.T) {
+		conf.UserinfoFormat = oidctype.UserinfoFormatEnums_RAW_JSON
+
+		result, err := f.fetchUserInfoIfEnabled(ctx, token)
+		assert.NoError(t, err)
+		assert.JSONEq(t, userInfoClaimsJSON, result)
+	})
+
+	t.Run("userinfoFormat base64", func(t *testing.T) {
+		conf.UserinfoFormat = oidctype.UserinfoFormatEnums_BASE64
+		result, err := f.fetchUserInfoIfEnabled(ctx, token)
+		assert.NoError(t, err)
+
+		data, err := base64.StdEncoding.DecodeString(result)
+		assert.NoError(t, err)
+		assert.JSONEq(t, userInfoClaimsJSON, string(data))
+	})
+
+	t.Run("userinfoFormat base64url", func(t *testing.T) {
+		conf.UserinfoFormat = oidctype.UserinfoFormatEnums_BASE64URL
+		result, err := f.fetchUserInfoIfEnabled(ctx, token)
+		assert.NoError(t, err)
+
+		data, err := base64.RawURLEncoding.DecodeString(result)
+		assert.NoError(t, err)
+		assert.JSONEq(t, userInfoClaimsJSON, string(data))
+	})
+
+	t.Run("userinfo support disabled", func(t *testing.T) {
+		conf.EnableUserinfoSupport = false
+		result, err := f.fetchUserInfoIfEnabled(ctx, token)
+		assert.NoError(t, err)
+		assert.Equal(t, "", result)
+		conf.EnableUserinfoSupport = true // 还原
+	})
+
+	t.Run("userinfo fetch failed", func(t *testing.T) {
+		patches.Reset()
+		patches = gomonkey.ApplyMethodReturn(conf.oidcProvider, "UserInfo", nil, errors.New("userinfo err"))
+		defer patches.Reset()
+
+		_, err := f.fetchUserInfoIfEnabled(ctx, token)
+		assert.Error(t, err)
+	})
 }

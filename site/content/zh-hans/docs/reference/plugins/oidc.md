@@ -27,6 +27,11 @@ title: OIDC
 | timeout                   | [Duration](../type.md#duration)             | 否   | > 0s              | 超时时长。例如，`10s` 表示超时时间为 10 秒。默认值为 3s。                                                                                              |
 | disableAccessTokenRefresh | bool                                        | 否   |                   | 是否禁止自动刷新 Access Token。                                                                                                                        |
 | accessTokenRefreshLeeway  | [Duration](../type.md#duration)             | 否   | >= 0s             | 决定判断是否需要刷新过期令牌时，令牌过期的时间比实际过期时间早多少。它用于避免因客户端与服务器时间不匹配而导致自动刷新失败。默认为 10 秒。           |
+| enableUserinfoSupport     | boolean（布尔值）                    | 否  |                             | 是否启用 userinfo 支持。启用后，插件会在用户登录成功后从 OIDC 提供方获取额外的用户信息。默认值为 `false`。                                                                    |
+| userinfoHeader            | string（字符串）                     | 否  |                             | 插件会将完整的 userinfo 对象插入到请求头中，该配置项用于指定该请求头的名称。默认值为 `"x-userinfo"`。                                                                      |
+| userinfoFormat            | UserinfoFormatEnums（枚举类型）       | 否  | [BASE64URL,BASE64,RAW_JSON] | 指定发送到后端的 userinfo 数据格式。默认使用 BASE64URL。(BASE64:标准 base64，有 padding; BASE64URL:URL 安全，无 padding)                                       |
+| cookieEncryptionKey       | string（字符串）                     | 否  | 长度为 16、24 或 32 字节           | 用于加密 cookie 的密钥，建议不要与 `client_secret` 相同。如果未启用 userinfo 支持，此项可选。                                                                     |
+
 
 ## 用法
 

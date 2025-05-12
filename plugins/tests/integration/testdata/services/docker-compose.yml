@@ -23,11 +23,13 @@ services:
     networks:
       service:
   hydra-consent:
-    environment:
-      - HYDRA_ADMIN_URL=http://hydra:4445
     image: oryd/hydra-login-consent-node:v2.2.0-rc.3
     ports:
       - "3000:3000"
+    environment:
+      - HYDRA_ADMIN_URL=http://hydra:4445
+      - NODE_TLS_REJECT_UNAUTHORIZED=0
+    command: serve
     restart: unless-stopped
     networks:
       service:

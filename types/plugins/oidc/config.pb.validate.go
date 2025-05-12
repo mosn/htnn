@@ -186,6 +186,27 @@ func (m *Config) validate(all bool) error {
 		}
 	}
 
+	// no validation rules for EnableUserinfoSupport
+
+	// no validation rules for UserinfoHeader
+
+	// no validation rules for UserinfoFormat
+
+	if m.GetCookieEncryptionKey() != "" {
+
+		if !_Config_CookieEncryptionKey_Pattern.MatchString(m.GetCookieEncryptionKey()) {
+			err := ConfigValidationError{
+				field:  "CookieEncryptionKey",
+				reason: "value does not match regex pattern \"^.{16}$|^.{24}$|^.{32}$\"",
+			}
+			if !all {
+				return err
+			}
+			errors = append(errors, err)
+		}
+
+	}
+
 	if len(errors) > 0 {
 		return ConfigMultiError(errors)
 	}
@@ -262,3 +283,5 @@ var _ interface {
 	Cause() error
 	ErrorName() string
 } = ConfigValidationError{}
+
+var _Config_CookieEncryptionKey_Pattern = regexp.MustCompile("^.{16}$|^.{24}$|^.{32}$")

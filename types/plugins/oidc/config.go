@@ -46,5 +46,24 @@ func (p *Plugin) NonBlockingPhases() api.Phase {
 }
 
 func (p *Plugin) Config() api.PluginConfig {
-	return &Config{}
+	return &CustomConfig{}
+}
+
+type CustomConfig struct {
+	Config
+}
+
+func (conf *CustomConfig) Validate() error {
+	err := conf.Config.Validate()
+	if err != nil {
+		return err
+	}
+
+	if conf.Config.EnableUserinfoSupport && conf.Config.CookieEncryptionKey == "" {
+		return ConfigValidationError{
+			field:  "CookieEncryptionKey",
+			reason: "value length must be 16, 24 or 32 bytes",
+		}
+	}
+	return nil
 }

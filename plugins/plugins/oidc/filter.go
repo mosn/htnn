@@ -20,6 +20,7 @@ import (
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -29,6 +30,7 @@ import (
 	"golang.org/x/oauth2"
 
 	"mosn.io/htnn/api/pkg/filtermanager/api"
+	"mosn.io/htnn/types/plugins/oidc"
 )
 
 func factory(c interface{}, callbacks api.FilterCallbackHandler) api.Filter {
@@ -41,14 +43,15 @@ func factory(c interface{}, callbacks api.FilterCallbackHandler) api.Filter {
 type filter struct {
 	api.PassThroughFilter
 
-	callbacks   api.FilterCallbackHandler
-	config      *config
-	tokenCookie *http.Cookie
+	callbacks      api.FilterCallbackHandler
+	config         *config
+	authDataCookie *http.Cookie
 }
 
-type Tokens struct {
-	IDToken     string        `json:"id_token"`
-	Oauth2Token *oauth2.Token `json:"oauth_token"`
+type AuthData struct {
+	IDToken      string        `json:"id_token"`
+	Oauth2Token  *oauth2.Token `json:"oauth_token"`
+	UserInfoJSON string        `json:"user_info_json"`
 }
 
 func generateState(verifier string, secret string, url string) string {
@@ -75,6 +78,33 @@ func signState(state string, secret string) string {
 	return base64.RawURLEncoding.EncodeToString(mac.Sum(nil))
 }
 
+func (f *filter) fetchUserInfoIfEnabled(ctx context.Context, token *oauth2.Token) (string, error) {
+	if !f.config.EnableUserinfoSupport {
+		return "", nil
+	}
+
+	resp, err := f.config.oidcProvider.UserInfo(ctx, oauth2.StaticTokenSource(token))
+	if err != nil {
+		api.LogErrorf("failed to fetch userinfo but skipping allowed %v", err)
+		return "", err
+	}
+
+	var raw json.RawMessage
+	err = resp.Claims(&raw)
+	if err != nil {
+		return "", err
+	}
+
+	if f.config.UserinfoFormat == oidc.UserinfoFormatEnums_BASE64URL {
+		return base64.RawURLEncoding.EncodeToString(raw), nil
+	}
+	if f.config.UserinfoFormat == oidc.UserinfoFormatEnums_BASE64 {
+		return base64.StdEncoding.EncodeToString(raw), nil
+	}
+
+	return string(raw), nil
+}
+
 func (f *filter) CookieName(key string) string {
 	return fmt.Sprintf("htnn_oidc_%s_%s", key, f.config.cookieEntryID)
 }
@@ -89,7 +119,7 @@ func (f *filter) handleInitRequest(headers api.RequestHeaderMap) api.ResultActio
 	verifier := oauth2.GenerateVerifier()
 	originURL := fmt.Sprintf("%s://%s%s", headers.Scheme(), headers.Host(), headers.Path())
 	s := generateState(verifier, config.ClientSecret, originURL)
-	url := o2conf.AuthCodeURL(s,
+	authURL := o2conf.AuthCodeURL(s,
 		// use PKCE to protect against CSRF attacks if possible
 		// https://www.ietf.org/archive/id/draft-ietf-oauth-security-topics-22.html#name-countermeasures-6
 		oauth2.S256ChallengeOption(verifier),
@@ -112,7 +142,7 @@ func (f *filter) handleInitRequest(headers api.RequestHeaderMap) api.ResultActio
 	return &api.LocalResponse{
 		Code: http.StatusFound,
 		Header: http.Header{
-			"Location":   []string{url},
+			"Location":   []string{authURL},
 			"Set-Cookie": []string{cookieNonce.String()},
 		},
 	}
@@ -171,6 +201,8 @@ func (f *filter) handleCallback(headers api.RequestHeaderMap, query url.Values) 
 		return &api.LocalResponse{Code: 503, Msg: "failed to exchange code to the token"}
 	}
 
+	api.LogDebugf("OAuth2 Token Details: %+v", oauth2Token)
+
 	rawIDToken, ok := getIDToken(oauth2Token)
 	if !ok {
 		api.LogErrorf("failed to lookup id token: %v", err)
@@ -203,7 +235,18 @@ func (f *filter) handleCallback(headers api.RequestHeaderMap, query url.Values) 
 		}
 	}
 
-	cookie, err := f.saveTokenAsCookie(ctx, oauth2Token, rawIDToken)
+	rawUserInfoJSON, err := f.fetchUserInfoIfEnabled(ctx, oauth2Token)
+	if err != nil {
+		api.LogInfof("failed to fetch userinfo :%s", err)
+		return &api.LocalResponse{Code: 403, Msg: "failed to fetch userinfo"}
+	}
+
+	cookie, err := f.saveAuthDataAsCookie(ctx, &AuthData{
+		Oauth2Token:  oauth2Token,
+		IDToken:      rawIDToken,
+		UserInfoJSON: rawUserInfoJSON,
+	})
+
 	if err != nil {
 		return &api.LocalResponse{Code: 503, Msg: "failed to save token"}
 	}
@@ -217,20 +260,19 @@ func (f *filter) handleCallback(headers api.RequestHeaderMap, query url.Values) 
 	}
 }
 
-func (f *filter) attachInfo(headers api.RequestHeaderMap, encodedToken string) api.ResultAction {
+func (f *filter) attachInfo(headers api.RequestHeaderMap, encodedAuthData string) api.ResultAction {
 	config := f.config
 	ctx := context.Background()
 
-	tokens := &Tokens{}
-	cookieName := f.CookieName("token")
-	err := config.cookieEncoding.Decode(cookieName, encodedToken, tokens)
+	rawAuthData := &AuthData{}
+	cookieName := f.CookieName("auth_data")
+	err := config.cookieEncoding.Decode(cookieName, encodedAuthData, rawAuthData)
 	if err != nil {
-		api.LogInfof("bad oidc cookie: %s, err: %v", encodedToken, err)
+		api.LogInfof("bad oidc cookie: %s, err: %v", encodedAuthData, err)
 		return &api.LocalResponse{Code: 403, Msg: "bad oidc cookie"}
 	}
 
-	oauth2Token := tokens.Oauth2Token
-	rawIDToken := tokens.IDToken
+	oauth2Token := rawAuthData.Oauth2Token
 	if f.refreshEnabled(oauth2Token) {
 		tokenSrc := config.oauth2Config.TokenSource(context.Background(), oauth2Token)
 		tokenSrc = oauth2.ReuseTokenSourceWithExpiry(oauth2Token, tokenSrc, config.refreshLeeway)
@@ -246,15 +288,22 @@ func (f *filter) attachInfo(headers api.RequestHeaderMap, encodedToken string) a
 			oauth2Token = possibleRefreshedToken
 			newIDToken, ok := getIDToken(oauth2Token)
 			if ok {
-				rawIDToken = newIDToken
+				if newIDToken != rawAuthData.IDToken {
+					resp, err := f.fetchUserInfoIfEnabled(ctx, oauth2Token)
+					if err != nil {
+						return &api.LocalResponse{Code: 403, Msg: "fail to fetch userinfo"}
+					}
+					rawAuthData.UserInfoJSON = resp
+				}
+				rawAuthData.IDToken = newIDToken
 			}
 
-			f.tokenCookie, err = f.saveTokenAsCookie(ctx, possibleRefreshedToken, rawIDToken)
+			rawAuthData.Oauth2Token = oauth2Token
+			f.authDataCookie, err = f.saveAuthDataAsCookie(ctx, rawAuthData)
 			if err != nil {
 				return &api.LocalResponse{Code: 503, Msg: "failed to save token"}
 			}
 		}
-
 	} else {
 		ok := oauth2Token.Valid()
 		if !ok {
@@ -264,15 +313,19 @@ func (f *filter) attachInfo(headers api.RequestHeaderMap, encodedToken string) a
 	}
 
 	headers.Set("authorization", fmt.Sprintf("%s %s", oauth2Token.Type(), oauth2Token.AccessToken))
-	headers.Set(config.IdTokenHeader, rawIDToken)
+	headers.Set(config.IdTokenHeader, rawAuthData.IDToken)
+	if config.EnableUserinfoSupport {
+		headers.Set(config.UserinfoHeader, rawAuthData.UserInfoJSON)
+	}
+
 	return api.Continue
 }
 
 func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {
-	cookieName := f.CookieName("token")
-	token := headers.Cookie(cookieName)
-	if token != nil {
-		return f.attachInfo(headers, token.Value)
+	cookieName := f.CookieName("auth_data")
+	authData := headers.Cookie(cookieName)
+	if authData != nil {
+		return f.attachInfo(headers, authData.Value)
 	}
 
 	query := headers.URL().Query()
@@ -284,38 +337,35 @@ func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api
 	return f.handleCallback(headers, query)
 }
 
-func (f *filter) saveTokenAsCookie(ctx context.Context, oauth2Token *oauth2.Token, rawIDToken string) (*http.Cookie, error) {
-	idToken, err := f.config.verifier.Verify(ctx, rawIDToken)
+func (f *filter) saveAuthDataAsCookie(ctx context.Context, authData *AuthData) (*http.Cookie, error) {
+	idToken, err := f.config.verifier.Verify(ctx, authData.IDToken)
 	if err != nil {
-		api.LogErrorf("bad token: %v", err)
+		api.LogErrorf("bad authData: %v", err)
 		return nil, err
 	}
 
-	cookieName := f.CookieName("token")
-	token, err := f.config.cookieEncoding.Encode(cookieName, Tokens{
-		Oauth2Token: oauth2Token,
-		IDToken:     rawIDToken,
-	})
+	cookieName := f.CookieName("auth_data")
+	encodedAuthData, err := f.config.cookieEncoding.Encode(cookieName, *authData)
 	if err != nil {
 		api.LogErrorf("failed to encode cookie: %v", err)
 		return nil, err
 	}
 
-	ttl := f.calculateTokenTTL(oauth2Token.Expiry, idToken.Expiry, f.refreshEnabled(oauth2Token))
+	ttl := f.calculateTokenTTL(authData.Oauth2Token.Expiry, idToken.Expiry, f.refreshEnabled(authData.Oauth2Token))
 	cookie := &http.Cookie{
 		Name:     cookieName,
-		Value:    token,
+		Value:    encodedAuthData,
 		MaxAge:   ttl,
 		HttpOnly: true,
 	}
 
-	api.LogInfof("token saved as cookie %+v, client id: %s", cookie, f.config.ClientId)
+	api.LogInfof("authData saved as cookie %+v, client id: %s", cookie, f.config.ClientId)
 	return cookie, nil
 }
 
 func (f *filter) EncodeHeaders(headers api.ResponseHeaderMap, endStream bool) api.ResultAction {
-	if f.tokenCookie != nil {
-		headers.Add("set-cookie", f.tokenCookie.String())
+	if f.authDataCookie != nil {
+		headers.Add("set-cookie", f.authDataCookie.String())
 	}
 	return api.Continue
 }
