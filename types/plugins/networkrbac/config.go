@@ -112,6 +112,42 @@ func (conf *CustomConfig) Validate() error {
 		}
 	}
 	// TODO: validate the Action in the other matcher like ExactMatchMap
+
+	// validate ExactMatchMap
+	// Check if exact match configuration exists
+	exactMatchMap := m.GetExactMatchMap()
+	if exactMatchMap != nil {
+		// Get all exact match rules
+		ruleMap := exactMatchMap.GetMap()
+
+		// Loop through each rule
+		for ruleKey, ruleValue := range ruleMap {
+			// Get the action configuration from the rule
+			actionConfig := ruleValue.GetAction().GetTypedConfig()
+			if actionConfig == nil {
+				return fmt.Errorf("rule %s is missing action configuration", ruleKey)
+			}
+
+			// Get the actual configuration value
+			configValue := actionConfig.GetValue()
+			if len(configValue) == 0 {
+				return fmt.Errorf("action configuration is empty for rule %s", ruleKey)
+			}
+
+			// Create a new action object
+			action := &rbacconfig.Action{}
+
+			// Parse the configuration into the action object
+			if err := proto.Unmarshal(configValue, action); err != nil {
+				return fmt.Errorf("failed to parse action configuration for rule %s: %v", ruleKey, err)
+			}
+
+			// Validate if the action configuration is valid
+			if err := action.Validate(); err != nil {
+				return fmt.Errorf("invalid action configuration for rule %s: %v", ruleKey, err)
+			}
+		}
+	}
 	// Another TODO: do it more smartly
 	return nil
 }
