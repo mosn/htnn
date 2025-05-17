@@ -15,6 +15,8 @@
 package plugins
 
 import (
+	_ "mosn.io/htnn/plugins/plugins/acl"
+	_ "mosn.io/htnn/plugins/plugins/basicauth"
 	_ "mosn.io/htnn/plugins/plugins/casbin"
 	_ "mosn.io/htnn/plugins/plugins/celscript"
 	_ "mosn.io/htnn/plugins/plugins/consumerrestriction"

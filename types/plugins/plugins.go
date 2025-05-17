@@ -16,7 +16,9 @@ package plugins
 
 import (
 	_ "mosn.io/htnn/types/dynamicconfigs"
+	_ "mosn.io/htnn/types/plugins/acl"
 	_ "mosn.io/htnn/types/plugins/bandwidthlimit"
+	_ "mosn.io/htnn/types/plugins/basicauth"
 	_ "mosn.io/htnn/types/plugins/buffer"
 	_ "mosn.io/htnn/types/plugins/casbin"
 	_ "mosn.io/htnn/types/plugins/celscript"

@@ -22,7 +22,7 @@ CONTAINER_TOOL ?= docker
 
 PROXY_IMAGE ?= htnn/proxy:latest
 PROXY_BASE_IMAGE ?= istio/proxyv2:$(ISTIO_VERSION)
-CONTROLLER_IMAGE ?= htnn/controller:latest
+CONTROLLER_IMAGE ?= htnn-controller:latest
 CONTROLLER_BASE_IMAGE ?= docker.io/istio/pilot:$(ISTIO_VERSION)
 GO_BUILD_BASE_IMAGE ?= golang:1.22
 
