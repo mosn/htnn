@@ -21,13 +21,27 @@
           "description": "the name is similar to the default ingress gateway installed by istioctl",
           "title": "name",
           "type": "string"
+        },
+        "image": {
+          "default": "m.daocloud.io/docker.io/envoyproxy/envoy:latest",
+          "description": "the image to use for the ingress gateway",
+          "title": "image",
+          "type": "string"
+        },
+        "imagePullPolicy": {
+          "default": "IfNotPresent",
+          "description": "the image pull policy for the ingress gateway",
+          "title": "imagePullPolicy",
+          "type": "string"
         }
       },
       "title": "gateway",
       "type": "object",
       "required": [
         "name",
-        "env"
+        "env",
+        "image",
+        "imagePullPolicy"
       ]
     },
     "global": {
