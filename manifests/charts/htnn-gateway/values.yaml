@@ -1,5 +1,6 @@
 gateway:
-  # the name is similar to the default ingress gateway installed by istioctl
   name: istio-ingressgateway
+  image: m.daocloud.io/docker.io/envoyproxy/envoy:latest
+  imagePullPolicy: Never
   env:
     ISTIO_DELTA_XDS: "true"

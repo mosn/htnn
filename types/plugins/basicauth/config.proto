@@ -1,0 +1,11 @@
+syntax = "proto3";
+
+package types.plugins.basicauth;
+
+option go_package = "mosn.io/htnn/types/plugins/basicauth";
+
+// 定义 Basic Auth 插件的配置
+message Config {
+  // 用户名和密码对
+  map<string, string> credentials = 1;
+}

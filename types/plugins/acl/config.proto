@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package types.plugins.acl;
+
+option go_package = "mosn.io/htnn/types/plugins/acl";
+
+// 定义 ACL 插件的配置
+message Config {
+  // 允许的 IP 地址列表
+  repeated string allow_list = 1;
+
+  // 拒绝的 IP 地址列表
+  repeated string deny_list = 2;
+}
