@@ -4,6 +4,11 @@ pilot:
     HTNN_ENABLE_LDS_PLUGIN_VIA_ECDS: "true"
     PILOT_ENABLE_ALPHA_GATEWAY_API: true
     UNSAFE_PILOT_ENABLE_RUNTIME_ASSERTIONS: "true"
+    # Aggressive push configuration
+    PILOT_DEBOUNCE_AFTER: "10ms"
+    PILOT_DEBOUNCE_MAX: "1s"
+    PILOT_ENABLE_EDS_DEBOUNCE: "false"
+    PILOT_PUSH_THROTTLE: "200"
   volumes:
   - emptyDir:
       medium: Memory
