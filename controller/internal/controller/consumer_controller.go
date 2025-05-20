@@ -18,7 +18,10 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"k8s.io/apimachinery/pkg/types"
@@ -39,7 +42,20 @@ import (
 // ConsumerReconciler reconciles a Consumer object
 type ConsumerReconciler struct {
 	component.ResourceManager
-	Output component.Output
+	Output   component.Output
+	keyIndex *KeyIndexRegistry // Add a new Key index
+}
+
+type KeyIndexRegistry struct {
+	mu    sync.RWMutex
+	index map[string]map[string]map[string]string // ns -> plugin -> key -> consumerName
+}
+
+func NewKeyIndexRegistry() *KeyIndexRegistry {
+	return &KeyIndexRegistry{
+		index: make(map[string]map[string]map[string]string),
+		mu:    sync.RWMutex{},
+	}
 }
 
 //+kubebuilder:rbac:groups=htnn.mosn.io,resources=consumers,verbs=get;list;watch;create;update;patch;delete
@@ -180,4 +196,74 @@ func (r *ConsumerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			),
 		)
 	return controller.Complete(r)
+}
+
+// checkConsumerConflicts Perform full conflict detection and rebuild the index
+func (r *ConsumerReconciler) checkConsumerConflicts(ctx context.Context) error {
+	r.keyIndex.mu.Lock()
+	defer r.keyIndex.mu.Unlock()
+
+	// Clear old indexes
+	r.keyIndex.index = make(map[string]map[string]map[string]string)
+
+	// Get all Consumer
+	var allConsumers mosniov1.ConsumerList
+	if err := r.ResourceManager.List(ctx, &allConsumers); err != nil {
+		return fmt.Errorf("list consumers failed: %w", err)
+	}
+
+	// Perforated detection
+	for _, consumer := range allConsumers.Items {
+		if !consumer.DeletionTimestamp.IsZero() {
+			continue
+		}
+
+		if err := r.indexConsumer(consumer); err != nil {
+			return fmt.Errorf("consumer %s/%s: %w", consumer.Namespace, consumer.Name, err)
+		}
+	}
+	return nil
+}
+
+// indexConsumer Index a single Consumer and detect conflicts
+func (r *ConsumerReconciler) indexConsumer(consumer mosniov1.Consumer) error {
+	for pluginName, plugin := range consumer.Spec.Auth {
+		key, err := extractPluginKey(plugin.Config.Raw)
+		if err != nil {
+			return fmt.Errorf("invalid plugin %s config: %w", pluginName, err)
+		}
+
+		// Inertly initialize the three-level map
+		if r.keyIndex.index[consumer.Namespace] == nil {
+			r.keyIndex.index[consumer.Namespace] = make(map[string]map[string]string)
+		}
+		if r.keyIndex.index[consumer.Namespace][pluginName] == nil {
+			r.keyIndex.index[consumer.Namespace][pluginName] = make(map[string]string)
+		}
+
+		// collision detect
+		if existing, exists := r.keyIndex.index[consumer.Namespace][pluginName][key]; exists {
+			return fmt.Errorf(
+				"key conflict: plugin=%s key=%s (already used by %s)",
+				pluginName, key, existing,
+			)
+		}
+		r.keyIndex.index[consumer.Namespace][pluginName][key] = consumer.Name
+	}
+	return nil
+}
+
+func extractPluginKey(raw []byte) (string, error) {
+	var cfg map[string]interface{}
+	if err := json.Unmarshal(raw, &cfg); err != nil {
+		return "", err
+	}
+
+	if key, ok := cfg["key"].(string); ok {
+		return key, nil
+	}
+	if iss, ok := cfg["issuer"].(string); ok {
+		return iss, nil
+	}
+	return "", errors.New("no valid key field found")
 }
