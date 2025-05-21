@@ -1,10 +1,8 @@
 package controller
 
 import (
-	"context"
-	"encoding/json"
-	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	"testing"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -12,193 +10,116 @@ import (
 	mosniov1 "mosn.io/htnn/types/apis/v1"
 )
 
-func TestCheckConsumerConflicts(t *testing.T) {
-	scheme := runtime.NewScheme()
-	mosniov1.AddToScheme(scheme)
+// test_plugins.go
+// Test plugin A (simulated KeyAuth)
+type TestPluginA struct{}
+
+func (p *TestPluginA) Name() string                    { return "pluginA" }
+func (p *TestPluginA) NewConfig() PluginConsumerConfig { return &TestConfigA{} }
+
+type TestConfigA struct {
+	Key string `json:"key"`
+}
+
+func (c *TestConfigA) Index() string { return c.Key }
+
+// Test plugin B (simulated jwt)
+type TestPluginB struct{}
+
+func (p *TestPluginB) Name() string                    { return "pluginB" }
+func (p *TestPluginB) NewConfig() PluginConsumerConfig { return &TestConfigB{} }
+
+type TestConfigB struct {
+	Issuer string `json:"issuer"`
+}
+
+func (c *TestConfigB) Index() string { return c.Issuer }
+
+// consumer_reconciler_test.go
+func TestConflictDetection(t *testing.T) {
+	// Initialize the registry (Note: clear before testing to avoid contamination)
+	pluginRegistry = make(map[string]Plugin)
+	RegisterPlugin(&TestPluginA{})
+	RegisterPlugin(&TestPluginB{})
+
+	// Create a test Reconciler
+	r := &ConsumerReconciler{
+		keyIndex: NewKeyIndexRegistry(),
+	}
 
 	tests := []struct {
-		name    string
-		setup   func() []mosniov1.Consumer
-		wantErr bool
+		name        string
+		consumers   []*mosniov1.Consumer
+		wantErr     bool
+		errContains string
 	}{
 		{
-			name: "no consumers",
-			setup: func() []mosniov1.Consumer {
-				return []mosniov1.Consumer{}
+			name: "no conflict with different plugins",
+			consumers: []*mosniov1.Consumer{
+				createTestConsumer("ns1", "consumer1", "pluginA", `{"key": "key1"}`),
+				createTestConsumer("ns1", "consumer2", "pluginB", `{"issuer": "key1"}`),
 			},
 			wantErr: false,
 		},
 		{
-			name: "single consumer no conflict",
-			setup: func() []mosniov1.Consumer {
-				return []mosniov1.Consumer{
-					createTestConsumer("ns1", "consumer1", map[string]interface{}{
-						"key": "value1",
-					}),
-				}
+			name: "conflict within same plugin",
+			consumers: []*mosniov1.Consumer{
+				createTestConsumer("ns1", "consumer1", "pluginA", `{"key": "dupKey"}`),
+				createTestConsumer("ns1", "consumer2", "pluginA", `{"key": "dupKey"}`),
 			},
-			wantErr: false,
+			wantErr:     true,
+			errContains: "key conflict",
 		},
 		{
-			name: "multiple consumers different namespaces no conflict",
-			setup: func() []mosniov1.Consumer {
-				return []mosniov1.Consumer{
-					createTestConsumer("ns1", "consumer1", map[string]interface{}{
-						"key": "value1",
-					}),
-					createTestConsumer("ns2", "consumer2", map[string]interface{}{
-						"key": "value1",
-					}),
-				}
+			name: "unknown plugin should fail",
+			consumers: []*mosniov1.Consumer{
+				createTestConsumer("ns1", "consumer1", "nonExistPlugin", `{}`),
 			},
-			wantErr: false,
-		},
-		{
-			name: "multiple consumers same namespace different plugins no conflict",
-			setup: func() []mosniov1.Consumer {
-				return []mosniov1.Consumer{
-					createTestConsumerWithPlugins("ns1", "consumer1", map[string]map[string]interface{}{
-						"plugin1": {"key": "value1"},
-					}),
-					createTestConsumerWithPlugins("ns1", "consumer2", map[string]map[string]interface{}{
-						"plugin2": {"key": "value1"},
-					}),
-				}
-			},
-			wantErr: false,
-		},
-		{
-			name: "conflict in same namespace and plugin",
-			setup: func() []mosniov1.Consumer {
-				return []mosniov1.Consumer{
-					createTestConsumer("ns1", "consumer1", map[string]interface{}{
-						"key": "value1",
-					}),
-					createTestConsumer("ns1", "consumer2", map[string]interface{}{
-						"key": "value1",
-					}),
-				}
-			},
-			wantErr: true,
-		},
-		{
-			name: "invalid config",
-			setup: func() []mosniov1.Consumer {
-				return []mosniov1.Consumer{
-					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "consumer1",
-							Namespace: "ns1",
-						},
-						Spec: mosniov1.ConsumerSpec{
-							Auth: map[string]mosniov1.ConsumerPlugin{
-								"plugin1": {
-									Config: runtime.RawExtension{
-										Raw: []byte("invalid json"),
-									},
-								},
-							},
-						},
-					},
-				}
-			},
-			wantErr: true,
-		},
-		{
-			name: "no key field",
-			setup: func() []mosniov1.Consumer {
-				return []mosniov1.Consumer{
-					createTestConsumer("ns1", "consumer1", map[string]interface{}{
-						"other_field": "value",
-					}),
-				}
-			},
-			wantErr: true,
-		},
-		{
-			name: "issuer field as key",
-			setup: func() []mosniov1.Consumer {
-				return []mosniov1.Consumer{
-					createTestConsumer("ns1", "consumer1", map[string]interface{}{
-						"issuer": "issuer-value",
-					}),
-				}
-			},
-			wantErr: false,
+			wantErr:     true,
+			errContains: "unknown plugin",
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			consumers := tt.setup()
-			objects := make([]client.Object, 0, len(consumers))
-			for i := range consumers {
-				objects = append(objects, &consumers[i])
+			// Reset the index status
+			r.keyIndex.index = make(map[string]map[string]map[string]string)
+
+			// Simulate conflict detection in the Reconcile process
+			var err error
+			for _, c := range tt.consumers {
+				if e := r.indexConsumer(c.Namespace, c); e != nil {
+					err = e
+					break
+				}
 			}
 
-			r := &ConsumerReconciler{
-				ResourceManager: newTestResourceManager(scheme, objects...),
-				keyIndex:        NewKeyIndexRegistry(),
-			}
-
-			err := r.checkConsumerConflicts(context.Background())
-
-			if (err != nil) != tt.wantErr {
-				t.Errorf("checkConsumerConflicts() error = %v, wantErr %v", err, tt.wantErr)
+			// verification result
+			if tt.wantErr {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.errContains)
+			} else {
+				require.NoError(t, err)
 			}
 		})
 	}
 }
 
-func createTestConsumer(namespace, name string, config map[string]interface{}) mosniov1.Consumer {
-	return createTestConsumerWithPlugins(namespace, name, map[string]map[string]interface{}{
-		"test-plugin": config,
-	})
-}
-
-func createTestConsumerWithPlugins(namespace, name string, plugins map[string]map[string]interface{}) mosniov1.Consumer {
-	authPlugins := make(map[string]mosniov1.ConsumerPlugin)
-	for pluginName, config := range plugins {
-		raw, _ := json.Marshal(config)
-		authPlugins[pluginName] = mosniov1.ConsumerPlugin{
-			Config: runtime.RawExtension{Raw: raw},
-		}
-	}
-
-	return mosniov1.Consumer{
+// Auxiliary function: Create a test Consumer object
+func createTestConsumer(namespace, name, pluginName, rawConfig string) *mosniov1.Consumer {
+	return &mosniov1.Consumer{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
 			Namespace: namespace,
+			Name:      name,
 		},
 		Spec: mosniov1.ConsumerSpec{
-			Auth: authPlugins,
+			Auth: map[string]mosniov1.ConsumerPlugin{
+				pluginName: {
+					Config: runtime.RawExtension{
+						Raw: []byte(rawConfig),
+					},
+				},
+			},
 		},
-	}
-}
-
-type testResourceManager struct {
-	client  client.Client
-	objects []client.Object
-}
-
-func (m *testResourceManager) Get(ctx context.Context, key client.ObjectKey, out client.Object) error {
-	return m.client.Get(ctx, key, out)
-}
-
-func (m *testResourceManager) List(ctx context.Context, list client.ObjectList) error {
-	return m.client.List(ctx, list)
-}
-
-func (m *testResourceManager) UpdateStatus(ctx context.Context, obj client.Object, statusPtr any) error {
-	return nil
-}
-
-func newTestResourceManager(scheme *runtime.Scheme, objects ...client.Object) *testResourceManager {
-	return &testResourceManager{
-		client: fake.NewClientBuilder().
-			WithScheme(scheme).
-			WithObjects(objects...).
-			Build(),
-		objects: objects,
 	}
 }

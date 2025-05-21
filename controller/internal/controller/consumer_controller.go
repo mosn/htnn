@@ -19,7 +19,6 @@ package controller
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"sync"
 	"time"
@@ -80,6 +79,11 @@ func (r *ConsumerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	state, err := r.consumersToState(ctx, &consumers)
 	if err != nil {
 		return ctrl.Result{}, err
+	}
+
+	// Check for key conflicts across all consumers
+	if err := r.checkConsumerConflicts(ctx, state); err != nil {
+		return ctrl.Result{}, fmt.Errorf("consumer key conflict detected: %w", err)
 	}
 
 	err = r.generateCustomResource(ctx, state)
@@ -199,71 +203,74 @@ func (r *ConsumerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 // checkConsumerConflicts Perform full conflict detection and rebuild the index
-func (r *ConsumerReconciler) checkConsumerConflicts(ctx context.Context) error {
+func (r *ConsumerReconciler) checkConsumerConflicts(ctx context.Context, state *consumerReconcileState) error {
 	r.keyIndex.mu.Lock()
 	defer r.keyIndex.mu.Unlock()
 
 	// Clear old indexes
 	r.keyIndex.index = make(map[string]map[string]map[string]string)
 
-	// Get all Consumer
-	var allConsumers mosniov1.ConsumerList
-	if err := r.ResourceManager.List(ctx, &allConsumers); err != nil {
-		return fmt.Errorf("list consumers failed: %w", err)
-	}
-
-	// Perforated detection
-	for _, consumer := range allConsumers.Items {
-		if !consumer.DeletionTimestamp.IsZero() {
-			continue
-		}
-
-		if err := r.indexConsumer(consumer); err != nil {
-			return fmt.Errorf("consumer %s/%s: %w", consumer.Namespace, consumer.Name, err)
+	// Check conflicts for all valid consumers in the current state
+	for ns, consumers := range state.namespaceToConsumers {
+		for _, consumer := range consumers {
+			if err := r.indexConsumer(ns, consumer); err != nil {
+				return err
+			}
 		}
 	}
 	return nil
 }
 
-// indexConsumer Index a single Consumer and detect conflicts
-func (r *ConsumerReconciler) indexConsumer(consumer mosniov1.Consumer) error {
+// indexConsumer method to use the plugin's Index method
+func (r *ConsumerReconciler) indexConsumer(namespace string, consumer *mosniov1.Consumer) error {
 	for pluginName, plugin := range consumer.Spec.Auth {
-		key, err := extractPluginKey(plugin.Config.Raw)
-		if err != nil {
-			return fmt.Errorf("invalid plugin %s config: %w", pluginName, err)
+		// Get the plugin from the registry
+		registeredPlugin, exists := pluginRegistry[pluginName]
+		if !exists {
+			return fmt.Errorf("unknown plugin: %s", pluginName)
 		}
 
-		// Inertly initialize the three-level map
-		if r.keyIndex.index[consumer.Namespace] == nil {
-			r.keyIndex.index[consumer.Namespace] = make(map[string]map[string]string)
-		}
-		if r.keyIndex.index[consumer.Namespace][pluginName] == nil {
-			r.keyIndex.index[consumer.Namespace][pluginName] = make(map[string]string)
+		// Create configuration instances through the plugin interface
+		pluginConfig := registeredPlugin.NewConfig()
+		if err := json.Unmarshal(plugin.Config.Raw, pluginConfig); err != nil {
+			return fmt.Errorf("invalid config for plugin %s: %w", pluginName, err)
 		}
 
-		// collision detect
-		if existing, exists := r.keyIndex.index[consumer.Namespace][pluginName][key]; exists {
+		key := pluginConfig.Index()
+
+		// Initialize the three-level map if needed
+		if r.keyIndex.index[namespace] == nil {
+			r.keyIndex.index[namespace] = make(map[string]map[string]string)
+		}
+		if r.keyIndex.index[namespace][pluginName] == nil {
+			r.keyIndex.index[namespace][pluginName] = make(map[string]string)
+		}
+
+		// Check for collision
+		if existing, exists := r.keyIndex.index[namespace][pluginName][key]; exists {
 			return fmt.Errorf(
-				"key conflict: plugin=%s key=%s (already used by %s)",
-				pluginName, key, existing,
+				"key conflict in namespace %s: plugin=%s key=%s (already used by %s)",
+				namespace, pluginName, key, existing,
 			)
 		}
-		r.keyIndex.index[consumer.Namespace][pluginName][key] = consumer.Name
+		r.keyIndex.index[namespace][pluginName][key] = consumer.Name
 	}
 	return nil
 }
 
-func extractPluginKey(raw []byte) (string, error) {
-	var cfg map[string]interface{}
-	if err := json.Unmarshal(raw, &cfg); err != nil {
-		return "", err
-	}
+// Plugin Define the plugin interface
+type Plugin interface {
+	Name() string
+	NewConfig() PluginConsumerConfig
+}
 
-	if key, ok := cfg["key"].(string); ok {
-		return key, nil
-	}
-	if iss, ok := cfg["issuer"].(string); ok {
-		return iss, nil
-	}
-	return "", errors.New("no valid key field found")
+type PluginConsumerConfig interface {
+	Index() string
+}
+
+// Global plugin registry
+var pluginRegistry = make(map[string]Plugin)
+
+func RegisterPlugin(plugin Plugin) {
+	pluginRegistry[plugin.Name()] = plugin
 }
