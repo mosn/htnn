@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"mosn.io/htnn/api/pkg/plugins"
 	"sync"
 	"time"
 
@@ -46,14 +47,14 @@ type ConsumerReconciler struct {
 }
 
 type KeyIndexRegistry struct {
-	mu    sync.RWMutex
+	mu    sync.Mutex
 	index map[string]map[string]map[string]string // ns -> plugin -> key -> consumerName
 }
 
 func NewKeyIndexRegistry() *KeyIndexRegistry {
 	return &KeyIndexRegistry{
 		index: make(map[string]map[string]map[string]string),
-		mu:    sync.RWMutex{},
+		mu:    sync.Mutex{},
 	}
 }
 
@@ -214,7 +215,7 @@ func (r *ConsumerReconciler) checkConsumerConflicts(ctx context.Context, state *
 	for ns, consumers := range state.namespaceToConsumers {
 		for _, consumer := range consumers {
 			if err := r.indexConsumer(ns, consumer); err != nil {
-				return err
+				consumer.SetAccepted(mosniov1.ReasonInvalid, err.Error())
 			}
 		}
 	}
@@ -223,22 +224,33 @@ func (r *ConsumerReconciler) checkConsumerConflicts(ctx context.Context, state *
 
 // indexConsumer method to use the plugin's Index method
 func (r *ConsumerReconciler) indexConsumer(namespace string, consumer *mosniov1.Consumer) error {
+	r.keyIndex.mu.Lock()
+	defer r.keyIndex.mu.Unlock()
+
 	for pluginName, plugin := range consumer.Spec.Auth {
-		// Get the plugin from the registry
-		registeredPlugin, exists := pluginRegistry[pluginName]
-		if !exists {
-			return fmt.Errorf("unknown plugin: %s", pluginName)
+		// Get the plugin instance
+		pluginInstance := plugins.LoadPlugin(pluginName)
+
+		// Check whether the ConsumerPlugin interface is implemented
+		consumerPlugin, ok := pluginInstance.(plugins.ConsumerPlugin)
+		if !ok {
+			return fmt.Errorf("plugin %s does not support consumer configuration", pluginName)
 		}
 
-		// Create configuration instances through the plugin interface
-		pluginConfig := registeredPlugin.NewConfig()
-		if err := json.Unmarshal(plugin.Config.Raw, pluginConfig); err != nil {
+		// Parse configuration
+		config := consumerPlugin.ConsumerConfig()
+		if err := json.Unmarshal(plugin.Config.Raw, config); err != nil {
 			return fmt.Errorf("invalid config for plugin %s: %w", pluginName, err)
 		}
 
-		key := pluginConfig.Index()
+		// Obtain a unique identifier
+		indexer, ok := config.(plugins.Indexer)
+		if !ok {
+			return fmt.Errorf("plugin %s config does not implement Indexer", pluginName)
+		}
+		key := indexer.Index()
 
-		// Initialize the three-level map if needed
+		// Initialize the index structure
 		if r.keyIndex.index[namespace] == nil {
 			r.keyIndex.index[namespace] = make(map[string]map[string]string)
 		}
@@ -246,31 +258,15 @@ func (r *ConsumerReconciler) indexConsumer(namespace string, consumer *mosniov1.
 			r.keyIndex.index[namespace][pluginName] = make(map[string]string)
 		}
 
-		// Check for collision
+		// collision detection
 		if existing, exists := r.keyIndex.index[namespace][pluginName][key]; exists {
 			return fmt.Errorf(
 				"key conflict in namespace %s: plugin=%s key=%s (already used by %s)",
 				namespace, pluginName, key, existing,
 			)
 		}
+
 		r.keyIndex.index[namespace][pluginName][key] = consumer.Name
 	}
 	return nil
-}
-
-// Plugin Define the plugin interface
-type Plugin interface {
-	Name() string
-	NewConfig() PluginConsumerConfig
-}
-
-type PluginConsumerConfig interface {
-	Index() string
-}
-
-// Global plugin registry
-var pluginRegistry = make(map[string]Plugin)
-
-func RegisterPlugin(plugin Plugin) {
-	pluginRegistry[plugin.Name()] = plugin
 }

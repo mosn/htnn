@@ -185,3 +185,7 @@ type ConsumerPlugin interface {
 
 	ConsumerConfig() api.PluginConsumerConfig
 }
+
+type Indexer interface {
+	Index() string
+}
