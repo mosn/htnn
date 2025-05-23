@@ -205,9 +205,6 @@ func (r *ConsumerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 // checkConsumerConflicts Perform full conflict detection and rebuild the index
 func (r *ConsumerReconciler) checkConsumerConflicts(ctx context.Context, state *consumerReconcileState) error {
-	r.keyIndex.mu.Lock()
-	defer r.keyIndex.mu.Unlock()
-
 	// Clear old indexes
 	r.keyIndex.index = make(map[string]map[string]map[string]string)
 
@@ -215,6 +212,7 @@ func (r *ConsumerReconciler) checkConsumerConflicts(ctx context.Context, state *
 	for ns, consumers := range state.namespaceToConsumers {
 		for _, consumer := range consumers {
 			if err := r.indexConsumer(ns, consumer); err != nil {
+				log.Error("Conflict detected")
 				consumer.SetAccepted(mosniov1.ReasonInvalid, err.Error())
 			}
 		}
@@ -227,18 +225,19 @@ func (r *ConsumerReconciler) indexConsumer(namespace string, consumer *mosniov1.
 	r.keyIndex.mu.Lock()
 	defer r.keyIndex.mu.Unlock()
 
-	for pluginName, plugin := range consumer.Spec.Auth {
-		// Get the plugin instance
-		pluginInstance := plugins.LoadPlugin(pluginName)
+	if consumer == nil || consumer.Spec.Auth == nil {
+		return fmt.Errorf("nil consumer or auth config")
+	}
 
-		// Check whether the ConsumerPlugin interface is implemented
-		consumerPlugin, ok := pluginInstance.(plugins.ConsumerPlugin)
+	for pluginName, plugin := range consumer.Spec.Auth {
+
+		p, ok := plugins.LoadPlugin(pluginName).(plugins.Plugin)
 		if !ok {
-			return fmt.Errorf("plugin %s does not support consumer configuration", pluginName)
+			return fmt.Errorf("plugin %s is not for consumer", pluginName)
 		}
 
 		// Parse configuration
-		config := consumerPlugin.ConsumerConfig()
+		config := p.Config()
 		if err := json.Unmarshal(plugin.Config.Raw, config); err != nil {
 			return fmt.Errorf("invalid config for plugin %s: %w", pluginName, err)
 		}
