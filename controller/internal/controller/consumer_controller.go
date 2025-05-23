@@ -18,7 +18,10 @@ package controller
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"mosn.io/htnn/api/pkg/plugins"
+	"sync"
 	"time"
 
 	"k8s.io/apimachinery/pkg/types"
@@ -39,7 +42,20 @@ import (
 // ConsumerReconciler reconciles a Consumer object
 type ConsumerReconciler struct {
 	component.ResourceManager
-	Output component.Output
+	Output   component.Output
+	keyIndex *KeyIndexRegistry // Add a new Key index
+}
+
+type KeyIndexRegistry struct {
+	mu    sync.Mutex
+	index map[string]map[string]map[string]string // ns -> plugin -> key -> consumerName
+}
+
+func NewKeyIndexRegistry() *KeyIndexRegistry {
+	return &KeyIndexRegistry{
+		index: make(map[string]map[string]map[string]string),
+		mu:    sync.Mutex{},
+	}
 }
 
 //+kubebuilder:rbac:groups=htnn.mosn.io,resources=consumers,verbs=get;list;watch;create;update;patch;delete
@@ -64,6 +80,11 @@ func (r *ConsumerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	state, err := r.consumersToState(ctx, &consumers)
 	if err != nil {
 		return ctrl.Result{}, err
+	}
+
+	// Check for key conflicts across all consumers
+	if err := r.checkConsumerConflicts(ctx, state); err != nil {
+		return ctrl.Result{}, fmt.Errorf("consumer key conflict detected: %w", err)
 	}
 
 	err = r.generateCustomResource(ctx, state)
@@ -180,4 +201,71 @@ func (r *ConsumerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			),
 		)
 	return controller.Complete(r)
+}
+
+// checkConsumerConflicts Perform full conflict detection and rebuild the index
+func (r *ConsumerReconciler) checkConsumerConflicts(ctx context.Context, state *consumerReconcileState) error {
+	// Clear old indexes
+	r.keyIndex.index = make(map[string]map[string]map[string]string)
+
+	// Check conflicts for all valid consumers in the current state
+	for ns, consumers := range state.namespaceToConsumers {
+		for _, consumer := range consumers {
+			if err := r.indexConsumer(ns, consumer); err != nil {
+				log.Error("Conflict detected")
+				consumer.SetAccepted(mosniov1.ReasonInvalid, err.Error())
+			}
+		}
+	}
+	return nil
+}
+
+// indexConsumer method to use the plugin's Index method
+func (r *ConsumerReconciler) indexConsumer(namespace string, consumer *mosniov1.Consumer) error {
+	r.keyIndex.mu.Lock()
+	defer r.keyIndex.mu.Unlock()
+
+	if consumer == nil || consumer.Spec.Auth == nil {
+		return fmt.Errorf("nil consumer or auth config")
+	}
+
+	for pluginName, plugin := range consumer.Spec.Auth {
+
+		p, ok := plugins.LoadPlugin(pluginName).(plugins.Plugin)
+		if !ok {
+			return fmt.Errorf("plugin %s is not for consumer", pluginName)
+		}
+
+		// Parse configuration
+		config := p.Config()
+		if err := json.Unmarshal(plugin.Config.Raw, config); err != nil {
+			return fmt.Errorf("invalid config for plugin %s: %w", pluginName, err)
+		}
+
+		// Obtain a unique identifier
+		indexer, ok := config.(plugins.Indexer)
+		if !ok {
+			return fmt.Errorf("plugin %s config does not implement Indexer", pluginName)
+		}
+		key := indexer.Index()
+
+		// Initialize the index structure
+		if r.keyIndex.index[namespace] == nil {
+			r.keyIndex.index[namespace] = make(map[string]map[string]string)
+		}
+		if r.keyIndex.index[namespace][pluginName] == nil {
+			r.keyIndex.index[namespace][pluginName] = make(map[string]string)
+		}
+
+		// collision detection
+		if existing, exists := r.keyIndex.index[namespace][pluginName][key]; exists {
+			return fmt.Errorf(
+				"key conflict in namespace %s: plugin=%s key=%s (already used by %s)",
+				namespace, pluginName, key, existing,
+			)
+		}
+
+		r.keyIndex.index[namespace][pluginName][key] = consumer.Name
+	}
+	return nil
 }
