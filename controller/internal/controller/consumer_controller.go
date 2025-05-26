@@ -83,9 +83,7 @@ func (r *ConsumerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (c
 	}
 
 	// Check for key conflicts across all consumers
-	if err := r.checkConsumerConflicts(ctx, state); err != nil {
-		return ctrl.Result{}, fmt.Errorf("consumer key conflict detected: %w", err)
-	}
+	r.checkConsumerConflicts(ctx, state)
 
 	err = r.generateCustomResource(ctx, state)
 	if err != nil {
@@ -205,25 +203,42 @@ func (r *ConsumerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 // checkConsumerConflicts Perform full conflict detection and rebuild the index
 func (r *ConsumerReconciler) checkConsumerConflicts(ctx context.Context, state *consumerReconcileState) error {
+	r.keyIndex.mu.Lock()
+	defer r.keyIndex.mu.Unlock()
+
+	if state == nil || state.namespaceToConsumers == nil {
+		return nil
+	}
+
 	// Clear old indexes
 	r.keyIndex.index = make(map[string]map[string]map[string]string)
 
 	// Check conflicts for all valid consumers in the current state
 	for ns, consumers := range state.namespaceToConsumers {
-		for _, consumer := range consumers {
-			if err := r.indexConsumer(ns, consumer); err != nil {
-				log.Error("Conflict detected")
+		if consumers == nil {
+			continue
+		}
+		// Create a new map to filter out invalid consumers
+		validConsumers := make(map[string]*mosniov1.Consumer)
+
+		for name, consumer := range consumers {
+			if consumer == nil {
+				continue
+			}
+			if err := r.indexConsumer(ns, consumer); err == nil {
+				validConsumers[name] = consumer
+			} else {
 				consumer.SetAccepted(mosniov1.ReasonInvalid, err.Error())
 			}
 		}
+
+		state.namespaceToConsumers[ns] = validConsumers
 	}
 	return nil
 }
 
 // indexConsumer method to use the plugin's Index method
 func (r *ConsumerReconciler) indexConsumer(namespace string, consumer *mosniov1.Consumer) error {
-	r.keyIndex.mu.Lock()
-	defer r.keyIndex.mu.Unlock()
 
 	if consumer == nil || consumer.Spec.Auth == nil {
 		return fmt.Errorf("nil consumer or auth config")
@@ -231,23 +246,18 @@ func (r *ConsumerReconciler) indexConsumer(namespace string, consumer *mosniov1.
 
 	for pluginName, plugin := range consumer.Spec.Auth {
 
-		p, ok := plugins.LoadPlugin(pluginName).(plugins.Plugin)
+		p, ok := plugins.LoadPlugin(pluginName).(plugins.ConsumerPlugin)
 		if !ok {
 			return fmt.Errorf("plugin %s is not for consumer", pluginName)
 		}
 
 		// Parse configuration
-		config := p.Config()
+		config := p.ConsumerConfig()
 		if err := json.Unmarshal(plugin.Config.Raw, config); err != nil {
 			return fmt.Errorf("invalid config for plugin %s: %w", pluginName, err)
 		}
 
-		// Obtain a unique identifier
-		indexer, ok := config.(plugins.Indexer)
-		if !ok {
-			return fmt.Errorf("plugin %s config does not implement Indexer", pluginName)
-		}
-		key := indexer.Index()
+		key := config.Index()
 
 		// Initialize the index structure
 		if r.keyIndex.index[namespace] == nil {
