@@ -96,7 +96,7 @@ func createTestConsumer(namespace, name, pluginName, key string) *mosniov1.Consu
 
 func TestIndexConsumer(t *testing.T) {
 	r := &ConsumerReconciler{
-		keyIndex: NewKeyIndexRegistry(),
+		KeyIndex: NewKeyIndexRegistry(),
 	}
 
 	plugins.RegisterPlugin("testPlugin", &mockPlugin{})
@@ -143,7 +143,7 @@ func TestIndexConsumer(t *testing.T) {
 				// Verify that the index is correctly added
 				assert.Equal(t,
 					consumer.Name,
-					r.keyIndex.index[consumer.Namespace]["testPlugin"]["key123"])
+					r.KeyIndex.index[consumer.Namespace]["testPlugin"]["key123"])
 			}
 		})
 	}
@@ -151,7 +151,7 @@ func TestIndexConsumer(t *testing.T) {
 
 func TestCheckConsumerConflicts(t *testing.T) {
 	r := &ConsumerReconciler{
-		keyIndex: NewKeyIndexRegistry(),
+		KeyIndex: NewKeyIndexRegistry(),
 	}
 
 	t.Run("multiple namespaces no conflict", func(t *testing.T) {
@@ -166,8 +166,8 @@ func TestCheckConsumerConflicts(t *testing.T) {
 			},
 		}
 
-		err := r.checkConsumerConflicts(context.Background(), state)
-		assert.NoError(t, err)
+		r.checkConsumerConflicts(context.Background(), state)
+
 	})
 
 	t.Run("detect cross-consumer conflict", func(t *testing.T) {
@@ -181,8 +181,7 @@ func TestCheckConsumerConflicts(t *testing.T) {
 			},
 		}
 
-		err := r.checkConsumerConflicts(context.Background(), state)
-		assert.NoError(t, err)
+		r.checkConsumerConflicts(context.Background(), state)
 
 		// The consumer status of the verified conflict is updated
 		assert.Equal(t, metav1.ConditionFalse, conflictConsumer.Status.Conditions[0].Status)

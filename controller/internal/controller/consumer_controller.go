@@ -43,7 +43,7 @@ import (
 type ConsumerReconciler struct {
 	component.ResourceManager
 	Output   component.Output
-	keyIndex *KeyIndexRegistry // Add a new Key index
+	KeyIndex *KeyIndexRegistry // Add a new Key index
 }
 
 type KeyIndexRegistry struct {
@@ -203,28 +203,25 @@ func (r *ConsumerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 // checkConsumerConflicts Perform full conflict detection and rebuild the index
 func (r *ConsumerReconciler) checkConsumerConflicts(ctx context.Context, state *consumerReconcileState) {
-	r.keyIndex.mu.Lock()
-	defer r.keyIndex.mu.Unlock()
+	if r.KeyIndex == nil {
+		r.KeyIndex = NewKeyIndexRegistry()
+	}
+
+	r.KeyIndex.mu.Lock()
+	defer r.KeyIndex.mu.Unlock()
 
 	if state == nil || state.namespaceToConsumers == nil {
 		return
 	}
 
 	// Clear old indexes
-	r.keyIndex.index = make(map[string]map[string]map[string]string)
+	r.KeyIndex.index = make(map[string]map[string]map[string]string)
 
 	// Check conflicts for all valid consumers in the current state
 	for ns, consumers := range state.namespaceToConsumers {
-		if consumers == nil {
-			continue
-		}
-
 		validConsumers := make(map[string]*mosniov1.Consumer)
 
 		for name, consumer := range consumers {
-			if consumer == nil {
-				continue
-			}
 			// Create a new map to filter out invalid consumers
 			if err := r.indexConsumer(ns, consumer); err == nil {
 				validConsumers[name] = consumer
@@ -259,22 +256,22 @@ func (r *ConsumerReconciler) indexConsumer(namespace string, consumer *mosniov1.
 		key := config.Index()
 
 		// Initialize the index structure
-		if r.keyIndex.index[namespace] == nil {
-			r.keyIndex.index[namespace] = make(map[string]map[string]string)
+		if r.KeyIndex.index[namespace] == nil {
+			r.KeyIndex.index[namespace] = make(map[string]map[string]string)
 		}
-		if r.keyIndex.index[namespace][pluginName] == nil {
-			r.keyIndex.index[namespace][pluginName] = make(map[string]string)
+		if r.KeyIndex.index[namespace][pluginName] == nil {
+			r.KeyIndex.index[namespace][pluginName] = make(map[string]string)
 		}
 
 		// collision detection
-		if existing, exists := r.keyIndex.index[namespace][pluginName][key]; exists {
+		if existing, exists := r.KeyIndex.index[namespace][pluginName][key]; exists {
 			return fmt.Errorf(
 				"key conflict in namespace %s: plugin=%s key=%s (already used by %s)",
 				namespace, pluginName, key, existing,
 			)
 		}
 
-		r.keyIndex.index[namespace][pluginName][key] = consumer.Name
+		r.KeyIndex.index[namespace][pluginName][key] = consumer.Name
 	}
 	return nil
 }
