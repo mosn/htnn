@@ -3,66 +3,13 @@ package controller
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"github.com/stretchr/testify/assert"
-	"google.golang.org/protobuf/reflect/protoreflect"
-	"mosn.io/htnn/api/pkg/filtermanager/api"
-	"mosn.io/htnn/api/pkg/plugins"
 	"testing"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	mosniov1 "mosn.io/htnn/types/apis/v1"
 )
-
-type mockPlugin struct {
-	plugins.PluginMethodDefaultImpl
-}
-
-func (p *mockPlugin) Config() api.PluginConfig {
-	return &testPluginConfig{}
-}
-
-func (p *mockPlugin) Type() plugins.PluginType {
-	return plugins.TypeAuthn
-}
-
-func (p *mockPlugin) Order() plugins.PluginOrder {
-	return plugins.PluginOrder{Position: plugins.OrderPositionAuthn}
-}
-
-func (p *mockPlugin) Factory() api.FilterFactory {
-	return func(interface{}, api.FilterCallbackHandler) api.Filter {
-		return &api.PassThroughFilter{}
-	}
-}
-
-func (p *mockPlugin) NonBlockingPhases() api.Phase {
-	return 0
-}
-
-type testPluginConfig struct {
-	Key string `json:"key"`
-}
-
-func (c *testPluginConfig) ProtoReflect() protoreflect.Message {
-	return nil
-}
-
-func (c *testPluginConfig) Validate() error {
-	if c.Key == "" {
-		return fmt.Errorf("key cannot be empty")
-	}
-	return nil
-}
-
-func (c *testPluginConfig) Index() string {
-	return c.Key
-}
-
-func (c *testPluginConfig) ConsumerConfig() interface{} {
-	return c
-}
 
 func createTestConsumer(namespace, name, pluginName, key string) *mosniov1.Consumer {
 	config := map[string]interface{}{"key": key}
@@ -98,11 +45,6 @@ func TestIndexConsumer(t *testing.T) {
 	r := &ConsumerReconciler{
 		KeyIndex: NewKeyIndexRegistry(),
 	}
-
-	plugins.RegisterPlugin("testPlugin", &mockPlugin{})
-
-	plugin := plugins.LoadPluginType("testPlugin")
-	assert.NotNil(t, plugin)
 
 	tests := []struct {
 		name     string
@@ -167,7 +109,6 @@ func TestCheckConsumerConflicts(t *testing.T) {
 		}
 
 		r.checkConsumerConflicts(context.Background(), state)
-
 	})
 
 	t.Run("detect cross-consumer conflict", func(t *testing.T) {
