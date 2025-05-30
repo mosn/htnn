@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"mosn.io/htnn/api/pkg/plugins"
 	"sync"
 	"time"
 
@@ -43,6 +44,15 @@ type ConsumerReconciler struct {
 	component.ResourceManager
 	Output   component.Output
 	KeyIndex *KeyIndexRegistry // Add a new Key index
+}
+
+func NewConsumerReconciler(manager component.ResourceManager, output component.Output) *ConsumerReconciler {
+	r := &ConsumerReconciler{
+		ResourceManager: manager,
+		Output:          output,
+		KeyIndex:        NewKeyIndexRegistry(),
+	}
+	return r
 }
 
 type KeyIndexRegistry struct {
@@ -202,10 +212,6 @@ func (r *ConsumerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 // checkConsumerConflicts Perform full conflict detection and rebuild the index
 func (r *ConsumerReconciler) checkConsumerConflicts(ctx context.Context, state *consumerReconcileState) {
-	if r.KeyIndex == nil {
-		r.KeyIndex = NewKeyIndexRegistry() // make sure keyIndex not nil
-	}
-
 	r.KeyIndex.mu.Lock()
 	defer r.KeyIndex.mu.Unlock()
 
@@ -241,16 +247,18 @@ func (r *ConsumerReconciler) indexConsumer(namespace string, consumer *mosniov1.
 	}
 
 	for pluginName, plugin := range consumer.Spec.Auth {
+		p, ok := plugins.LoadPlugin(pluginName).(plugins.ConsumerPlugin)
+		if !ok {
+			return fmt.Errorf("plugin %s is not for consumer", pluginName)
+		}
+
 		// Parse configuration
-		config := make(map[string]interface{})
-		if err := json.Unmarshal(plugin.Config.Raw, &config); err != nil {
+		config := p.ConsumerConfig()
+		if err := json.Unmarshal(plugin.Config.Raw, config); err != nil {
 			return fmt.Errorf("invalid config for plugin %s: %w", pluginName, err)
 		}
 
-		key, ok := config["key"].(string)
-		if !ok {
-			return fmt.Errorf("key not found or not a string in plugin %s config", pluginName)
-		}
+		key := config.Index()
 
 		// Initialize the index structure
 		if r.KeyIndex.index[namespace] == nil {

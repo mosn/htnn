@@ -4,6 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/stretchr/testify/assert"
+	"google.golang.org/protobuf/reflect/protoreflect"
+	"mosn.io/htnn/api/pkg/filtermanager/api"
+	"mosn.io/htnn/api/pkg/plugins"
 	"testing"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -41,10 +44,72 @@ func createTestConsumer(namespace, name, pluginName, key string) *mosniov1.Consu
 	}
 }
 
+type consumerPlugin struct {
+	plugins.PluginMethodDefaultImpl
+}
+
+func (p *consumerPlugin) Type() plugins.PluginType {
+	return plugins.TypeAuthn
+}
+
+func (p *consumerPlugin) Order() plugins.PluginOrder {
+	return plugins.PluginOrder{
+		Position: plugins.OrderPositionAuthn,
+	}
+}
+
+func (p *consumerPlugin) Factory() api.FilterFactory {
+	return func(interface{}, api.FilterCallbackHandler) api.Filter {
+		return &api.PassThroughFilter{}
+	}
+}
+
+func (p *consumerPlugin) Config() api.PluginConfig {
+	return &Config{}
+}
+
+func (p *consumerPlugin) ConsumerConfig() api.PluginConsumerConfig {
+	return &ConsumerConfig{}
+}
+
+type ConsumerConfig struct {
+	Key string `json:"key"`
+}
+
+func (c ConsumerConfig) ProtoReflect() protoreflect.Message {
+	return nil
+}
+
+func (c ConsumerConfig) Validate() error {
+	return nil // or proper validation logic
+}
+
+func (c ConsumerConfig) Index() string {
+	return c.Key
+}
+
+type Config struct {
+	Key string `json:"key"`
+}
+
+func (c *Config) Index() string {
+	return c.Key
+}
+
+func (c *Config) ProtoReflect() protoreflect.Message {
+	return nil
+}
+
+func (c *Config) Validate() error {
+	return nil // or proper validation logic
+}
+
 func TestIndexConsumer(t *testing.T) {
 	r := &ConsumerReconciler{
 		KeyIndex: NewKeyIndexRegistry(),
 	}
+
+	plugins.RegisterPlugin("testPlugin", &consumerPlugin{})
 
 	tests := []struct {
 		name     string
@@ -95,6 +160,8 @@ func TestCheckConsumerConflicts(t *testing.T) {
 	r := &ConsumerReconciler{
 		KeyIndex: NewKeyIndexRegistry(),
 	}
+
+	plugins.RegisterPlugin("testPlugin", &consumerPlugin{})
 
 	t.Run("multiple namespaces no conflict", func(t *testing.T) {
 		state := &consumerReconcileState{
