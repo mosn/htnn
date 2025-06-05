@@ -76,7 +76,10 @@ func (conf *config) Init(cb api.ConfigCallbackHandler) error {
 	ctx := context.Background()
 
 	query, _ := rego.New(
-		rego.Query(fmt.Sprintf("allow = data.%s.allow", policy)),
+		rego.Query(fmt.Sprintf(`
+            allow = data.%[1]s.allow;
+            custom_response = object.get(data.%[1]s, "custom_response", null)
+        `, policy)),
 		rego.Module(fmt.Sprintf("%s.rego", policy), module),
 	).PrepareForEval(ctx)
 	conf.query = query

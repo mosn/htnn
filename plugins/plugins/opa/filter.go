@@ -42,9 +42,18 @@ type filter struct {
 }
 
 type opaResponse struct {
-	Result struct {
-		Allow bool `json:"allow"`
-	} `json:"result"`
+	Result Result `json:"result"`
+}
+
+type Result struct {
+	Allow          bool            `json:"allow"`
+	CustomResponse *CustomResponse `json:"custom_response"`
+}
+
+type CustomResponse struct {
+	Msg        string              `json:"msg"`
+	Headers    map[string][]string `json:"headers"`
+	StatusCode int                 `json:"status_code"`
 }
 
 func mapStrsToMapStr(strs map[string][]string) map[string]string {
@@ -85,54 +94,117 @@ func (f *filter) buildInput(header api.RequestHeaderMap) map[string]interface{} 
 	}
 }
 
-func (f *filter) isAllowed(input map[string]interface{}) (bool, error) {
+func (f *filter) isAllowed(input map[string]interface{}) (Result, error) {
 	remote := f.config.GetRemote()
 	if remote != nil {
 		params, err := json.Marshal(input)
 		if err != nil {
-			return false, err
+			return Result{Allow: false}, err
 		}
 
 		path := remote.GetUrl() + "/v1/data/" + remote.GetPolicy()
 		api.LogInfof("send request to opa: %s, param: %s", path, params)
 		resp, err := f.config.client.Post(path, "application/json", bytes.NewReader(params))
 		if err != nil {
-			return false, err
+			return Result{Allow: false}, err
 		}
 		defer resp.Body.Close()
 
 		var opaResponse opaResponse
 		if err := json.NewDecoder(resp.Body).Decode(&opaResponse); err != nil {
-			return false, err
+			return Result{Allow: false}, err
 		}
 
-		return opaResponse.Result.Allow, nil
+		return opaResponse.Result, nil
 	}
 
 	ctx := context.TODO()
 	results, err := f.config.query.Eval(ctx, rego.EvalInput(input["input"]))
 	if err != nil {
-		return false, err
+		return Result{Allow: false}, err
 	}
 	if len(results) == 0 {
-		return false, errors.New("result is missing in the response")
+		return Result{Allow: false}, errors.New("result is missing in the response")
 	}
-	result, ok := results[0].Bindings["allow"].(bool)
-	if !ok {
-		return false, errors.New("unexpected result type")
+
+	result, allowOk := results[0].Bindings["allow"].(bool)
+	if !allowOk {
+		return Result{Allow: false}, errors.New("unexpected type for 'allow' binding in OPA result")
 	}
-	return result, nil
+
+	customResponseData, crExists := results[0].Bindings["custom_response"]
+	if crExists {
+		var customResp CustomResponse
+		if responseMap, ok := customResponseData.(map[string]interface{}); ok {
+			if msgVal, found := responseMap["msg"]; found {
+				if msgStr, isStr := msgVal.(string); isStr {
+					customResp.Msg = msgStr
+				}
+			}
+
+			if statusCodeVal, found := responseMap["status_code"]; found {
+				if v, ok := statusCodeVal.(json.Number); ok {
+					if statusCodeInt, err := v.Int64(); err == nil {
+						customResp.StatusCode = int(statusCodeInt)
+					}
+				}
+			}
+
+			if headersVal, found := responseMap["headers"]; found {
+				if headersMapInterface, isMap := headersVal.(map[string]interface{}); isMap {
+					parsedHeaders := make(map[string][]string)
+					for key, valueInterface := range headersMapInterface {
+						if valueSliceInterface, isSlice := valueInterface.([]interface{}); isSlice {
+							var headerValues []string
+							allStringsInSlice := true
+							for _, itemInterface := range valueSliceInterface {
+								if itemStr, isStr := itemInterface.(string); isStr {
+									headerValues = append(headerValues, itemStr)
+								} else {
+									allStringsInSlice = false
+									break
+								}
+							}
+							if allStringsInSlice && len(headerValues) > 0 {
+								parsedHeaders[key] = headerValues
+							}
+						} else if singleValueStr, isStr := valueInterface.(string); isStr {
+							parsedHeaders[key] = []string{singleValueStr}
+						}
+					}
+
+					if len(parsedHeaders) > 0 {
+						customResp.Headers = parsedHeaders
+					}
+				}
+			}
+		}
+		return Result{Allow: result, CustomResponse: &customResp}, nil
+	}
+
+	return Result{Allow: result, CustomResponse: nil}, nil
 }
 
 func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {
 	input := f.buildInput(headers)
-	allow, err := f.isAllowed(input)
+	result, err := f.isAllowed(input)
 	if err != nil {
 		api.LogErrorf("failed to do OPA auth: %v", err)
 		return &api.LocalResponse{Code: 503}
 	}
 
-	if !allow {
+	if !result.Allow {
+		customResponse := result.CustomResponse
+		if result.CustomResponse != nil {
+			if customResponse.StatusCode == 0 {
+				customResponse.StatusCode = 403
+			}
+			return &api.LocalResponse{
+				Code:   customResponse.StatusCode,
+				Msg:    customResponse.Msg,
+				Header: customResponse.Headers,
+			}
+		}
 		return &api.LocalResponse{Code: 403}
 	}
 	return api.Continue

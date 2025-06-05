@@ -53,11 +53,13 @@ func TestOpaRemote(t *testing.T) {
 	}))
 
 	tests := []struct {
-		name       string
-		status     int
-		checkInput func(input map[string]interface{})
-		resp       string
-		respErr    error
+		name            string
+		status          int
+		checkInput      func(input map[string]interface{})
+		resp            string
+		respErr         error
+		expectedMsg     string
+		expectedHeaders http.Header
 	}{
 		{
 			name: "happy path",
@@ -95,6 +97,163 @@ func TestOpaRemote(t *testing.T) {
 			status:  503,
 			respErr: io.ErrUnexpectedEOF,
 		},
+		{
+			name:   "custom response with status code and message",
+			status: 401,
+			resp: `{
+				"result": {
+					"allow": false,
+					"custom_response": {
+						"status_code": 401,
+						"msg": "Authentication failed"
+					}
+				}
+			}`,
+			expectedMsg: "Authentication failed",
+		},
+		{
+			name:   "custom response with headers",
+			status: 429,
+			resp: `{
+				"result": {
+					"allow": false,
+					"custom_response": {
+						"status_code": 429,
+						"msg": "Rate limit exceeded",
+						"headers": {
+							"X-Rate-Limit": ["100"],
+							"Retry-After": ["60"],
+							"X-Request-ID": ["abc123"]
+						}
+					}
+				}
+			}`,
+			expectedMsg: "Rate limit exceeded",
+			expectedHeaders: http.Header{
+				"X-Rate-Limit": {"100"},
+				"Retry-After":  {"60"},
+				"X-Request-ID": {"abc123"},
+			},
+		},
+		{
+			name:   "custom response with complex headers",
+			status: 422,
+			resp: `{
+				"result": {
+					"allow": false,
+					"custom_response": {
+						"status_code": 422,
+						"msg": "Validation failed",
+						"headers": {
+							"Content-Type": ["application/json"],
+							"X-Validation-Errors": ["field1", "field2", "field3"],
+							"X-Error-Code": ["VALIDATION_FAILED"]
+						}
+					}
+				}
+			}`,
+			expectedMsg: "Validation failed",
+			expectedHeaders: http.Header{
+				"Content-Type":        {"application/json"},
+				"X-Validation-Errors": {"field1", "field2", "field3"},
+				"X-Error-Code":        {"VALIDATION_FAILED"},
+			},
+		},
+		{
+			name:   "custom response with status code only",
+			status: 418,
+			resp: `{
+				"result": {
+					"allow": false,
+					"custom_response": {
+						"status_code": 418
+					}
+				}
+			}`,
+		},
+		{
+			name:   "custom response with message only",
+			status: 403,
+			resp: `{
+				"result": {
+					"allow": false,
+					"custom_response": {
+						"msg": "Access denied"
+					}
+				}
+			}`,
+			expectedMsg: "Access denied",
+		},
+		{
+			name:   "custom response with empty object",
+			status: 403,
+			resp: `{
+				"result": {
+					"allow": false,
+					"custom_response": {}
+				}
+			}`,
+		},
+		{
+			name:   "custom response with null value",
+			status: 403,
+			resp: `{
+				"result": {
+					"allow": false,
+					"custom_response": null
+				}
+			}`,
+		},
+		{
+			name: "allow true ignores custom response",
+			resp: `{
+				"result": {
+					"allow": true,
+					"custom_response": {
+						"status_code": 401,
+						"msg": "This message should be ignored"
+					}
+				}
+			}`,
+		},
+		{
+			name:   "custom response for service unavailable",
+			status: 503,
+			resp: `{
+				"result": {
+					"allow": false,
+					"custom_response": {
+						"status_code": 503,
+						"msg": "Service temporarily unavailable",
+						"headers": {
+							"Retry-After": ["300"],
+							"X-Service-Status": ["maintenance"],
+							"X-Maintenance-Window": ["2025-06-05T06:00:00Z", "2025-06-05T08:00:00Z"]
+						}
+					}
+				}
+			}`,
+			expectedMsg: "Service temporarily unavailable",
+			expectedHeaders: http.Header{
+				"Retry-After":          {"300"},
+				"X-Service-Status":     {"maintenance"},
+				"X-Maintenance-Window": {"2025-06-05T06:00:00Z", "2025-06-05T08:00:00Z"},
+			},
+		},
+		{
+			name:   "custom response with zero status code",
+			status: 403, // should default to 403 when status_code is 0
+			resp: `{
+				"result": {
+					"allow": false,
+					"custom_response": {
+						"status_code": 0,
+						"msg": "Zero status code test"
+					}
+				}
+			}`,
+			expectedMsg: "Zero status code test",
+		},
 	}
 
 	for _, tt := range tests {
@@ -117,7 +276,15 @@ func TestOpaRemote(t *testing.T) {
 			if !ok {
 				assert.Equal(t, tt.status, 0)
 			} else {
-				assert.Equal(t, tt.status, lr.Code)
+				assert.Equal(t, tt.status, lr.Code, "Status code mismatch")
+
+				if tt.expectedMsg != "" {
+					assert.Equal(t, tt.expectedMsg, lr.Msg, "Message mismatch")
+				}
+
+				if tt.expectedHeaders != nil {
+					assert.Equal(t, tt.expectedHeaders, lr.Header, "Headers mismatch")
+				}
 			}
 		})
 	}
@@ -131,9 +298,11 @@ func TestOpaLocal(t *testing.T) {
 	}))
 
 	tests := []struct {
-		name   string
-		status int
-		text   string
+		name            string
+		status          int
+		text            string
+		expectedMsg     string
+		expectedHeaders http.Header
 	}{
 		{
 			name: "happy path",
@@ -171,6 +340,110 @@ func TestOpaLocal(t *testing.T) {
 			text:   `default allow = "a"`,
 			status: 503,
 		},
+		// for customResponse
+		{
+			name: "custom response with status and message",
+			text: `import input.request
+				import future.keywords
+				default allow = false
+				default custom_response = {
+					"status_code": 401,
+					"msg": "Unauthorized access"
+				}
+				allow {
+					false
+				}`,
+			status:      401,
+			expectedMsg: "Unauthorized access",
+		},
+		{
+			name: "custom response with headers",
+			text: `import input.request
+				import future.keywords
+				default allow = false
+				default custom_response = {
+					"status_code": 429,
+					"msg": "Rate limit exceeded",
+					"headers": {
+						"X-Rate-Limit": ["100"],
+						"Retry-After": ["60"]
+					}
+				}
+				allow {
+					false
+				}`,
+			status:      429,
+			expectedMsg: "Rate limit exceeded",
+			expectedHeaders: http.Header{
+				"X-Rate-Limit": {"100"},
+				"Retry-After":  {"60"},
+			},
+		},
+		{
+			name: "custom response with multiple header values",
+			text: `import input.request
+				import future.keywords
+				default allow = false
+				default custom_response = {
+					"status_code": 422,
+					"msg": "Validation failed",
+					"headers": {
+						"X-Error": ["field1", "field2"],
+						"X-Request-ID": ["12345"]
+					}
+				}
+				allow {
+					false
+				}`,
+			status:      422,
+			expectedMsg: "Validation failed",
+			expectedHeaders: http.Header{
+				"X-Error":      {"field1", "field2"},
+				"X-Request-ID": {"12345"},
+			},
+		},
+		{
+			name: "custom response with zero status code should default to 403",
+			text: `import input.request
+				import future.keywords
+				default allow = false
+				default custom_response = {
+					"status_code": 0,
+					"msg": "Default status"
+				}
+				allow {
+					false
+				}`,
+			status:      403,
+			expectedMsg: "Default status",
+		},
+		{
+			name: "custom response without status code",
+			text: `import input.request
+				import future.keywords
+				default allow = false
+				default custom_response = {
+					"msg": "No status code provided"
+				}
+				allow {
+					false
+				}`,
+			status:      403,
+			expectedMsg: "No status code provided",
+		},
+		{
+			name: "allow true with custom response should be ignored",
+			text: `import input.request
+				import future.keywords
+				default allow = true
+				default custom_response = {
+					"status_code": 401,
+					"msg": "This should be ignored"
+				}
+				allow {
+					true
+				}`,
+		},
 	}
 
 	for _, tt := range tests {
@@ -193,7 +466,15 @@ func TestOpaLocal(t *testing.T) {
 			if !ok {
 				assert.Equal(t, tt.status, 0)
 			} else {
-				assert.Equal(t, tt.status, lr.Code)
+				assert.Equal(t, tt.status, lr.Code, "CustomResponse Status code mismatch")
+
+				if tt.expectedMsg != "" {
+					assert.Equal(t, tt.expectedMsg, lr.Msg, "CustomResponse Message mismatch")
+				}
+
+				if tt.expectedHeaders != nil {
+					assert.Equal(t, tt.expectedHeaders, lr.Header, "CustomResponse Headers mismatch")
+				}
 			}
 		})
 	}

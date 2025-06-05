@@ -87,13 +87,26 @@ OPA 策略应该定义一个布尔值 `allow` 并使用它来指示请求是否�
 
 ```json
 {
-    "result": {
-        "allow": true
+  "result": {
+    "allow": true
+  },
+  "custom_response": {
+    "msg": "Authentication required. Please provide valid authorization header.",
+    "status_code": 401,
+    "headers": {
+      "WWW-Authenticate": [
+        "Bearer realm=\"api\""
+      ],
+      "Content-Type": [
+        "application/json"
+      ]
     }
+  }
 }
 ```
 
 * `allow` 表示请求是否被允许。
+* `custom_response` 包含可选的自定义响应内容（例如消息、状态码和响应头），如果定义了该字段，则将覆盖默认的允许/拒绝响应。
 
 ## 用法
 
@@ -198,3 +211,65 @@ HTTP/1.1 200 OK
 curl -i -X POST localhost:10000/echo -d "AA"
 HTTP/1.1 403 Forbidden
 ```
+
+### 自定义响应的使用
+
+#### 字段格式
+
+* **`msg`**
+  此字段的行为与 `LocalResponse` 结构中的 `Msg` 字段一致。如果 `msg` 不为空，其内容将在构造返回给客户端的响应体时，按照以下规则进行处理：
+
+  1. 如果显式设置了 `Content-Type` 响应头，则 `msg` 将原样发送。
+  2. 如果 `Content-Type` 是 `"application/json"`，则 `msg` 会被包装为以下 JSON 格式：
+
+     ```json
+     { "msg": "..." }
+     ```
+
+     （具体实现可参考 `DefaultJSONResponse` 结构体。）
+  3. 如果没有提供 `Content-Type`，或者值为 `"application/json"`，则消息也会被包装为 JSON 格式。
+  4. 对于其他内容类型，消息将以原始字符串形式返回。
+
+* **`status_code`**
+  HTTP 状态码。此字段支持数值类型。
+
+* **`headers`**
+  HTTP 响应头。每个头部的值必须以字符串数组形式表示。
+
+#### 示例
+
+```rego
+package test
+import input.request
+default allow = false
+allow {
+    request.method == "GET"
+    startswith(request.path, "/echo")
+}
+custom_response = {
+    "msg": "Authentication required. Please provide valid authorization header.",
+    "status_code": 401,
+    "headers": {
+        "WWW-Authenticate": ["Bearer realm=\"api\""],
+        "Content-Type": ["application/json"]
+    }
+} {
+    request.method == "GET"
+    startswith(request.path, "/x")
+}
+```
+
+在此示例中：
+
+* 对 `/echo` 的请求将被允许；
+* 对 `/x` 的请求将被拒绝，并返回 `401 Unauthorized` 状态码，以及 JSON 格式的错误消息和相应的响应头。
+
+#### 注意事项
+
+在使用远程 OPA 服务时，`custom_response` 应作为策略决策结果的一部分返回。有关 OPA 返回的 JSON 格式的详细信息，请参考 **数据交换** 部分。
+
+如果 `allow` 为 `true`，则 `custom_response` 将被插件忽略。
+
+如果您在响应中未看到 `custom_response` 字段的部分或全部内容，请确认字段名称和类型是否符合规范。
+
+
