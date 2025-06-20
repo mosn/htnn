@@ -105,7 +105,7 @@ func TestOpaRemote(t *testing.T) {
 					"allow": false,
 					"custom_response": {
 						"status_code": 401,
-						"msg": "Authentication failed"
+						"body": "Authentication failed"
 					}
 				}
 			}`,
@@ -119,7 +119,7 @@ func TestOpaRemote(t *testing.T) {
 					"allow": false,
 					"custom_response": {
 						"status_code": 429,
-						"msg": "Rate limit exceeded",
+						"body": "Rate limit exceeded",
 						"headers": {
 							"X-Rate-Limit": ["100"],
 							"Retry-After": ["60"],
@@ -132,7 +132,8 @@ func TestOpaRemote(t *testing.T) {
 			expectedHeaders: http.Header{
 				"X-Rate-Limit": {"100"},
 				"Retry-After":  {"60"},
-				"X-Request-ID": {"abc123"},
+				"X-Request-Id": {"abc123"},
+				"Content-Type": []string{"text/plain"},
 			},
 		},
 		{
@@ -143,7 +144,7 @@ func TestOpaRemote(t *testing.T) {
 					"allow": false,
 					"custom_response": {
 						"status_code": 422,
-						"msg": "Validation failed",
+						"body": "Validation failed",
 						"headers": {
 							"Content-Type": ["application/json"],
 							"X-Validation-Errors": ["field1", "field2", "field3"],
@@ -178,7 +179,7 @@ func TestOpaRemote(t *testing.T) {
 				"result": {
 					"allow": false,
 					"custom_response": {
-						"msg": "Access denied"
+						"body": "Access denied"
 					}
 				}
 			}`,
@@ -211,7 +212,7 @@ func TestOpaRemote(t *testing.T) {
 					"allow": true,
 					"custom_response": {
 						"status_code": 401,
-						"msg": "This message should be ignored"
+						"body": "This message should be ignored"
 					}
 				}
 			}`,
@@ -224,7 +225,7 @@ func TestOpaRemote(t *testing.T) {
 					"allow": false,
 					"custom_response": {
 						"status_code": 503,
-						"msg": "Service temporarily unavailable",
+						"body": "Service temporarily unavailable",
 						"headers": {
 							"Retry-After": ["300"],
 							"X-Service-Status": ["maintenance"],
@@ -237,22 +238,149 @@ func TestOpaRemote(t *testing.T) {
 			expectedHeaders: http.Header{
 				"Retry-After":          {"300"},
 				"X-Service-Status":     {"maintenance"},
+				"Content-Type":         []string{"text/plain"},
 				"X-Maintenance-Window": {"2025-06-05T06:00:00Z", "2025-06-05T08:00:00Z"},
 			},
 		},
 		{
 			name:   "custom response with zero status code",
-			status: 403, // should default to 403 when status_code is 0
+			status: 403,
 			resp: `{
 				"result": {
 					"allow": false,
 					"custom_response": {
 						"status_code": 0,
-						"msg": "Zero status code test"
+						"body": "Zero status code test"
 					}
 				}
 			}`,
 			expectedMsg: "Zero status code test",
+		},
+		{
+			name:   "custom response not present, deny by default",
+			resp:   `{"result":{"allow":false}}`,
+			status: 403,
+		},
+		{
+			name: "header array contains non-string, should be ignored",
+			resp: `{
+		"result": {
+			"allow": false,
+			"custom_response": {
+				"status_code": 400,
+				"body": "bad array",
+				"headers": {
+					"X-Bad": ["ok", "123"]
+				}
+			}
+		}
+	}`,
+			status:      400,
+			expectedMsg: "bad array",
+			expectedHeaders: http.Header{
+				"X-Bad":        {"ok", "123"},
+				"Content-Type": {"text/plain"},
+			},
+		},
+		{
+			name: "header value is single string",
+			resp: `{
+		"result": {
+			"allow": false,
+			"custom_response": {
+				"status_code": 401,
+				"body": "single value",
+				"headers": {
+					"X-Note": ["just one"]
+				}
+			}
+		}
+	}`,
+			status:      401,
+			expectedMsg: "single value",
+			expectedHeaders: http.Header{
+				"X-Note":       {"just one"},
+				"Content-Type": {"text/plain"},
+			},
+		},
+		{
+			name:   "custom response with no Content-Type header, should fallback to text/plain",
+			status: 401,
+			resp: `{
+		"result": {
+			"allow": false,
+			"custom_response": {
+				"status_code": 401,
+				"body": "No content-type header present"
+			}
+		}
+	}`,
+			expectedMsg: "No content-type header present",
+			expectedHeaders: http.Header{
+				"Content-Type": {"text/plain"},
+			},
+		},
+		{
+			name:   "custom response with lowercase content-type header",
+			status: 401,
+			resp: `{
+		"result": {
+			"allow": false,
+			"custom_response": {
+				"status_code": 401,
+				"body": "Lowercase header test",
+				"headers": {
+					"content-type": ["application/json"]
+				}
+			}
+		}
+	}`,
+			expectedMsg: "Lowercase header test",
+			expectedHeaders: http.Header{
+				"Content-Type": {"application/json"},
+			},
+		},
+		{
+			name:   "custom response with empty content-type header value, fallback expected",
+			status: 401,
+			resp: `{
+		"result": {
+			"allow": false,
+			"custom_response": {
+				"status_code": 401,
+				"body": "Empty content-type",
+				"headers": {
+					"Content-Type": []
+				}
+			}
+		}
+	}`,
+			expectedMsg: "Empty content-type",
+			expectedHeaders: http.Header{
+				"Content-Type": {"text/plain"},
+			},
+		},
+		{
+			name:   "custom response with correct application/json content-type",
+			status: 403,
+			resp: `{
+		"result": {
+			"allow": false,
+			"custom_response": {
+				"status_code": 403,
+				"body": "Expected JSON",
+				"headers": {
+					"Content-Type": ["application/json"],
+					"X-Debug": ["ok"]
+				}
+			}
+		}
+	}`,
+			expectedMsg: "Expected JSON",
+			expectedHeaders: http.Header{
+				"Content-Type": {"application/json"},
+				"X-Debug":      {"ok"},
+			},
 		},
 	}
 
@@ -340,7 +468,6 @@ func TestOpaLocal(t *testing.T) {
 			text:   `default allow = "a"`,
 			status: 503,
 		},
-		// for customResponse
 		{
 			name: "custom response with status and message",
 			text: `import input.request
@@ -348,7 +475,7 @@ func TestOpaLocal(t *testing.T) {
 				default allow = false
 				default custom_response = {
 					"status_code": 401,
-					"msg": "Unauthorized access"
+					"body": "Unauthorized access"
 				}
 				allow {
 					false
@@ -363,7 +490,7 @@ func TestOpaLocal(t *testing.T) {
 				default allow = false
 				default custom_response = {
 					"status_code": 429,
-					"msg": "Rate limit exceeded",
+					"body": "Rate limit exceeded",
 					"headers": {
 						"X-Rate-Limit": ["100"],
 						"Retry-After": ["60"]
@@ -377,6 +504,7 @@ func TestOpaLocal(t *testing.T) {
 			expectedHeaders: http.Header{
 				"X-Rate-Limit": {"100"},
 				"Retry-After":  {"60"},
+				"Content-Type": {"text/plain"},
 			},
 		},
 		{
@@ -386,7 +514,7 @@ func TestOpaLocal(t *testing.T) {
 				default allow = false
 				default custom_response = {
 					"status_code": 422,
-					"msg": "Validation failed",
+					"body": "Validation failed",
 					"headers": {
 						"X-Error": ["field1", "field2"],
 						"X-Request-ID": ["12345"]
@@ -399,7 +527,8 @@ func TestOpaLocal(t *testing.T) {
 			expectedMsg: "Validation failed",
 			expectedHeaders: http.Header{
 				"X-Error":      {"field1", "field2"},
-				"X-Request-ID": {"12345"},
+				"X-Request-Id": {"12345"},
+				"Content-Type": {"text/plain"},
 			},
 		},
 		{
@@ -409,7 +538,7 @@ func TestOpaLocal(t *testing.T) {
 				default allow = false
 				default custom_response = {
 					"status_code": 0,
-					"msg": "Default status"
+					"body": "Default status"
 				}
 				allow {
 					false
@@ -423,7 +552,7 @@ func TestOpaLocal(t *testing.T) {
 				import future.keywords
 				default allow = false
 				default custom_response = {
-					"msg": "No status code provided"
+					"body": "No status code provided"
 				}
 				allow {
 					false
@@ -438,11 +567,122 @@ func TestOpaLocal(t *testing.T) {
 				default allow = true
 				default custom_response = {
 					"status_code": 401,
-					"msg": "This should be ignored"
+					"body": "This should be ignored"
 				}
 				allow {
 					true
 				}`,
+		},
+		{
+			name: "custom response not provided, default to 403",
+			text: `import input.request
+		default allow = false
+		allow {
+			false
+		}`,
+			status: 403,
+		},
+		{
+			name: "header array contains non-string, should be ignored",
+			text: `import input.request
+		import future.keywords
+		default allow = false
+		default custom_response = {
+			"status_code": 400,
+			"body": "mixed header value types",
+			"headers": {
+				"X-Bad": ["ok", 123]
+			}
+		}
+		allow {
+			false
+		}`,
+			status:      400,
+			expectedMsg: "mixed header value types",
+			expectedHeaders: http.Header{
+				"Content-Type": {"text/plain"},
+			},
+		},
+		{
+			name: "custom response with lowercase content-type",
+			text: `import input.request
+		import future.keywords
+		default allow = false
+		default custom_response = {
+			"status_code": 401,
+			"body": "invalid",
+			"headers": {
+				"content-type": ["application/json"]
+			}
+		}
+		allow {
+			false
+		}`,
+			status:      401,
+			expectedMsg: "invalid",
+			expectedHeaders: http.Header{
+				"Content-Type": {"application/json"},
+			},
+		},
+		{
+			name: "custom response without content-type header, should default to text/plain",
+			text: `import input.request
+		import future.keywords
+		default allow = false
+		default custom_response = {
+			"status_code": 401,
+			"body": "invalid"
+		}
+		allow {
+			false
+		}`,
+			status:      401,
+			expectedMsg: "invalid",
+			expectedHeaders: http.Header{
+				"Content-Type": {"text/plain"},
+			},
+		},
+		{
+			name: "custom response with empty content-type array, should fallback to text/plain",
+			text: `import input.request
+		import future.keywords
+		default allow = false
+		default custom_response = {
+			"status_code": 401,
+			"body": "invalid",
+			"headers": {
+				"Content-Type": []
+			}
+		}
+		allow {
+			false
+		}`,
+			status:      401,
+			expectedMsg: "invalid",
+			expectedHeaders: http.Header{
+				"Content-Type": {"text/plain"},
+			},
+		},
+		{
+			name: "custom response with proper Content-Type should not be overridden",
+			text: `import input.request
+		import future.keywords
+		default allow = false
+		default custom_response = {
+			"status_code": 401,
+			"body": "invalid",
+			"headers": {
+				"Content-Type": ["application/json"]
+			}
+		}
+		allow {
+			false
+		}`,
+			status:      401,
+			expectedMsg: "invalid",
+			expectedHeaders: http.Header{
+				"Content-Type": {"application/json"},
+			},
 		},
 	}
 

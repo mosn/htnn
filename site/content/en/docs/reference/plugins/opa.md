@@ -91,7 +91,7 @@ Here is the JSON data OPA sends back to HTNN, set by the configured policy:
     "allow": true
   },
   "custom_response": {
-    "msg": "Authentication required. Please provide valid authorization header.",
+    "body": "Authentication required. Please provide valid authorization header.",
     "status_code": 401,
     "headers": {
       "WWW-Authenticate": [
@@ -220,23 +220,11 @@ HTTP/1.1 403 Forbidden
 
 #### Field Format
 
-* **`msg`**
-  This field follows the same behavior as the `Msg` field in the `LocalResponse` structure. If `msg` is not empty, its content
-  will be processed according to the following rules when constructing the response body sent to the client:
-
-    1. If a `Content-Type` header is explicitly set, the `msg` will be sent as-is.
-    2. If `Content-Type` is `"application/json"`, the `msg` will be wrapped as:
-
-       ```json
-       { "msg": "..." }
-       ```
-
-       (Refer to the `DefaultJSONResponse` structure for details.)
-    3. If no `Content-Type` is provided, or it is `"application/json"`, the message will also be wrapped as JSON.
-    4. For all other content types, the message will be returned as a raw string.
+* **`body`**
+  This field represents the message body sent to the client. **If this field exists but no Content-Type is set in the headers,** the plugin will automatically add Content-Type: text/plain as the default.
 
 * **`status_code`**
-  The HTTP status code. This field supports numeric values.
+  HTTP status code. This field supports numeric values.
 
 * **`headers`**
   HTTP response headers. Each header value must be represented as an array of strings.
@@ -252,7 +240,7 @@ allow {
     startswith(request.path, "/echo")
 }
 custom_response = {
-    "msg": "Authentication required. Please provide valid authorization header.",
+    "body": "Authentication required. Please provide valid authorization header.",
     "status_code": 401,
     "headers": {
         "WWW-Authenticate": ["Bearer realm=\"api\""],
@@ -271,8 +259,8 @@ In this example:
 
 #### Notes
 
-When working with a remote OPA service, `custom_response` should be added as part of the policy decision result. For the expected JSON format returned by OPA, refer to the **Data Exchange** section.
+1. When working with a remote OPA service, `custom_response` should be added as part of the policy decision result. For the expected JSON format returned by OPA, refer to the **Data Exchange** section.
 
-If `allow` is `true`, the `custom_response` will be ignored by plugin.
+2. If `allow` is `true`, the `custom_response` will be ignored by plugin.
 
-If some or all fields under `custom_response` are missing in the response, please ensure that the field names and types conform to the expected format.
+3. If some or all fields under `custom_response` are missing in the response, please ensure that the field names and types conform to the expected format.

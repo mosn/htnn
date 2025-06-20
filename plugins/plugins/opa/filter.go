@@ -19,6 +19,8 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"net/http"
+	"net/textproto"
 	"strings"
 
 	"github.com/open-policy-agent/opa/rego"
@@ -51,7 +53,7 @@ type Result struct {
 }
 
 type CustomResponse struct {
-	Msg        string              `json:"msg"`
+	Body       string              `json:"body"`
 	Headers    map[string][]string `json:"headers"`
 	StatusCode int                 `json:"status_code"`
 }
@@ -136,9 +138,9 @@ func (f *filter) isAllowed(input map[string]interface{}) (Result, error) {
 	if crExists {
 		var customResp CustomResponse
 		if responseMap, ok := customResponseData.(map[string]interface{}); ok {
-			if msgVal, found := responseMap["msg"]; found {
-				if msgStr, isStr := msgVal.(string); isStr {
-					customResp.Msg = msgStr
+			if bodyVal, found := responseMap["body"]; found {
+				if bodyStr, isStr := bodyVal.(string); isStr {
+					customResp.Body = bodyStr
 				}
 			}
 
@@ -168,8 +170,6 @@ func (f *filter) isAllowed(input map[string]interface{}) (Result, error) {
 							if allStringsInSlice && len(headerValues) > 0 {
 								parsedHeaders[key] = headerValues
 							}
-						} else if singleValueStr, isStr := valueInterface.(string); isStr {
-							parsedHeaders[key] = []string{singleValueStr}
 						}
 					}
 
@@ -199,10 +199,21 @@ func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api
 			if customResponse.StatusCode == 0 {
 				customResponse.StatusCode = 403
 			}
+
+			canonicalHeaders := make(http.Header)
+			for key, values := range customResponse.Headers {
+				canonicalKey := textproto.CanonicalMIMEHeaderKey(key)
+				canonicalHeaders[canonicalKey] = values
+			}
+
+			if canonicalHeaders.Get("Content-Type") == "" {
+				canonicalHeaders.Set("Content-Type", "text/plain")
+			}
+
 			return &api.LocalResponse{
 				Code:   customResponse.StatusCode,
-				Msg:    customResponse.Msg,
-				Header: customResponse.Headers,
+				Msg:    customResponse.Body,
+				Header: canonicalHeaders,
 			}
 		}
 		return &api.LocalResponse{Code: 403}

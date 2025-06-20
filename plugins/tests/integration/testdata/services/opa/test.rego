@@ -24,7 +24,7 @@ allow {
 }
 
 custom_response = {
-    "msg": "Authentication required. Please provide valid authorization header.",
+    "body": "Authentication required. Please provide valid authorization header.",
     "status_code": 401,
     "headers": {
         "WWW-Authenticate": ["Bearer realm=\"api\""],
