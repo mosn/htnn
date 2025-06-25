@@ -221,7 +221,7 @@ HTTP/1.1 403 Forbidden
 #### Field Format
 
 * **`body`**
-  This field represents the message body sent to the client. **If this field exists but no Content-Type is set in the headers,** the plugin will automatically add Content-Type: text/plain as the default.
+  This field represents the message body sent to the client. **If this field exists but no Content-Type is set in the headers, the plugin will automatically add `Content-Type: text/plain` as the default**.
 
 * **`status_code`**
   HTTP status code. This field supports numeric values.
