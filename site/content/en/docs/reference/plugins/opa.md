@@ -87,13 +87,26 @@ Here is the JSON data OPA sends back to HTNN, set by the configured policy:
 
 ```json
 {
-    "result": {
-        "allow": true
+  "result": {
+    "allow": true
+  },
+  "custom_response": {
+    "body": "Authentication required. Please provide valid authorization header.",
+    "status_code": 401,
+    "headers": {
+      "WWW-Authenticate": [
+        "Bearer realm=\"api\""
+      ],
+      "Content-Type": [
+        "application/json"
+      ]
     }
+  }
 }
 ```
 
 * `allow` indicates whether the request is allowed.
+* `custom_response` contains the optional response details (e.g., message, status code, headers) to be returned instead of the default response.
 
 ## Usage
 
@@ -201,3 +214,53 @@ If we try to make a request with a different method, the request will fail:
 curl -i -X POST localhost:10000/echo -d "AA"
 HTTP/1.1 403 Forbidden
 ```
+
+
+### Use of Custom Response
+
+#### Field Format
+
+* **`body`**
+  This field represents the message body sent to the client. **If this field exists but no Content-Type is set in the headers, the plugin will automatically add `Content-Type: text/plain` as the default**.
+
+* **`status_code`**
+  HTTP status code. This field supports numeric values.
+
+* **`headers`**
+  HTTP response headers. Each header value must be represented as an array of strings.
+
+#### Example
+
+```rego
+package test
+import input.request
+default allow = false
+allow {
+    request.method == "GET"
+    startswith(request.path, "/echo")
+}
+custom_response = {
+    "body": "Authentication required. Please provide valid authorization header.",
+    "status_code": 401,
+    "headers": {
+        "WWW-Authenticate": ["Bearer realm=\"api\""],
+        "Content-Type": ["application/json"]
+    }
+} {
+    request.method == "GET"
+    startswith(request.path, "/x")
+}
+```
+
+In this example:
+
+* Requests to `/echo` are allowed.
+* Requests to `/x` will be denied with a `401 Unauthorized` status and a JSON-formatted error message, along with appropriate headers.
+
+#### Notes
+
+1. When working with a remote OPA service, `custom_response` should be added as part of the policy decision result. For the expected JSON format returned by OPA, refer to the **Data Exchange** section.
+
+2. If `allow` is `true`, the `custom_response` will be ignored by plugin.
+
+3. If some or all fields under `custom_response` are missing in the response, please ensure that the field names and types conform to the expected format.

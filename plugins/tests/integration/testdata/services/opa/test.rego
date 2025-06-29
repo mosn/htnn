@@ -22,3 +22,15 @@ allow {
     request.method == "GET"
     startswith(request.path, "/echo")
 }
+
+custom_response = {
+    "body": "Authentication required. Please provide valid authorization header.",
+    "status_code": 401,
+    "headers": {
+        "WWW-Authenticate": ["Bearer realm=\"api\""],
+        "Content-Type": ["application/json"]
+    }
+} {
+    request.method == "GET"
+    startswith(request.path, "/x")
+}

@@ -15,6 +15,7 @@
 package integration
 
 import (
+	"io"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -53,8 +54,19 @@ func TestOpa(t *testing.T) {
 				resp, err := dp.Get("/echo", nil)
 				require.Nil(t, err)
 				assert.Equal(t, 200, resp.StatusCode)
-				resp, _ = dp.Get("/x", nil)
-				assert.Equal(t, 403, resp.StatusCode)
+				resp.Body.Close()
+
+				resp, err = dp.Get("/x", nil)
+				require.Nil(t, err)
+				assert.Equal(t, 401, resp.StatusCode)
+				assert.Equal(t, "Bearer realm=\"api\"", resp.Header.Get("WWW-Authenticate"))
+				assert.Equal(t, "application/json", resp.Header.Get("Content-Type"))
+
+				bodyBytes, err := io.ReadAll(resp.Body)
+				require.Nil(t, err)
+				resp.Body.Close()
+
+				assert.Contains(t, string(bodyBytes), "Authentication required")
 			},
 		},
 		{
@@ -67,6 +79,17 @@ func TestOpa(t *testing.T) {
 						allow {
 							request.method == "GET"
 							startswith(request.path, "/echo")
+						}
+						custom_response := {
+							"body": "Authentication required. Please provide valid authorization header.",
+							"status_code": 401,
+							"headers": {
+								"WWW-Authenticate": ["Bearer realm=\"api\""],
+								"content-type": ["application/json"]
+							}
+						} {
+							request.method == "GET"
+							startswith(request.path, "/x")
 						}`,
 				},
 			}),
@@ -74,8 +97,19 @@ func TestOpa(t *testing.T) {
 				resp, err := dp.Get("/echo", nil)
 				require.Nil(t, err)
 				assert.Equal(t, 200, resp.StatusCode)
-				resp, _ = dp.Get("/x", nil)
-				assert.Equal(t, 403, resp.StatusCode)
+				resp.Body.Close()
+
+				resp, err = dp.Get("/x", nil)
+				require.Nil(t, err)
+				assert.Equal(t, 401, resp.StatusCode)
+				assert.Equal(t, "Bearer realm=\"api\"", resp.Header.Get("WWW-Authenticate"))
+				assert.Equal(t, "application/json", resp.Header.Get("Content-Type"))
+
+				bodyBytes, err := io.ReadAll(resp.Body)
+				require.Nil(t, err)
+				resp.Body.Close()
+
+				assert.Contains(t, string(bodyBytes), "Authentication required. Please provide valid authorization header.")
 			},
 		},
 	}
