@@ -142,6 +142,7 @@ var _ = BeforeSuite(func() {
 	err = (&controller.ConsumerReconciler{
 		ResourceManager: rm,
 		Output:          output,
+		KeyIndex:        controller.NewKeyIndexRegistry(),
 	}).SetupWithManager(k8sManager)
 	Expect(err).ToNot(HaveOccurred())
 
