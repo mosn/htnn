@@ -19,7 +19,7 @@ module mosn.io/htnn/plugins
 // a non-release version of mosn.io/htnn/xxx module, you may need to manually update the
 // dependency yourself, such as using replace in go.mod
 
-go 1.22
+go 1.23.0
 
 require (
 	github.com/agiledragon/gomonkey/v2 v2.11.0
@@ -35,7 +35,7 @@ require (
 	github.com/open-policy-agent/opa v0.68.0
 	github.com/redis/go-redis/v9 v9.5.5
 	github.com/stretchr/testify v1.10.0
-	golang.org/x/oauth2 v0.21.0
+	golang.org/x/oauth2 v0.27.0
 	golang.org/x/time v0.6.0
 	google.golang.org/protobuf v1.35.1
 	mosn.io/htnn/api v0.5.0
@@ -105,5 +105,4 @@ require (
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	sigs.k8s.io/yaml v1.4.0 // indirect
-
 )
