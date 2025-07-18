@@ -19,7 +19,7 @@ module mosn.io/htnn/controller
 // a non-release version of mosn.io/htnn/xxx module, you may need to manually update the
 // dependency yourself, such as using replace in go.mod
 
-go 1.22
+go 1.23.0
 
 require (
 	github.com/agiledragon/gomonkey/v2 v2.11.0
@@ -146,7 +146,7 @@ require (
 	go.uber.org/multierr v1.11.0 // indirect
 	golang.org/x/crypto v0.31.0 // indirect
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d // indirect
-	golang.org/x/oauth2 v0.21.0 // indirect
+	golang.org/x/oauth2 v0.27.0 // indirect
 	golang.org/x/sync v0.10.0 // indirect
 	golang.org/x/sys v0.28.0 // indirect
 	golang.org/x/term v0.27.0 // indirect
