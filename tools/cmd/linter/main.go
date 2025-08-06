@@ -266,6 +266,9 @@ func filenameToPluginName(name string) string {
 	if name == "network_rbac" {
 		return "networkRBAC"
 	}
+	if name == "ai_content_security" {
+		return "AIContentSecurity"
+	}
 	return snakeToCamel(name)
 }
 

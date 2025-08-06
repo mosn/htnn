@@ -15,6 +15,7 @@
 package plugins
 
 import (
+	_ "mosn.io/htnn/plugins/plugins/aicontentsecurity"
 	_ "mosn.io/htnn/plugins/plugins/casbin"
 	_ "mosn.io/htnn/plugins/plugins/celscript"
 	_ "mosn.io/htnn/plugins/plugins/consumerrestriction"
