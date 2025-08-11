@@ -6,6 +6,8 @@ linters:
     # sorted in alphabetic order
     - bodyclose
     - contextcheck
+    - dupl
+    - dupword
     - errcheck
     - copyloopvar
     - forcetypeassert
@@ -24,6 +26,14 @@ linters:
     - unused
 
 linters-settings:
+  dupl:
+    threshold: 100  # minimum number of tokens to trigger duplication warning
+  dupword:
+    # ignore some common patterns
+    ignore:
+      - "google"
+      - "apache"
+      - "github"
   gocritic:
     disabled-tags:
       - style
@@ -64,6 +74,14 @@ issues:
     - path: dynamicconfigs/ # ditto
       linters:
         - forcetypeassert
+    - path: \.pb\.go$ # generated protobuf files
+      linters:
+        - dupl
+        - dupword
+    - path: \.pb\.validate\.go$ # generated validation files
+      linters:
+        - dupl
+        - dupword
   # Show the complete output
   max-issues-per-linter: 0
   max-same-issues: 0

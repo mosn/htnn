@@ -207,8 +207,12 @@ lint-remain:
 	grep '>>>>>>' $(shell git ls-files .) | grep -v 'Makefile:' && exit 1 || true
 	cd tools && go run cmd/linter/main.go
 
+.PHONY: lint-duplicates
+lint-duplicates: $(LOCALBIN)
+	scripts/detect-duplicates.sh
+
 .PHONY: lint
-lint: lint-go lint-proto lint-license lint-spell lint-editorconfig lint-cjk lint-remain lint-markdown lint-yaml
+lint: lint-go lint-proto lint-license lint-spell lint-editorconfig lint-cjk lint-remain lint-markdown lint-yaml lint-duplicates
 
 .PHONY: fmt
 fmt: fmt-go fmt-proto fix-spell fix-cjk
