@@ -14,14 +14,12 @@
 
 package contentbuffer
 
-// chunkBoundary stores metadata for a single data chunk.
 type chunkBoundary struct {
 	start      int
 	end        int
 	writeTimes int
 }
 
-// SplitResult encapsulates the result of a split operation.
 type SplitResult struct {
 	Chunks          []string
 	CompletedEvents int
@@ -42,24 +40,12 @@ type ContentBuffer struct {
 	currEventCounter    int // Event counter for the current chunk.
 	overlapEventCounter int // Event counter for the current overlap area (delays the next chunk's count).
 
-	initialCapacity int     // The initial capacity of the buffer.
-	shrinkFactor    float64 // The threshold factor that triggers buffer shrinkage.
-	resizeFactor    float64
+	initialCapacity int // The initial capacity of the buffer.
 
 	counter CharCounter
 }
 
-// BufferOption is a function type for configuring a ContentBuffer.
 type BufferOption func(*ContentBuffer)
-
-// WithInitialCapacity sets the initial capacity of the buffer.
-func WithInitialCapacity(capacity int) BufferOption {
-	return func(c *ContentBuffer) {
-		if capacity > 0 {
-			c.initialCapacity = capacity
-		}
-	}
-}
 
 func WithMaxChars(maxChars int) BufferOption {
 	return func(c *ContentBuffer) {
@@ -73,7 +59,6 @@ func WithOverlapCharNum(overlapCharNum int) BufferOption {
 	}
 }
 
-// NewContentBuffer creates and initializes a new ContentBuffer.
 func NewContentBuffer(opts ...BufferOption) *ContentBuffer {
 	c := &ContentBuffer{
 		maxChars:            100,
@@ -83,15 +68,13 @@ func NewContentBuffer(opts ...BufferOption) *ContentBuffer {
 		currStart:           0,
 		currChars:           0,
 		overlapCountDelayed: true,
-		initialCapacity:     2049,
-		shrinkFactor:        2,
-		resizeFactor:        1.3,
 	}
 
 	for _, opt := range opts {
 		opt(c)
 	}
 
+	c.initialCapacity = 2 * c.counter.MaxBytesForChars(c.maxChars)
 	c.buffer = make([]byte, 0, c.initialCapacity)
 	return c
 }
@@ -115,39 +98,12 @@ func (c *ContentBuffer) startNewChunk(disableOverlap bool) {
 	c.overlapEventCounter = 0
 
 	if c.overlapCharNum > 0 && !disableOverlap {
-		overlapStart := c.counter.TailStartIndex(c.buffer, c.overlapCharNum) // Better implementation?
+		overlapStart := c.counter.TailStartIndex(c.buffer, c.overlapCharNum)
 		c.currStart = overlapStart
 		c.currChars = c.overlapCharNum
 	} else {
-		c.currStart = len(c.buffer)
+		c.currStart = end
 		c.currChars = 0
-	}
-}
-
-// shrinkIfNeeded checks if the buffer's capacity needs to be reduced and performs the shrink if necessary.
-func (c *ContentBuffer) shrinkIfNeeded() {
-	currentCap := cap(c.buffer)
-	currentLen := len(c.buffer)
-
-	// If the buffer is empty and its capacity is greater than the initial capacity,
-	// shrink it back to the initial capacity.
-	if currentLen == 0 && currentCap > c.initialCapacity {
-		c.buffer = make([]byte, 0, c.initialCapacity)
-		return
-	}
-
-	// Only consider shrinking when the capacity is greater than the initial capacity.
-	if currentCap > c.initialCapacity {
-		targetShrinkCapacity := int(float64(currentLen) * c.shrinkFactor)
-		if targetShrinkCapacity < c.initialCapacity {
-			targetShrinkCapacity = c.initialCapacity
-		}
-
-		if currentCap > targetShrinkCapacity {
-			newBuf := make([]byte, currentLen, int(float64(currentLen)*c.resizeFactor))
-			copy(newBuf, c.buffer)
-			c.buffer = newBuf
-		}
 	}
 }
 
@@ -155,9 +111,9 @@ func (c *ContentBuffer) shrinkIfNeeded() {
 func (c *ContentBuffer) Write(data []byte) {
 	i := 0
 	for i < len(data) {
-		_, size, err := c.counter.DecodeChar(data[i:])
+		size, err := c.counter.DecodeOne(data[i:])
 		if err != nil {
-			// As a fault-tolerance strategy, skip invalid UTF-8 bytes.
+			// skip invalid bytes.
 			i++
 			continue
 		}
@@ -167,9 +123,9 @@ func (c *ContentBuffer) Write(data []byte) {
 		i += size
 
 		if c.currChars == c.maxChars {
-			// Processing is complete and the buffered text has reached the upper limit.
+			// Processing is complete, and the buffered text has reached the upper limit.
 			c.startNewChunk(false)
-			if i == len(data) && c.overlapCharNum == 0 {
+			if i >= len(data) && c.overlapCharNum == 0 {
 				c.boundaries[len(c.boundaries)-1].writeTimes++
 				return
 			}
@@ -186,7 +142,6 @@ func (c *ContentBuffer) Write(data []byte) {
 // Flush commits the currently ongoing chunk.
 func (c *ContentBuffer) Flush() {
 	if c.currChars > 0 {
-		// Avoid missing event counts.
 		c.currEventCounter += c.overlapEventCounter
 		c.startNewChunk(true)
 	}
@@ -212,7 +167,6 @@ func (c *ContentBuffer) GetCompletedResult() SplitResult {
 		eventCount += boundary.writeTimes
 	}
 
-	// Clean completed result
 	if c.currStart > 0 {
 		remainingSize := len(c.buffer) - c.currStart
 		copy(c.buffer, c.buffer[c.currStart:])
@@ -221,7 +175,6 @@ func (c *ContentBuffer) GetCompletedResult() SplitResult {
 		c.currStart = 0
 		c.outputIndex = 0
 	}
-	c.shrinkIfNeeded()
 
 	return SplitResult{Chunks: chunks, CompletedEvents: eventCount}
 }

@@ -16,7 +16,6 @@ package aicontentsecurity
 
 import (
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 
@@ -26,7 +25,7 @@ import (
 func TestDefaultValue(t *testing.T) {
 	cfg := &config{}
 	cfg.CustomConfig.Config = aicontentsecurity.Config{
-		ModerationTimeout:            int64(2 * time.Second / time.Millisecond), // 2000 ms
+		ModerationTimeout:            "2000ms",
 		StreamingEnabled:             true,
 		ModerationCharLimit:          5000,
 		ModerationChunkOverlapLength: 100,

@@ -54,9 +54,15 @@ func New(config interface{}) (moderation.Moderator, error) {
 		return nil, errors.New("LocalModerationService config is empty inside the wrapper")
 	}
 
+	var timeout time.Duration
+	if conf.GetTimeout() != "" {
+		timeout, _ = time.ParseDuration(conf.GetTimeout())
+
+	}
+
 	return &LocalService{
 		client: &http.Client{
-			Timeout: 3 * time.Second,
+			Timeout: timeout,
 		},
 		baseURL:            conf.BaseUrl,
 		unhealthyWords:     conf.UnhealthyWords,

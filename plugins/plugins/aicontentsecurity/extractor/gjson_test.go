@@ -30,6 +30,37 @@ func NewGjsonContentExtractor(config *aicontentsecurity.GjsonConfig) *GjsonConte
 	}
 }
 
+func TestNew(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		cfg := &aicontentsecurity.Config_GjsonConfig{
+			GjsonConfig: &aicontentsecurity.GjsonConfig{},
+		}
+		e, err := New(cfg)
+		assert.NoError(t, err)
+		assert.NotNil(t, e)
+		_, ok := e.(*GjsonContentExtractor)
+		assert.True(t, ok)
+	})
+
+	t.Run("invalid config type", func(t *testing.T) {
+		cfg := "not a valid config"
+		e, err := New(cfg)
+		assert.Error(t, err)
+		assert.Nil(t, e)
+		assert.EqualError(t, err, "invalid config type for GjsonContentExtractor")
+	})
+
+	t.Run("nil inner config", func(t *testing.T) {
+		cfg := &aicontentsecurity.Config_GjsonConfig{
+			GjsonConfig: nil,
+		}
+		e, err := New(cfg)
+		assert.Error(t, err)
+		assert.Nil(t, e)
+		assert.EqualError(t, err, "GjsonContentExtractor config is empty inside the wrapper")
+	})
+}
+
 func TestSetData(t *testing.T) {
 	extractor := &GjsonContentExtractor{config: &aicontentsecurity.GjsonConfig{}}
 
@@ -93,6 +124,10 @@ func TestExtractContent(t *testing.T) {
 		{"Req: Path not found", &aicontentsecurity.GjsonConfig{RequestContentPath: "request.nonexistent"}, jsonData, (*GjsonContentExtractor).RequestContent, ""},
 		{"Req: Empty path", &aicontentsecurity.GjsonConfig{RequestContentPath: ""}, jsonData, (*GjsonContentExtractor).RequestContent, ""},
 		{"Req: Nil config", nil, jsonData, (*GjsonContentExtractor).RequestContent, ""},
+		{"Req: Value is number", &aicontentsecurity.GjsonConfig{RequestContentPath: "not_a_string"}, jsonData, (*GjsonContentExtractor).RequestContent, "42"},
+		{"Req: Value is boolean", &aicontentsecurity.GjsonConfig{RequestContentPath: "is_bool"}, jsonData, (*GjsonContentExtractor).RequestContent, "true"},
+		{"Req: Value is object", &aicontentsecurity.GjsonConfig{RequestContentPath: "an_object"}, jsonData, (*GjsonContentExtractor).RequestContent, `{"a": 1}`},
+		{"Req: No data set", &aicontentsecurity.GjsonConfig{RequestContentPath: "request.prompt"}, nil, (*GjsonContentExtractor).RequestContent, ""},
 		// --- Response Content ---
 		{"Resp: Normal", &aicontentsecurity.GjsonConfig{ResponseContentPath: "response.answer"}, jsonData, (*GjsonContentExtractor).ResponseContent, "Hi there!"},
 		{"Resp: Value is null", &aicontentsecurity.GjsonConfig{ResponseContentPath: "response.details"}, jsonData, (*GjsonContentExtractor).ResponseContent, ""},
@@ -154,6 +189,16 @@ func TestExtractIDFromHeaders(t *testing.T) {
 				{SourceField: "X-Missing", TargetField: "missing"},
 			}},
 			headersToAdd:  map[string]string{"X-User-ID": "u1"},
+			initialIDMap:  make(map[string]string),
+			expectedIDMap: map[string]string{"user_id": "u1"},
+		},
+		{
+			name: "Header with empty value",
+			config: &aicontentsecurity.GjsonConfig{HeaderFields: []*aicontentsecurity.FieldMapping{
+				{SourceField: "X-Empty", TargetField: "empty"},
+				{SourceField: "X-User-ID", TargetField: "user_id"},
+			}},
+			headersToAdd:  map[string]string{"X-Empty": "", "X-User-ID": "u1"},
 			initialIDMap:  make(map[string]string),
 			expectedIDMap: map[string]string{"user_id": "u1"},
 		},
@@ -224,7 +269,8 @@ func TestExtractIDFromData(t *testing.T) {
         "user": {"id": "user-body", "name": "John"},
         "request_id": "req-body",
         "nested": {"deep": {"session_id": 12345}},
-        "complex": { "a": 1, "b": 2 }
+        "complex": { "a": 1, "b": 2 },
+        "nullable_field": null
     }`)
 
 	testCases := []struct {
@@ -233,14 +279,17 @@ func TestExtractIDFromData(t *testing.T) {
 		initialIDMap  map[string]string
 		expectedIDMap map[string]string
 	}{
-		// MODIFIED: Merged multiple extraction tests into one comprehensive case.
 		{
-			name: "Comprehensive extraction of various types",
+			name: "Comprehensive extraction",
 			config: &aicontentsecurity.GjsonConfig{BodyFields: []*aicontentsecurity.FieldMapping{
-				{SourceField: "user.id", TargetField: "user_id"},                   // Normal
-				{SourceField: "request_id", TargetField: "req_id"},                 // Normal
-				{SourceField: "nested.deep.session_id", TargetField: "session_id"}, // Nested + Number
+				{SourceField: "user.id", TargetField: "user_id"},                   // Normal string
+				{SourceField: "request_id", TargetField: "req_id"},                 // Root level string
+				{SourceField: "nested.deep.session_id", TargetField: "session_id"}, // Nested number
 				{SourceField: "complex", TargetField: "complex_field"},             // Complex Object
+				{SourceField: "nullable_field", TargetField: "nullable"},           // Null value
+				{SourceField: "non.existent", TargetField: "non_existent"},         // Non-existent path
+				{SourceField: "", TargetField: "empty_source"},                     // Empty source
+				{SourceField: "user.id", TargetField: ""},                          // Empty target
 			}},
 			initialIDMap: make(map[string]string),
 			expectedIDMap: map[string]string{
@@ -248,6 +297,7 @@ func TestExtractIDFromData(t *testing.T) {
 				"req_id":        "req-body",
 				"session_id":    "12345",
 				"complex_field": `{ "a": 1, "b": 2 }`,
+				"nullable":      "", // gjson converts null to empty string, but Exists() is true
 			},
 		},
 		{

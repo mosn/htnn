@@ -42,8 +42,8 @@ title: AI Content Security
 
 | 名称                        | 类型                              | 必需 | 验证 | 描述                          |
 |---------------------------|---------------------------------|----|----|-----------------------------|
-| requestContentPath        | 字符串                             | 否  |    | 从请求体中提取需要审核的内容的 GJSON 路径。   |
-| responseContentPath       | 字符串                             | 否  |    | 从非流式响应体中提取内容的 GJSON 路径。     |
+| requestContentPath        | 字符串                             | 是  |    | 从请求体中提取需要审核的内容的 GJSON 路径。   |
+| responseContentPath       | 字符串                             | 是  |    | 从非流式响应体中提取内容的 GJSON 路径。     |
 | streamResponseContentPath | 字符串                             | 否  |    | 从流式响应的每个数据块中提取内容的 GJSON 路径。 |
 | headerFields              | [FieldMapping](#fieldmapping)数组 | 否  |    | 从请求头中提取的字段。                 |
 | bodyFields                | [FieldMapping](#fieldmapping)数组 | 否  |    | 使用 GJSON 路径从请求体中提取的字段。      |
@@ -54,8 +54,8 @@ title: AI Content Security
 
 | 名称          | 类型  | 必需 | 验证 | 描述                            |
 |-------------|-----|----|----|-------------------------------|
-| sourceField | 字符串 | 否  |    | 提取值的源字段（例如，头部名称或 GJSON 路径）。   |
-| targetField | 字符串 | 否  |    | 用于提取值的目标字段名称（例如，"SessionId"）。 |
+| sourceField | 字符串 | 是  |    | 提取值的源字段（例如，头部名称或 GJSON 路径）。   |
+| targetField | 字符串 | 是  |    | 用于提取值的目标字段名称（例如，"SessionId"）。 |
 
 ### AliyunConfig
 
@@ -63,23 +63,24 @@ title: AI Content Security
 
 | 名称              | 类型  | 必需 | 验证 | 描述                                                |
 |-----------------|-----|----|----|---------------------------------------------------|
-| accessKeyId     | 字符串 | 否  |    | 阿里云 API 认证的 AccessKey ID。                         |
-| accessKeySecret | 字符串 | 否  |    | 阿里云 API 认证的 AccessKey Secret。                     |
+| accessKeyId     | 字符串 | 是  |    | 阿里云 API 认证的 AccessKey ID。                         |
+| accessKeySecret | 字符串 | 是  |    | 阿里云 API 认证的 AccessKey Secret。                     |
 | region          | 字符串 | 否  |    | 阿里云服务区域（例如，"cn-shanghai"）。                        |
 | version         | 字符串 | 否  |    | 使用的阿里云 API 版本（例如，"2022-03-02"）。                   |
 | useSessionId    | 布尔值 | 否  |    | 是否使用会话 ID 进行多个请求间的上下文审核。                          |
 | maxRiskLevel    | 字符串 | 否  |    | 内容达到或超过此级别将被拒绝。有效值包括"none"、"low"、"medium"、"high"。 |
-| timeout         | 整数  | 否  |    | 单个外部审核服务请求的超时时间，单位为毫秒。                            |
+| timeout         | 字符串  | 否  |    | 单个外部审核服务请求的超时时间，单位为毫秒/秒。 |
 
 ### LocalModerationServiceConfig
 
 `localModerationServiceConfig`对象的配置（用于本地集成测试）。
 
-| 名称                 | 类型    | 必需 | 验证 | 描述             |
-|--------------------|-------|----|----|----------------|
-| baseUrl            | 字符串   | 否  |    | 本地服务的基础 URL。   |
-| customErrorMessage | 字符串   | 否  |    | 拒绝时返回的自定义错误消息。 |
-| unhealthyWords     | 字符串数组 | 否  |    | 被视为不健康的词汇列表。   |
+| 名称                 | 类型    | 必需 | 验证 | 描述                       |
+|--------------------|-------|----|----|--------------------------|
+| baseUrl            | 字符串   | 否  |    | 本地服务的基础 URL。             |
+| customErrorMessage | 字符串   | 否  |    | 拒绝时返回的自定义错误消息。           |
+| unhealthyWords     | 字符串数组 | 否  |    | 被视为不健康的词汇列表。             |
+| timeout         | 字符串  | 否  |    | 单个外部审核服务请求的超时时间，单位为毫秒/秒。 |
 
 ## 用法
 
@@ -131,7 +132,7 @@ spec:
         moderation_chunk_overlap_length: 100
         aliyun_config:
           access_key_id: "your accessKeyId"
-          access_key_secret: "our accessKeySecret"
+          access_key_secret: "your accessKeySecret"
           version: "2022-03-02"
           region: "cn-shanghai"
           use_session_id: true
@@ -148,3 +149,8 @@ spec:
 
 应用上述配置后，可通过接口测试工具（如 Postman）访问 `http://localhost:10000/v1/chat/completions` ，
 发送符合 OpenAI Chat Completions API 格式的请求，即可体验集成后的内容审核能力。
+
+## Note
+
+1. 一些内容审核服务提供商在响应中可能会生成多个内容字段。例如 DeepSeek 的 `reasoning_content`（参考：[DeepSeek API 文档](https://api-docs.deepseek.com/guides/reasoning_model)）。我们计划在未来的 PR 中支持这一特性。
+2. 在处理流式响应时，不会发送任何不完整或未经审核的事件（event）。

@@ -127,10 +127,11 @@ func New(config interface{}) (moderation.Moderator, error) {
 		m.maxRiskLevel = level
 	}
 
-	if clientTimeout := conf.GetTimeout(); clientTimeout > 0 {
-		m.httpClient = &http.Client{Timeout: time.Duration(clientTimeout) * time.Millisecond}
+	if conf.GetTimeout() != "" {
+		duration, _ := time.ParseDuration(conf.GetTimeout())
+		m.httpClient = &http.Client{Timeout: duration}
 	} else {
-		m.httpClient = &http.Client{Timeout: time.Duration(1) * time.Second}
+		m.httpClient = &http.Client{Timeout: 2 * time.Second}
 	}
 
 	if region := conf.GetRegion(); region != "" {

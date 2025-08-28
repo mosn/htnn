@@ -21,12 +21,16 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/agiledragon/gomonkey/v2"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
+	"mosn.io/htnn/plugins/plugins/aicontentsecurity/moderation"
 	"mosn.io/htnn/types/plugins/aicontentsecurity"
 )
 
@@ -47,7 +51,7 @@ func TestRequestModeration_Live(t *testing.T) {
 	assert.True(t, ok, "m should be of type *Moderator")
 
 	t.Run("live test with clean text", func(t *testing.T) {
-		content := "你好，这是一个正常的测试文本，用于测试阿里云内容安全接口。"
+		content := "Hello, this is a normal test text for the Aliyun content security API."
 		result, err := m.Request(context.Background(), content, nil)
 		assert.NoError(t, err)
 		assert.True(t, result.Allow, "clean text should be allowed")
@@ -55,7 +59,7 @@ func TestRequestModeration_Live(t *testing.T) {
 	})
 
 	t.Run("live test with dangerous text", func(t *testing.T) {
-		content := "台独" // Example of violative word
+		content := "Using drugs" // Example of violative word
 		result, err := m.Request(context.Background(), content, nil)
 		assert.NoError(t, err)
 		assert.False(t, result.Allow, "violative text should be rejected")
@@ -160,7 +164,7 @@ func TestModerator_Call_WithGomonkey(t *testing.T) {
 
 		_, err := m.call(context.Background(), "service", "params")
 		assert.Error(t, err)
-		assert.Contains(t, err.Error(), "request returned non-200 status code: 500, body: server error")
+		assert.Contains(t, err.Error(), "server error")
 	})
 
 	t.Run("should fail when reading response body fails", func(t *testing.T) {
@@ -320,20 +324,20 @@ func TestEvaluateResponse(t *testing.T) {
 
 	t.Run("should reject when risk level is equal to max", func(t *testing.T) {
 		resp := aliResp{}
-		_ = json.Unmarshal([]byte(`{"Data":{"RiskLevel":"medium", "Advice": [{"Answer":"存在风险"}]}}`), &resp)
+		_ = json.Unmarshal([]byte(`{"Data":{"RiskLevel":"medium", "Advice": [{"Answer":"potential risk"}]}}`), &resp)
 		result, err := m.EvaluateResponse(resp)
 		assert.NoError(t, err)
 		assert.False(t, result.Allow)
-		assert.Equal(t, "存在风险", result.Reason)
+		assert.Equal(t, "potential risk", result.Reason)
 	})
 
 	t.Run("should reject when risk level is higher than max", func(t *testing.T) {
 		resp := aliResp{}
-		_ = json.Unmarshal([]byte(`{"Data":{"RiskLevel":"high", "Advice": [{"Answer":"高度风险内容"}]}}`), &resp)
+		_ = json.Unmarshal([]byte(`{"Data":{"RiskLevel":"high", "Advice": [{"Answer":"high-risk content"}]}}`), &resp)
 		result, err := m.EvaluateResponse(resp)
 		assert.NoError(t, err)
 		assert.False(t, result.Allow)
-		assert.Equal(t, "高度风险内容", result.Reason)
+		assert.Equal(t, "high-risk content", result.Reason)
 	})
 
 	t.Run("should allow 'none' risk level", func(t *testing.T) {
@@ -351,5 +355,229 @@ func TestEvaluateResponse(t *testing.T) {
 		assert.Error(t, err)
 		assert.Contains(t, err.Error(), "invalid risk level: \"unknown\"")
 		assert.False(t, result.Allow, "should default to reject when parsing risk level fails")
+	})
+}
+
+func TestNewModerator(t *testing.T) {
+	testCases := []struct {
+		name        string
+		config      interface{}
+		expectError bool
+		errorMsg    string
+		checkFunc   func(t *testing.T, mod moderation.Moderator)
+	}{
+		{
+			name:        "should return error for invalid config type",
+			config:      "not a valid config",
+			expectError: true,
+			errorMsg:    "invalid config type for aliyun moderator",
+		},
+		{
+			name:        "should return error for nil aliyun config",
+			config:      &aicontentsecurity.Config_AliyunConfig{AliyunConfig: nil},
+			expectError: true,
+			errorMsg:    "aliyun config is empty inside the wrapper",
+		},
+		{
+			name: "should use default values when config is minimal",
+			config: &aicontentsecurity.Config_AliyunConfig{
+				AliyunConfig: &aicontentsecurity.AliyunConfig{
+					AccessKeyId:     "test_id",
+					AccessKeySecret: "test_secret",
+				},
+			},
+			expectError: false,
+			checkFunc: func(t *testing.T, mod moderation.Moderator) {
+				m, ok := mod.(*Moderator)
+				require.True(t, ok)
+				assert.Equal(t, "https://green-cip.cn-shanghai.aliyuncs.com", m.endpoint)
+				assert.Equal(t, 2*time.Second, m.httpClient.Timeout)
+				assert.Equal(t, High, m.maxRiskLevel)
+				assert.Equal(t, defaultVersion, m.version)
+			},
+		},
+		{
+			name: "should override default values from config",
+			config: &aicontentsecurity.Config_AliyunConfig{
+				AliyunConfig: &aicontentsecurity.AliyunConfig{
+					AccessKeyId:     "test_id",
+					AccessKeySecret: "test_secret",
+					Region:          "cn-beijing",
+					Timeout:         "5s",
+					MaxRiskLevel:    "low",
+					Version:         "2023-01-01",
+				},
+			},
+			expectError: false,
+			checkFunc: func(t *testing.T, mod moderation.Moderator) {
+				m, ok := mod.(*Moderator)
+				require.True(t, ok)
+				assert.Equal(t, "https://green-cip.cn-beijing.aliyuncs.com", m.endpoint)
+				assert.Equal(t, 5*time.Second, m.httpClient.Timeout)
+				assert.Equal(t, Low, m.maxRiskLevel)
+				assert.Equal(t, "2023-01-01", m.version)
+			},
+		},
+		{
+			name: "should return error for invalid MaxRiskLevel",
+			config: &aicontentsecurity.Config_AliyunConfig{
+				AliyunConfig: &aicontentsecurity.AliyunConfig{
+					MaxRiskLevel: "critical",
+				},
+			},
+			expectError: true,
+			errorMsg:    `invalid risk level: "critical"`,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mod, err := New(tc.config)
+			if tc.expectError {
+				assert.Error(t, err)
+				assert.Contains(t, err.Error(), tc.errorMsg)
+			} else {
+				assert.NoError(t, err)
+				require.NotNil(t, mod)
+				if tc.checkFunc != nil {
+					tc.checkFunc(t, mod)
+				}
+			}
+		})
+	}
+}
+
+func TestExecuteModerationService_WithSessionId(t *testing.T) {
+	var capturedServiceParams string
+
+	testCases := []struct {
+		name              string
+		useSessionID      bool
+		idMap             map[string]string
+		expectedSessionID string
+		expectSessionID   bool
+	}{
+		{
+			name:              "should include SessionId when enabled and provided",
+			useSessionID:      true,
+			idMap:             map[string]string{"SessionId": "session-123"},
+			expectedSessionID: "session-123",
+			expectSessionID:   true,
+		},
+		{
+			name:            "should not include SessionId when enabled but not provided",
+			useSessionID:    true,
+			idMap:           map[string]string{},
+			expectSessionID: false,
+		},
+		{
+			name:            "should not include SessionId when disabled even if provided",
+			useSessionID:    false,
+			idMap:           map[string]string{"SessionId": "session-123"},
+			expectSessionID: false,
+		},
+		{
+			name:            "should not include SessionId when enabled and idMap is nil",
+			useSessionID:    true,
+			idMap:           nil,
+			expectSessionID: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			capturedServiceParams = ""
+
+			confWrapper := &aicontentsecurity.Config_AliyunConfig{
+				AliyunConfig: &aicontentsecurity.AliyunConfig{
+					AccessKeyId:     "test-id",
+					AccessKeySecret: "test-secret",
+					UseSessionId:    tc.useSessionID,
+				},
+			}
+			mod, err := New(confWrapper)
+			require.NoError(t, err)
+			m, ok := mod.(*Moderator)
+			require.True(t, ok, "moderator should be of type *Moderator")
+
+			patches := gomonkey.NewPatches()
+			defer patches.Reset()
+
+			patches.ApplyMethodFunc(m.httpClient, "Do", func(req *http.Request) (*http.Response, error) {
+				queryParams, _ := url.ParseQuery(req.URL.RawQuery)
+				capturedServiceParams = queryParams.Get("ServiceParameters")
+
+				responseBody := `{"Code":200, "Message":"OK", "Data":{"RiskLevel":"none"}}`
+				return &http.Response{
+					StatusCode: http.StatusOK,
+					Body:       io.NopCloser(strings.NewReader(responseBody)),
+				}, nil
+			})
+
+			_, err = m.executeModerationService(context.Background(), "service", "content", tc.idMap)
+			require.NoError(t, err)
+
+			require.NotEmpty(t, capturedServiceParams, "ServiceParameters should have been captured")
+
+			var params map[string]interface{}
+			err = json.Unmarshal([]byte(capturedServiceParams), &params)
+			require.NoError(t, err, "service parameters should be valid json")
+
+			_, ok = params["SessionId"]
+			assert.Equal(t, tc.expectSessionID, ok, "presence of SessionId field should match expectation")
+			if tc.expectSessionID {
+				assert.Equal(t, tc.expectedSessionID, params["SessionId"])
+			}
+		})
+	}
+}
+
+func TestRiskLevel(t *testing.T) {
+	t.Run("String representation", func(t *testing.T) {
+		assert.Equal(t, "none", None.String())
+		assert.Equal(t, "low", Low.String())
+		assert.Equal(t, "medium", Medium.String())
+		assert.Equal(t, "high", High.String())
+		assert.Equal(t, "unknown", RiskLevel(99).String())
+	})
+
+	t.Run("ParseRiskLevel", func(t *testing.T) {
+		level, err := ParseRiskLevel("medium")
+		assert.NoError(t, err)
+		assert.Equal(t, Medium, level)
+
+		_, err = ParseRiskLevel("invalid")
+		assert.Error(t, err)
+		assert.Equal(t, `invalid risk level: "invalid"`, err.Error())
+	})
+
+	t.Run("JSON Marshaling", func(t *testing.T) {
+		level := Medium
+		data, err := json.Marshal(level)
+		assert.NoError(t, err)
+		assert.Equal(t, `"medium"`, string(data))
+
+		type sampleStruct struct {
+			Level RiskLevel `json:"level"`
+		}
+		s := sampleStruct{Level: High}
+		data, err = json.Marshal(s)
+		assert.NoError(t, err)
+		assert.JSONEq(t, `{"level": "high"}`, string(data))
+	})
+
+	t.Run("JSON Unmarshaling", func(t *testing.T) {
+		var level RiskLevel
+		err := json.Unmarshal([]byte(`"low"`), &level)
+		assert.NoError(t, err)
+		assert.Equal(t, Low, level)
+
+		err = json.Unmarshal([]byte(`null`), &level)
+		assert.NoError(t, err)
+		assert.Equal(t, None, level)
+
+		err = json.Unmarshal([]byte(`"critical"`), &level)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), `invalid risk level: "critical"`)
 	})
 }

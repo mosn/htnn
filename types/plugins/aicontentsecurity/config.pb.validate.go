@@ -56,7 +56,20 @@ func (m *Config) validate(all bool) error {
 
 	var errors []error
 
-	// no validation rules for ModerationTimeout
+	if m.GetModerationTimeout() != "" {
+
+		if !_Config_ModerationTimeout_Pattern.MatchString(m.GetModerationTimeout()) {
+			err := ConfigValidationError{
+				field:  "ModerationTimeout",
+				reason: "value does not match regex pattern \"^\\\\d+(ms|s)$\"",
+			}
+			if !all {
+				return err
+			}
+			errors = append(errors, err)
+		}
+
+	}
 
 	// no validation rules for StreamingEnabled
 
@@ -307,6 +320,8 @@ var _ interface {
 	ErrorName() string
 } = ConfigValidationError{}
 
+var _Config_ModerationTimeout_Pattern = regexp.MustCompile("^\\d+(ms|s)$")
+
 // Validate checks the field values on FieldMapping with the rules defined in
 // the proto definition for this message. If any rules are violated, the first
 // error encountered is returned, or nil if there are no violations.
@@ -329,9 +344,27 @@ func (m *FieldMapping) validate(all bool) error {
 
 	var errors []error
 
-	// no validation rules for SourceField
+	if utf8.RuneCountInString(m.GetSourceField()) < 1 {
+		err := FieldMappingValidationError{
+			field:  "SourceField",
+			reason: "value length must be at least 1 runes",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
 
-	// no validation rules for TargetField
+	if utf8.RuneCountInString(m.GetTargetField()) < 1 {
+		err := FieldMappingValidationError{
+			field:  "TargetField",
+			reason: "value length must be at least 1 runes",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
 
 	if len(errors) > 0 {
 		return FieldMappingMultiError(errors)
@@ -432,9 +465,27 @@ func (m *GjsonConfig) validate(all bool) error {
 
 	var errors []error
 
-	// no validation rules for RequestContentPath
+	if utf8.RuneCountInString(m.GetRequestContentPath()) < 1 {
+		err := GjsonConfigValidationError{
+			field:  "RequestContentPath",
+			reason: "value length must be at least 1 runes",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
 
-	// no validation rules for ResponseContentPath
+	if utf8.RuneCountInString(m.GetResponseContentPath()) < 1 {
+		err := GjsonConfigValidationError{
+			field:  "ResponseContentPath",
+			reason: "value length must be at least 1 runes",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
 
 	// no validation rules for StreamResponseContentPath
 
@@ -605,9 +656,27 @@ func (m *AliyunConfig) validate(all bool) error {
 
 	var errors []error
 
-	// no validation rules for AccessKeyId
+	if utf8.RuneCountInString(m.GetAccessKeyId()) < 1 {
+		err := AliyunConfigValidationError{
+			field:  "AccessKeyId",
+			reason: "value length must be at least 1 runes",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
 
-	// no validation rules for AccessKeySecret
+	if utf8.RuneCountInString(m.GetAccessKeySecret()) < 1 {
+		err := AliyunConfigValidationError{
+			field:  "AccessKeySecret",
+			reason: "value length must be at least 1 runes",
+		}
+		if !all {
+			return err
+		}
+		errors = append(errors, err)
+	}
 
 	// no validation rules for Region
 
@@ -617,7 +686,20 @@ func (m *AliyunConfig) validate(all bool) error {
 
 	// no validation rules for MaxRiskLevel
 
-	// no validation rules for Timeout
+	if m.GetTimeout() != "" {
+
+		if !_AliyunConfig_Timeout_Pattern.MatchString(m.GetTimeout()) {
+			err := AliyunConfigValidationError{
+				field:  "Timeout",
+				reason: "value does not match regex pattern \"^\\\\d+(ms|s)$\"",
+			}
+			if !all {
+				return err
+			}
+			errors = append(errors, err)
+		}
+
+	}
 
 	if len(errors) > 0 {
 		return AliyunConfigMultiError(errors)
@@ -696,6 +778,8 @@ var _ interface {
 	ErrorName() string
 } = AliyunConfigValidationError{}
 
+var _AliyunConfig_Timeout_Pattern = regexp.MustCompile("^\\d+(ms|s)$")
+
 // Validate checks the field values on LocalModerationServiceConfig with the
 // rules defined in the proto definition for this message. If any rules are
 // violated, the first error encountered is returned, or nil if there are no violations.
@@ -721,6 +805,21 @@ func (m *LocalModerationServiceConfig) validate(all bool) error {
 	// no validation rules for BaseUrl
 
 	// no validation rules for CustomErrorMessage
+
+	if m.GetTimeout() != "" {
+
+		if !_LocalModerationServiceConfig_Timeout_Pattern.MatchString(m.GetTimeout()) {
+			err := LocalModerationServiceConfigValidationError{
+				field:  "Timeout",
+				reason: "value does not match regex pattern \"^\\\\d+(ms|s)$\"",
+			}
+			if !all {
+				return err
+			}
+			errors = append(errors, err)
+		}
+
+	}
 
 	if len(errors) > 0 {
 		return LocalModerationServiceConfigMultiError(errors)
@@ -802,3 +901,5 @@ var _ interface {
 	Cause() error
 	ErrorName() string
 } = LocalModerationServiceConfigValidationError{}
+
+var _LocalModerationServiceConfig_Timeout_Pattern = regexp.MustCompile("^\\d+(ms|s)$")

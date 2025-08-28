@@ -22,19 +22,21 @@ option go_package = "mosn.io/htnn/types/plugins/aicontentsecurity";
 
 // Configuration for the AI Content Security plugin.
 message Config {
-  // Total timeout across all attempts to the external moderation service, in milliseconds.
-  int64 moderation_timeout = 1;
+  // Total timeout for all attempts to the external moderation service, specified as an integer with unit "ms" or "s".
+  // default to 3s
+  string moderation_timeout = 1
+      [(validate.rules).string = {pattern: "^\\d+(ms|s)$", ignore_empty: true}];
 
   // Whether to enable support for streaming responses.
-  bool streaming_enabled = 4;
+  bool streaming_enabled = 2;
 
   // The character limit for a single moderation request. If the text exceeds this limit,
   // it will be chunked.
-  int64 moderation_char_limit = 5 [(validate.rules).int64.gt = 0];
+  int64 moderation_char_limit = 3 [(validate.rules).int64.gt = 0];
 
   // The number of overlapping characters between text chunks when splitting large text
   // for moderation. This helps maintain context across chunks.
-  int64 moderation_chunk_overlap_length = 6;
+  int64 moderation_chunk_overlap_length = 4;
 
   // Configuration for extracting content and metadata from requests/responses.
   oneof extractor_config {
@@ -55,17 +57,17 @@ message Config {
 // used for extracting metadata like session IDs.
 message FieldMapping {
   // The source field from which to extract the value (e.g., a header name or a GJSON path).
-  string source_field = 1;
+  string source_field = 1 [(validate.rules).string = {min_len: 1}];
   // The target field name to use for the extracted value (e.g., "SessionId").
-  string target_field = 2;
+  string target_field = 2 [(validate.rules).string = {min_len: 1}];
 }
 
 // Configuration for extracting content using GJSON paths.
 message GjsonConfig {
   // GJSON path to extract the content to be moderated from the request body.
-  string request_content_path = 1;
+  string request_content_path = 1 [(validate.rules).string = {min_len: 1}];
   // GJSON path to extract content from a non-streaming response body.
-  string response_content_path = 2;
+  string response_content_path = 2 [(validate.rules).string = {min_len: 1}];
   // GJSON path to extract content from each chunk of a streaming response.
   string stream_response_content_path = 3;
 
@@ -78,9 +80,9 @@ message GjsonConfig {
 // Configuration for the Aliyun Content Moderation service.
 message AliyunConfig {
   // The AccessKey ID for Aliyun API authentication.
-  string access_key_id = 1;
+  string access_key_id = 1 [(validate.rules).string = {min_len: 1}];
   // The AccessKey Secret for Aliyun API authentication.
-  string access_key_secret = 2;
+  string access_key_secret = 2 [(validate.rules).string = {min_len: 1}];
 
   // The Aliyun service region (e.g., "cn-shanghai").
   string region = 3;
@@ -90,8 +92,9 @@ message AliyunConfig {
   bool use_session_id = 5;
   // Content exceeding or equal this level will be rejected. Valid values include "none", "low", "medium", "high".
   string max_risk_level = 6;
-  // Timeout for a single request to the external moderation service, in milliseconds.
-  int64 timeout = 7;
+  // Timeout for a single request to the external moderation service, specified as an integer with unit "ms" or "s".
+  // default to 2s.
+  string timeout = 7 [(validate.rules).string = {pattern: "^\\d+(ms|s)$", ignore_empty: true}];
 }
 
 // Configuration for a local integration test moderation service.
@@ -99,4 +102,6 @@ message LocalModerationServiceConfig {
   string base_url = 1;
   string custom_error_message = 2;
   repeated string unhealthy_words = 3;
+  // Timeout for a single request to the external moderation service, specified as an integer with unit "ms" or "s".
+  string timeout = 4 [(validate.rules).string = {pattern: "^\\d+(ms|s)$", ignore_empty: true}];
 }

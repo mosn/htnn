@@ -16,7 +16,10 @@ package contentbuffer
 
 import (
 	"fmt"
+	"math/rand"
+	"strings"
 	"testing"
+	"time"
 	"unicode/utf8"
 
 	"github.com/stretchr/testify/assert"
@@ -53,21 +56,19 @@ func (acc *resultAccumulator) check(expectedTotalEvents int, expectedChunks []st
 }
 
 func TestContentBuffer(t *testing.T) {
-	// Basic usage without overlap
 	t.Run("Basic/NoOverlap", func(t *testing.T) {
 		buffer := NewContentBuffer(WithMaxChars(10), WithOverlapCharNum(0))
 		acc := newResultAccumulator(t, buffer)
 
-		buffer.Write([]byte("事件A1"))
-		buffer.Write([]byte("事件B2"))
-		buffer.Write([]byte("事件C3"))
+		buffer.Write([]byte("EVA1"))
+		buffer.Write([]byte("EVB2"))
+		buffer.Write([]byte("EVC3"))
 		acc.flushAndAccumulate()
 
-		expectedChunks := []string{"事件A1事件B2事件", "C3"}
+		expectedChunks := []string{"EVA1EVB2EV", "C3"}
 		acc.check(3, expectedChunks)
 	})
 
-	// Basic usage with overlap
 	t.Run("Basic/WithOverlap", func(t *testing.T) {
 		buffer := NewContentBuffer(WithMaxChars(10), WithOverlapCharNum(3))
 		acc := newResultAccumulator(t, buffer)
@@ -80,10 +81,9 @@ func TestContentBuffer(t *testing.T) {
 		acc.check(2, expectedChunks)
 	})
 
-	// A single long event spans multiple chunks with overlap
 	t.Run("Complex/SingleLongEventWithOverlap", func(t *testing.T) {
-		longEvent := "这是一个非常非常长的事件，它毫无疑问会跨越我们设定的分片边界。" // 31
-		secondEvent := "第二个事件。"                        // 6
+		longEvent := "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" // 31 runes
+		secondEvent := "bbbbbb"                        // 6 runes
 		buffer := NewContentBuffer(WithMaxChars(15), WithOverlapCharNum(5))
 		acc := newResultAccumulator(t, buffer)
 
@@ -92,15 +92,14 @@ func TestContentBuffer(t *testing.T) {
 		acc.flushAndAccumulate()
 
 		expectedChunks := []string{
-			"这是一个非常非常长的事件，它毫",
-			"事件，它毫无疑问会跨越我们设定",
-			"越我们设定的分片边界。第二个事",
-			"。第二个事件。",
+			"aaaaaaaaaaaaaaa",
+			"aaaaaaaaaaaaaaa",
+			"aaaaaaaaaaabbbb",
+			"abbbbbb",
 		}
 		acc.check(2, expectedChunks)
 	})
 
-	// A single write creates multiple chunks
 	t.Run("Complex/SingleWriteCreatesMultipleChunks", func(t *testing.T) {
 		buffer := NewContentBuffer(WithMaxChars(5), WithOverlapCharNum(2))
 		acc := newResultAccumulator(t, buffer)
@@ -112,25 +111,23 @@ func TestContentBuffer(t *testing.T) {
 		acc.check(1, expectedChunks)
 	})
 
-	// Multi-byte character boundary test
 	t.Run("Complex/MultiByteCharacters", func(t *testing.T) {
 		buffer := NewContentBuffer(WithMaxChars(6), WithOverlapCharNum(2))
 		acc := newResultAccumulator(t, buffer)
 
-		buffer.Write([]byte("测试中文字符"))
-		buffer.Write([]byte("码"))
-		buffer.Write([]byte("继续测试多字节"))
+		buffer.Write([]byte("ABCDEF"))
+		buffer.Write([]byte("G"))
+		buffer.Write([]byte("HIJKLMN"))
 		acc.flushAndAccumulate()
 
 		for i, chunk := range acc.allChunks {
 			assert.True(t, utf8.ValidString(chunk), "Chunk %d should be valid UTF-8: %q", i, chunk)
 		}
 
-		expectedChunks := []string{"测试中文字符", "字符码继续测", "续测试多字节", "字节"}
+		expectedChunks := []string{"ABCDEF", "EFGHIJ", "IJKLMN", "MN"}
 		acc.check(3, expectedChunks)
 	})
 
-	// Write exactly to a boundary
 	t.Run("EdgeCase/WriteExactlyToBoundary", func(t *testing.T) {
 		buffer := NewContentBuffer(WithMaxChars(10), WithOverlapCharNum(2))
 		acc := newResultAccumulator(t, buffer)
@@ -143,7 +140,6 @@ func TestContentBuffer(t *testing.T) {
 		acc.check(2, expectedChunks)
 	})
 
-	// Successive writes and compaction
 	t.Run("EdgeCase/SuccessiveWritesAndCompaction", func(t *testing.T) {
 		buffer := NewContentBuffer(WithMaxChars(10), WithOverlapCharNum(3))
 		acc := newResultAccumulator(t, buffer)
@@ -157,7 +153,6 @@ func TestContentBuffer(t *testing.T) {
 		acc.check(3, expectedChunks)
 	})
 
-	// Maximal legal overlap
 	t.Run("EdgeCase/MaximalLegalOverlap", func(t *testing.T) {
 		buffer := NewContentBuffer(WithMaxChars(6), WithOverlapCharNum(5))
 		acc := newResultAccumulator(t, buffer)
@@ -169,7 +164,6 @@ func TestContentBuffer(t *testing.T) {
 		acc.check(1, expectedChunks)
 	})
 
-	// First chunk is smaller than the overlap number
 	t.Run("EdgeCase/FirstChunkSmallerThanOverlap", func(t *testing.T) {
 		buffer := NewContentBuffer(WithMaxChars(10), WithOverlapCharNum(5))
 		acc := newResultAccumulator(t, buffer)
@@ -183,7 +177,6 @@ func TestContentBuffer(t *testing.T) {
 		acc.check(3, expectedChunks)
 	})
 
-	// Single-rune events with overlap
 	t.Run("EdgeCase/SingleRuneEventsWithOverlap", func(t *testing.T) {
 		buffer := NewContentBuffer(WithMaxChars(3), WithOverlapCharNum(1))
 		acc := newResultAccumulator(t, buffer)
@@ -201,7 +194,6 @@ func TestContentBuffer(t *testing.T) {
 		acc.check(7, expectedChunks)
 	})
 
-	// Test event counting with empty and nil writes
 	t.Run("EdgeCase/EventCountingWithEmptyAndNilWrites", func(t *testing.T) {
 		t.Run("MixedWithData", func(t *testing.T) {
 			buffer := NewContentBuffer(WithMaxChars(10), WithOverlapCharNum(2))
@@ -245,12 +237,10 @@ func TestContentBuffer(t *testing.T) {
 		})
 	})
 
-	// Test event counting logic with different overlap strategies
 	t.Run("Feature/EventCountingLogic", func(t *testing.T) {
-		// Scenario 1: Default behavior, event count in overlap region is delayed
 		t.Run("DelayedCountingInOverlap", func(t *testing.T) {
 			buffer := NewContentBuffer(WithMaxChars(10), WithOverlapCharNum(3))
-			buffer.overlapCountDelayed = true // Explicitly set to default
+			buffer.overlapCountDelayed = true
 			acc := newResultAccumulator(t, buffer)
 
 			buffer.Write([]byte("0123456")) // Event 1 - ends before overlap zone
@@ -266,7 +256,6 @@ func TestContentBuffer(t *testing.T) {
 			assert.Equal(t, []string{"0123456789", "789A"}, acc.allChunks, "Second chunk content is incorrect")
 		})
 
-		// Scenario 2: Delayed counting is off, events in overlap are counted immediately
 		t.Run("ImmediateCountingInOverlap", func(t *testing.T) {
 			buffer := NewContentBuffer(WithMaxChars(10), WithOverlapCharNum(3))
 			buffer.overlapCountDelayed = false // Disable delay
@@ -285,7 +274,6 @@ func TestContentBuffer(t *testing.T) {
 			assert.Equal(t, []string{"0123456789", "789A"}, acc.allChunks, "Second chunk content is incorrect")
 		})
 
-		// Scenario 3: With no overlap, the overlapCountDelayed flag has no effect
 		t.Run("NoOverlapIgnoresFlag", func(t *testing.T) {
 			for _, delayed := range []bool{true, false} {
 				t.Run(fmt.Sprintf("delayed=%v", delayed), func(t *testing.T) {
@@ -303,7 +291,6 @@ func TestContentBuffer(t *testing.T) {
 			}
 		})
 
-		// Write fills a chunk exactly
 		t.Run("WriteFillsChunkExactly", func(t *testing.T) {
 			t.Run("Delayed", func(t *testing.T) {
 				buffer := NewContentBuffer(WithMaxChars(5), WithOverlapCharNum(2))
@@ -340,7 +327,6 @@ func TestContentBuffer(t *testing.T) {
 			})
 		})
 
-		// Flush with a partial overlap
 		t.Run("FlushWithPartialOverlap", func(t *testing.T) {
 			t.Run("Delayed", func(t *testing.T) {
 				buffer := NewContentBuffer(WithMaxChars(10), WithOverlapCharNum(4))
@@ -372,7 +358,6 @@ func TestContentBuffer(t *testing.T) {
 			})
 		})
 
-		// Empty events in the overlap zone
 		t.Run("EmptyEventsInOverlap", func(t *testing.T) {
 			t.Run("Delayed", func(t *testing.T) {
 				buffer := NewContentBuffer(WithMaxChars(5), WithOverlapCharNum(2))
@@ -412,7 +397,6 @@ func TestContentBuffer(t *testing.T) {
 		})
 	})
 
-	// New: State machine interaction tests
 	t.Run("Boundary/StateInteractions", func(t *testing.T) {
 		t.Run("RepeatedFlushIsIdempotent", func(t *testing.T) {
 			buffer := NewContentBuffer(WithMaxChars(10), WithOverlapCharNum(2))
@@ -457,35 +441,191 @@ func TestContentBuffer(t *testing.T) {
 		})
 	})
 
-	// New: Destructive test for UTF-8
-	t.Run("Boundary/InvalidUTF8Sequence", func(t *testing.T) {
-		buffer := NewContentBuffer(WithMaxChars(10), WithOverlapCharNum(0))
-		acc := newResultAccumulator(t, buffer)
+	t.Run("Boundary/AdvancedUTF8", func(t *testing.T) {
+		t.Run("IncompleteMultiByteAtEnd", func(t *testing.T) {
+			buffer := NewContentBuffer(WithMaxChars(10), WithOverlapCharNum(0))
+			acc := newResultAccumulator(t, buffer)
 
-		buffer.Write([]byte("你好\xff世界")) // Event 1
-		acc.flushAndAccumulate()
+			buffer.Write([]byte("AB\xe4\xbd"))
+			acc.flushAndAccumulate()
 
-		expectedChunks := []string{"你好世界"}
-		acc.check(1, expectedChunks)
-		assert.True(t, utf8.ValidString(acc.allChunks[0]), "Chunk content must be valid UTF-8")
+			expectedChunks := []string{"AB"}
+			acc.check(1, expectedChunks)
+			assert.True(t, utf8.ValidString(acc.allChunks[0]))
+		})
+
+		t.Run("InvalidByteAtChunkBoundary", func(t *testing.T) {
+			buffer := NewContentBuffer(WithMaxChars(5), WithOverlapCharNum(2))
+			acc := newResultAccumulator(t, buffer)
+
+			buffer.Write([]byte("1234\xff56789"))
+			acc.flushAndAccumulate()
+
+			expectedChunks := []string{"12345", "45678", "789"}
+			acc.check(1, expectedChunks)
+			assert.True(t, utf8.ValidString(acc.allChunks[0]))
+			assert.True(t, utf8.ValidString(acc.allChunks[1]))
+		})
+
+		t.Run("InvalidByteInOverlap", func(t *testing.T) {
+			buffer := NewContentBuffer(WithMaxChars(10), WithOverlapCharNum(4))
+			acc := newResultAccumulator(t, buffer)
+
+			buffer.Write([]byte("01234567\xff89ABCDEFG"))
+			acc.flushAndAccumulate()
+
+			expectedChunks := []string{"0123456789", "6789ABCDEF", "CDEFG"}
+			acc.check(1, expectedChunks)
+		})
+
+		t.Run("IncompleteSequenceAcrossWrites", func(t *testing.T) {
+			buffer := NewContentBuffer(WithMaxChars(20), WithOverlapCharNum(0))
+			acc := newResultAccumulator(t, buffer)
+
+			buffer.Write([]byte("ABCD\xe4\xbd"))
+			buffer.Write([]byte("\xa0EFGH"))
+
+			acc.flushAndAccumulate()
+
+			expectedChunks := []string{"ABCDEFGH"}
+			acc.check(2, expectedChunks)
+		})
 	})
 
-	// New: Blackbox test with a complex sequence of calls
-	t.Run("Blackbox/ComplexInteractionSequence", func(t *testing.T) {
-		buffer := NewContentBuffer(WithMaxChars(8), WithOverlapCharNum(3))
+}
+
+func stripInvalidUTF8Bytes(s string) string {
+	if utf8.ValidString(s) {
+		return s
+	}
+
+	var result strings.Builder
+	result.Grow(len(s))
+	for i := 0; i < len(s); {
+		r, size := utf8.DecodeRuneInString(s[i:])
+		if r == utf8.RuneError && size == 1 {
+			i += size
+			continue
+		}
+		result.WriteRune(r)
+		i += size
+	}
+	return result.String()
+}
+
+func FuzzContentBuffer(f *testing.F) {
+	f.Add(10, 3, "Hello, world!", true)
+	f.Add(10, 0, "Hello, world!", true)
+	f.Add(20, 5, "AB\xe4\xbdCD", false) // Contains an incomplete UTF-8 sequence
+	f.Add(5, 2, "\xff\xfe\xfd", true)   // Contains invalid bytes
+	f.Add(15, 4, "这是中文事件\n另一行事件", true) // Contains multibyte characters and multiple events
+	f.Add(8, 2, "1234567890", false)
+	f.Add(12, 3, "abcdefghijklmnopqrstuvwxyz", true)
+	f.Add(10, 3, "ababababababab", true)     // Repetitive string to test overlap logic
+	f.Add(10, 3, "", true)                   // Input is an empty string
+	f.Add(100, 20, "short", false)           // Input data is much smaller than maxChars
+	f.Add(10, 9, "edge case", true)          // Edge case where overlapChars is close to the maxChars limit
+	f.Add(5, 2, "tiny", false)               // Input data is smaller than maxChars but larger than overlapChars
+	f.Add(10, 8, "123\xe4\xbd\xffENG", true) // Contains a mix of valid and invalid UTF-8 sequences
+
+	// The Fuzz function receives inputs from the seed corpus and the fuzzing engine to execute the test logic.
+	f.Fuzz(func(t *testing.T, maxChars int, overlapChars int, input string, overlapCountDelayed bool) {
+		// Filter out invalid parameter combinations, as ContentBuffer does not support these cases.
+		if maxChars <= 0 || overlapChars < 0 || overlapChars >= maxChars {
+			return
+		}
+		t.Logf("[Fuzz test input] maxChars=%d, overlapChars=%d, overlapDelayed=%v, input=%q (%d bytes)",
+			maxChars, overlapChars, overlapCountDelayed, input, len(input))
+
+		r := rand.New(rand.NewSource(time.Now().UnixNano()))
+
+		var events []string
+		remainingInput := input
+		// randomly split the input string into multiple small events.
+		if len(remainingInput) > 0 {
+			for utf8.RuneCountInString(remainingInput) > 1 {
+				var cutPoints []int
+				// Find all valid rune boundaries to split the string
+				tempStr := remainingInput
+				for i := range tempStr {
+					if i > 0 {
+						cutPoints = append(cutPoints, i)
+					}
+				}
+				if len(cutPoints) == 0 {
+					break
+				}
+				cutIndexInBytes := cutPoints[r.Intn(len(cutPoints))]
+
+				event := remainingInput[:cutIndexInBytes]
+				events = append(events, event)
+				remainingInput = remainingInput[cutIndexInBytes:]
+			}
+			events = append(events, remainingInput)
+		} else {
+			events = append(events, "")
+		}
+
+		buffer := NewContentBuffer(WithMaxChars(maxChars), WithOverlapCharNum(overlapChars))
+		buffer.overlapCountDelayed = overlapCountDelayed
 		acc := newResultAccumulator(t, buffer)
 
-		buffer.Write([]byte("事件一"))
-		acc.accumulate()
-		acc.check(0, nil)
+		// Write the split events one by one into the buffer.
+		realCount := 0
+		for _, event := range events {
+			realCount++
+			buffer.Write([]byte(event))
+		}
 
-		buffer.Write([]byte("然后是事件二"))
-		acc.accumulate()
-		acc.check(1, []string{"事件一然后是事件"})
+		acc.flushAndAccumulate()
 
-		buffer.Write([]byte("三"))
-		buffer.Flush()
-		acc.accumulate()
-		acc.check(3, []string{"事件一然后是事件", "是事件二三"})
+		var reconstructed strings.Builder
+		allChunks := acc.allChunks
+		// Since the buffer cleans up invalid UTF-8 bytes, we need a clean version of the original input for comparison.
+		cleanOriginalInput := stripInvalidUTF8Bytes(input)
+		for i, chunk := range allChunks {
+			assert.True(t, utf8.ValidString(chunk), "Fuzzing: Chunk %d should be valid UTF-8: %q", i, chunk)
+		}
+
+		// attempt to reconstruct the original string from the chunks, accounting for the overlap.
+		if len(allChunks) > 0 {
+			reconstructed.WriteString(allChunks[0])
+			for i := 1; i < len(allChunks); i++ {
+				prevChunk := allChunks[i-1]
+				currentChunk := allChunks[i]
+
+				if len(currentChunk) == 0 {
+					continue
+				}
+
+				if overlapChars == 0 {
+					reconstructed.WriteString(currentChunk)
+					continue
+				}
+
+				// Based on the buffer's overlap logic, calculate the expected overlap.
+				var intendedOverlap string
+				prevRunes := []rune(prevChunk)
+
+				if len(prevRunes) > overlapChars {
+					overlapStartIndex := len(prevRunes) - overlapChars
+					intendedOverlap = string(prevRunes[overlapStartIndex:])
+				} else {
+					// If the previous chunk is shorter than the overlap count, the whole chunk is considered the overlap.
+					intendedOverlap = prevChunk
+				}
+
+				// Remove the overlapping part from the current chunk and then append the rest to the reconstructed string.
+				if strings.HasPrefix(currentChunk, intendedOverlap) {
+					reconstructed.WriteString(currentChunk[len(intendedOverlap):])
+				} else {
+					reconstructed.WriteString(currentChunk)
+				}
+			}
+		}
+
+		reconstructedStr := reconstructed.String()
+		// The reconstructed string should be identical to the original input after it has been cleaned of invalid UTF-8 bytes.
+		assert.Equal(t, cleanOriginalInput, reconstructedStr, "Fuzzing: Reconstructed string should match original input")
 	})
 }

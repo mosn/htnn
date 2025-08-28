@@ -21,20 +21,21 @@ import (
 
 type CharCounter interface {
 	Count(data []byte) int
-	DecodeChar(data []byte) (r rune, size int, err error)
+	DecodeOne(data []byte) (size int, err error)
 	TailStartIndex(data []byte, n int) int
+	MaxBytesForChars(n int) int
 }
 
 type Utf8RuneCounter struct{}
 
 func (Utf8RuneCounter) Count(data []byte) int { return utf8.RuneCount(data) }
 
-func (Utf8RuneCounter) DecodeChar(data []byte) (rune, int, error) {
+func (Utf8RuneCounter) DecodeOne(data []byte) (int, error) {
 	r, size := utf8.DecodeRune(data)
 	if r == utf8.RuneError && size == 1 {
-		return r, size, fmt.Errorf("invalid utf8 encoding")
+		return size, fmt.Errorf("invalid utf8 encoding")
 	}
-	return r, size, nil
+	return size, nil
 }
 
 func (Utf8RuneCounter) TailStartIndex(data []byte, n int) int {
@@ -49,4 +50,12 @@ func (Utf8RuneCounter) TailStartIndex(data []byte, n int) int {
 		count++
 	}
 	return i
+}
+
+func (Utf8RuneCounter) MaxBytesForChars(n int) int {
+	if n <= 0 {
+		return 0
+	}
+
+	return n * 4
 }

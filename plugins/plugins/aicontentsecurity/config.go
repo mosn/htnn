@@ -50,10 +50,10 @@ type config struct {
 }
 
 func (conf *config) Init(cb api.ConfigCallbackHandler) error {
-	if conf.ModerationTimeout > 0 {
-		conf.moderationTimeout = time.Duration(conf.ModerationTimeout) * time.Millisecond
+	if conf.ModerationTimeout != "" {
+		conf.moderationTimeout, _ = time.ParseDuration(conf.ModerationTimeout)
 	} else {
-		conf.moderationTimeout = time.Duration(3 * int(time.Second))
+		conf.moderationTimeout = 3 * time.Second
 	}
 
 	providerTypeName := reflect.TypeOf(conf.ProviderConfig).String()

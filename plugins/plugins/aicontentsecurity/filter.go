@@ -18,8 +18,8 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"mime"
 	"net/http"
-	"strings"
 
 	"golang.org/x/sync/errgroup"
 
@@ -60,7 +60,11 @@ func isStream(headers api.HeaderMap) bool {
 	if !ok {
 		return false
 	}
-	return strings.HasPrefix(contentType, "text/event-stream")
+	mediaType, _, err := mime.ParseMediaType(contentType)
+	if err != nil {
+		return false
+	}
+	return mediaType == "text/event-stream"
 }
 
 func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {
@@ -74,8 +78,11 @@ func (f *filter) DecodeData(data api.BufferInstance, endStream bool) api.ResultA
 
 func (f *filter) EncodeHeaders(headers api.ResponseHeaderMap, endStream bool) api.ResultAction {
 	if isStream(headers) && !endStream {
-		f.streamResponse = true
 		f.sseParser = sseparser.NewStreamEventParser()
+		if !f.config.StreamingEnabled {
+			return api.WaitAllData
+		}
+		f.streamResponse = true
 	}
 	return api.Continue
 }
@@ -88,6 +95,10 @@ func (f *filter) EncodeData(data api.BufferInstance, endStream bool) api.ResultA
 	}
 }
 
+func (f *filter) EncodeResponse(headers api.ResponseHeaderMap, data api.BufferInstance, trailers api.ResponseTrailerMap) api.ResultAction {
+	return f.streamDataHandler(data, true)
+}
+
 func (f *filter) streamDataHandler(data api.BufferInstance, endStream bool) api.ResultAction {
 	if f.streamCloseFlag {
 		data.Reset()
@@ -95,7 +106,6 @@ func (f *filter) streamDataHandler(data api.BufferInstance, endStream bool) api.
 	}
 
 	f.sseParser.Append(data.Bytes())
-
 	data.Reset()
 
 	// event parser
@@ -117,12 +127,9 @@ func (f *filter) streamDataHandler(data api.BufferInstance, endStream bool) api.
 		f.contentBuf.Write([]byte(eventContent))
 	}
 
-	if !endStream {
-		// This is a stream response but streaming is not enabled.
-		// In this case, we do not modify the header, just buffer the events and send them all at once.
-		if !f.config.StreamingEnabled || newAddedEventFlag {
-			return api.Continue
-		}
+	// No new complete event
+	if !endStream && newAddedEventFlag {
+		return api.Continue
 	}
 
 	// If the stream ends, flush the content buffer and send everything for moderation.
@@ -147,6 +154,7 @@ func (f *filter) streamDataHandler(data api.BufferInstance, endStream bool) api.
 
 		if res != nil && !res.Allow {
 			// Graceful shutdown.
+			api.LogInfof("Content rejected by moderation service, reason: %s", res.Reason)
 			errorPayload := fmt.Sprintf(
 				"event: error\ndata: %s\n\n",
 				res.Reason)
@@ -168,15 +176,6 @@ func (f *filter) streamDataHandler(data api.BufferInstance, endStream bool) api.
 	}
 	f.sseParser.PruneParsedData()
 
-	if endStream {
-		// End of stream, send all unparsed bytes remaining in the buffer.
-		err := data.Append(f.sseParser.UnparsedBytes())
-		if err != nil {
-			api.LogErrorf("Failed to append unparsed bytes: %v", err)
-			return &api.LocalResponse{Code: http.StatusBadGateway}
-		}
-	}
-
 	return api.Continue
 }
 
@@ -197,7 +196,6 @@ func (f *filter) performModeration(ctx context.Context, buffers []string, isEnco
 	concurrencyLimit := 5
 	sem := make(chan struct{}, concurrencyLimit)
 
-	// TODO Retry support
 	for _, buffer := range buffers {
 		buf := buffer
 
@@ -245,7 +243,6 @@ func (f *filter) performModeration(ctx context.Context, buffers []string, isEnco
 
 func (f *filter) dataHandler(data api.BufferInstance, endStream bool, isEncode bool) api.ResultAction {
 	extractor := f.config.extractor
-
 	var err error
 	actionType := "DecodeData"
 	if isEncode {
@@ -260,7 +257,7 @@ func (f *filter) dataHandler(data api.BufferInstance, endStream bool, isEncode b
 			return &api.LocalResponse{Code: http.StatusBadGateway}
 		}
 	} else {
-		// Not a stream, but the body is incomplete.
+		// Packet Fragmentation
 		if f.bodyBuffer == nil {
 			f.bodyBuffer = make([]byte, 0, 2048)
 		}
@@ -287,14 +284,12 @@ func (f *filter) dataHandler(data api.BufferInstance, endStream bool, isEncode b
 		content = extractor.RequestContent()
 	}
 
-	// Specialized implementation ?
 	f.contentBuf.Write([]byte(content))
 	f.contentBuf.Flush()
 	contents := f.contentBuf.GetCompletedResult()
 
 	ctx, cancel := context.WithTimeout(context.Background(), f.config.moderationTimeout)
 	defer cancel()
-
 	res, err := f.performModeration(ctx, contents.Chunks, isEncode)
 	if err != nil {
 		api.LogErrorf("%s moderation failed: %v", actionType, err)
@@ -311,6 +306,7 @@ func (f *filter) dataHandler(data api.BufferInstance, endStream bool, isEncode b
 			api.LogErrorf("%s failed to set processed buffer data back to response: %v", actionType, err)
 			return &api.LocalResponse{Code: http.StatusBadGateway}
 		}
+		f.bodyBuffer = nil
 	}
 	return api.Continue
 }
