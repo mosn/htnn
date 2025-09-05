@@ -89,17 +89,17 @@ func (f *filter) EncodeHeaders(headers api.ResponseHeaderMap, endStream bool) ap
 
 func (f *filter) EncodeData(data api.BufferInstance, endStream bool) api.ResultAction {
 	if f.streamResponse {
-		return f.streamDataHandler(data, endStream)
+		return f.sseDataHandler(data, endStream)
 	} else {
 		return f.dataHandler(data, endStream, true)
 	}
 }
 
 func (f *filter) EncodeResponse(headers api.ResponseHeaderMap, data api.BufferInstance, trailers api.ResponseTrailerMap) api.ResultAction {
-	return f.streamDataHandler(data, true)
+	return f.sseDataHandler(data, true)
 }
 
-func (f *filter) streamDataHandler(data api.BufferInstance, endStream bool) api.ResultAction {
+func (f *filter) sseDataHandler(data api.BufferInstance, endStream bool) api.ResultAction {
 	if f.streamCloseFlag {
 		data.Reset()
 		return &api.LocalResponse{Code: http.StatusBadGateway}

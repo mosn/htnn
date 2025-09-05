@@ -152,4 +152,4 @@ to experience the integrated content moderation capabilities.
    `reasoning_content` in DeepSeek ([reference](https://api-docs.deepseek.com/guides/reasoning_model)). We plan to add
    support for this in future PR.
 2. When processing streaming responses, no incomplete or unmoderated events will ever be sent.
-
+3. Currently, the SSE parser only supports CRLF (\r\n) and LF (\n) as line delimiters.

@@ -34,39 +34,6 @@ import (
 	"mosn.io/htnn/types/plugins/aicontentsecurity"
 )
 
-func TestRequestModeration_Live(t *testing.T) {
-	t.Skip("Skipping live test to avoid dependency on external services")
-	accessKeyID := ""
-	accessKeySecret := ""
-
-	conf := &aicontentsecurity.AliyunConfig{
-		AccessKeyId:     accessKeyID,
-		AccessKeySecret: accessKeySecret,
-		Region:          "cn-shanghai",
-		MaxRiskLevel:    "high",
-	}
-	mod, err := New(&aicontentsecurity.Config_AliyunConfig{AliyunConfig: conf})
-	assert.NoError(t, err)
-	m, ok := mod.(*Moderator)
-	assert.True(t, ok, "m should be of type *Moderator")
-
-	t.Run("live test with clean text", func(t *testing.T) {
-		content := "Hello, this is a normal test text for the Aliyun content security API."
-		result, err := m.Request(context.Background(), content, nil)
-		assert.NoError(t, err)
-		assert.True(t, result.Allow, "clean text should be allowed")
-		t.Log("Clean text test passed, Allow=true")
-	})
-
-	t.Run("live test with dangerous text", func(t *testing.T) {
-		content := "Using drugs" // Example of violative word
-		result, err := m.Request(context.Background(), content, nil)
-		assert.NoError(t, err)
-		assert.False(t, result.Allow, "violative text should be rejected")
-		t.Logf("Violative text test rejected, Allow=false, Reason: %s", result.Reason)
-	})
-}
-
 // TestPercentEncode validates the custom percent encoding function
 func TestPercentEncode(t *testing.T) {
 	testCases := []struct {

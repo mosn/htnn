@@ -154,3 +154,4 @@ spec:
 
 1. 一些内容审核服务提供商在响应中可能会生成多个内容字段。例如 DeepSeek 的 `reasoning_content`（参考：[DeepSeek API 文档](https://api-docs.deepseek.com/guides/reasoning_model)）。我们计划在未来的 PR 中支持这一特性。
 2. 在处理流式响应时，不会发送任何不完整或未经审核的事件（event）。
+3. 目前，SSE 解析器仅支持 CRLF (\r\n) 和 LF (\n) 作为换行符。

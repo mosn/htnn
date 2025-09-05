@@ -87,6 +87,7 @@ func findEventEnd(data []byte) (int, int) {
 			}
 		}
 		// otherwise second char is not a line break -> continue scanning
+		i = j
 	}
 
 	return -1, 0

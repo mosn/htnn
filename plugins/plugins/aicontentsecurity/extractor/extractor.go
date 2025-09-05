@@ -18,7 +18,7 @@ import "mosn.io/htnn/api/pkg/filtermanager/api"
 
 type Extractor interface {
 
-	// SetData parse the raw data and prepare the internal state for subsequent extraction calls.
+	// SetData parses the raw data and prepares the internal state for subsequent extraction calls.
 	SetData(data []byte) error
 
 	// RequestContent extracts the request content from the data loaded previously.

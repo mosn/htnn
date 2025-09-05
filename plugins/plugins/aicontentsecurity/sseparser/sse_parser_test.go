@@ -57,6 +57,7 @@ func TestFindEventEnd(t *testing.T) {
 		{"finds first of multiple terminators", []byte("id: 1\n\ndata: 2\n\n"), 5, 2},
 		{"single CR in middle is ignored", []byte("data: a\r_b\n\n"), 10, 2},
 		{"LF followed by CR in middle is not a terminator", []byte("data: event\n\r-not-a-terminator-\n\n"), 31, 2},
+		{"aggressive jump fails here", []byte("data: a\nX\n\n"), 9, 2},
 	}
 
 	for _, tc := range testCases {
@@ -462,30 +463,29 @@ func TestStreamingParser_UnsafeLifecycle(t *testing.T) {
 	parser.PruneParsedData()
 	parser.Append([]byte("id: 2\ndata: second\n\n"))
 
-	// This assertion is not guaranteed to fail, as memory might not be overwritten
-	// in the exact same way every time. The principle is what's being tested.
-	// The goal is to demonstrate the danger that the underlying array has changed.
 	assert.NotEqual(t, "1", idBeforePrune, "string from unsafe event should be corrupted after prune")
 }
 
 func FuzzParse(f *testing.F) {
 	f.Add([]byte("data: valid event\n\n"))
-	f.Add([]byte("id: 1\ndata: first\n\n:comment\ndata: second\n\n"))
+	f.Add([]byte("id: 1\ndata: first\n\n:comment\ndata: second\r\r"))
 	f.Add([]byte("data: incomplete event"))
 	f.Add([]byte("data: line1\ndata: line2\n\n"))
-	f.Add([]byte(":\n:\n\n"))
+	f.Add([]byte(":\r:\n\r\r"))
 	f.Add([]byte("\n\n"))
-	f.Add([]byte("data\n\n"))
+	f.Add([]byte("\r\r"))
+	f.Add([]byte("data\n\r"))
 	f.Add([]byte("data:\r\n\r\n"))
 	f.Add([]byte("field without colon\n\n"))
 	f.Add([]byte(""))
-	f.Add([]byte{'d', 'a', 't', 'a', ':', ' ', 0, 1, 2, 3, '\n', '\n'})                      // Non-UTF-8 data
-	f.Add([]byte("data: line1\ndata: line2\r\ndata: line3\n\n"))                             // Mixed line endings
-	f.Add([]byte("data: first\n\n" + strings.Repeat(":comment\n", 50) + "data: second\n\n")) // Lots of comments
-	f.Add([]byte("data: first\n\n" + strings.Repeat("\n", 50) + "data: second\n\n"))         // Lots of empty lines
-	f.Add([]byte("\n\n\r\n\r\n\n\n"))                                                        // Only terminators
-	f.Add([]byte("data: a\r\n\ndata: b\n\r\n"))                                              // Terminator variations
-	f.Add([]byte("data: " + strings.Repeat("A", 4096) + "\n\n"))                             // Very long data line
+	f.Add([]byte{'d', 'a', 't', 'a', ':', ' ', 0, 1, 2, 3, '\r', '\r'})
+	f.Add([]byte("data: line1\rdata: line2\r\ndata: line3\n\n")) // Mixed line endings
+	f.Add([]byte("data: first\n\n" + strings.Repeat(":comment\r", 50) + "data: second\r\r"))
+	f.Add([]byte("data: first\r\r" + strings.Repeat("\n", 50) + "data: second\n\n")) // Lots of empty lines
+	f.Add([]byte("\n\n\r\n\r\r\n\r"))                                                // Only terminators
+	f.Add([]byte("data: a\r\n\rdata: b\n\r\n"))                                      // Terminator variations
+	f.Add([]byte("data: " + strings.Repeat("A", 4096) + "\r\r"))                     // Very long data line
+	f.Add([]byte("data: a\nX\n\n"))
 
 	f.Fuzz(func(t *testing.T, data []byte) {
 		groundTruthParser := NewStreamEventParser()
