@@ -1,5 +1,35 @@
 services:
   # names in alphabetical order
+  aimockservices:
+    build:
+      context: ./ai_content_security
+      dockerfile_inline: |
+        FROM python:3.11-slim
+        WORKDIR /app
+        RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+        COPY requirements.txt .
+        RUN pip install --no-cache-dir -r requirements.txt
+        COPY app.py .
+        EXPOSE 10901 10902
+        CMD ["python", "app.py"]
+    ports:
+      - "10901:10901"
+      - "10902:10902"
+    environment:
+      - UNHEALTHY_WORDS=violence,hate,porn,abuse,toxic,harmful
+      - LLM_PORT=10901
+      - AUDIT_PORT=10902
+    restart: unless-stopped
+    volumes:
+      - ./ai_content_security/app.py:/app/app.py  # Mount local files into the container
+    healthcheck:
+      test: [ "CMD", "sh", "-c", "curl -f http://localhost:10901/health && curl -f http://localhost:10902/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      service:
   hydra:
     image: oryd/hydra:v2.2.0-rc.3
     ports:

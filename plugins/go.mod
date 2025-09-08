@@ -35,7 +35,9 @@ require (
 	github.com/open-policy-agent/opa v0.68.0
 	github.com/redis/go-redis/v9 v9.5.5
 	github.com/stretchr/testify v1.10.0
+	github.com/tidwall/gjson v1.18.0
 	golang.org/x/oauth2 v0.21.0
+	golang.org/x/sync v0.10.0
 	golang.org/x/time v0.6.0
 	google.golang.org/protobuf v1.35.1
 	mosn.io/htnn/api v0.5.0
@@ -82,6 +84,8 @@ require (
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/stoewer/go-strcase v1.2.0 // indirect
 	github.com/tchap/go-patricia/v2 v2.3.1 // indirect
+	github.com/tidwall/match v1.1.1 // indirect
+	github.com/tidwall/pretty v1.2.0 // indirect
 	github.com/tklauser/go-sysconf v0.3.6 // indirect
 	github.com/tklauser/numcpus v0.2.2 // indirect
 	github.com/xeipuuv/gojsonpointer v0.0.0-20190905194746-02993c407bfb // indirect
@@ -96,7 +100,6 @@ require (
 	golang.org/x/crypto v0.32.0 // indirect
 	golang.org/x/exp v0.0.0-20231006140011-7918f672742d // indirect
 	golang.org/x/net v0.33.0 // indirect
-	golang.org/x/sync v0.10.0 // indirect
 	golang.org/x/sys v0.29.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20240701130421-f6361c86f094 // indirect

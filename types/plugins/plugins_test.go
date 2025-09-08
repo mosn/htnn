@@ -63,6 +63,8 @@ func TestCheckPluginAttributes(t *testing.T) {
 		filename := filepath.Base(path)[:len(filepath.Base(path))-3]
 		if filename == "network_rbac" {
 			plugin = "networkRBAC"
+		} else if filename == "ai_content_security" {
+			plugin = "AIContentSecurity"
 		} else {
 			plugin = snakeToCamel(filename)
 		}
