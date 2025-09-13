@@ -1,5 +1,0 @@
-match:
-  path_separated_prefix: /v1/chat/completions
-route:
-  cluster: llm_backend
-  timeout: 10s

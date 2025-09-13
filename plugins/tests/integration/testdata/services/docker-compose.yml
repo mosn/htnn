@@ -2,7 +2,7 @@ services:
   # names in alphabetical order
   aimockservices:
     build:
-      context: ./ai_content_security
+      context: ./aimockservices
       dockerfile_inline: |
         FROM python:3.11-slim
         WORKDIR /app
@@ -21,7 +21,7 @@ services:
       - AUDIT_PORT=10902
     restart: unless-stopped
     volumes:
-      - ./ai_content_security/app.py:/app/app.py  # Mount local files into the container
+      - ./aimockservices/app.py:/app/app.py  # Mount local files into the container
     healthcheck:
       test: [ "CMD", "sh", "-c", "curl -f http://localhost:10901/health && curl -f http://localhost:10902/health" ]
       interval: 30s
