@@ -30,6 +30,7 @@ import (
 	_ "mosn.io/htnn/types/plugins/fault"
 	_ "mosn.io/htnn/types/plugins/hmacauth"
 	_ "mosn.io/htnn/types/plugins/keyauth"
+	_ "mosn.io/htnn/types/plugins/limitToken"
 	_ "mosn.io/htnn/types/plugins/limitcountredis"
 	_ "mosn.io/htnn/types/plugins/limitreq"
 	_ "mosn.io/htnn/types/plugins/listenerpatch"
