@@ -24,6 +24,7 @@ import (
 	_ "mosn.io/htnn/plugins/plugins/extauth"
 	_ "mosn.io/htnn/plugins/plugins/hmacauth"
 	_ "mosn.io/htnn/plugins/plugins/keyauth"
+	_ "mosn.io/htnn/plugins/plugins/limitToken"
 	_ "mosn.io/htnn/plugins/plugins/limitcountredis"
 	_ "mosn.io/htnn/plugins/plugins/limitreq"
 	_ "mosn.io/htnn/plugins/plugins/oidc"

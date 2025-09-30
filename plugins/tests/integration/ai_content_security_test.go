@@ -37,10 +37,10 @@ import (
 )
 
 var (
-	//go:embed testdata/ai_content_security_route.yml
+	//go:embed testdata/ai_mock_service_route.yml
 	aiContentSecurityRoute string
 
-	//go:embed testdata/ai_content_security_cluster.yml
+	//go:embed testdata/ai_mock_service_cluster.yml
 	aiContentSecurityCluster string
 )
 

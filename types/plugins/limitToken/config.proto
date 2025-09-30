@@ -1,0 +1,152 @@
+// Copyright The HTNN Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package types.plugins.limitToken;
+
+import "google/protobuf/duration.proto";
+import "validate/validate.proto";
+
+option go_package = "mosn.io/htnn/types/plugins/limitToken";
+
+// Config is the top-level configuration structure for the limitToken plugin.
+message Config {
+  // HTTP status code returned when the request is rate limited, e.g., 429
+  int32 rejected_code = 1;
+
+  // Message returned when the request is rejected
+  string rejected_msg = 2;
+
+  // Rate limiting rule definition
+  Rule rule = 3;
+
+  // Redis configuration for global/distributed rate limiting
+  RedisConfig redis = 4;
+
+  // Token statistics and prediction configuration for dynamically estimating Completion tokens
+  TokenStatsConfig token_stats = 5;
+
+  // Model adapter type, e.g., "openai"
+  string tokenizer = 6;
+
+  // Configuration for extracting content and metadata from requests/responses
+  oneof extractor_config {
+    option (validate.required) = true;
+    GjsonConfig gjson_config = 100;
+  }
+
+  // Whether to enable support for streaming responses
+  bool streaming_enabled = 7;
+}
+
+// Rule defines the basis and rate for rate limiting
+message Rule {
+  // The basis for rate limiting, only one can be set (oneof)
+  oneof limit_by {
+    // Limit by request header (global)
+    string limit_by_header = 1;
+
+    // Limit by URL parameter (global)
+    string limit_by_param = 2;
+
+    // Limit by Cookie field (global)
+    string limit_by_cookie = 3;
+
+    // Limit by consumer (e.g., API key, global)
+    string limit_by_consumer = 4;
+
+    // Limit by IP address (individual counting)
+    string limit_by_per_ip = 5;
+
+    // Limit by request header (count per header value)
+    string limit_by_per_header = 6;
+
+    // Limit by URL parameter (count per value)
+    string limit_by_per_param = 7;
+
+    // Limit by Cookie field (count per value)
+    string limit_by_per_cookie = 8;
+
+    // Limit by consumer (count per value)
+    string limit_by_per_consumer = 9;
+  }
+
+  // List of rate limit buckets
+  repeated Bucket buckets = 10;
+
+  // Keys to extract for finer-grained rate limiting (supports regex)
+  repeated string keys = 11;
+}
+
+message Bucket {
+  // Maximum tokens allowed in a burst (bucket capacity)
+  int32 burst = 1;
+
+  // Token generation rate (tokens per second)
+  int32 rate = 2;
+
+  // Round duration or period
+  int32 round = 3;
+}
+
+// RedisConfig contains information needed to connect the plugin to Redis
+message RedisConfig {
+  // Redis service address (e.g., localhost:6379)
+  string service_addr = 1 [(validate.rules).string.min_len = 1];
+
+  // Redis username (optional)
+  string username = 2;
+
+  // Redis password (optional)
+  string password = 3;
+
+  // Redis timeout in seconds
+  uint32 timeout = 4;
+}
+
+// TokenStatsConfig is used to track the relationship between Prompt/Completion tokens and predict Completion tokens
+message TokenStatsConfig {
+  // Sliding window size (maximum number of samples), default: 1000
+  int32 window_size = 1;
+
+  // Minimum number of samples required before prediction, default: 10
+  int32 min_samples = 2;
+
+  // Default maximum Prompt/Completion token ratio, default: 4.0
+  float max_ratio = 3;
+
+  // Maximum tokens allowed per request, default: 2000
+  int32 max_tokens_per_req = 4;
+
+  // Relaxation factor for exceeding predicted limits, e.g., 1.5 means 150% allowed, default: 1.5
+  float exceed_factor = 5;
+}
+
+// GjsonConfig defines configuration for extracting content using GJSON paths
+message GjsonConfig {
+  // GJSON path to extract content from the request body
+  string request_content_path = 1 [(validate.rules).string = {min_len: 1}];
+  string request_model_path = 2 [(validate.rules).string = {min_len: 1}];
+
+  // GJSON path to extract content from non-streaming response
+  string response_content_path = 3 [(validate.rules).string = {min_len: 1}];
+  string response_model_path = 4 [(validate.rules).string = {min_len: 1}];
+  string response_completion_tokens_path = 5;
+  string response_prompt_tokens_path = 6;
+
+  // GJSON path to extract content from each chunk of a streaming response
+  string stream_response_content_path = 7;
+  string stream_response_model_path = 8;
+}

@@ -1,0 +1,13 @@
+name: llm_backend
+type: strict_dns
+lb_policy: round_robin
+connect_timeout: 5s
+load_assignment:
+  cluster_name: llm_backend
+  endpoints:
+    - lb_endpoints:
+        - endpoint:
+            address:
+              socket_address:
+                address: aimockservices
+                port_value: 10901
