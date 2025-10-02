@@ -35,7 +35,7 @@ if [[ "$envoy_version" =~ ^1\.32\.[0-9]+$ ]]; then
     exit 0
 fi
 
-if [[ ! "$envoy_version" =~ ^1\.(29|31|32|33)\. ]]; then
+if [[ ! "$envoy_version" =~ ^1\.(29|31|32|33|35)\. ]]; then
     echo "Unsupported envoy version $envoy_version"
     exit 1
 fi

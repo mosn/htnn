@@ -2,7 +2,7 @@ name: test
 
 on:
   push:
-    branches: [ "main", "release/**" ]
+    branches: [ "main", "release/**", "envoy-**" ]
     paths-ignore:
     - "site/**"
     - "**/*.md"
@@ -53,13 +53,13 @@ jobs:
         FULL_ENVOY_VERSION=${ENVOY_API_VERSION}.0
         if [[ $ENVOY_API_VERSION == dev ]]; then
           # update this once there are more breaking changes
-          FULL_ENVOY_VERSION=1.33.1-0.20250411033243-86ca8d764bbd
+          FULL_ENVOY_VERSION=1.35.3
           # This is the envoy:contrib-dev image pull in 2025-04-11.
           # Use docker inspect --format='{{index .RepoDigests 0}}' envoyproxy/envoy:contrib-dev to get the sha256 ID.
           # We don't use the envoy:contrib-dev tag directly because it will be rewritten by the latest commit and
           # our test suite uses IfPresent policy to pull image.
           # We don't use the CI to catch the breaking change from the upstream so far.
-          export PROXY_IMAGE=envoyproxy/envoy@sha256:2e1202c7b0bc3694a8d4a4b642888602deab77ec1bf54cb8569184112b5c0ab3
+          export PROXY_IMAGE=envoyproxy/envoy@sha256:34c15269e0ee344fd90da7cf081124633692454ccf1be70b8078d9d2ba41a27c
           echo PROXY_IMAGE=$PROXY_IMAGE >> $GITHUB_ENV
         fi
         pushd ..

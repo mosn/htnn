@@ -17,6 +17,7 @@
 package filtermanager
 
 import (
+	"fmt"
 	"runtime/debug"
 
 	capi "github.com/envoyproxy/envoy/contrib/golang/common/go/api"
@@ -48,6 +49,10 @@ type decoderFilterCallbackHandlerWrapper struct {
 	commonFilterCallbackHandlerWrapper
 
 	capi.DecoderFilterCallbacks
+}
+
+func (cb *decoderFilterCallbackHandlerWrapper) SetUpstreamOverrideHost(host string, strict bool) error {
+	return fmt.Errorf("SetUpstreamOverrideHost is not implemented: %s", debug.Stack())
 }
 
 func NewDecoderFilterCallbackHandlerWrapper(h capi.DecoderFilterCallbacks) api.DecoderFilterCallbacks {
