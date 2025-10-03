@@ -112,7 +112,7 @@ services:
       service:
 
   redis-cluster-0:
-    image: docker.io/bitnami/redis-cluster:7.0
+    image: docker.io/bitnamilegacy/redis-cluster:7.0
     restart: unless-stopped
     volumes:
       - ./certs:/certs
@@ -130,7 +130,7 @@ services:
       service:
 
   redis-cluster-1:
-    image: docker.io/bitnami/redis-cluster:7.0
+    image: docker.io/bitnamilegacy/redis-cluster:7.0
     restart: unless-stopped
     volumes:
       - ./certs:/certs
@@ -148,7 +148,7 @@ services:
       service:
 
   redis-cluster-2:
-    image: docker.io/bitnami/redis-cluster:7.0
+    image: docker.io/bitnamilegacy/redis-cluster:7.0
     restart: unless-stopped
     volumes:
       - ./certs:/certs
