@@ -2,7 +2,7 @@ name: test
 
 on:
   push:
-    branches: [ "main", "release/**" ]
+    branches: [ "main", "release/**", "envoy-**" ]
     paths-ignore:
     - "site/**"
     - "**/*.md"
