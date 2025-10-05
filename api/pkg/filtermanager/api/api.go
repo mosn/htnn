@@ -270,13 +270,13 @@ type DecoderFilterCallbacks interface {
 	// Here are some cases:
 	// 1. Set a valid host(no matter in or not in the cluster), will route to the specified host directly and return 200.
 	// 2. Set a non-IP host, C++ side will return error and not route to cluster.
-	// 3. Set a unavaiable host, and the host is not in the cluster, will req the valid host in the cluster and rerurn 200.
-	// 4. Set a unavaiable host, and the host is in the cluster, but not available(can not connect to the host), will req the unavaiable hoat and rerurn 503.
-	// 5. Set a unavaiable host, and the host is in the cluster, but not available(can not connect to the host), and with retry. when first request with unavaiable host failed 503, the second request will retry with the valid host, then the second request will succeed and finally return 200.
-	// 6. Set a unavaiable host with strict mode, and the host is in the cluster, will req the unavaiable host and rerurn 503.
-	// 7. Set a unavaiable host with strict mode, and the host is not in the cluster, will req the unavaiable host and rerurn 503.
-	// 8. Set a unavaiable host with strict mode and retry. when first request with unavaiable host failed 503, the second request will retry with the valid host, then the second request will succeed and finally return 200.
-	// 9. Set a unavaiable host with strict mode and retry, and the host is not in the cluster, will req the unavaiable host and rerurn 503.
+	// 3. Set a unavailable host, and the host is not in the cluster, will req the valid host in the cluster and return 200.
+	// 4. Set a unavailable host, and the host is in the cluster, but not available(can not connect to the host), will req the unavailable hoat and return 503.
+	// 5. Set a unavailable host, and the host is in the cluster, but not available(can not connect to the host), and with retry. when first request with unavailable host failed 503, the second request will retry with the valid host, then the second request will succeed and finally return 200.
+	// 6. Set a unavailable host with strict mode, and the host is in the cluster, will req the unavailable host and return 503.
+	// 7. Set a unavailable host with strict mode, and the host is not in the cluster, will req the unavailable host and return 503.
+	// 8. Set a unavailable host with strict mode and retry. when first request with unavailable host failed 503, the second request will retry with the valid host, then the second request will succeed and finally return 200.
+	// 9. Set a unavailable host with strict mode and retry, and the host is not in the cluster, will req the unavailable host and return 503.
 	//
 	// The function takes two arguments:
 	//
