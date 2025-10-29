@@ -16,9 +16,10 @@ package limitToken
 
 import (
 	"context"
-	"mosn.io/htnn/api/plugins/tests/pkg/envoy"
 	"testing"
 	"time"
+
+	"mosn.io/htnn/api/plugins/tests/pkg/envoy"
 
 	"github.com/alicebob/miniredis/v2"
 	"github.com/stretchr/testify/assert"
@@ -176,7 +177,7 @@ func TestInitRedisLimiter_Ping(t *testing.T) {
 	assert.Equal(t, "v", val)
 }
 
-func TestInitExtrator_OK(t *testing.T) {
+func TestInitExtractor_OK(t *testing.T) {
 	conf := &config{
 		CustomConfig: limitToken.CustomConfig{
 			Config: limitToken.Config{
@@ -188,7 +189,7 @@ func TestInitExtrator_OK(t *testing.T) {
 			},
 		},
 	}
-	err := conf.initExtrator()
+	err := conf.initExtractor()
 	assert.NoError(t, err)
 	assert.NotNil(t, conf.extractor)
 	_, ok := conf.extractor.(extractor.Extractor)

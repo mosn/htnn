@@ -12,7 +12,7 @@ This plugin provides token-level rate limiting for LLM requests. It supports glo
 |--------|--------------|
 | Type   | Rate Limiting Plugin |
 | Order  | Unspecified        |
-| Status | Stable             |
+| Status | experimental             |
 
 ## Configuration
 

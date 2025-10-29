@@ -3,14 +3,16 @@ package limiter
 import (
 	"context"
 	"fmt"
+	"regexp"
+	"sort"
+	"sync"
+	"time"
+
 	"github.com/go-redis/redis_rate/v10"
 	"github.com/redis/go-redis/v9"
 	"mosn.io/htnn/api/pkg/filtermanager/api"
 	"mosn.io/htnn/plugins/plugins/limitToken/tokenizer"
 	"mosn.io/htnn/types/plugins/limitToken"
-	"regexp"
-	"sort"
-	"time"
 )
 
 const (
@@ -106,8 +108,14 @@ func (l *Limiter) DecodeData(headers api.RequestHeaderMap, rule *limitToken.Rule
 		return api.Continue
 	}
 
+	if len(keys) == 0 {
+		api.LogWarnf("no key extracted, skip rate limit")
+		return api.Continue
+	}
+
 	promptToken, err := l.tokenizer.GetToken(content, model)
 	if err != nil {
+		api.LogErrorf("get token failed: %v", err)
 		return nil
 	}
 
@@ -315,6 +323,7 @@ type TokenPair struct {
 
 // TokenStats tracks statistics for prompt and completion tokens to enforce limits and make predictions
 type TokenStats struct {
+	mu              sync.Mutex  // protects concurrent access to all fields below
 	WindowSize      int         // maximum number of samples in the sliding window
 	Data            []TokenPair // token usage data
 	index           int         // current write index in the circular buffer
@@ -327,6 +336,9 @@ type TokenStats struct {
 
 // Add records a new token usage pair in the sliding window
 func (s *TokenStats) Add(promptTokens, completionTokens int) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	// Ensure promptTokens is at least 1 to avoid panic
 	if promptTokens <= 0 {
 		promptTokens = 1

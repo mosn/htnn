@@ -16,10 +16,11 @@ package limitToken
 
 import (
 	"mime"
+	"net/http"
+
 	"mosn.io/htnn/api/pkg/filtermanager/api"
 	"mosn.io/htnn/plugins/plugins/limitToken/limiter"
 	"mosn.io/htnn/plugins/plugins/limitToken/sseparser"
-	"net/http"
 )
 
 // factory creates a filter instance by binding the configuration and callback.
@@ -55,9 +56,10 @@ type filter struct {
 	config         *config
 	streamResponse bool // Whether response is streaming
 
-	sseParser  *sseparser.StreamEventParser // SSE event parser
-	limiter    *limiter.Limiter
-	bodyBuffer []byte // Buffer for non-streaming response data
+	sseParser      *sseparser.StreamEventParser // SSE event parser
+	limiter        *limiter.Limiter
+	bodyBuffer     []byte // Buffer for non-streaming response data
+	BodyBufferSize int    // initial buffer size for bodyBuffer, default 2048 if 0
 
 	streamCloseFlag bool // Stream close flag, set to true when violation detected
 }
@@ -127,7 +129,11 @@ func (f *filter) decodeDataHandler(headers api.RequestHeaderMap, data api.Buffer
 	} else {
 		// Chunked data
 		if f.bodyBuffer == nil {
-			f.bodyBuffer = make([]byte, 0, 2048)
+			bufSize := f.BodyBufferSize
+			if bufSize <= 0 {
+				bufSize = 2048
+			}
+			f.bodyBuffer = make([]byte, 0, bufSize)
 		}
 		f.bodyBuffer = append(f.bodyBuffer, data.Bytes()...)
 		data.Reset()

@@ -17,14 +17,16 @@ package limitToken
 import (
 	"context"
 	"fmt"
+	"reflect"
+	"regexp"
+	"time"
+
 	"github.com/redis/go-redis/v9"
 	"mosn.io/htnn/api/pkg/filtermanager/api"
 	"mosn.io/htnn/api/pkg/plugins"
 	"mosn.io/htnn/plugins/plugins/limitToken/extractor"
 	"mosn.io/htnn/plugins/plugins/limitToken/limiter"
 	"mosn.io/htnn/types/plugins/limitToken"
-	"reflect"
-	"regexp"
 )
 
 const (
@@ -77,7 +79,7 @@ func (conf *config) Init(cb api.ConfigCallbackHandler) error {
 		return err
 	}
 
-	if err := conf.initExtrator(); err != nil {
+	if err := conf.initExtractor(); err != nil {
 		return err
 	}
 
@@ -87,9 +89,12 @@ func (conf *config) Init(cb api.ConfigCallbackHandler) error {
 // initRedisLimiter initializes the Redis client used for distributed rate limiting
 func (conf *config) initRedisLimiter() error {
 	rdb := redis.NewClient(&redis.Options{
-		Addr:     conf.Redis.ServiceAddr,
-		Username: conf.Redis.Username,
-		Password: conf.Redis.Password,
+		Addr:         conf.Redis.ServiceAddr,
+		Username:     conf.Redis.Username,
+		Password:     conf.Redis.Password,
+		DialTimeout:  5 * time.Second,
+		ReadTimeout:  3 * time.Second,
+		WriteTimeout: 3 * time.Second,
 	})
 
 	if err := rdb.Ping(context.Background()).Err(); err != nil {
@@ -101,8 +106,13 @@ func (conf *config) initRedisLimiter() error {
 	return nil
 }
 
-// initExtrator creates the Extractor (data extractor) based on ExtractorConfig
-func (conf *config) initExtrator() error {
+// initExtractor creates the Extractor (data extractor) based on ExtractorConfig
+func (conf *config) initExtractor() error {
+	if conf.ExtractorConfig == nil {
+		api.LogWarnf("ExtractorConfig is nil, skip extractor initialization")
+		return nil
+	}
+
 	extractorTypeName := reflect.TypeOf(conf.ExtractorConfig).String()
 	newExtractor, err := extractor.NewExtractor(extractorTypeName, conf.ExtractorConfig)
 	if err != nil {
