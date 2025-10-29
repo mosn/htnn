@@ -48,3 +48,53 @@ func TestOpenaiTokenizer_GetToken(t *testing.T) {
 		t.Errorf("expected tokens > 0, got %d", tokens)
 	}
 }
+
+func TestOpenaiTokenizer_GetToken_DefaultCases(t *testing.T) {
+	tokenizer := &OpenaiTokenizer{}
+
+	messages := []OpenaiPromptMessage{
+		{Role: "user", Content: "Hello!"},
+	}
+	data, _ := json.Marshal(messages)
+
+	tests := []struct {
+		name    string
+		model   string
+		wantErr bool
+	}{
+		{
+			name:    "unknown gpt-3.5-turbo version",
+			model:   "gpt-3.5-turbo-latest",
+			wantErr: false,
+		},
+		{
+			name:    "unknown gpt-4 version",
+			model:   "gpt-4-preview",
+			wantErr: false,
+		},
+		{
+			name:    "completely unknown model",
+			model:   "bert-large-uncased",
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			defer func() {
+				if r := recover(); r != nil {
+					t.Logf("Recovered from panic in model=%s: %v", tt.model, r)
+				}
+			}()
+
+			tokens, err := tokenizer.GetToken(string(data), tt.model)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("expected error=%v, got %v", tt.wantErr, err)
+			}
+			if !tt.wantErr && tokens <= 0 {
+				t.Errorf("expected tokens > 0, got %d", tokens)
+			}
+			t.Logf("%s => tokens=%d, err=%v", tt.model, tokens, err)
+		})
+	}
+}

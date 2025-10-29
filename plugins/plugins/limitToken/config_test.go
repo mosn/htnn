@@ -19,6 +19,7 @@ import (
 	"testing"
 	"time"
 
+	"mosn.io/htnn/api/pkg/plugins"
 	"mosn.io/htnn/api/plugins/tests/pkg/envoy"
 
 	"github.com/alicebob/miniredis/v2"
@@ -194,4 +195,9 @@ func TestInitExtractor_OK(t *testing.T) {
 	assert.NotNil(t, conf.extractor)
 	_, ok := conf.extractor.(extractor.Extractor)
 	assert.True(t, ok)
+}
+
+func TestPlugin_Type(t *testing.T) {
+	p := &plugin{}
+	assert.Equal(t, plugins.TypeTraffic, p.Type())
 }

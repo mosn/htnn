@@ -15,9 +15,11 @@
 package limitToken
 
 import (
-	"github.com/tidwall/gjson"
 	"net/http"
 	"testing"
+
+	"github.com/alicebob/miniredis/v2"
+	"github.com/tidwall/gjson"
 
 	"github.com/stretchr/testify/assert"
 	"mosn.io/htnn/api/pkg/filtermanager/api"
@@ -68,6 +70,13 @@ func TestIsStream(t *testing.T) {
 
 // TestFilter simulates actual requests and responses through the filter
 func TestFilter(t *testing.T) {
+	// run a miniredis server for testing
+	mr, err := miniredis.Run()
+	if err != nil {
+		t.Fatalf("failed to start miniredis: %v", err)
+	}
+	defer mr.Close()
+
 	conf := &config{
 		CustomConfig: limitToken.CustomConfig{
 			Config: limitToken.Config{
@@ -79,7 +88,7 @@ func TestFilter(t *testing.T) {
 						{Burst: 100, Rate: 10, Round: 1},
 					},
 				},
-				Redis: &limitToken.RedisConfig{ServiceAddr: "localhost:6379", Timeout: 5},
+				Redis: &limitToken.RedisConfig{ServiceAddr: mr.Addr(), Timeout: 5},
 				TokenStats: &limitToken.TokenStatsConfig{
 					WindowSize:      1000,
 					MinSamples:      10,
@@ -104,7 +113,7 @@ func TestFilter(t *testing.T) {
 	}
 
 	// Initialize config
-	err := conf.Init(envoy.NewFilterCallbackHandler())
+	err = conf.Init(envoy.NewFilterCallbackHandler())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -123,20 +132,20 @@ func TestFilter(t *testing.T) {
 		{
 			name: "Valid single request",
 			req: []byte(`{
-				"model": "gpt-4o-mini",
-				"messages": [{"role":"user","content":"Write a Go limiter middleware"}],
-				"max_tokens": 50,
-				"stream": false
-			}`),
+             "model": "gpt-4o-mini",
+             "messages": [{"role":"user","content":"Write a Go limiter middleware"}],
+             "max_tokens": 50,
+             "stream": false
+          }`),
 			resp: []byte(`{
-				"id": "chatcmpl-123",
-				"object": "chat.completion",
-				"model": "gpt-4o-mini",
-				"choices": [
-					{"index":0,"message":{"role":"assistant","content":"This is the answer"},"finish_reason":"stop"}
-				],
-				"usage":{"prompt_tokens":10,"completion_tokens":20,"total_tokens":30}
-			}`),
+             "id": "chatcmpl-123",
+             "object": "chat.completion",
+             "model": "gpt-4o-mini",
+             "choices": [
+                {"index":0,"message":{"role":"assistant","content":"This is the answer"},"finish_reason":"stop"}
+             ],
+             "usage":{"prompt_tokens":10,"completion_tokens":20,"total_tokens":30}
+          }`),
 			wantCode: http.StatusOK,
 			checkFn: func(t *testing.T, resp []byte) {
 				assert.Equal(t, "This is the answer", gjson.GetBytes(resp, "choices.0.message.content").String())
@@ -146,22 +155,22 @@ func TestFilter(t *testing.T) {
 		{
 			name: "Multiple choices request (n=2)",
 			req: []byte(`{
-				"model": "gpt-4o-mini",
-				"messages": [{"role":"user","content":"Give me two implementations"}],
-				"n": 2,
-				"max_tokens": 50,
-				"stream": false
-			}`),
+             "model": "gpt-4o-mini",
+             "messages": [{"role":"user","content":"Give me two implementations"}],
+             "n": 2,
+             "max_tokens": 50,
+             "stream": false
+          }`),
 			resp: []byte(`{
-				"id": "chatcmpl-456",
-				"object": "chat.completion",
-				"model": "gpt-4o-mini",
-				"choices": [
-					{"index":0,"message":{"role":"assistant","content":"Implementation 1"},"finish_reason":"stop"},
-					{"index":1,"message":{"role":"assistant","content":"Implementation 2"},"finish_reason":"stop"}
-				],
-				"usage":{"prompt_tokens":15,"completion_tokens":40,"total_tokens":55}
-			}`),
+             "id": "chatcmpl-456",
+             "object": "chat.completion",
+             "model": "gpt-4o-mini",
+             "choices": [
+                {"index":0,"message":{"role":"assistant","content":"Implementation 1"},"finish_reason":"stop"},
+                {"index":1,"message":{"role":"assistant","content":"Implementation 2"},"finish_reason":"stop"}
+             ],
+             "usage":{"prompt_tokens":15,"completion_tokens":40,"total_tokens":55}
+          }`),
 			wantCode: http.StatusOK,
 			checkFn: func(t *testing.T, resp []byte) {
 				assert.Equal(t, "Implementation 1", gjson.GetBytes(resp, "choices.0.message.content").String())
@@ -199,4 +208,70 @@ func TestFilter(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestFilter_StreamResponse(t *testing.T) {
+	mr, err := miniredis.Run()
+	if err != nil {
+		t.Fatalf("failed to start miniredis: %v", err)
+	}
+	defer mr.Close()
+
+	conf := &config{
+		CustomConfig: limitToken.CustomConfig{
+			Config: limitToken.Config{
+				RejectedCode:     409,
+				RejectedMsg:      "Request limited",
+				StreamingEnabled: true,
+				Rule: &limitToken.Rule{
+					LimitBy: &limitToken.Rule_LimitByPerIp{},
+					Buckets: []*limitToken.Bucket{{Burst: 100, Rate: 10, Round: 1}},
+				},
+				Redis: &limitToken.RedisConfig{ServiceAddr: mr.Addr(), Timeout: 5},
+				TokenStats: &limitToken.TokenStatsConfig{
+					WindowSize:      1000,
+					MinSamples:      10,
+					MaxRatio:        4.0,
+					MaxTokensPerReq: 2000,
+					ExceedFactor:    1.5,
+				},
+				Tokenizer: "openai",
+				ExtractorConfig: &limitToken.Config_GjsonConfig{
+					GjsonConfig: &limitToken.GjsonConfig{
+						RequestContentPath:  "messages",
+						RequestModelPath:    "model",
+						ResponseContentPath: "choices.0.message.content",
+					},
+				},
+			},
+		},
+	}
+
+	err = conf.Init(envoy.NewFilterCallbackHandler())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cb := envoy.NewFilterCallbackHandler()
+	f := factory(conf, cb)
+
+	headers := envoy.NewResponseHeaderMap(http.Header{})
+	headers.Set("Content-Type", "text/event-stream")
+	res := f.EncodeHeaders(headers, false)
+	assert.Equal(t, api.Continue, res)
+
+	sseData1 := []byte("data: {\"choices\":[{\"message\":{\"content\":\"chunk1\"}}]}\n\n")
+	sseData2 := []byte("data: {\"choices\":[{\"message\":{\"content\":\"chunk2\"}}]}\n\n")
+
+	buf1 := envoy.NewBufferInstance(sseData1)
+	buf2 := envoy.NewBufferInstance(sseData2)
+
+	res = f.EncodeData(buf1, false)
+	assert.Equal(t, api.Continue, res)
+
+	res = f.EncodeData(buf2, false)
+	assert.Equal(t, api.Continue, res)
+
+	res = f.EncodeData(envoy.NewBufferInstance(nil), true)
+	assert.Equal(t, api.Continue, res)
 }
