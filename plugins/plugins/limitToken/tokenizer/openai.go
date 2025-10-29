@@ -16,9 +16,11 @@ package tokenizer
 
 import (
 	"encoding/json"
-	"github.com/pkoukk/tiktoken-go"
-	"log"
+	"errors"
 	"strings"
+
+	"github.com/pkoukk/tiktoken-go"
+	"mosn.io/htnn/api/pkg/filtermanager/api"
 )
 
 type OpenaiTokenizer struct{}
@@ -33,13 +35,13 @@ func (t *OpenaiTokenizer) GetToken(messagesStr, model string) (int, error) {
 	var messages []OpenaiPromptMessage
 	err := json.Unmarshal([]byte(messagesStr), &messages)
 	if err != nil {
-		log.Printf("unmarshal failed: %v", err)
+		api.LogErrorf("unmarshal failed: %v", err)
 		return 0, err
 	}
 
 	tkm, err := tiktoken.EncodingForModel(model)
 	if err != nil {
-		log.Printf("encoding for model %s: %v", model, err)
+		api.LogInfof("encoding for model %s: %v", model, err)
 		return 0, err
 	}
 
@@ -55,15 +57,18 @@ func (t *OpenaiTokenizer) GetToken(messagesStr, model string) (int, error) {
 	case "gpt-3.5-turbo-0301":
 		tokensPerMessage = 4
 	default:
+		// TODO(HTNN): Make model handling configurable in future versions.
+		// Currently, only specific GPT-3.5 and GPT-4 model IDs are supported.
+		// Consider adding a configuration file or registry to define token rules for new models.
 		if strings.Contains(model, "gpt-3.5-turbo") {
-			log.Println("warning: gpt-3.5-turbo may update over time. Returning num tokens assuming gpt-3.5-turbo-0613.")
+			api.LogWarnf("warning: gpt-3.5-turbo may update over time. Returning num tokens assuming gpt-3.5-turbo-0613.")
 			return t.GetToken(messagesStr, "gpt-3.5-turbo-0613")
 		} else if strings.Contains(model, "gpt-4") {
-			log.Println("warning: gpt-4 may update over time. Returning num tokens assuming gpt-4-0613.")
+			api.LogWarnf("warning: gpt-4 may update over time. Returning num tokens assuming gpt-4-0613.")
 			return t.GetToken(messagesStr, "gpt-4-0613")
 		} else {
-			err := log.Output(2, "num_tokens_from_messages() is not implemented for model "+model+". See https://github.com/openai/openai-python/blob/main/chatml.md for information.")
-			return 0, err
+			api.LogWarnf("num_tokens_from_messages() is not implemented for model " + model + ". See https://github.com/openai/openai-python/blob/main/chatml.md for information.")
+			return 0, errors.New("num_tokens_from_messages() is not implemented for model " + model)
 		}
 	}
 

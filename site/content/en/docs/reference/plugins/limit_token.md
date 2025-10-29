@@ -22,7 +22,7 @@ This plugin provides token-level rate limiting for LLM requests. It supports glo
 | rejected_msg     | string                            | No       |            | Message returned when a request is rejected.                                |
 | rule             | [Rule](#rule)                     | Yes      |            | Rate limiting rule configuration.                                           |
 | redis            | [RedisConfig](#redisconfig)       | No       |            | Redis configuration for distributed rate limiting.                          |
-| token_stats      | [TokenStatsConfig](#tokenstatsconfig) | No   |            | Configuration for tracking Prompt/Completion tokens and predicting completion tokens. |
+| token_stats      | [TokenStatsConfig](#tokenstatsconfig) | No   |            | Configuration for tracking Prompt/Completion tokens and predicting completion tokens.If the token limit calculation returns an error, the request is denied by default. A configurable policy may be added in future versions to allow or deny such requests. |
 | tokenizer        | string                            | No       |            | Adapter type for the LLM, e.g., "openai".                                   |
 | extractor_config | [GjsonConfig](#gjsonconfig)       | Yes      |            | Configuration for extracting content and metadata from requests/responses.  |
 | streaming_enabled| boolean                           | No       |            | Enable rate limiting for streaming responses.                               |
@@ -75,6 +75,20 @@ This plugin provides token-level rate limiting for LLM requests. It supports glo
 | stream_response_content_path   | string | No       | GJSON path to extract content from each chunk of a streaming response. |
 | stream_response_model_path     | string | No       | GJSON path to extract model info from each chunk of a streaming response. |
 
+## Model Support and Future Plans
+
+> **Current Limitations:**
+>
+> - Only partial support for OpenAI models (`gpt-3.5-turbo-*`, `gpt-4-*`).
+> - If other models are used, token calculation will return an error and a warning log will be recorded.
+> - When a token calculation error occurs, the request will be **rejected by default**.
+>
+> **Future Plans:**
+>
+> - Support additional LLM model tokenizers.
+> - Provide model configuration files or registries that allow users to define custom token calculation rules.
+> - Add configurable error-handling policies, allowing users to choose whether to *reject* or *allow* requests when calculation fails.
+> - Gradually improve the tokenizer adaptation layer to automatically detect model types and load the appropriate rules.
 
 ## Example Usage
 

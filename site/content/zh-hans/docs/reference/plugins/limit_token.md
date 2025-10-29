@@ -8,11 +8,11 @@ title: Token 限流插件配置说明
 
 ## 属性
 
-|        |              |
-|--------|--------------|
-| 类型   | 限流插件     |
-| 顺序   | 未指定       |
-| 状态   | 稳定         |
+|        |      |
+|--------|------|
+| 类型   | 限流插件 |
+| 顺序   | 未指定  |
+| 状态   | 实验   |
 
 ## 配置
 
@@ -22,7 +22,7 @@ title: Token 限流插件配置说明
 | rejected_msg     | string                            | 否   |          | 请求被拒绝时返回的消息。                                             |
 | rule             | [Rule](#rule)                     | 是   |          | 限流规则配置。                                                        |
 | redis            | [RedisConfig](#redisconfig)       | 否   |          | Redis 配置，用于分布式限流。                                         |
-| token_stats      | [TokenStatsConfig](#tokenstatsconfig) | 否   |          | 用于统计 Prompt/Completion token 并预测 Completion token。          |
+| token_stats      | [TokenStatsConfig](#tokenstatsconfig) | 否   |          | 用于统计 Prompt/Completion token 并预测 Completion token。如果在计算 Token 限额时发生错误，请求会默认被拒绝。未来版本将支持配置策略，允许用户自定义在出错时是否拒绝请求。 |
 | tokenizer        | string                            | 否   |          | 模型适配器类型，例如 "openai"。                                       |
 | extractor_config | [GjsonConfig](#gjsonconfig)       | 是   |          | 用于提取请求/响应内容的路径配置。                                     |
 | streaming_enabled| boolean                           | 否   |          | 是否支持流式响应的限流计算。                                         |
@@ -74,6 +74,21 @@ title: Token 限流插件配置说明
 | response_prompt_tokens_path     | string | 否  | 从响应体提取 Prompt Token 的路径                  |
 | stream_response_content_path    | string | 否  | 流式响应每个 chunk 提取内容的 GJSON 路径          |
 | stream_response_model_path      | string | 否  | 流式响应每个 chunk 提取模型信息的 GJSON 路径      |
+
+## 模型支持与未来计划
+
+> **当前限制：**
+>
+> - 仅支持部分 OpenAI 模型（`gpt-3.5-turbo-*`、`gpt-4-*`）。
+> - 若请求使用其他模型，token 计算会返回错误，并记录警告日志。
+> - Token 计算错误时，请求将被默认拒绝。
+>
+> **未来计划：**
+>
+> - 支持更多 LLM 模型的 tokenizer。
+> - 提供模型配置文件或注册表，让用户自定义 token 计算规则。
+> - 增加出错策略配置项，允许用户选择在计算失败时“拒绝”或“放行”请求。
+> - 逐步完善 tokenizer 适配层，使其支持自动识别模型类型并加载对应规则。
 
 ## 使用示例
 
