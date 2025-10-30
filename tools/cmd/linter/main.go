@@ -270,7 +270,7 @@ func filenameToPluginName(name string) string {
 		return "AIContentSecurity"
 	}
 	if name == "limit_token" {
-		return "limitToken"
+		return "limittoken"
 	}
 	return snakeToCamel(name)
 }

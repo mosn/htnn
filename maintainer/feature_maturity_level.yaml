@@ -88,7 +88,7 @@ plugins:
   - name: AIContentSecurity
     status: experimental
     experimental_since: 0.5.0
-  - name: limitToken
+  - name: limittoken
     status: experimental
     experimental_since: 0.5.0
   - name: demo

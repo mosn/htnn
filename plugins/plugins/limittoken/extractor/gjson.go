@@ -20,23 +20,23 @@ import (
 
 	"github.com/tidwall/gjson"
 
-	"mosn.io/htnn/types/plugins/limitToken"
+	"mosn.io/htnn/types/plugins/limittoken"
 )
 
 func init() {
-	var cfg *limitToken.Config_GjsonConfig
+	var cfg *limittoken.Config_GjsonConfig
 	typeName := reflect.TypeOf(cfg).String()
 	Register(typeName, New)
 }
 
 type GjsonExtractor struct {
 	data       []byte
-	config     *limitToken.GjsonConfig
+	config     *limittoken.GjsonConfig
 	parsedData gjson.Result
 }
 
 func New(config interface{}) (Extractor, error) {
-	wrapper, ok := config.(*limitToken.Config_GjsonConfig)
+	wrapper, ok := config.(*limittoken.Config_GjsonConfig)
 	if !ok {
 		return nil, errors.New("invalid config type for GjsonExtractor")
 	}

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package limitToken
+package limittoken
 
 import (
 	"net/http"
@@ -24,7 +24,7 @@ import (
 
 	"mosn.io/htnn/api/pkg/filtermanager/api"
 	"mosn.io/htnn/api/plugins/tests/pkg/envoy"
-	"mosn.io/htnn/types/plugins/limitToken"
+	"mosn.io/htnn/types/plugins/limittoken"
 )
 
 // TestFactory ensures the filter factory correctly creates a filter instance
@@ -78,18 +78,18 @@ func TestFilter(t *testing.T) {
 	defer mr.Close()
 
 	conf := &config{
-		CustomConfig: limitToken.CustomConfig{
-			Config: limitToken.Config{
+		CustomConfig: limittoken.CustomConfig{
+			Config: limittoken.Config{
 				RejectedCode: 409,               // HTTP status when request is limited
 				RejectedMsg:  "Request limited", // Message when request is limited
-				Rule: &limitToken.Rule{ // Limit rule by IP
-					LimitBy: &limitToken.Rule_LimitByPerIp{},
-					Buckets: []*limitToken.Bucket{
+				Rule: &limittoken.Rule{ // Limit rule by IP
+					LimitBy: &limittoken.Rule_LimitByPerIp{},
+					Buckets: []*limittoken.Bucket{
 						{Burst: 100, Rate: 10, Round: 1},
 					},
 				},
-				Redis: &limitToken.RedisConfig{ServiceAddr: mr.Addr(), Timeout: 5},
-				TokenStats: &limitToken.TokenStatsConfig{
+				Redis: &limittoken.RedisConfig{ServiceAddr: mr.Addr(), Timeout: 5},
+				TokenStats: &limittoken.TokenStatsConfig{
 					WindowSize:      1000,
 					MinSamples:      10,
 					MaxRatio:        4.0,
@@ -97,8 +97,8 @@ func TestFilter(t *testing.T) {
 					ExceedFactor:    1.5,
 				},
 				Tokenizer: "openai",
-				ExtractorConfig: &limitToken.Config_GjsonConfig{
-					GjsonConfig: &limitToken.GjsonConfig{
+				ExtractorConfig: &limittoken.Config_GjsonConfig{
+					GjsonConfig: &limittoken.GjsonConfig{
 						RequestContentPath:           "messages",
 						RequestModelPath:             "model",
 						ResponseContentPath:          "choices.0.message.content",
@@ -218,17 +218,17 @@ func TestFilter_StreamResponse(t *testing.T) {
 	defer mr.Close()
 
 	conf := &config{
-		CustomConfig: limitToken.CustomConfig{
-			Config: limitToken.Config{
+		CustomConfig: limittoken.CustomConfig{
+			Config: limittoken.Config{
 				RejectedCode:     409,
 				RejectedMsg:      "Request limited",
 				StreamingEnabled: true,
-				Rule: &limitToken.Rule{
-					LimitBy: &limitToken.Rule_LimitByPerIp{},
-					Buckets: []*limitToken.Bucket{{Burst: 100, Rate: 10, Round: 1}},
+				Rule: &limittoken.Rule{
+					LimitBy: &limittoken.Rule_LimitByPerIp{},
+					Buckets: []*limittoken.Bucket{{Burst: 100, Rate: 10, Round: 1}},
 				},
-				Redis: &limitToken.RedisConfig{ServiceAddr: mr.Addr(), Timeout: 5},
-				TokenStats: &limitToken.TokenStatsConfig{
+				Redis: &limittoken.RedisConfig{ServiceAddr: mr.Addr(), Timeout: 5},
+				TokenStats: &limittoken.TokenStatsConfig{
 					WindowSize:      1000,
 					MinSamples:      10,
 					MaxRatio:        4.0,
@@ -236,8 +236,8 @@ func TestFilter_StreamResponse(t *testing.T) {
 					ExceedFactor:    1.5,
 				},
 				Tokenizer: "openai",
-				ExtractorConfig: &limitToken.Config_GjsonConfig{
-					GjsonConfig: &limitToken.GjsonConfig{
+				ExtractorConfig: &limittoken.Config_GjsonConfig{
+					GjsonConfig: &limittoken.GjsonConfig{
 						RequestContentPath:  "messages",
 						RequestModelPath:    "model",
 						ResponseContentPath: "choices.0.message.content",

@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package limitToken
+package limittoken
 
 import (
 	"context"
@@ -24,8 +24,8 @@ import (
 
 	"mosn.io/htnn/api/pkg/plugins"
 	"mosn.io/htnn/api/plugins/tests/pkg/envoy"
-	"mosn.io/htnn/plugins/plugins/limitToken/extractor"
-	"mosn.io/htnn/types/plugins/limitToken"
+	"mosn.io/htnn/plugins/plugins/limittoken/extractor"
+	"mosn.io/htnn/types/plugins/limittoken"
 )
 
 func TestConfig_Init(t *testing.T) {
@@ -42,12 +42,12 @@ func TestConfig_Init(t *testing.T) {
 		{
 			name: "Default TokenStats applied",
 			conf: &config{
-				CustomConfig: limitToken.CustomConfig{
-					Config: limitToken.Config{
-						Redis: &limitToken.RedisConfig{ServiceAddr: s.Addr()},
-						Rule:  &limitToken.Rule{},
-						ExtractorConfig: &limitToken.Config_GjsonConfig{
-							GjsonConfig: &limitToken.GjsonConfig{RequestContentPath: "messages"},
+				CustomConfig: limittoken.CustomConfig{
+					Config: limittoken.Config{
+						Redis: &limittoken.RedisConfig{ServiceAddr: s.Addr()},
+						Rule:  &limittoken.Rule{},
+						ExtractorConfig: &limittoken.Config_GjsonConfig{
+							GjsonConfig: &limittoken.GjsonConfig{RequestContentPath: "messages"},
 						},
 					},
 				},
@@ -62,19 +62,19 @@ func TestConfig_Init(t *testing.T) {
 		{
 			name: "Custom TokenStats applied",
 			conf: &config{
-				CustomConfig: limitToken.CustomConfig{
-					Config: limitToken.Config{
-						Redis: &limitToken.RedisConfig{ServiceAddr: s.Addr()},
-						Rule:  &limitToken.Rule{},
-						TokenStats: &limitToken.TokenStatsConfig{
+				CustomConfig: limittoken.CustomConfig{
+					Config: limittoken.Config{
+						Redis: &limittoken.RedisConfig{ServiceAddr: s.Addr()},
+						Rule:  &limittoken.Rule{},
+						TokenStats: &limittoken.TokenStatsConfig{
 							WindowSize:      10,
 							MinSamples:      5,
 							MaxRatio:        2.5,
 							MaxTokensPerReq: 500,
 							ExceedFactor:    3.0,
 						},
-						ExtractorConfig: &limitToken.Config_GjsonConfig{
-							GjsonConfig: &limitToken.GjsonConfig{RequestContentPath: "messages"},
+						ExtractorConfig: &limittoken.Config_GjsonConfig{
+							GjsonConfig: &limittoken.GjsonConfig{RequestContentPath: "messages"},
 						},
 					},
 				},
@@ -90,12 +90,12 @@ func TestConfig_Init(t *testing.T) {
 		{
 			name: "Valid regexps",
 			conf: &config{
-				CustomConfig: limitToken.CustomConfig{
-					Config: limitToken.Config{
-						Redis: &limitToken.RedisConfig{ServiceAddr: s.Addr()},
-						Rule:  &limitToken.Rule{Keys: []string{`^user-\d+$`}},
-						ExtractorConfig: &limitToken.Config_GjsonConfig{
-							GjsonConfig: &limitToken.GjsonConfig{RequestContentPath: "messages"},
+				CustomConfig: limittoken.CustomConfig{
+					Config: limittoken.Config{
+						Redis: &limittoken.RedisConfig{ServiceAddr: s.Addr()},
+						Rule:  &limittoken.Rule{Keys: []string{`^user-\d+$`}},
+						ExtractorConfig: &limittoken.Config_GjsonConfig{
+							GjsonConfig: &limittoken.GjsonConfig{RequestContentPath: "messages"},
 						},
 					},
 				},
@@ -109,12 +109,12 @@ func TestConfig_Init(t *testing.T) {
 		{
 			name: "Invalid regexps should fail",
 			conf: &config{
-				CustomConfig: limitToken.CustomConfig{
-					Config: limitToken.Config{
-						Redis: &limitToken.RedisConfig{ServiceAddr: s.Addr()},
-						Rule:  &limitToken.Rule{Keys: []string{"[invalid"}},
-						ExtractorConfig: &limitToken.Config_GjsonConfig{
-							GjsonConfig: &limitToken.GjsonConfig{RequestContentPath: "messages"},
+				CustomConfig: limittoken.CustomConfig{
+					Config: limittoken.Config{
+						Redis: &limittoken.RedisConfig{ServiceAddr: s.Addr()},
+						Rule:  &limittoken.Rule{Keys: []string{"[invalid"}},
+						ExtractorConfig: &limittoken.Config_GjsonConfig{
+							GjsonConfig: &limittoken.GjsonConfig{RequestContentPath: "messages"},
 						},
 					},
 				},
@@ -124,12 +124,12 @@ func TestConfig_Init(t *testing.T) {
 		{
 			name: "Invalid redis addr should fail",
 			conf: &config{
-				CustomConfig: limitToken.CustomConfig{
-					Config: limitToken.Config{
-						Redis: &limitToken.RedisConfig{ServiceAddr: "127.0.0.1:6390"}, // 错误端口
-						Rule:  &limitToken.Rule{},
-						ExtractorConfig: &limitToken.Config_GjsonConfig{
-							GjsonConfig: &limitToken.GjsonConfig{RequestContentPath: "messages"},
+				CustomConfig: limittoken.CustomConfig{
+					Config: limittoken.Config{
+						Redis: &limittoken.RedisConfig{ServiceAddr: "127.0.0.1:6390"}, // 错误端口
+						Rule:  &limittoken.Rule{},
+						ExtractorConfig: &limittoken.Config_GjsonConfig{
+							GjsonConfig: &limittoken.GjsonConfig{RequestContentPath: "messages"},
 						},
 					},
 				},
@@ -159,10 +159,10 @@ func TestInitRedisLimiter_Ping(t *testing.T) {
 	defer s.Close()
 
 	conf := &config{
-		CustomConfig: limitToken.CustomConfig{
-			Config: limitToken.Config{
-				Redis: &limitToken.RedisConfig{ServiceAddr: s.Addr()},
-				Rule:  &limitToken.Rule{},
+		CustomConfig: limittoken.CustomConfig{
+			Config: limittoken.Config{
+				Redis: &limittoken.RedisConfig{ServiceAddr: s.Addr()},
+				Rule:  &limittoken.Rule{},
 			},
 		},
 	}
@@ -180,12 +180,12 @@ func TestInitRedisLimiter_Ping(t *testing.T) {
 
 func TestInitExtractor_OK(t *testing.T) {
 	conf := &config{
-		CustomConfig: limitToken.CustomConfig{
-			Config: limitToken.Config{
-				Redis: &limitToken.RedisConfig{},
-				Rule:  &limitToken.Rule{},
-				ExtractorConfig: &limitToken.Config_GjsonConfig{
-					GjsonConfig: &limitToken.GjsonConfig{RequestContentPath: "messages"},
+		CustomConfig: limittoken.CustomConfig{
+			Config: limittoken.Config{
+				Redis: &limittoken.RedisConfig{},
+				Rule:  &limittoken.Rule{},
+				ExtractorConfig: &limittoken.Config_GjsonConfig{
+					GjsonConfig: &limittoken.GjsonConfig{RequestContentPath: "messages"},
 				},
 			},
 		},

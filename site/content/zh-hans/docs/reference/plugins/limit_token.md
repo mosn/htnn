@@ -97,7 +97,7 @@ title: Token 限流插件配置说明
 
 ```yaml
 filters:
-  LimitToken:
+  limittoken:
     config:
       rejected_code: 409
       rejected_msg: "请求被限流"

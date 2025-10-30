@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package limitToken
+package limittoken
 
 import (
 	"context"
@@ -25,9 +25,9 @@ import (
 
 	"mosn.io/htnn/api/pkg/filtermanager/api"
 	"mosn.io/htnn/api/pkg/plugins"
-	"mosn.io/htnn/plugins/plugins/limitToken/extractor"
-	"mosn.io/htnn/plugins/plugins/limitToken/limiter"
-	"mosn.io/htnn/types/plugins/limitToken"
+	"mosn.io/htnn/plugins/plugins/limittoken/extractor"
+	"mosn.io/htnn/plugins/plugins/limittoken/limiter"
+	"mosn.io/htnn/types/plugins/limittoken"
 )
 
 const (
@@ -39,12 +39,12 @@ const (
 )
 
 func init() {
-	plugins.RegisterPlugin(limitToken.Name, &plugin{})
+	plugins.RegisterPlugin(limittoken.Name, &plugin{})
 }
 
-// plugin implements the limitToken.Plugin interface
+// plugin implements the limittoken.Plugin interface
 type plugin struct {
-	limitToken.Plugin
+	limittoken.Plugin
 }
 
 // Factory returns the filter factory
@@ -57,9 +57,9 @@ func (p *plugin) Config() api.PluginConfig {
 	return &config{}
 }
 
-// config holds the runtime configuration of the limitToken plugin
+// config holds the runtime configuration of the limittoken plugin
 type config struct {
-	limitToken.CustomConfig
+	limittoken.CustomConfig
 	rdb        *redis.Client
 	tokenStats *limiter.TokenStats
 	extractor  extractor.Extractor
@@ -142,7 +142,7 @@ func (conf *config) initRegexps() error {
 func (conf *config) initTokenStats() error {
 	cfg := conf.TokenStats
 	if cfg == nil {
-		cfg = &limitToken.TokenStatsConfig{}
+		cfg = &limittoken.TokenStatsConfig{}
 	}
 
 	windowSize := int(cfg.WindowSize)

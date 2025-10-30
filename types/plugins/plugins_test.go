@@ -66,7 +66,7 @@ func TestCheckPluginAttributes(t *testing.T) {
 		} else if filename == "ai_content_security" {
 			plugin = "AIContentSecurity"
 		} else if filename == "limit_token" {
-			plugin = "limitToken"
+			plugin = "limittoken"
 		} else {
 			plugin = snakeToCamel(filename)
 		}

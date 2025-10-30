@@ -53,7 +53,7 @@ func TestLimitToken(t *testing.T) {
 
 	helper.WaitServiceUp(t, ":10901", "aimockservices")
 
-	config := controlplane.NewSinglePluginConfig("limitToken", map[string]interface{}{
+	config := controlplane.NewSinglePluginConfig("limittoken", map[string]interface{}{
 		"rejected_code": 429,
 		"rejected_msg":  "请求被限流",
 		"rule": map[string]interface{}{

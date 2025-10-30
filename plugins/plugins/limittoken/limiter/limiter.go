@@ -12,8 +12,8 @@ import (
 	"github.com/redis/go-redis/v9"
 
 	"mosn.io/htnn/api/pkg/filtermanager/api"
-	"mosn.io/htnn/plugins/plugins/limitToken/tokenizer"
-	"mosn.io/htnn/types/plugins/limitToken"
+	"mosn.io/htnn/plugins/plugins/limittoken/tokenizer"
+	"mosn.io/htnn/types/plugins/limittoken"
 )
 
 const (
@@ -25,7 +25,7 @@ type Limiter struct {
 	rejectedMsg            string
 	rejectedCode           int
 	keys                   []string
-	buckets                []*limitToken.Bucket
+	buckets                []*limittoken.Bucket
 	promptToken            int
 	predictCompletionToken int
 	totalCompletionToken   int
@@ -100,7 +100,7 @@ func NewLimiter(opts ...Option) *Limiter {
 }
 
 // DecodeData processes a request and applies rate limiting
-func (l *Limiter) DecodeData(headers api.RequestHeaderMap, rule *limitToken.Rule, content, model string) api.ResultAction {
+func (l *Limiter) DecodeData(headers api.RequestHeaderMap, rule *limittoken.Rule, content, model string) api.ResultAction {
 	l.buckets = rule.Buckets
 	// Get the keys for rate limiting
 	keys, err := l.getKey(headers, rule)
@@ -240,40 +240,40 @@ func (l *Limiter) tokenRate(keys []string, promptTokenLength int) bool {
 }
 
 // getKey extracts the key(s) from headers according to the rule
-func (l *Limiter) getKey(headers api.RequestHeaderMap, rule *limitToken.Rule) ([]string, error) {
+func (l *Limiter) getKey(headers api.RequestHeaderMap, rule *limittoken.Rule) ([]string, error) {
 	var raw string
 	var ok, isMatchMode bool
 
 	switch v := rule.LimitBy.(type) {
-	case *limitToken.Rule_LimitByHeader:
+	case *limittoken.Rule_LimitByHeader:
 		raw, ok = headers.Get(v.LimitByHeader)
 
-	case *limitToken.Rule_LimitByParam:
+	case *limittoken.Rule_LimitByParam:
 		raw, ok = l.getQueryValue(headers, v.LimitByParam)
 
-	case *limitToken.Rule_LimitByCookie:
+	case *limittoken.Rule_LimitByCookie:
 		raw, ok = l.getCookieValue(headers, v.LimitByCookie)
 
-	case *limitToken.Rule_LimitByConsumer:
+	case *limittoken.Rule_LimitByConsumer:
 		raw, ok = headers.Get(ConsumerHeader)
 
-	case *limitToken.Rule_LimitByPerIp:
+	case *limittoken.Rule_LimitByPerIp:
 		raw, ok = headers.Host(), true
 		isMatchMode = true
 
-	case *limitToken.Rule_LimitByPerHeader:
+	case *limittoken.Rule_LimitByPerHeader:
 		raw, ok = headers.Get(v.LimitByPerHeader)
 		isMatchMode = true
 
-	case *limitToken.Rule_LimitByPerParam:
+	case *limittoken.Rule_LimitByPerParam:
 		raw, ok = l.getQueryValue(headers, v.LimitByPerParam)
 		isMatchMode = true
 
-	case *limitToken.Rule_LimitByPerCookie:
+	case *limittoken.Rule_LimitByPerCookie:
 		raw, ok = l.getCookieValue(headers, v.LimitByPerCookie)
 		isMatchMode = true
 
-	case *limitToken.Rule_LimitByPerConsumer:
+	case *limittoken.Rule_LimitByPerConsumer:
 		raw, ok = headers.Get(ConsumerHeader)
 		isMatchMode = true
 

@@ -20,13 +20,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"mosn.io/htnn/plugins/plugins/limitToken/extractor"
-	"mosn.io/htnn/types/plugins/limitToken"
+	"mosn.io/htnn/plugins/plugins/limittoken/extractor"
+	"mosn.io/htnn/types/plugins/limittoken"
 )
 
-func buildGjsonConfig() *limitToken.Config_GjsonConfig {
-	return &limitToken.Config_GjsonConfig{
-		GjsonConfig: &limitToken.GjsonConfig{
+func buildGjsonConfig() *limittoken.Config_GjsonConfig {
+	return &limittoken.Config_GjsonConfig{
+		GjsonConfig: &limittoken.GjsonConfig{
 			RequestContentPath:           "request.content",
 			RequestModelPath:             "request.model",
 			ResponseContentPath:          "response.content",
@@ -112,8 +112,8 @@ func TestGjsonExtractor_InvalidJSON(t *testing.T) {
 }
 
 func TestGjsonExtractor_MissingConfig(t *testing.T) {
-	ex, err := extractor.New(&limitToken.Config_GjsonConfig{
-		GjsonConfig: &limitToken.GjsonConfig{},
+	ex, err := extractor.New(&limittoken.Config_GjsonConfig{
+		GjsonConfig: &limittoken.GjsonConfig{},
 	})
 	require.NoError(t, err)
 

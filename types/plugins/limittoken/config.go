@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package limitToken
+package limittoken
 
 import (
 	"mosn.io/htnn/api/pkg/filtermanager/api"
@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	Name = "limitToken"
+	Name = "limittoken"
 )
 
 func init() {

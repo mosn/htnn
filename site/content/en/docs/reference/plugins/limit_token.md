@@ -96,7 +96,7 @@ To apply token-based rate limiting to OpenAI Chat Completions API requests:
 
 ```yaml
 filters:
-  LimitToken:
+  limittoken:
     config:
       rejected_code: 429
       rejected_msg: "Request rate-limited"

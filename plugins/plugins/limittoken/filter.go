@@ -12,15 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package limitToken
+package limittoken
 
 import (
 	"mime"
 	"net/http"
 
 	"mosn.io/htnn/api/pkg/filtermanager/api"
-	"mosn.io/htnn/plugins/plugins/limitToken/limiter"
-	"mosn.io/htnn/plugins/plugins/limitToken/sseparser"
+	"mosn.io/htnn/plugins/plugins/limittoken/limiter"
+	"mosn.io/htnn/plugins/plugins/limittoken/sseparser"
 )
 
 // factory creates a filter instance by binding the configuration and callback.

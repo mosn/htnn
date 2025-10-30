@@ -14,14 +14,14 @@
 
 syntax = "proto3";
 
-package types.plugins.limitToken;
+package types.plugins.limittoken;
 
 import "google/protobuf/duration.proto";
 import "validate/validate.proto";
 
-option go_package = "mosn.io/htnn/types/plugins/limitToken";
+option go_package = "mosn.io/htnn/types/plugins/limittoken";
 
-// Config is the top-level configuration structure for the limitToken plugin.
+// Config is the top-level configuration structure for the limittoken plugin.
 message Config {
   // HTTP status code returned when the request is rate limited, e.g., 429
   int32 rejected_code = 1;

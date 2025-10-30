@@ -29,8 +29,8 @@ import (
 
 	"mosn.io/htnn/api/pkg/filtermanager/api"
 	"mosn.io/htnn/api/plugins/tests/pkg/envoy"
-	"mosn.io/htnn/plugins/plugins/limitToken/tokenizer"
-	"mosn.io/htnn/types/plugins/limitToken"
+	"mosn.io/htnn/plugins/plugins/limittoken/tokenizer"
+	"mosn.io/htnn/types/plugins/limittoken"
 )
 
 func TestOptions(t *testing.T) {
@@ -71,13 +71,13 @@ func TestDecodeDataAndEncodeData(t *testing.T) {
 		WindowSize: 5, MinSamples: 1,
 		MaxRatio: 2, MaxTokensPerReq: 100, ExceedFactor: 2,
 	}
-	l.buckets = []*limitToken.Bucket{{Burst: 10, Rate: 100, Round: 1}}
+	l.buckets = []*limittoken.Bucket{{Burst: 10, Rate: 100, Round: 1}}
 
 	httpHdr := http.Header{"x-mse-consumer": []string{"user1"}}
 	hdr := envoy.NewRequestHeaderMap(httpHdr)
 	hdr.Set(":authority", "127.0.0.1")
 
-	rule := &limitToken.Rule{LimitBy: &limitToken.Rule_LimitByConsumer{}}
+	rule := &limittoken.Rule{LimitBy: &limittoken.Rule_LimitByConsumer{}}
 
 	// Simulate a real OpenAI request JSON
 	messages := []tokenizer.OpenaiPromptMessage{
@@ -109,7 +109,7 @@ func TestEncodeStreamData(t *testing.T) {
 	l := NewLimiter(WithRedisLimiter(rdb))
 	l.tokenizer = &tokenizer.OpenaiTokenizer{}
 	l.tokenStat = &TokenStats{WindowSize: 3, MinSamples: 1, MaxRatio: 2, MaxTokensPerReq: 50, ExceedFactor: 2}
-	l.buckets = []*limitToken.Bucket{{Burst: 100, Rate: 10, Round: 1}}
+	l.buckets = []*limittoken.Bucket{{Burst: 100, Rate: 10, Round: 1}}
 	l.predictCompletionToken = 5
 
 	messages := []tokenizer.OpenaiPromptMessage{
@@ -152,7 +152,7 @@ func TestGetKey(t *testing.T) {
 	tests := []struct {
 		name      string
 		headerMap func() api.RequestHeaderMap
-		rule      *limitToken.Rule
+		rule      *limittoken.Rule
 		want      string
 	}{
 		{
@@ -163,7 +163,7 @@ func TestGetKey(t *testing.T) {
 				hdr.Set("X-header", "abc")
 				return hdr
 			},
-			rule: &limitToken.Rule{LimitBy: &limitToken.Rule_LimitByHeader{LimitByHeader: "X-header"}},
+			rule: &limittoken.Rule{LimitBy: &limittoken.Rule_LimitByHeader{LimitByHeader: "X-header"}},
 			want: "abc",
 		},
 		{
@@ -174,7 +174,7 @@ func TestGetKey(t *testing.T) {
 				hdr.Set(":path", "/?p=1")
 				return hdr
 			},
-			rule: &limitToken.Rule{LimitBy: &limitToken.Rule_LimitByParam{LimitByParam: "p"}},
+			rule: &limittoken.Rule{LimitBy: &limittoken.Rule_LimitByParam{LimitByParam: "p"}},
 			want: "1",
 		},
 		{
@@ -185,7 +185,7 @@ func TestGetKey(t *testing.T) {
 				hdr := envoy.NewRequestHeaderMap(h)
 				return hdr
 			},
-			rule: &limitToken.Rule{LimitBy: &limitToken.Rule_LimitByCookie{LimitByCookie: "c"}},
+			rule: &limittoken.Rule{LimitBy: &limittoken.Rule_LimitByCookie{LimitByCookie: "c"}},
 			want: "c=val",
 		},
 		{
@@ -196,7 +196,7 @@ func TestGetKey(t *testing.T) {
 				hdr.Set(":authority", "ip123")
 				return hdr
 			},
-			rule: &limitToken.Rule{LimitBy: &limitToken.Rule_LimitByPerIp{}},
+			rule: &limittoken.Rule{LimitBy: &limittoken.Rule_LimitByPerIp{}},
 			want: "123",
 		},
 	}
@@ -220,7 +220,7 @@ func TestDecodeData_ErrorBranches(t *testing.T) {
 	rdb := redis.NewClient(&redis.Options{Addr: s.Addr()})
 	t.Cleanup(func() { _ = rdb.Close() })
 
-	rule := &limitToken.Rule{LimitBy: &limitToken.Rule_LimitByConsumer{}}
+	rule := &limittoken.Rule{LimitBy: &limittoken.Rule_LimitByConsumer{}}
 
 	l := NewLimiter(WithRedisLimiter(rdb))
 	hdr := envoy.NewRequestHeaderMap(http.Header{ConsumerHeader: []string{"user1"}})
@@ -267,7 +267,7 @@ func TestDecodeData_ErrorBranches(t *testing.T) {
 		MaxRatio:        0.1,
 		MaxTokensPerReq: 1,
 	}
-	l.buckets = []*limitToken.Bucket{{Burst: 10, Rate: 10, Round: 1}}
+	l.buckets = []*limittoken.Bucket{{Burst: 10, Rate: 10, Round: 1}}
 	l.keys = []string{"key1"}
 
 	res = l.EncodeData("hello", "gpt-3.5-turbo", 0, 1)
@@ -298,25 +298,25 @@ func TestGetKey_PerModeBranches(t *testing.T) {
 
 	tests := []struct {
 		name   string
-		rule   *limitToken.Rule
+		rule   *limittoken.Rule
 		header http.Header
 		want   string
 	}{
 		{
 			name:   "PerHeader",
-			rule:   &limitToken.Rule{LimitBy: &limitToken.Rule_LimitByPerHeader{LimitByPerHeader: "X-Test"}},
+			rule:   &limittoken.Rule{LimitBy: &limittoken.Rule_LimitByPerHeader{LimitByPerHeader: "X-Test"}},
 			header: http.Header{"X-Test": []string{"abc123"}},
 			want:   "123",
 		},
 		{
 			name:   "PerParam",
-			rule:   &limitToken.Rule{LimitBy: &limitToken.Rule_LimitByPerParam{LimitByPerParam: "p"}},
+			rule:   &limittoken.Rule{LimitBy: &limittoken.Rule_LimitByPerParam{LimitByPerParam: "p"}},
 			header: http.Header{":path": []string{"/?p=456"}},
 			want:   "456",
 		},
 		{
 			name:   "PerCookie",
-			rule:   &limitToken.Rule{LimitBy: &limitToken.Rule_LimitByPerCookie{LimitByPerCookie: "c"}},
+			rule:   &limittoken.Rule{LimitBy: &limittoken.Rule_LimitByPerCookie{LimitByPerCookie: "c"}},
 			header: http.Header{"Cookie": []string{"c=789"}},
 			want:   "789",
 		},
