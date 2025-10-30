@@ -17,15 +17,13 @@ package limiter
 import (
 	"context"
 	"encoding/json"
+	"net/http"
+	"regexp"
+	"testing"
 	"time"
 
 	"github.com/alicebob/miniredis/v2"
 	"github.com/go-redis/redis_rate/v10"
-
-	"net/http"
-	"regexp"
-	"testing"
-
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 

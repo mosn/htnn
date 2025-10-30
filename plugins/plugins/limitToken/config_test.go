@@ -19,11 +19,11 @@ import (
 	"testing"
 	"time"
 
-	"mosn.io/htnn/api/pkg/plugins"
-	"mosn.io/htnn/api/plugins/tests/pkg/envoy"
-
 	"github.com/alicebob/miniredis/v2"
 	"github.com/stretchr/testify/assert"
+
+	"mosn.io/htnn/api/pkg/plugins"
+	"mosn.io/htnn/api/plugins/tests/pkg/envoy"
 	"mosn.io/htnn/plugins/plugins/limitToken/extractor"
 	"mosn.io/htnn/types/plugins/limitToken"
 )

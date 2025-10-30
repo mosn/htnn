@@ -20,6 +20,7 @@ import (
 	"strings"
 
 	"github.com/pkoukk/tiktoken-go"
+
 	"mosn.io/htnn/api/pkg/filtermanager/api"
 )
 

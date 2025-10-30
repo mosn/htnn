@@ -19,9 +19,9 @@ import (
 	"testing"
 
 	"github.com/alicebob/miniredis/v2"
+	"github.com/stretchr/testify/assert"
 	"github.com/tidwall/gjson"
 
-	"github.com/stretchr/testify/assert"
 	"mosn.io/htnn/api/pkg/filtermanager/api"
 	"mosn.io/htnn/api/plugins/tests/pkg/envoy"
 	"mosn.io/htnn/types/plugins/limitToken"
