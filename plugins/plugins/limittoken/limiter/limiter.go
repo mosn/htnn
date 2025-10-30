@@ -109,15 +109,14 @@ func (l *Limiter) DecodeData(headers api.RequestHeaderMap, rule *limittoken.Rule
 		return api.Continue
 	}
 
-	if len(keys) == 0 {
-		api.LogWarnf("no key extracted, skip rate limit")
+	if len(content) == 0 {
 		return api.Continue
 	}
 
 	promptToken, err := l.tokenizer.GetToken(content, model)
 	if err != nil {
 		api.LogErrorf("get token failed: %v", err)
-		return nil
+		return api.Continue
 	}
 
 	// Check if prompt tokens exceed default limit
@@ -149,10 +148,10 @@ func (l *Limiter) DecodeData(headers api.RequestHeaderMap, rule *limittoken.Rule
 // EncodeData applies rate limiting for response data
 func (l *Limiter) EncodeData(content, model string, completionToken, promptToken int) api.ResultAction {
 	var err error
-	if completionToken == 0 {
+	if completionToken == 0 && len(content) > 0 {
 		completionToken, err = l.tokenizer.GetToken(content, model)
 		if err != nil {
-			return nil
+			return api.Continue
 		}
 	}
 
@@ -174,9 +173,13 @@ func (l *Limiter) EncodeData(content, model string, completionToken, promptToken
 
 // EncodeStreamData applies rate limiting for streaming responses
 func (l *Limiter) EncodeStreamData(content, model string, isEnd bool) api.ResultAction {
+	if len(content) == 0 {
+		return api.Continue
+	}
+
 	completionToken, err := l.tokenizer.GetToken(content, model)
 	if err != nil {
-		return nil
+		return api.Continue
 	}
 
 	l.totalCompletionToken += completionToken
@@ -285,7 +288,7 @@ func (l *Limiter) getKey(headers api.RequestHeaderMap, rule *limittoken.Rule) ([
 		return nil, nil
 	}
 
-	if isMatchMode {
+	if isMatchMode && len(l.regexps) > 0 {
 		result := make([]string, 0, len(l.regexps))
 		for _, reg := range l.regexps {
 			if matches := reg.FindStringSubmatch(raw); len(matches) > 1 {

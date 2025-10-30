@@ -24,7 +24,6 @@ import (
 
 	"mosn.io/htnn/api/pkg/plugins"
 	"mosn.io/htnn/api/plugins/tests/pkg/envoy"
-	"mosn.io/htnn/plugins/plugins/limittoken/extractor"
 	"mosn.io/htnn/types/plugins/limittoken"
 )
 
@@ -193,8 +192,6 @@ func TestInitExtractor_OK(t *testing.T) {
 	err := conf.initExtractor()
 	assert.NoError(t, err)
 	assert.NotNil(t, conf.extractor)
-	_, ok := conf.extractor.(extractor.Extractor)
-	assert.True(t, ok)
 }
 
 func TestPlugin_Type(t *testing.T) {

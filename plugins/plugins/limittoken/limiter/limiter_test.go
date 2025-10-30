@@ -20,10 +20,8 @@ import (
 	"net/http"
 	"regexp"
 	"testing"
-	"time"
 
 	"github.com/alicebob/miniredis/v2"
-	"github.com/go-redis/redis_rate/v10"
 	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 
@@ -222,7 +220,7 @@ func TestDecodeData_ErrorBranches(t *testing.T) {
 
 	rule := &limittoken.Rule{LimitBy: &limittoken.Rule_LimitByConsumer{}}
 
-	l := NewLimiter(WithRedisLimiter(rdb))
+	l := NewLimiter(WithRedisLimiter(rdb), WithTokenizer("openai"))
 	hdr := envoy.NewRequestHeaderMap(http.Header{ConsumerHeader: []string{"user1"}})
 	res := l.DecodeData(hdr, rule, "some content", "gpt-3.5-turbo")
 
@@ -283,12 +281,6 @@ func TestDecodeData_ErrorBranches(t *testing.T) {
 			t.Errorf("EncodeData returned unexpected type: %T", v)
 		}
 	}
-}
-
-type mockRedisLimiter struct{}
-
-func (m *mockRedisLimiter) AllowN(ctx context.Context, key string, limit redis_rate.Limit, n int) (*redis_rate.Result, error) {
-	return &redis_rate.Result{Allowed: 0, RetryAfter: time.Second}, nil
 }
 
 func TestGetKey_PerModeBranches(t *testing.T) {

@@ -68,32 +68,13 @@ func (g *GjsonExtractor) RequestContentAndModel() (string, string) {
 	}
 
 	content := g.parsedData.Get(g.config.RequestContentPath)
-	if !content.Exists() {
-		return "", ""
-	}
 	model := g.parsedData.Get(g.config.RequestModelPath)
-	if !model.Exists() {
-		return "", ""
-	}
-
 	return content.String(), model.String()
 }
 
 func (g *GjsonExtractor) ResponseContentAndModel() (string, string, int64, int64) {
-	if !g.parsedData.Exists() || g.config == nil || g.config.ResponseContentPath == "" || g.config.ResponseModelPath == "" {
-		return "", "", 0, 0
-	}
-
 	content := g.parsedData.Get(g.config.ResponseContentPath)
-	if !content.Exists() {
-		return "", "", 0, 0
-	}
-
 	model := g.parsedData.Get(g.config.ResponseModelPath)
-	if !model.Exists() {
-		return "", "", 0, 0
-	}
-
 	completionTokens := g.parsedData.Get(g.config.ResponseCompletionTokensPath)
 	promptTokens := g.parsedData.Get(g.config.ResponsePromptTokensPath)
 	return content.String(), model.String(), completionTokens.Int(), promptTokens.Int()

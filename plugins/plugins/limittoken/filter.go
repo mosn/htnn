@@ -15,11 +15,12 @@
 package limittoken
 
 import (
+	"fmt"
 	"mime"
 	"net/http"
+	"strings"
 
 	"mosn.io/htnn/api/pkg/filtermanager/api"
-	"mosn.io/htnn/plugins/plugins/limittoken/limiter"
 	"mosn.io/htnn/plugins/plugins/limittoken/sseparser"
 )
 
@@ -27,18 +28,11 @@ import (
 // During initialization, it also creates a buffer to store content chunks for moderation.
 func factory(c interface{}, callbacks api.FilterCallbackHandler) api.Filter {
 	config := c.(*config)
+	api.LogInfo(fmt.Sprintf("xxxxxxxxxxxxxxxxxxxxxxxxxx"))
 	return &filter{
-		callbacks: callbacks,
-		config:    config,
-		sseParser: sseparser.NewStreamEventParser(),
-		limiter: limiter.NewLimiter(
-			limiter.WithRedisLimiter(config.rdb),
-			limiter.WithRegexps(config.regexps),
-			limiter.WithRejectedMsg(config.RejectedMsg),
-			limiter.WithRejectedCode(int(config.RejectedCode)),
-			limiter.WithTokenizer(config.Tokenizer),
-			limiter.WithTokenStats(config.tokenStats),
-		),
+		callbacks:  callbacks,
+		config:     config,
+		sseParser:  sseparser.NewStreamEventParser(),
 		bodyBuffer: []byte{},
 	}
 }
@@ -57,9 +51,8 @@ type filter struct {
 	streamResponse bool // Whether response is streaming
 
 	sseParser      *sseparser.StreamEventParser // SSE event parser
-	limiter        *limiter.Limiter
-	bodyBuffer     []byte // Buffer for non-streaming response data
-	BodyBufferSize int    // initial buffer size for bodyBuffer, default 2048 if 0
+	bodyBuffer     []byte                       // Buffer for non-streaming response data
+	BodyBufferSize int                          // initial buffer size for bodyBuffer, default 2048 if 0
 
 	streamCloseFlag bool // Stream close flag, set to true when violation detected
 }
@@ -75,6 +68,13 @@ func isStream(headers api.HeaderMap) bool {
 		return false
 	}
 	return mediaType == "text/event-stream"
+}
+
+func (f *filter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {
+	if endStream {
+		return api.Continue
+	}
+	return api.WaitAllData
 }
 
 // DecodeRequest intercepts request data for moderation
@@ -99,18 +99,14 @@ func (f *filter) EncodeHeaders(headers api.ResponseHeaderMap, endStream bool) ap
 // EncodeData handles response body data, supporting both streaming and non-streaming.
 func (f *filter) EncodeData(data api.BufferInstance, endStream bool) api.ResultAction {
 	if f.streamResponse {
+		//return api.Continue
 		return f.streamDataHandler(data, endStream)
 	} else {
 		return f.encodeDataHandler(data, endStream)
 	}
 }
 
-// EncodeResponse handles final processing for streaming responses.
-func (f *filter) EncodeResponse(headers api.ResponseHeaderMap, data api.BufferInstance, trailers api.ResponseTrailerMap) api.ResultAction {
-	return f.streamDataHandler(data, true)
-}
-
-// decodeDataHandler handles non-streaming request/response body.
+// decodeDataHandler handles non-streaming request body.
 // Core logic:
 //   - Handle chunked or full body
 //   - Extract ID and content
@@ -118,7 +114,6 @@ func (f *filter) EncodeResponse(headers api.ResponseHeaderMap, data api.BufferIn
 //   - Block if violation, else pass original data
 func (f *filter) decodeDataHandler(headers api.RequestHeaderMap, data api.BufferInstance, endStream bool) api.ResultAction {
 	extractor := f.config.extractor
-
 	if len(f.bodyBuffer) == 0 && endStream {
 		// Single full body
 		err := extractor.SetData(data.Bytes())
@@ -136,7 +131,6 @@ func (f *filter) decodeDataHandler(headers api.RequestHeaderMap, data api.Buffer
 			f.bodyBuffer = make([]byte, 0, bufSize)
 		}
 		f.bodyBuffer = append(f.bodyBuffer, data.Bytes()...)
-		data.Reset()
 
 		if !endStream {
 			return api.Continue
@@ -151,7 +145,7 @@ func (f *filter) decodeDataHandler(headers api.RequestHeaderMap, data api.Buffer
 	}
 
 	content, model := extractor.RequestContentAndModel()
-	return f.limiter.DecodeData(headers, f.config.Rule, content, model)
+	return f.config.limiter.DecodeData(headers, f.config.Rule, content, model)
 }
 
 // encodeDataHandler processes non-streaming response data
@@ -162,7 +156,7 @@ func (f *filter) encodeDataHandler(data api.BufferInstance, endStream bool) api.
 		// Single full body
 		err := extractor.SetData(data.Bytes())
 		if err != nil {
-			api.LogErrorf("failed to set data to extractor with original data:%s err: %v", data.String(), err)
+			api.LogInfof("failed to set data to extractor with original data:%s err: %v", data.String(), err)
 			return &api.LocalResponse{Code: http.StatusBadGateway}
 		}
 	} else {
@@ -171,7 +165,6 @@ func (f *filter) encodeDataHandler(data api.BufferInstance, endStream bool) api.
 			f.bodyBuffer = make([]byte, 0, 2048)
 		}
 		f.bodyBuffer = append(f.bodyBuffer, data.Bytes()...)
-		data.Reset()
 
 		if !endStream {
 			return api.Continue
@@ -180,28 +173,27 @@ func (f *filter) encodeDataHandler(data api.BufferInstance, endStream bool) api.
 		// Full data collected, set to extractor
 		err := extractor.SetData(f.bodyBuffer)
 		if err != nil {
-			api.LogErrorf("failed to set bodyBuffer to extractor with original data:%s err: %v", f.bodyBuffer, err)
+			api.LogInfof("failed to set bodyBuffer to extractor with original data:%s err: %v", f.bodyBuffer, err)
 			return &api.LocalResponse{Code: http.StatusBadGateway}
 		}
 	}
 
 	content, model, completeToken, promptToken := extractor.ResponseContentAndModel()
-	return f.limiter.EncodeData(content, model, int(completeToken), int(promptToken))
+	return f.config.limiter.EncodeData(content, model, int(completeToken), int(promptToken))
 }
 
 // streamDataHandler processes streaming response data (SSE)
 func (f *filter) streamDataHandler(data api.BufferInstance, endStream bool) api.ResultAction {
 	extractor := f.config.extractor
 
+	// 如果流已经关闭，则直接返回错误响应
 	if f.streamCloseFlag {
 		return &api.LocalResponse{Code: http.StatusBadGateway}
 	}
 
-	// Feed new data to SSE parser
+	// 将新数据追加到 SSE parser
 	f.sseParser.Append(data.Bytes())
-	data.Reset()
 
-	// Parse events one by one
 	newAddedEventFlag := true
 	for {
 		event, err := f.sseParser.TryParse()
@@ -209,22 +201,26 @@ func (f *filter) streamDataHandler(data api.BufferInstance, endStream bool) api.
 			api.LogErrorf("SSE parsing error: %v", err)
 			return &api.LocalResponse{Code: http.StatusBadGateway}
 		}
-		if event == nil {
+
+		if event == nil || strings.Contains(event.Data, "[DONE]") {
 			break
 		}
-		content, model := extractor.StreamResponseContentAndModel()
-		f.limiter.EncodeStreamData(content, model, false)
+
+		if err := extractor.SetData([]byte(event.Data)); err != nil {
+			api.LogErrorf("Failed to set extractor data: %v", err)
+			return &api.LocalResponse{Code: http.StatusBadGateway}
+		}
+
 		newAddedEventFlag = false
 	}
 
-	// If no new event and stream not finished, continue waiting
 	if !endStream && newAddedEventFlag {
 		return api.Continue
 	}
 
-	// Flush buffer when stream ends
 	if endStream {
-		f.limiter.EncodeStreamData("", "", true)
+		content, model := extractor.StreamResponseContentAndModel()
+		return f.config.limiter.EncodeStreamData(content, model, endStream)
 	}
 
 	return api.Continue

@@ -32,12 +32,16 @@ type OpenaiPromptMessage struct {
 }
 
 func (t *OpenaiTokenizer) GetToken(messagesStr, model string) (int, error) {
-
 	var messages []OpenaiPromptMessage
 	err := json.Unmarshal([]byte(messagesStr), &messages)
 	if err != nil {
 		api.LogErrorf("unmarshal failed: %v", err)
 		return 0, err
+	}
+
+	if strings.TrimSpace(model) == "" {
+		model = "gpt-3.5-turbo-0613"
+		api.LogWarn("model is empty, fallback to default: gpt-3.5-turbo-0613")
 	}
 
 	tkm, err := tiktoken.EncodingForModel(model)

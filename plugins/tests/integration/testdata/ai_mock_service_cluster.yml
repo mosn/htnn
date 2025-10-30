@@ -10,4 +10,4 @@ load_assignment:
             address:
               socket_address:
                 address: aimockservices
-                port_value: 10901
+                port_value: 10903

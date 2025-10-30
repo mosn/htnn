@@ -16,6 +16,7 @@ package limittoken
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 	"regexp"
@@ -64,10 +65,12 @@ type config struct {
 	tokenStats *limiter.TokenStats
 	extractor  extractor.Extractor
 	regexps    []*regexp.Regexp
+	limiter    *limiter.Limiter
 }
 
 // Init initializes the plugin configuration
 func (conf *config) Init(cb api.ConfigCallbackHandler) error {
+
 	if err := conf.initTokenStats(); err != nil {
 		return err
 	}
@@ -81,6 +84,9 @@ func (conf *config) Init(cb api.ConfigCallbackHandler) error {
 	}
 
 	if err := conf.initExtractor(); err != nil {
+		return err
+	}
+	if err := conf.initLimiter(); err != nil {
 		return err
 	}
 
@@ -110,8 +116,8 @@ func (conf *config) initRedisLimiter() error {
 // initExtractor creates the Extractor (data extractor) based on ExtractorConfig
 func (conf *config) initExtractor() error {
 	if conf.ExtractorConfig == nil {
-		api.LogWarnf("ExtractorConfig is nil, skip extractor initialization")
-		return nil
+		api.LogErrorf("ExtractorConfig is nil, skip extractor initialization")
+		return errors.New("extractorConfig is nil")
 	}
 
 	extractorTypeName := reflect.TypeOf(conf.ExtractorConfig).String()
@@ -179,5 +185,17 @@ func (conf *config) initTokenStats() error {
 		ExceedFactor:    exceedFactor,
 	}
 
+	return nil
+}
+
+func (conf *config) initLimiter() error {
+	conf.limiter = limiter.NewLimiter(
+		limiter.WithRedisLimiter(conf.rdb),
+		limiter.WithRegexps(conf.regexps),
+		limiter.WithRejectedMsg(conf.RejectedMsg),
+		limiter.WithRejectedCode(int(conf.RejectedCode)),
+		limiter.WithTokenizer(conf.Tokenizer),
+		limiter.WithTokenStats(conf.tokenStats),
+	)
 	return nil
 }

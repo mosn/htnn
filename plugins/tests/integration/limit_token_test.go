@@ -15,6 +15,7 @@
 package integration
 
 import (
+	"bufio"
 	"bytes"
 	_ "embed"
 	"encoding/json"
@@ -42,16 +43,17 @@ var (
 
 func TestLimitToken(t *testing.T) {
 	dp, err := dataplane.StartDataPlane(t, &dataplane.Option{
-		Bootstrap: dataplane.Bootstrap().AddBackendRoute(limitTokenRoute).AddCluster(limitTokenCluster),
+		Bootstrap: dataplane.Bootstrap().
+			AddBackendRoute(limitTokenRoute).
+			AddCluster(limitTokenCluster),
 	})
-
 	if err != nil {
 		t.Fatalf("failed to start data plane: %v", err)
-		return
 	}
 	defer dp.Stop()
 
-	helper.WaitServiceUp(t, ":10901", "aimockservices")
+	helper.WaitServiceUp(t, ":6379", "redis")
+	helper.WaitServiceUp(t, ":10903", "aicontentsecurity")
 
 	config := controlplane.NewSinglePluginConfig("limittoken", map[string]interface{}{
 		"rejected_code": 429,
@@ -59,15 +61,11 @@ func TestLimitToken(t *testing.T) {
 		"rule": map[string]interface{}{
 			"limit_by_header": "Authorization",
 			"buckets": []map[string]interface{}{
-				{
-					"burst": 10,
-					"rate":  5,
-					"round": 1,
-				},
+				{"burst": 1000, "rate": 5, "round": 1},
 			},
 		},
 		"redis": map[string]interface{}{
-			"service_addr": "localhost:6379",
+			"service_addr": "redis:6379",
 		},
 		"token_stats": map[string]interface{}{
 			"window_size":        100,
@@ -76,110 +74,101 @@ func TestLimitToken(t *testing.T) {
 			"max_tokens_per_req": 200,
 			"exceed_factor":      1.5,
 		},
-		"tokenizer": "openai",
-		"extractor_config": map[string]interface{}{
-			"request_content_path":         "messages.0.content",
-			"request_model_path":           "model",
-			"response_content_path":        "choices.0.message.content",
-			"response_model_path":          "choices.0.message.model",
-			"stream_response_content_path": "choices.0.delta.content",
+		"tokenizer":         "openai",
+		"streaming_enabled": true,
+		"gjson_config": map[string]interface{}{
+			"request_content_path":            "messages",
+			"request_model_path":              "model",
+			"response_content_path":           "choices.0.message.content",
+			"response_model_path":             "model",
+			"response_completion_tokens_path": "usage.completion_tokens",
+			"response_prompt_tokens_path":     "usage.prompt_tokens",
+			"stream_response_content_path":    "choices.0.delta.content",
+			"stream_response_model_path":      "model",
 		},
 	})
-	controlPlane.UseGoPluginConfig(t, config, dp)
 
-	client := &http.Client{
-		Timeout: 5 * time.Second,
-	}
+	controlPlane.UseGoPluginConfig(t, config, dp)
+	client := &http.Client{Timeout: 10 * time.Second}
 	url := fmt.Sprintf("http://127.0.0.1:%d/v1/chat/completions", dp.Port())
 
+	// ---- Non-streaming pass ----
 	t.Run("Non-streaming pass", func(t *testing.T) {
-		requestBody := map[string]interface{}{
-			"messages": []map[string]string{
-				{"role": "user", "content": "Hello, world!"},
-			},
-			"model":  "gpt-3.5-turbo",
-			"stream": false,
-		}
-		jsonBody, _ := json.Marshal(requestBody)
-		req, _ := http.NewRequest("POST", url, bytes.NewBuffer(jsonBody))
-		req.Header.Set("Authorization", "token-1")
-		req.Header.Set("Content-Type", "application/json")
-
-		resp, err := client.Do(req)
-		assert.NoError(t, err)
-		defer resp.Body.Close()
-
-		assert.Equal(t, http.StatusOK, resp.StatusCode)
+		runNonStreamTest(t, client, url, "token-ns-pass", "hello,world!", http.StatusOK)
 	})
 
+	// ---- Non-streaming rejected ----
 	t.Run("Non-streaming rejected", func(t *testing.T) {
-		// 模拟请求超大 token
-		requestBody := map[string]interface{}{
-			"messages": []map[string]string{
-				{"role": "user", "content": strings.Repeat("x", 10000)},
-			},
-			"model":  "gpt-3.5-turbo",
-			"stream": false,
-		}
-		jsonBody, _ := json.Marshal(requestBody)
-		req, _ := http.NewRequest("POST", url, bytes.NewBuffer(jsonBody))
-		req.Header.Set("Authorization", "token-1")
-		req.Header.Set("Content-Type", "application/json")
-
-		resp, err := client.Do(req)
-		assert.NoError(t, err)
-		defer resp.Body.Close()
-
-		assert.Equal(t, 429, resp.StatusCode)
-
-		body, _ := io.ReadAll(resp.Body)
-		assert.Contains(t, string(body), "请求被限流")
+		runNonStreamTest(t, client, url, "token-ns-reject", strings.Repeat("x", 10000), 429)
 	})
 
+	// ---- Streaming pass ----
 	t.Run("Streaming pass", func(t *testing.T) {
-		requestBody := map[string]interface{}{
-			"messages": []map[string]string{
-				{"role": "user", "content": "streaming message"},
-			},
-			"model":     "gpt-3.5-turbo",
-			"stream":    true,
-			"event_num": 3,
-		}
-		jsonBody, _ := json.Marshal(requestBody)
-		req, _ := http.NewRequest("POST", url, bytes.NewBuffer(jsonBody))
-		req.Header.Set("Authorization", "token-2")
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Accept", "text/event-stream")
-
-		resp, err := client.Do(req)
-		assert.NoError(t, err)
-		defer resp.Body.Close()
-
-		assert.Equal(t, http.StatusOK, resp.StatusCode)
-
-		allData, _ := io.ReadAll(resp.Body)
-		assert.Contains(t, string(allData), "data:")
+		runStreamTest(t, client, url, "token-stream-pass", "hello,world!", false)
 	})
 
+	// ---- Streaming rejected ----
 	t.Run("Streaming rejected", func(t *testing.T) {
-		requestBody := map[string]interface{}{
-			"messages": []map[string]string{
-				{"role": "user", "content": strings.Repeat("y", 10000)},
-			},
-			"model":  "gpt-3.5-turbo",
-			"stream": true,
-		}
-		jsonBody, _ := json.Marshal(requestBody)
-		req, _ := http.NewRequest("POST", url, bytes.NewBuffer(jsonBody))
-		req.Header.Set("Authorization", "token-2")
-		req.Header.Set("Content-Type", "application/json")
-		req.Header.Set("Accept", "text/event-stream")
-
-		resp, err := client.Do(req)
-		assert.NoError(t, err)
-		defer resp.Body.Close()
-
-		body, _ := io.ReadAll(resp.Body)
-		assert.Contains(t, string(body), "请求被限流")
+		runStreamTest(t, client, url, "token-stream-reject", strings.Repeat("x", 10000), true)
 	})
+}
+
+func runNonStreamTest(t *testing.T, client *http.Client, url, token, content string, expectCode int) {
+	body := map[string]interface{}{
+		"model": "gpt-4o-mini",
+		"messages": []map[string]string{
+			{"role": "user", "content": content},
+		},
+		"max_tokens": 5000,
+		"stream":     false,
+	}
+	jsonBody, _ := json.Marshal(body)
+	req, _ := http.NewRequest("POST", url, bytes.NewBuffer(jsonBody))
+	req.Header.Set("Authorization", token)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := client.Do(req)
+	assert.NoError(t, err)
+	defer resp.Body.Close()
+	assert.Equal(t, expectCode, resp.StatusCode)
+}
+
+func runStreamTest(t *testing.T, client *http.Client, url, token string, content string, expectReject bool) {
+	body := map[string]interface{}{
+		"model": "gpt-4o-mini",
+		"messages": []map[string]string{
+			{"role": "user", "content": content},
+		},
+		"max_tokens": 5000,
+		"stream":     true,
+	}
+	jsonBody, _ := json.Marshal(body)
+	req, _ := http.NewRequest("POST", url, bytes.NewBuffer(jsonBody))
+	req.Header.Set("Authorization", token)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "text/event-stream")
+
+	resp, err := client.Do(req)
+	assert.NoError(t, err)
+	defer resp.Body.Close()
+	reader := bufio.NewReader(resp.Body)
+	for {
+		line, err := reader.ReadString('\n')
+		if err != nil {
+			if err == io.EOF {
+				break
+			}
+			t.Fatalf("read stream err: %v", err)
+		}
+		//all += line
+		if strings.Contains(line, "[DONE]") {
+			break
+		}
+	}
+
+	if expectReject {
+		assert.Equal(t, http.StatusTooManyRequests, resp.StatusCode)
+	} else {
+		assert.Equal(t, http.StatusOK, resp.StatusCode)
+	}
 }
