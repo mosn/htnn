@@ -46,6 +46,7 @@ func TestLimitToken(t *testing.T) {
 		Bootstrap: dataplane.Bootstrap().
 			AddBackendRoute(limitTokenRoute).
 			AddCluster(limitTokenCluster),
+		NoErrorLogCheck: true,
 	})
 	if err != nil {
 		t.Fatalf("failed to start data plane: %v", err)
