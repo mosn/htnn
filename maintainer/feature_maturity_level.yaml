@@ -82,13 +82,13 @@ plugins:
   - name: limitReq
     status: experimental
     experimental_since: 0.4.0
+  - name: limittoken
+    status: experimental
+    experimental_since: 0.5.0
   - name: sentinel
     status: experimental
     experimental_since: 0.5.0
   - name: AIContentSecurity
-    status: experimental
-    experimental_since: 0.5.0
-  - name: limittoken
     status: experimental
     experimental_since: 0.5.0
   - name: demo

@@ -4,76 +4,84 @@ title: Token Limit Plugin Configuration
 
 ## Description
 
-This plugin provides token-level rate limiting for LLM requests. It supports global or per-value limits based on headers, URL parameters, cookies, consumer identifiers, or IP addresses. The plugin also supports Redis for distributed storage and token statistics/prediction.
+This plugin provides token-level rate limiting for LLM requests. It supports global or per-value limits based on headers, URL parameters, cookies, consumer identifiers, or IP addresses. Redis is supported for distributed storage and token statistics/prediction.
 
-## Attributes
+## Attribute
 
 |        |              |
 |--------|--------------|
-| Type   | Rate Limiting Plugin |
-| Order  | Unspecified        |
-| Status | experimental             |
+| Type   | Traffic      |
+| Order  | Traffic      |
+| Status | Experimental |
 
 ## Configuration
 
-| Name             | Type                              | Required | Validation | Description                                                                 |
-|------------------|-----------------------------------|----------|------------|-----------------------------------------------------------------------------|
-| rejected_code    | integer                           | No       |            | HTTP status code returned when a request is rejected, e.g., 429.           |
-| rejected_msg     | string                            | No       |            | Message returned when a request is rejected.                                |
-| rule             | [Rule](#rule)                     | Yes      |            | Rate limiting rule configuration.                                           |
-| redis            | [RedisConfig](#redisconfig)       | No       |            | Redis configuration for distributed rate limiting.                          |
-| token_stats      | [TokenStatsConfig](#tokenstatsconfig) | No   |            | Configuration for tracking Prompt/Completion tokens and predicting completion tokens.If the token limit calculation returns an error, the request is denied by default. A configurable policy may be added in future versions to allow or deny such requests. |
-| tokenizer        | string                            | No       |            | Adapter type for the LLM, e.g., "openai".                                   |
-| extractor_config | [GjsonConfig](#gjsonconfig)       | Yes      |            | Configuration for extracting content and metadata from requests/responses.  |
-| streaming_enabled| boolean                           | No       |            | Enable rate limiting for streaming responses.                               |
+| Name             | Type                              | Required | Description                                                                 |
+|------------------|-----------------------------------|----------|-----------------------------------------------------------------------------|
+| rejectedCode     | int32                             | False    | HTTP status code returned when a request is rejected, e.g., 429.           |
+| rejectedMsg      | string                            | False    | Message returned when a request is rejected.                                |
+| rule             | [Rule](#rule)                     | False    | Rate limiting rule configuration.                                           |
+| redis            | [RedisConfig](#redisconfig)       | False    | Redis configuration for distributed rate limiting.                          |
+| tokenStats       | [TokenStatsConfig](#tokenstatsconfig) | False | Configuration for tracking Prompt/Completion tokens and predicting completion tokens. |
+| tokenizer        | string                            | False    | Adapter type for the LLM, e.g., "openai".                                   |
+| gjsonConfig      | [GjsonConfig](#gjsonconfig)       | True     | Configuration for extracting content and metadata from requests/responses.  |
+| streamingEnabled | boolean                           | False    | Enable rate limiting for streaming responses.                               |
 
 ### Rule
 
-| Name    | Type         | Required | Description |
-|---------|-------------|----------|-------------|
-| limit_by| oneof       | Yes      | Rate limiting criteria. Can be based on Header, Param, Cookie, Consumer, or IP (only one may be selected). |
-| buckets | array of Bucket | Yes   | Token bucket configuration, including burst, rate, and round. |
-| keys    | array of string | No    | Key expressions (supports regex) used for fine-grained limiting. |
+| Name             | Type     | Required | Description |
+|------------------|----------|----------|-------------|
+| limitByConsumer  | string   | False    | Rate limiting by consumer. |
+| limitByHeader    | string   | False    | Rate limiting by request header. |
+| limitByParam     | string   | False    | Rate limiting by URL parameter. |
+| limitByCookie    | string   | False    | Rate limiting by cookie. |
+| limitByPerConsumer | string | False    | Rate limiting per consumer. |
+| limitByPerHeader | string   | False    | Rate limiting per header. |
+| limitByPerParam  | string   | False    | Rate limiting per URL parameter. |
+| limitByPerCookie | string   | False    | Rate limiting per cookie. |
+| limitByPerIp     | string   | False    | Rate limiting per IP. |
+| buckets          | Bucket[] | False    | Token bucket configuration, including burst, rate, and round. |
+| keys             | string[] | False    | Key expressions (supports regex) used for fine-grained limiting. |
 
 #### Bucket
 
-| Name  | Type   | Description |
-|-------|--------|-------------|
-| burst | int32  | Maximum tokens for burst traffic (bucket capacity). |
-| rate  | int32  | Token generation rate (tokens per second). |
-| round | int32  | Token bucket interval/round. |
+| Name  | Type   | Required | Description |
+|-------|--------|----------|-------------|
+| burst | int32  | False    | Maximum tokens for burst traffic (bucket capacity). |
+| rate  | int32  | False    | Token generation rate (tokens per second). |
+| round | int32  | False    | Token bucket interval/round. |
 
 ### RedisConfig
 
-| Name         | Type   | Required | Description |
-|--------------|--------|----------|-------------|
-| service_addr | string | Yes      | Redis service address, e.g., localhost:6379. |
-| username     | string | No       | Redis username (optional). |
-| password     | string | No       | Redis password (optional). |
-| timeout      | uint32 | No       | Redis timeout in seconds. |
+| Name        | Type   | Required | Description |
+|-------------|--------|----------|-------------|
+| serviceAddr | string | True     | Redis service address, e.g., localhost:6379. |
+| username    | string | False    | Redis username (optional). |
+| password    | string | False    | Redis password (optional). |
+| timeout     | uint32 | False    | Redis timeout in seconds. |
 
 ### TokenStatsConfig
 
-| Name               | Type   | Required | Description |
+| Name              | Type   | Required | Description |
 |-------------------|--------|----------|-------------|
-| window_size        | int32  | No       | Sliding window size (max number of samples), default: 1000. |
-| min_samples        | int32  | No       | Minimum samples required to start prediction, default: 10. |
-| max_ratio          | float  | No       | Default max ratio of Prompt/Completion tokens, default: 4.0. |
-| max_tokens_per_req | int32  | No       | Maximum tokens allowed per request, default: 2000. |
-| exceed_factor      | float  | No       | Allowance factor for exceeding predicted tokens, e.g., 1.5 = 150%, default: 1.5. |
+| windowSize        | int32  | False    | Sliding window size (max number of samples), default: 1000. |
+| minSamples        | int32  | False    | Minimum samples required to start prediction, default: 10. |
+| maxRatio          | float  | False    | Default max ratio of Prompt/Completion tokens, default: 4.0. |
+| maxTokensPerReq   | int32  | False    | Maximum tokens allowed per request, default: 2000. |
+| exceedFactor      | float  | False    | Allowance factor for exceeding predicted tokens, default: 1.5. |
 
 ### GjsonConfig
 
 | Name                          | Type   | Required | Description |
 |-------------------------------|--------|----------|-------------|
-| request_content_path           | string | Yes      | GJSON path to extract content from the request body. |
-| request_model_path             | string | Yes      | GJSON path to extract model information from the request body. |
-| response_content_path          | string | Yes      | GJSON path to extract content from a non-streaming response. |
-| response_model_path            | string | Yes      | GJSON path to extract model information from the response. |
-| response_completion_tokens_path| string | No       | GJSON path to extract completion tokens from the response. |
-| response_prompt_tokens_path    | string | No       | GJSON path to extract prompt tokens from the response. |
-| stream_response_content_path   | string | No       | GJSON path to extract content from each chunk of a streaming response. |
-| stream_response_model_path     | string | No       | GJSON path to extract model info from each chunk of a streaming response. |
+| requestContentPath            | string | True     | GJSON path to extract content from the request body. |
+| requestModelPath              | string | True     | GJSON path to extract model information from the request body. |
+| responseContentPath           | string | True     | GJSON path to extract content from a non-streaming response. |
+| responseModelPath             | string | True     | GJSON path to extract model information from the response. |
+| responseCompletionTokensPath  | string | False    | GJSON path to extract completion tokens from the response. |
+| responsePromptTokensPath      | string | False    | GJSON path to extract prompt tokens from the response. |
+| streamResponseContentPath     | string | False    | GJSON path to extract content from each chunk of a streaming response. |
+| streamResponseModelPath       | string | False    | GJSON path to extract model info from each chunk of a streaming response. |
 
 ## Model Support and Future Plans
 
@@ -98,27 +106,26 @@ To apply token-based rate limiting to OpenAI Chat Completions API requests:
 filters:
   limittoken:
     config:
-      rejected_code: 429
-      rejected_msg: "Request rate-limited"
+      rejectedCode: 429
+      rejectedMsg: "Request rate-limited"
       rule:
-        limit_by_header: "Authorization"
+        limitByHeader: "Authorization"
         buckets:
           - burst: 100
             rate: 50
             round: 1
       redis:
-        service_addr: "localhost:6379"
-      token_stats:
-        window_size: 1000
-        min_samples: 10
-        max_ratio: 4.0
-        max_tokens_per_req: 2000
-        exceed_factor: 1.5
+        serviceAddr: "localhost:6379"
+      tokenStats:
+        windowSize: 1000
+        minSamples: 10
+        maxRatio: 4.0
+        maxTokensPerReq: 2000
+        exceedFactor: 1.5
       tokenizer: "openai"
-      extractor_config:
-        gjson_config:
-          request_content_path: "messages.0.content"
-          request_model_path: "messages.0.model"
-          response_content_path: "choices.0.message.content"
-          response_model_path: "choices.0.message.model"
-          stream_response_content_path: "choices.0.delta.content"
+      gjsonConfig:
+        requestContentPath: "messages.0.content"
+        requestModelPath: "messages.0.model"
+        responseContentPath: "choices.0.message.content"
+        responseModelPath: "choices.0.message.model"
+        streamResponseContentPath: "choices.0.delta.content"

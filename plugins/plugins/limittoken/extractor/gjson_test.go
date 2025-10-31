@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package extractor_test
+package extractor
 
 import (
 	"testing"
@@ -20,7 +20,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"mosn.io/htnn/plugins/plugins/limittoken/extractor"
 	"mosn.io/htnn/types/plugins/limittoken"
 )
 
@@ -41,7 +40,7 @@ func buildGjsonConfig() *limittoken.Config_GjsonConfig {
 
 func TestGjsonExtractor_RequestContentAndModel(t *testing.T) {
 	cfg := buildGjsonConfig()
-	ex, err := extractor.New(cfg)
+	ex, err := New(cfg)
 	require.NoError(t, err)
 
 	// 正常 JSON
@@ -60,7 +59,7 @@ func TestGjsonExtractor_RequestContentAndModel(t *testing.T) {
 
 func TestGjsonExtractor_ResponseContentAndModel(t *testing.T) {
 	cfg := buildGjsonConfig()
-	ex, _ := extractor.New(cfg)
+	ex, _ := New(cfg)
 
 	data := []byte(`{
 		"response": {"content": "world", "model": "gpt-4o", "usage": {"completion_tokens": 12, "prompt_tokens": 8}}
@@ -77,7 +76,7 @@ func TestGjsonExtractor_ResponseContentAndModel(t *testing.T) {
 
 func TestGjsonExtractor_StreamResponseContentAndModel(t *testing.T) {
 	cfg := buildGjsonConfig()
-	ex, _ := extractor.New(cfg)
+	ex, _ := New(cfg)
 
 	data := []byte(`{"stream": {"content": "chunk", "model": "gpt-4s"}}`)
 	err := ex.SetData(data)
@@ -90,7 +89,7 @@ func TestGjsonExtractor_StreamResponseContentAndModel(t *testing.T) {
 
 func TestGjsonExtractor_InvalidJSON(t *testing.T) {
 	cfg := buildGjsonConfig()
-	ex, _ := extractor.New(cfg)
+	ex, _ := New(cfg)
 
 	data := []byte(`invalid json`)
 	err := ex.SetData(data)
@@ -112,7 +111,7 @@ func TestGjsonExtractor_InvalidJSON(t *testing.T) {
 }
 
 func TestGjsonExtractor_MissingConfig(t *testing.T) {
-	ex, err := extractor.New(&limittoken.Config_GjsonConfig{
+	ex, err := New(&limittoken.Config_GjsonConfig{
 		GjsonConfig: &limittoken.GjsonConfig{},
 	})
 	require.NoError(t, err)
