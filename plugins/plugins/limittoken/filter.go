@@ -15,7 +15,6 @@
 package limittoken
 
 import (
-	"fmt"
 	"mime"
 	"net/http"
 	"strings"
@@ -28,7 +27,6 @@ import (
 // During initialization, it also creates a buffer to store content chunks for moderation.
 func factory(c interface{}, callbacks api.FilterCallbackHandler) api.Filter {
 	config := c.(*config)
-	api.LogInfo(fmt.Sprintf("xxxxxxxxxxxxxxxxxxxxxxxxxx"))
 	return &filter{
 		callbacks:  callbacks,
 		config:     config,
