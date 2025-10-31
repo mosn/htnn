@@ -26,6 +26,7 @@ import (
 	_ "mosn.io/htnn/plugins/plugins/keyauth"
 	_ "mosn.io/htnn/plugins/plugins/limitcountredis"
 	_ "mosn.io/htnn/plugins/plugins/limitreq"
+	_ "mosn.io/htnn/plugins/plugins/limittoken"
 	_ "mosn.io/htnn/plugins/plugins/oidc"
 	_ "mosn.io/htnn/plugins/plugins/opa"
 	_ "mosn.io/htnn/plugins/plugins/sentinel"

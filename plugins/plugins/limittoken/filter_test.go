@@ -1,0 +1,337 @@
+// Copyright The HTNN Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package limittoken
+
+import (
+	"encoding/json"
+	"net/http"
+	"testing"
+
+	"github.com/alicebob/miniredis/v2"
+	"github.com/stretchr/testify/assert"
+	"github.com/tidwall/gjson"
+
+	"mosn.io/htnn/api/pkg/filtermanager/api"
+	"mosn.io/htnn/api/plugins/tests/pkg/envoy"
+	"mosn.io/htnn/types/plugins/limittoken"
+)
+
+// TestFactory ensures the filter factory correctly creates a filter instance
+func TestFactory(t *testing.T) {
+	cb := envoy.NewFilterCallbackHandler()
+	conf := &config{}
+
+	// Create filter using factory
+	f := factory(conf, cb).(*filter)
+
+	// Assert that filter is properly initialized
+	assert.NotNil(t, f)
+	assert.Equal(t, cb, f.callbacks)
+	assert.Equal(t, conf, f.config)
+	assert.NotNil(t, f.sseParser)
+}
+
+// TestIsStream verifies the isStream helper for different content types
+func TestIsStream(t *testing.T) {
+	tests := []struct {
+		name        string
+		contentType string
+		want        bool
+	}{
+		{"SSE content type", "text/event-stream", true},
+		{"Non-SSE content type", "application/json", false},
+		{"Empty content type", "", false},
+		{"Invalid content type", "invalid;type", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			headers := envoy.NewRequestHeaderMap(http.Header{})
+			if tt.contentType != "" {
+				headers.Set("Content-Type", tt.contentType)
+			}
+			got := isStream(headers)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+// TestFilter simulates actual requests and responses through the filter
+func TestFilter(t *testing.T) {
+	// Test cases for request/response handling
+	tests := []struct {
+		name                string
+		req                 []byte
+		resp                []byte
+		wantCode            int
+		checkFn             func(t *testing.T, resp []byte)
+		decodeHeadersAction api.ResultAction
+		decodeRequestAction api.ResultAction
+		encodeHeadersAction api.ResultAction
+		encodeDataAction    api.ResultAction
+	}{
+		{
+			name: "Valid single request",
+			req: []byte(`{
+             "model": "gpt-4o-mini",
+             "messages": [{"role":"user","content":"Write a Go limiter middleware"}],
+             "max_tokens": 50,
+             "stream": false
+          }`),
+			resp: []byte(`{
+             "id": "chatcmpl-123",
+             "object": "chat.completion",
+             "model": "gpt-4o-mini",
+             "choices": [
+                {"index":0,"message":{"role":"assistant","content":"This is the answer"},"finish_reason":"stop"}
+             ],
+             "usage":{"prompt_tokens":10,"completion_tokens":20,"total_tokens":30}
+          }`),
+			wantCode: http.StatusOK,
+			checkFn: func(t *testing.T, resp []byte) {
+				assert.Equal(t, "This is the answer", gjson.GetBytes(resp, "choices.0.message.content").String())
+				assert.Equal(t, int64(20), gjson.GetBytes(resp, "usage.completion_tokens").Int())
+			},
+			decodeHeadersAction: api.Continue,
+			decodeRequestAction: api.Continue,
+			encodeHeadersAction: api.Continue,
+			encodeDataAction:    api.Continue,
+		},
+		{
+			name: "Very large response triggers rate limit",
+			req: []byte(`{
+     "model": "gpt-4o-mini",
+     "messages": [{"role":"user","content":"Generate a huge text"}],
+     "max_tokens": 5000,
+     "stream": false
+  }`),
+			resp: func() []byte {
+				// 构造一个超大 completion_tokens 响应
+				content := ""
+				for i := 0; i < 5000; i++ {
+					content += "x"
+				}
+				respMap := map[string]interface{}{
+					"id":     "chatcmpl-large",
+					"object": "chat.completion",
+					"model":  "gpt-4o-mini",
+					"choices": []map[string]interface{}{
+						{
+							"index":         0,
+							"message":       map[string]string{"role": "assistant", "content": content},
+							"finish_reason": "stop",
+						},
+					},
+					"usage": map[string]int64{
+						"prompt_tokens":     50,
+						"completion_tokens": 5000, // 超过 MaxTokensPerReq
+						"total_tokens":      5050,
+					},
+				}
+				b, _ := json.Marshal(respMap)
+				return b
+			}(),
+			wantCode:            409, // 期望触发限流
+			checkFn:             func(t *testing.T, resp []byte) {},
+			decodeHeadersAction: api.Continue,
+			decodeRequestAction: api.Continue,
+			encodeHeadersAction: api.Continue,
+			encodeDataAction:    &api.LocalResponse{Code: 409, Msg: "Request limited"},
+		},
+		{
+			name: "Multiple choices request (n=2)",
+			req: []byte(`{
+             "model": "gpt-4o-mini",
+             "messages": [{"role":"user","content":"Give me two implementations"}],
+             "n": 2,
+             "max_tokens": 50,
+             "stream": false
+          }`),
+			resp: []byte(`{
+             "id": "chatcmpl-456",
+             "object": "chat.completion",
+             "model": "gpt-4o-mini",
+             "choices": [
+                {"index":0,"message":{"role":"assistant","content":"Implementation 1"},"finish_reason":"stop"},
+                {"index":1,"message":{"role":"assistant","content":"Implementation 2"},"finish_reason":"stop"}
+             ],
+             "usage":{"prompt_tokens":15,"completion_tokens":40,"total_tokens":55}
+          }`),
+			wantCode: http.StatusOK,
+			checkFn: func(t *testing.T, resp []byte) {
+				assert.Equal(t, "Implementation 1", gjson.GetBytes(resp, "choices.0.message.content").String())
+				assert.Equal(t, "Implementation 2", gjson.GetBytes(resp, "choices.1.message.content").String())
+			},
+			decodeHeadersAction: api.Continue,
+			decodeRequestAction: api.Continue,
+			encodeHeadersAction: api.Continue,
+			encodeDataAction:    api.Continue,
+		},
+	}
+
+	// Run each test case
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			// run a miniredis server for testing
+			mr, err := miniredis.Run()
+			if err != nil {
+				t.Fatalf("failed to start miniredis: %v", err)
+			}
+			defer mr.Close()
+
+			conf := &config{
+				CustomConfig: limittoken.CustomConfig{
+					Config: limittoken.Config{
+						RejectedCode: 409,               // HTTP status when request is limited
+						RejectedMsg:  "Request limited", // Message when request is limited
+						Rule: &limittoken.Rule{ // Limit rule by IP
+							LimitBy: &limittoken.Rule_LimitByPerIp{},
+							Buckets: []*limittoken.Bucket{
+								{Burst: 100, Rate: 100, Round: 1},
+							},
+						},
+						Redis: &limittoken.RedisConfig{ServiceAddr: mr.Addr(), Timeout: 5},
+						TokenStats: &limittoken.TokenStatsConfig{
+							WindowSize:      1000,
+							MinSamples:      10,
+							MaxRatio:        4.0,
+							MaxTokensPerReq: 2000,
+							ExceedFactor:    1.5,
+						},
+						Tokenizer: "openai",
+						ExtractorConfig: &limittoken.Config_GjsonConfig{
+							GjsonConfig: &limittoken.GjsonConfig{
+								RequestContentPath:           "messages",
+								RequestModelPath:             "model",
+								ResponseContentPath:          "choices.0.message.content",
+								ResponseModelPath:            "model",
+								ResponseCompletionTokensPath: "usage.completion_tokens",
+								ResponsePromptTokensPath:     "usage.prompt_tokens",
+							},
+						},
+						StreamingEnabled: true,
+					},
+				},
+			}
+
+			// Initialize config
+			err = conf.Init(envoy.NewFilterCallbackHandler())
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			cb := envoy.NewFilterCallbackHandler()
+			f := factory(conf, cb)
+
+			h := http.Header{}
+			headers := envoy.NewRequestHeaderMap(h)
+			reqBuf := envoy.NewBufferInstance(tt.req)
+			rtMap := envoy.NewRequestTrailerMap(h)
+
+			// Decode headers
+			action := f.DecodeHeaders(headers, true)
+			assert.Equal(t, tt.decodeHeadersAction, action, "DecodeHeaders action should match expected")
+
+			// Decode request
+			decodeRequestAction := f.DecodeRequest(headers, reqBuf, rtMap)
+			assert.Equal(t, tt.decodeRequestAction, decodeRequestAction, "DecodeRequest action should match expected")
+
+			// Process request body
+			rhMap := envoy.NewResponseHeaderMap(h)
+			decodeRequestAction = f.DecodeRequest(headers, reqBuf, rtMap)
+			assert.Equal(t, tt.decodeRequestAction, decodeRequestAction, "DecodeRequestAction action should match expected")
+
+			// Encode headers
+			encodeHeadersAction := f.EncodeHeaders(rhMap, true)
+			assert.Equal(t, tt.encodeHeadersAction, encodeHeadersAction, "EncodeHeaders action should match expected")
+
+			// Encode response body
+			respBuf := envoy.NewBufferInstance(tt.resp)
+			encodeDataAction := f.EncodeData(respBuf, true)
+			assert.Equal(t, tt.encodeDataAction, encodeDataAction, "EncodeData action should match expected")
+
+			// Optional checks
+			if tt.checkFn != nil {
+				tt.checkFn(t, tt.resp)
+			}
+		})
+	}
+}
+
+func TestFilter_StreamResponse(t *testing.T) {
+	mr, err := miniredis.Run()
+	if err != nil {
+		t.Fatalf("failed to start miniredis: %v", err)
+	}
+	defer mr.Close()
+
+	conf := &config{
+		CustomConfig: limittoken.CustomConfig{
+			Config: limittoken.Config{
+				RejectedCode:     409,
+				RejectedMsg:      "Request limited",
+				StreamingEnabled: true,
+				Rule: &limittoken.Rule{
+					LimitBy: &limittoken.Rule_LimitByPerIp{},
+					Buckets: []*limittoken.Bucket{{Burst: 100, Rate: 10, Round: 1}},
+				},
+				Redis: &limittoken.RedisConfig{ServiceAddr: mr.Addr(), Timeout: 5},
+				TokenStats: &limittoken.TokenStatsConfig{
+					WindowSize:      1000,
+					MinSamples:      10,
+					MaxRatio:        4.0,
+					MaxTokensPerReq: 2000,
+					ExceedFactor:    1.5,
+				},
+				Tokenizer: "openai",
+				ExtractorConfig: &limittoken.Config_GjsonConfig{
+					GjsonConfig: &limittoken.GjsonConfig{
+						RequestContentPath:  "messages",
+						RequestModelPath:    "model",
+						ResponseContentPath: "choices.0.message.content",
+					},
+				},
+			},
+		},
+	}
+
+	err = conf.Init(envoy.NewFilterCallbackHandler())
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	cb := envoy.NewFilterCallbackHandler()
+	f := factory(conf, cb)
+
+	headers := envoy.NewResponseHeaderMap(http.Header{})
+	headers.Set("Content-Type", "text/event-stream")
+	res := f.EncodeHeaders(headers, false)
+	assert.Equal(t, api.Continue, res)
+
+	sseData1 := []byte("data: {\"choices\":[{\"message\":{\"content\":\"chunk1\"}}]}\n\n")
+	sseData2 := []byte("data: {\"choices\":[{\"message\":{\"content\":\"chunk2\"}}]}\n\n")
+
+	buf1 := envoy.NewBufferInstance(sseData1)
+	buf2 := envoy.NewBufferInstance(sseData2)
+
+	res = f.EncodeData(buf1, false)
+	assert.Equal(t, api.Continue, res)
+
+	res = f.EncodeData(buf2, false)
+	assert.Equal(t, api.Continue, res)
+
+	res = f.EncodeData(envoy.NewBufferInstance(nil), true)
+	assert.Equal(t, api.Continue, res)
+}

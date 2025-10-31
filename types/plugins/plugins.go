@@ -32,6 +32,7 @@ import (
 	_ "mosn.io/htnn/types/plugins/keyauth"
 	_ "mosn.io/htnn/types/plugins/limitcountredis"
 	_ "mosn.io/htnn/types/plugins/limitreq"
+	_ "mosn.io/htnn/types/plugins/limittoken"
 	_ "mosn.io/htnn/types/plugins/listenerpatch"
 	_ "mosn.io/htnn/types/plugins/localratelimit"
 	_ "mosn.io/htnn/types/plugins/lua"

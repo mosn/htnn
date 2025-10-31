@@ -1,6 +1,6 @@
 services:
   # names in alphabetical order
-  aimockservices:
+  aicontentsecurity:
     build:
       context: ./ai_content_security
       dockerfile_inline: |
@@ -24,6 +24,34 @@ services:
       - ./ai_content_security/app.py:/app/app.py  # Mount local files into the container
     healthcheck:
       test: [ "CMD", "sh", "-c", "curl -f http://localhost:10901/health && curl -f http://localhost:10902/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      service:
+  aimockservices:
+    build:
+      context: ./aimockservices
+      dockerfile_inline: |
+        FROM python:3.11-slim
+        WORKDIR /app
+        RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+        COPY requirements.txt .
+        RUN pip install --no-cache-dir -r requirements.txt
+        COPY app.py .
+        EXPOSE 10903
+        CMD ["python", "app.py"]
+    ports:
+      - "10903:10903"
+    environment:
+      - UNHEALTHY_WORDS=violence,hate,porn,abuse,toxic,harmful
+      - LLM_PORT=10903
+    restart: unless-stopped
+    volumes:
+      - ./aimockservices/app.py:/app/app.py  # Mount local files into the container
+    healthcheck:
+      test: [ "CMD", "sh", "-c", "curl -f http://localhost:10903/health && curl -f http://localhost:10903/health" ]
       interval: 30s
       timeout: 10s
       retries: 3

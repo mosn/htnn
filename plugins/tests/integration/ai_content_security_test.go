@@ -55,8 +55,8 @@ func TestAIContentSecurity(t *testing.T) {
 	}
 	defer dp.Stop()
 
-	helper.WaitServiceUp(t, ":10901", "llm-mock")
-	helper.WaitServiceUp(t, ":10902", "llm-moderation")
+	helper.WaitServiceUp(t, ":10901", "aicontentsecurity")
+	helper.WaitServiceUp(t, ":10902", "aicontentsecurity")
 
 	customModerationErrorMsg := "The content you sent includes inappropriate information and has been intercepted by the system."
 
@@ -66,7 +66,7 @@ func TestAIContentSecurity(t *testing.T) {
 		"moderation_char_limit":           5,
 		"moderation_chunk_overlap_length": 3,
 		"local_moderation_service_config": map[string]interface{}{
-			"base_url":             "http://aimockservices:10902",
+			"base_url":             "http://aicontentsecurity:10902",
 			"unhealthy_words":      []string{"hate", "ugly"},
 			"custom_error_message": customModerationErrorMsg,
 		},
@@ -282,7 +282,7 @@ func TestAIContentSecurity(t *testing.T) {
 		"moderation_char_limit":           5,
 		"moderation_chunk_overlap_length": 3,
 		"local_moderation_service_config": map[string]interface{}{
-			"base_url":             "http://aimockservices:10902",
+			"base_url":             "http://aicontentsecurity:10902",
 			"unhealthy_words":      []string{"hate", "ugly"},
 			"custom_error_message": customModerationErrorMsg,
 		},

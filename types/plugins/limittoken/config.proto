@@ -1,0 +1,86 @@
+// Copyright The HTNN Authors.
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package types.plugins.limittoken;
+
+import "validate/validate.proto";
+
+option go_package = "mosn.io/htnn/types/plugins/limittoken";
+
+// Config is the top-level configuration structure for the limittoken plugin.
+message Config {
+  int32 rejected_code = 1;
+  string rejected_msg = 2;
+  Rule rule = 3;
+  RedisConfig redis = 4;
+  TokenStatsConfig token_stats = 5;
+  string tokenizer = 6;
+
+  oneof extractor_config {
+    GjsonConfig gjson_config = 100 [(validate.rules).message.required = true];
+  }
+
+  bool streaming_enabled = 7;
+}
+
+message Rule {
+  oneof limit_by {
+    string limit_by_header = 1;
+    string limit_by_param = 2;
+    string limit_by_cookie = 3;
+    string limit_by_consumer = 4;
+    string limit_by_per_ip = 5;
+    string limit_by_per_header = 6;
+    string limit_by_per_param = 7;
+    string limit_by_per_cookie = 8;
+    string limit_by_per_consumer = 9;
+  }
+
+  repeated Bucket buckets = 10;
+  repeated string keys = 11;
+}
+
+message Bucket {
+  int32 burst = 1;
+  int32 rate = 2;
+  int32 round = 3;
+}
+
+message RedisConfig {
+  string service_addr = 1 [(validate.rules).string = {min_len: 1}];
+  string username = 2;
+  string password = 3;
+  uint32 timeout = 4;
+}
+
+message TokenStatsConfig {
+  int32 window_size = 1;
+  int32 min_samples = 2;
+  float max_ratio = 3;
+  int32 max_tokens_per_req = 4;
+  float exceed_factor = 5;
+}
+
+message GjsonConfig {
+  string request_content_path = 1 [(validate.rules).string = {min_len: 1}];
+  string request_model_path = 2 [(validate.rules).string = {min_len: 1}];
+  string response_content_path = 3 [(validate.rules).string = {min_len: 1}];
+  string response_model_path = 4 [(validate.rules).string = {min_len: 1}];
+  string response_completion_tokens_path = 5;
+  string response_prompt_tokens_path = 6;
+  string stream_response_content_path = 7;
+  string stream_response_model_path = 8;
+}
