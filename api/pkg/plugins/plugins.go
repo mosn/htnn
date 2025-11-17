@@ -20,6 +20,8 @@ import (
 	"errors"
 	"runtime/debug"
 
+	capi "github.com/envoyproxy/envoy/contrib/golang/common/go/api"
+
 	"mosn.io/htnn/api/internal/proto"
 	"mosn.io/htnn/api/pkg/filtermanager/api"
 	"mosn.io/htnn/api/pkg/log"
@@ -31,6 +33,7 @@ var (
 	pluginTypes                = map[string]Plugin{}
 	plugins                    = map[string]Plugin{}
 	httpFilterFactoryAndParser = map[string]*FilterFactoryAndParser{}
+	metricsDefinitions         = map[string]MetricsRegister{}
 )
 
 // Here we introduce extra struct to avoid cyclic import between pkg/filtermanager and pkg/plugins
@@ -233,4 +236,19 @@ func ComparePluginOrderInt(a, b string) int {
 		return int(aOrder.Operation - bOrder.Operation)
 	}
 	return cmp.Compare(a, b)
+}
+
+type MetricsWriter struct {
+	Counters map[string]capi.CounterMetric
+	Gaugers  map[string]capi.GaugeMetric
+}
+
+type MetricsRegister func(capi.ConfigCallbacks) MetricsWriter
+
+func RegisterMetricsDefinitions(pluginName string, definition MetricsRegister) {
+	metricsDefinitions[pluginName] = definition
+}
+
+func GetMetricsDefinitions() map[string]MetricsRegister {
+	return metricsDefinitions
 }

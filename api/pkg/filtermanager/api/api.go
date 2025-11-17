@@ -231,6 +231,10 @@ type StreamFilterCallbacks interface {
 	// PluginState returns the PluginState associated to this request.
 	PluginState() PluginState
 
+	// Metrics API for plugins
+	GetCounterMetrics(pluginName, metricsName string) api.CounterMetric
+	GetGaugeMetrics(pluginName, metricsName string) api.GaugeMetric
+
 	// WithLogArg injectes `key: value` as the suffix of application log created by this
 	// callback's Log* methods. The injected log arguments are only valid in the current request.
 	// This method can be used to inject IDs or other context information into the logs.

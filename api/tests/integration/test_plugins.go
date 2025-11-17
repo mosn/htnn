@@ -21,6 +21,8 @@ import (
 	"strconv"
 	"strings"
 
+	capi "github.com/envoyproxy/envoy/contrib/golang/common/go/api"
+
 	"mosn.io/htnn/api/pkg/filtermanager/api"
 	"mosn.io/htnn/api/pkg/plugins"
 )
@@ -636,6 +638,68 @@ func (f *onLogFilter) OnLog(reqHeaders api.RequestHeaderMap, reqTrailers api.Req
 	api.LogWarnf("receive request trailers: %+v", trailers)
 }
 
+type metricsConfig struct {
+	Config
+}
+
+type metricsPlugin struct {
+	plugins.PluginMethodDefaultImpl
+}
+
+func (p *metricsPlugin) Config() api.PluginConfig {
+	return &metricsConfig{}
+}
+
+func (p *metricsPlugin) Factory() api.FilterFactory {
+	return metricsFactory
+}
+
+func metricsFactory(c interface{}, callbacks api.FilterCallbackHandler) api.Filter {
+	return &metricsFilter{
+		callbacks: callbacks,
+		config:    c.(*metricsConfig),
+	}
+}
+
+type metricsFilter struct {
+	api.PassThroughFilter
+
+	callbacks api.FilterCallbackHandler
+	config    *metricsConfig
+}
+
+const metricsUsageCounter = "metrics-test.usage.counter"
+const metricsGauge = "metrics-test.usage.gauge"
+
+func RegisterMetrics(c capi.ConfigCallbacks) plugins.MetricsWriter {
+	writer := plugins.MetricsWriter{
+		Counters: map[string]capi.CounterMetric{},
+		Gaugers:  map[string]capi.GaugeMetric{},
+	}
+	writer.Counters[metricsUsageCounter] = c.DefineCounterMetric(metricsUsageCounter)
+	writer.Gaugers[metricsGauge] = c.DefineGaugeMetric(metricsGauge)
+	return writer
+}
+
+func (f *metricsFilter) DecodeHeaders(headers api.RequestHeaderMap, endStream bool) api.ResultAction {
+	usageCounter := f.callbacks.GetCounterMetrics("metrics", metricsUsageCounter)
+	if usageCounter != nil {
+		usageCounter.Increment(1)
+	} else {
+		return &api.LocalResponse{Code: 500, Msg: "metrics config counter is nil"}
+	}
+
+	gauger := f.callbacks.GetGaugeMetrics("metrics", metricsGauge)
+	if gauger != nil {
+		gauger.Record(2)
+	} else {
+		return &api.LocalResponse{Code: 500, Msg: "metrics config gauge is nil"}
+	}
+	return &api.LocalResponse{Code: 200, Msg: "metrics works"}
+}
+
+var mp = &metricsPlugin{}
+
 func init() {
 	plugins.RegisterPlugin("stream", &streamPlugin{})
 	plugins.RegisterPlugin("buffer", &bufferPlugin{})
@@ -648,4 +712,9 @@ func init() {
 	plugins.RegisterPlugin("beforeConsumerAndHasOtherMethod", &beforeConsumerAndHasOtherMethodPlugin{})
 	plugins.RegisterPlugin("beforeConsumerAndHasDecodeRequest", &beforeConsumerAndHasDecodeRequestPlugin{})
 	plugins.RegisterPlugin("onLog", &onLogPlugin{})
+	// register plugin "metrics" for plugin execution
+	plugins.RegisterPlugin("metrics", mp)
+	// register metrics definition for plugin "metrics"
+	plugins.RegisterMetricsDefinitions("metrics", RegisterMetrics)
+	// TODO(wonderflow): allow metrics to contains runtime information especially for listener name, this require support from envoy upstream:  https://github.com/envoyproxy/envoy/issues/37808
 }

@@ -595,6 +595,13 @@ func (i *filterCallbackHandler) PluginState() api.PluginState {
 	return i.pluginState
 }
 
+func (i *filterCallbackHandler) GetCounterMetrics(pluginName, metricsName string) capi.CounterMetric {
+	return nil
+}
+func (i *filterCallbackHandler) GetGaugeMetrics(pluginName, metricsName string) capi.GaugeMetric {
+	return nil
+}
+
 func (i *filterCallbackHandler) WithLogArg(key string, value any) api.StreamFilterCallbacks {
 	return i
 }
