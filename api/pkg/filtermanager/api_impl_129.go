@@ -17,6 +17,7 @@
 package filtermanager
 
 import (
+	"fmt"
 	"runtime/debug"
 
 	capi "github.com/envoyproxy/envoy/contrib/golang/common/go/api"
@@ -48,6 +49,10 @@ func (cb *filterManagerCallbackHandler) AddData([]byte, bool) {
 
 func (cb *filterManagerCallbackHandler) InjectData([]byte) {
 	api.LogErrorf("InjectData is not implemented: %s", debug.Stack())
+}
+
+func (cb *filterManagerCallbackHandler) SetUpstreamOverrideHost(host string, strict bool) error {
+	return fmt.Errorf("SetUpstreamOverrideHost is not implemented: %s", debug.Stack())
 }
 
 func (cb *filterManagerCallbackHandler) DecoderFilterCallbacks() api.DecoderFilterCallbacks {

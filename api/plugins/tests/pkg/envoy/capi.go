@@ -572,6 +572,10 @@ func (i *filterCallbackHandler) AddData([]byte, bool) {
 func (i *filterCallbackHandler) InjectData([]byte) {
 }
 
+func (i *filterCallbackHandler) SetUpstreamOverrideHost(host string, strict bool) error {
+	return nil
+}
+
 func (i *filterCallbackHandler) LookupConsumer(_, _ string) (api.Consumer, bool) {
 	return nil, false
 }
