@@ -304,6 +304,9 @@ func (cp *ControlPlane) useGoPluginConfig(t *testing.T, config *filtermanager.Fi
 		})
 	}
 
+	// hack: wait for RDS to be applied in Envoy
+	time.Sleep(1 * time.Second)
+
 	// Wait for DP to use the configuration.
 	require.Eventually(t, func() bool {
 		return dp.Configured()
