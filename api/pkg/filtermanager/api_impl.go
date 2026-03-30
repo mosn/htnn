@@ -30,6 +30,7 @@ import (
 	"mosn.io/htnn/api/internal/cookie"
 	"mosn.io/htnn/api/internal/pluginstate"
 	"mosn.io/htnn/api/pkg/filtermanager/api"
+	"mosn.io/htnn/api/pkg/plugins"
 )
 
 type filterManagerRequestHeaderMap struct {
@@ -146,6 +147,7 @@ type filterManagerCallbackHandler struct {
 	namespace   string
 	consumer    api.Consumer
 	pluginState api.PluginState
+	metrics     map[string]plugins.MetricsWriter
 
 	streamInfo *filterManagerStreamInfo
 
@@ -164,6 +166,7 @@ func (cb *filterManagerCallbackHandler) Reset() {
 	cb.streamInfo = nil
 	cb.logArgNames = ""
 	cb.logArgs = nil
+	cb.metrics = nil
 
 	cb.cacheLock.Unlock()
 }
@@ -205,6 +208,40 @@ func (cb *filterManagerCallbackHandler) PluginState() api.PluginState {
 	}
 	cb.cacheLock.Unlock()
 	return cb.pluginState
+}
+
+func (cb *filterManagerCallbackHandler) GetCounterMetrics(pluginName, metricName string) capi.CounterMetric {
+	if cb.metrics == nil {
+		api.LogErrorf("metrics not exist or not initialized for plugin %s", pluginName)
+		return nil
+	}
+	writer, ok := cb.metrics[pluginName]
+	if !ok {
+		api.LogErrorf("metrics writer for plugin %s not found", pluginName)
+		return nil
+	}
+	if writer.Counters == nil || writer.Counters[metricName] == nil {
+		api.LogErrorf("counter metric %s not found in plugin %s", metricName, pluginName)
+		return nil
+	}
+	return writer.Counters[metricName]
+}
+
+func (cb *filterManagerCallbackHandler) GetGaugeMetrics(pluginName, metricName string) capi.GaugeMetric {
+	if cb.metrics == nil {
+		api.LogErrorf("metrics not exist or not initialized for plugin %s", pluginName)
+		return nil
+	}
+	writer, ok := cb.metrics[pluginName]
+	if !ok {
+		api.LogErrorf("metrics writer for plugin %s not found", pluginName)
+		return nil
+	}
+	if writer.Gaugers == nil || writer.Gaugers[metricName] == nil {
+		api.LogErrorf("gauge metric %s not found in plugin %s", metricName, pluginName)
+		return nil
+	}
+	return writer.Gaugers[metricName]
 }
 
 func (cb *filterManagerCallbackHandler) WithLogArg(key string, value any) api.StreamFilterCallbacks {
