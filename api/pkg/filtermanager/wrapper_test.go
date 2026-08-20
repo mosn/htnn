@@ -90,7 +90,9 @@ func TestDebugFilter(t *testing.T) {
 	records = getRecords(executionRecords)
 	t.Logf("get records %+v\n", records) // for debug when test failed
 	// Should be the sum of multiple calls
-	delta := 10 * time.Millisecond
+	// Race instrumentation and shared CI hosts can add scheduling delay to the
+	// intentionally sleeping filter callbacks.
+	delta := 50 * time.Millisecond
 	rec := records[0].Record - decodeHeadersCost
 	assert.True(t, 270*time.Millisecond-delta < rec && rec < 270*time.Millisecond+delta, rec)
 }

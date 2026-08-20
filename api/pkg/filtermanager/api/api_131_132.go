@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build !envoy1.29 && !envoydev && !envoy1.35 && !envoy1.36 && !envoy1.37 && !envoy1.38
+//go:build !envoy1.29 && !envoydev && !envoy1.35 && !envoy1.36 && !envoy1.37 && !envoy1.38 && !envoy1.39
 
 package api
 

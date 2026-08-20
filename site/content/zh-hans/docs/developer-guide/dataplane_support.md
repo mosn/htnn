@@ -26,14 +26,15 @@ require (
 
 由于 Envoy Golang filter 尚处于发展阶段，几乎每个版本都会引入 break change。为此 HTNN 引入了一套数据面 API 版本选择机制，开发者能够根据自己的 Envoy 版本选择对应的 HTNN 数据面代码。
 
-默认情况下 HTNN 数据面代码的目标 API 版本是最新正式发布的 Envoy 版本。同时支持通过 build tag，编译出能够在之前发布的 Envoy 上运行的 shared library。目前支持的版本如下：
+默认情况下 HTNN 数据面代码的目标 API 版本为 Envoy 1.32。通过 build tag 可以选择其他受支持 Envoy 版本的 shared library 实现。Envoy 1.39 仅支持外部自管的 Envoy contrib 数据面，不会升级 HTNN 默认 Istio 数据面、Helm chart 或 controller。
 
 | 版本 | build tag                  | 最低 Go 版本 |
 |------|----------------------------|--------------|
 | dev  | envoydev                   | 1.24.6       |
-| 1.38 | envoy1.35                  | 1.24.6       |
-| 1.37 | envoy1.35                  | 1.24.6       |
-| 1.36 | envoy1.35                  | 1.22         |
+| 1.39（仅外部） | envoy1.39          | 1.25         |
+| 1.38 | envoy1.38                  | 1.24.6       |
+| 1.37 | envoy1.37                  | 1.24.6       |
+| 1.36 | envoy1.36                  | 1.22         |
 | 1.35 | envoy1.35                  | 1.22         |
 | 1.32 | 最新版本，不需要 build tag | 1.22         |
 | 1.31 | envoy1.31                  | 1.22         |
@@ -53,10 +54,18 @@ replace github.com/envoyproxy/envoy => github.com/envoyproxy/envoy v1.29.5
 CGO_ENABLED=1 go build -tags so,envoy1.29 --buildmode=c-shared ...
 ```
 
-如果目标是最新正式发布的 Envoy 版本，则不需要额外的 build tag：
+如果目标是默认 Envoy 1.32，则不需要额外的 build tag：
 
 ```shell
 CGO_ENABLED=1 go build -tags so --buildmode=c-shared ...
 ```
+
+如果目标是外部 Envoy 1.39.0 数据面，请使用 Go 1.25，将 Envoy SDK replace 为 `v1.39.0`，并使用 `envoy1.39` tag。builder 的 glibc 必须与运行时镜像兼容，且 shared library 必须为运行时架构构建：
+
+```shell
+CGO_ENABLED=1 go build -tags so,envoy1.39 --buildmode=c-shared ...
+```
+
+SDK 与 `envoyproxy/envoy:contrib-v1.39.0` 运行时镜像必须使用相同 Envoy patch 版本。加载失败时，请检查 Go 版本、replace 指令、build tag、架构、builder glibc 版本和 Envoy 启动日志。
 
 如果在旧的 Envoy 上执行只有最新 Envoy 才存在的接口，会执行到这套兼容层提供的虚假接口，输出错误日志并返回空值。

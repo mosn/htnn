@@ -41,6 +41,7 @@ jobs:
           - 1.36
           - 1.37
           - 1.38
+          - 1.39
           - dev
         exclude:
           # Envoy 1.36 Go SDK requires Go >= 1.23
@@ -55,6 +56,13 @@ jobs:
             envoy_version: 1.37
           - go_version: '1.23'
             envoy_version: 1.38
+          # Envoy 1.39 Go SDK requires Go >= 1.25.
+          - go_version: '1.22'
+            envoy_version: 1.39
+          - go_version: '1.23'
+            envoy_version: 1.39
+          - go_version: '1.24'
+            envoy_version: 1.39
           # dev tracks envoy 1.38, also requires Go >= 1.24.6
           - go_version: '1.22'
             envoy_version: dev
@@ -75,6 +83,7 @@ jobs:
       with:
         go-version: ${{ matrix.go_version }}
         cache-dependency-path: "**/*.sum"
+
     - name: Choose the Envoy API
       run: |
         FULL_ENVOY_VERSION=${ENVOY_API_VERSION}.0
@@ -102,6 +111,11 @@ jobs:
           echo PROXY_IMAGE=$PROXY_IMAGE >> $GITHUB_ENV
           echo BUILD_IMAGE=docker.io/library/golang:1.24-bullseye >> $GITHUB_ENV
         fi
+        if [[ $ENVOY_API_VERSION == 1.39 ]]; then
+          FULL_ENVOY_VERSION=1.39.0
+          echo BUILD_IMAGE=htnn-go1.25-jammy:local >> $GITHUB_ENV
+          echo PROXY_IMAGE=envoyproxy/envoy@sha256:bb61b7531b9f53ef497e039166d36f318ed50bf9af889896673b0ac494d08b3a >> $GITHUB_ENV
+        fi
         if [[ $ENVOY_API_VERSION == dev ]]; then
           # update this once there are more breaking changes
           FULL_ENVOY_VERSION=1.38.0
@@ -113,6 +127,21 @@ jobs:
         ./patch/switch-envoy-go-version.sh ${FULL_ENVOY_VERSION}
         popd
 
+    - name: Build the Envoy 1.39 Go builder
+      if: ${{ matrix.envoy_version == 1.39 }}
+      run: |
+        docker build --platform linux/amd64 --build-arg TARGETARCH=amd64 \
+          -t htnn-go1.25-jammy:local -f ../tools/Dockerfile.go1.25-jammy ..
+        docker run --rm htnn-go1.25-jammy:local go version
+
+    - name: Record the Envoy 1.39 dependency and image inputs
+      if: ${{ matrix.envoy_version == 1.39 }}
+      run: |
+        go list -m all | tee envoy-1.39-modules.txt
+        docker pull "${PROXY_IMAGE}"
+        docker image inspect "${BUILD_IMAGE}" --format '{{json .Id}}' | tee envoy-1.39-builder-image.txt
+        docker image inspect "${PROXY_IMAGE}" --format '{{json .RepoDigests}}' | tee envoy-1.39-runtime-image.txt
+
     - name: Unit test
       run: make unit-test
 
@@ -122,6 +151,10 @@ jobs:
 
     - name: Build
       run: make build-test-so
+
+    - name: Inspect the Envoy 1.39 shared library
+      if: ${{ matrix.envoy_version == 1.39 }}
+      run: readelf --version-info tests/integration/libgolang.so | tee envoy-1.39-libgolang-elf.txt
     - name: Integration test
       run: make integration-test
     - name: Upload logs
@@ -144,6 +177,7 @@ jobs:
         path: |
           ./api/cover.out
           ./api/cover_integration.out
+          ./api/envoy-1.39-*.txt
 
     - name: Make sure the benchmark is runnable
       run: |
@@ -233,7 +267,12 @@ jobs:
           - '1.23'
           - '1.24'
           - '1.25'
+        include:
+          - go_version: '1.25'
+            envoy_version: '1.39'
+            artifact_suffix: '-1.39'
     env:
+      ENVOY_API_VERSION: ${{ matrix.envoy_version || '1.32' }}
       # to test the custom port feature
       TEST_ENVOY_ADMIN_API_PORT: 9901
       TEST_ENVOY_CONTROL_PLANE_PORT: 9902
@@ -250,12 +289,39 @@ jobs:
         go-version: ${{ matrix.go_version }}
         cache-dependency-path: "**/*.sum"
 
+    - name: Choose the Envoy API
+      if: ${{ matrix.envoy_version == '1.39' }}
+      run: |
+        pushd ..
+        ./patch/switch-envoy-go-version.sh 1.39.0
+        popd
+
+    - name: Build the Envoy 1.39 Go builder
+      if: ${{ matrix.envoy_version == '1.39' }}
+      run: |
+        docker build --platform linux/amd64 --build-arg TARGETARCH=amd64 \
+          -t htnn-go1.25-jammy:local -f ../tools/Dockerfile.go1.25-jammy ..
+        echo BUILD_IMAGE=htnn-go1.25-jammy:local >> "$GITHUB_ENV"
+        echo PROXY_IMAGE=envoyproxy/envoy@sha256:bb61b7531b9f53ef497e039166d36f318ed50bf9af889896673b0ac494d08b3a >> "$GITHUB_ENV"
+
+    - name: Record the Envoy 1.39 dependency and image inputs
+      if: ${{ matrix.envoy_version == '1.39' }}
+      run: |
+        go list -m all | tee envoy-1.39-modules.txt
+        docker pull "${PROXY_IMAGE}"
+        docker image inspect "${BUILD_IMAGE}" --format '{{json .Id}}' | tee envoy-1.39-builder-image.txt
+        docker image inspect "${PROXY_IMAGE}" --format '{{json .RepoDigests}}' | tee envoy-1.39-runtime-image.txt
+
     - name: Set up services
       run: |
         make start-service
 
     - name: Build
       run: make build-test-so
+
+    - name: Inspect the Envoy 1.39 shared library
+      if: ${{ matrix.envoy_version == '1.39' }}
+      run: readelf --version-info tests/integration/libgolang.so | tee envoy-1.39-libgolang-elf.txt
 
     - name: Test
       run: make integration-test
@@ -264,7 +330,7 @@ jobs:
       if: failure()
       with:
         # upload artifact can be found in https://github.com/mosn/htnn/actions/runs/$id
-        name: plugins-integration-test-logs-go${{ matrix.go_version }}
+        name: plugins-integration-test-logs-go${{ matrix.go_version }}${{ matrix.artifact_suffix || '' }}
         path: ./test-envoy
     - name: Generate coverage
       if: always()
@@ -274,8 +340,10 @@ jobs:
       if: always()
       uses: actions/upload-artifact@v4
       with:
-        name: plugins-integration-test-cover-go${{ matrix.go_version }}
-        path: plugins/tests/integration/cover.out
+        name: plugins-integration-test-cover-go${{ matrix.go_version }}${{ matrix.artifact_suffix || '' }}
+        path: |
+          plugins/tests/integration/cover.out
+          plugins/envoy-1.39-*.txt
 
   controller-test:
     timeout-minutes: 10
@@ -352,6 +420,8 @@ jobs:
           ./api-module-test-cover-go1.25-1.37/cover_integration.out,
           ./api-module-test-cover-go1.25-1.38/cover.out,
           ./api-module-test-cover-go1.25-1.38/cover_integration.out,
+          ./api-module-test-cover-go1.25-1.39/cover.out,
+          ./api-module-test-cover-go1.25-1.39/cover_integration.out,
           ./api-module-test-cover-go1.24-dev/cover.out,
           ./api-module-test-cover-go1.24-dev/cover_integration.out,
           ./types-module-test-cover-go1.22/cover.out,

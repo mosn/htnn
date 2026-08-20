@@ -26,14 +26,15 @@ If it's a tagged version, such as `mosn.io/htnn/plugins v0.3.2`, you can directl
 
 Since the Envoy Golang filter is still under development, almost every version introduces breaking changes. To address this, HTNN introduces a data plane API version selection mechanism, allowing developers to choose the corresponding HTNN data plane code according to their Envoy version.
 
-By default, the target API version of HTNN's data plane code is the latest officially released Envoy version. At the same time, it supports compiling a shared library that can run on previously released Envoy versions by using build tags. The currently supported versions are as follows:
+By default, HTNN data plane code targets Envoy 1.32. Build tags select a shared library implementation for another supported Envoy version. Envoy 1.39 is supported only for externally managed Envoy contrib data planes; it does not upgrade HTNN's default Istio data plane, Helm charts, or controller.
 
 | Version   | build tag                           | Min Go version |
 |-----------|-------------------------------------|----------------|
 | dev       | envoydev                            | 1.24.6         |
-| 1.38      | envoy1.35                           | 1.24.6         |
-| 1.37      | envoy1.35                           | 1.24.6         |
-| 1.36      | envoy1.35                           | 1.22           |
+| 1.39 (external only) | envoy1.39                 | 1.25           |
+| 1.38      | envoy1.38                           | 1.24.6         |
+| 1.37      | envoy1.37                           | 1.24.6         |
+| 1.36      | envoy1.36                           | 1.22           |
 | 1.35      | envoy1.35                           | 1.22           |
 | 1.32      | Latest version, no build tag needed | 1.22           |
 | 1.31      | envoy1.31                           | 1.22           |
@@ -53,10 +54,18 @@ Then compile:
 CGO_ENABLED=1 go build -tags so,envoy1.29 --buildmode=c-shared ...
 ```
 
-If the target is the latest officially released Envoy version, no additional build tag is needed:
+For the default Envoy 1.32 target, no additional build tag is needed:
 
 ```shell
 CGO_ENABLED=1 go build -tags so --buildmode=c-shared ...
 ```
+
+To build for an external Envoy 1.39.0 data plane, use Go 1.25, replace the Envoy SDK with `v1.39.0`, and use the `envoy1.39` tag. The builder must be glibc-compatible with the runtime image, and the shared library must be built for the runtime architecture:
+
+```shell
+CGO_ENABLED=1 go build -tags so,envoy1.39 --buildmode=c-shared ...
+```
+
+Use the same Envoy patch version for the SDK and `envoyproxy/envoy:contrib-v1.39.0` runtime image. If loading fails, check the Go version, replace directive, build tag, architecture, builder glibc version, and Envoy startup logs.
 
 If an interface that only exists in the latest Envoy is executed on an older Envoy, the compatibility layer provided by this suite will execute an virtual interface, output an error log, and return a null value.
