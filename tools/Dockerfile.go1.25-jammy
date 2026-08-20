@@ -1,0 +1,27 @@
+# Copyright The HTNN Authors.
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+
+FROM ubuntu:22.04@sha256:f154feaf13b51d16e2b4b5575d69abc808da40c4b80e3a5055aaa4bcc5099d5b
+
+ARG GO_VERSION=1.25.0
+ARG TARGETARCH
+ARG GO_LINUX_AMD64_SHA256=2852af0cb20a13139b3448992e69b868e50ed0f8a1e5940ee1de9e19a123b613
+ARG GO_LINUX_ARM64_SHA256=05de75d6994a2783699815ee553bd5a9327d8b79991de36e38b66862782f54ae
+
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl git build-essential && \
+    rm -rf /var/lib/apt/lists/* && \
+    case "${TARGETARCH}" in \
+        amd64) goarch=amd64; expected_sha256="${GO_LINUX_AMD64_SHA256}" ;; \
+        arm64) goarch=arm64; expected_sha256="${GO_LINUX_ARM64_SHA256}" ;; \
+        *) echo "unsupported architecture: ${TARGETARCH}" >&2; exit 1 ;; \
+    esac && \
+    archive="go${GO_VERSION}.linux-${goarch}.tar.gz" && \
+    curl -fsSLO "https://go.dev/dl/${archive}" && \
+    test -n "${expected_sha256}" && \
+    printf '%s  %s\n' "${expected_sha256}" "${archive}" | sha256sum -c - && \
+    tar -C /usr/local -xzf "go${GO_VERSION}.linux-${goarch}.tar.gz" && \
+    rm "${archive}"
+
+ENV PATH=/usr/local/go/bin:${PATH}
