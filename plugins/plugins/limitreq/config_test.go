@@ -20,6 +20,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/protobuf/encoding/protojson"
+
+	_ "mosn.io/htnn/api/plugins/tests/pkg/envoy"
 )
 
 func TestConfig(t *testing.T) {

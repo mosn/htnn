@@ -117,3 +117,26 @@ func LogCriticalf(format string, v ...any) {
 
 type SecretManager interface {
 }
+
+// SslConnection is not available on Envoy < 1.38.
+type SslConnection interface {
+	PeerCertificatePresented() bool
+	PeerCertificateValidated() bool
+	Sha256PeerCertificateDigest() string
+	SerialNumberPeerCertificate() string
+	SubjectPeerCertificate() string
+	IssuerPeerCertificate() string
+	SubjectLocalCertificate() string
+	UriSanPeerCertificate() []string
+	UriSanLocalCertificate() []string
+	DnsSansPeerCertificate() []string
+	DnsSansLocalCertificate() []string
+	ValidFromPeerCertificate() (uint64, bool)
+	ExpirationPeerCertificate() (uint64, bool)
+	TlsVersion() string
+	CiphersuiteString() string
+	CiphersuiteId() (uint16, bool)
+	SessionId() (string, bool)
+	UrlEncodedPemEncodedPeerCertificate() string
+	UrlEncodedPemEncodedPeerCertificateChain() string
+}

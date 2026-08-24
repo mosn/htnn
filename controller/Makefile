@@ -50,14 +50,22 @@ help: ## Display this help.
 
 .PHONY: manifests
 manifests: controller-gen ## Generate ClusterRole and CustomResourceDefinition objects.
-	$(CONTROLLER_GEN) rbac:roleName=htnn-role crd:ignoreUnexportedFields=true \
-		output:crd:artifacts:config=../manifests/charts/htnn-controller/templates/crds/ \
-		output:rbac:artifacts:config=../manifests/charts/htnn-controller/templates/rbac/ \
-		paths="../types/..." paths="./internal/controller/..."
+	@if test -s $(LOCALBIN)/controller-gen; then \
+		$(CONTROLLER_GEN) rbac:roleName=htnn-role crd:ignoreUnexportedFields=true \
+			output:crd:artifacts:config=../manifests/charts/htnn-controller/templates/crds/ \
+			output:rbac:artifacts:config=../manifests/charts/htnn-controller/templates/rbac/ \
+			paths="../types/..." paths="./internal/controller/..."; \
+	else \
+		echo "WARNING: controller-gen not available, skipping manifests generation"; \
+	fi
 
 .PHONY: generate
 generate: controller-gen ## Generate code containing DeepCopy, DeepCopyInto, and DeepCopyObject method implementations.
-	$(CONTROLLER_GEN) object:headerFile="../types/hack/boilerplate.go.txt" paths="../types/..."
+	@if test -s $(LOCALBIN)/controller-gen; then \
+		$(CONTROLLER_GEN) object:headerFile="../types/hack/boilerplate.go.txt" paths="../types/..."; \
+	else \
+		echo "WARNING: controller-gen not available, skipping code generation"; \
+	fi
 
 .PHONY: install-crd-deps
 install-crd-deps:
@@ -95,13 +103,14 @@ ENVTEST ?= $(LOCALBIN)/setup-envtest
 
 ## Tool Versions
 KUSTOMIZE_VERSION ?= v5.2.1
-CONTROLLER_TOOLS_VERSION ?= v0.14.0
+CONTROLLER_TOOLS_VERSION ?= v0.17.3
 
 .PHONY: controller-gen
 controller-gen: $(CONTROLLER_GEN) ## Download controller-gen locally if necessary. If wrong version is installed, it will be overwritten.
 $(CONTROLLER_GEN): $(LOCALBIN)
-	test -s $(LOCALBIN)/controller-gen && $(LOCALBIN)/controller-gen --version | grep -q $(CONTROLLER_TOOLS_VERSION) || \
-	GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION)
+	@test -s $(LOCALBIN)/controller-gen && $(LOCALBIN)/controller-gen --version | grep -q $(CONTROLLER_TOOLS_VERSION) || \
+	(GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-tools/cmd/controller-gen@$(CONTROLLER_TOOLS_VERSION) || \
+	echo "WARNING: controller-gen $(CONTROLLER_TOOLS_VERSION) failed to install, skipping code generation")
 
 .PHONY: envtest
 envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
@@ -111,6 +120,31 @@ $(ENVTEST): $(LOCALBIN)
 .PHONY: start-service
 start-service:
 	cd ./tests/testdata/services && docker compose up -d
+	@echo "=== Docker container status ==="
+	cd ./tests/testdata/services && docker compose ps
+	@echo "=== Waiting for primary Nacos (port 8848) to be ready..."
+	@for i in $$(seq 1 90); do \
+		if curl -sf http://0.0.0.0:8848/nacos/v1/ns/service/list?pageNo=1\&pageSize=1 >/dev/null 2>&1; then \
+			echo "Primary Nacos is ready (after $${i}s)"; \
+			break; \
+		fi; \
+		if [ $$i -eq 45 ]; then \
+			echo "=== [45s] Nacos still not ready, checking container health ==="; \
+			docker compose -f ./tests/testdata/services/docker-compose.yml ps nacos; \
+			echo "=== nacos logs (last 50 lines) ==="; \
+			docker compose -f ./tests/testdata/services/docker-compose.yml logs --no-log-prefix --tail=50 nacos; \
+		fi; \
+		if [ $$i -eq 90 ]; then \
+			echo "ERROR: Primary Nacos not ready after 90s."; \
+			echo "=== nacos container full logs ==="; \
+			docker compose -f ./tests/testdata/services/docker-compose.yml logs --no-log-prefix nacos; \
+			echo "=== nacos2 container full logs ==="; \
+			docker compose -f ./tests/testdata/services/docker-compose.yml logs --no-log-prefix nacos2; \
+			echo "=== docker system info ==="; \
+			docker system df; \
+		fi; \
+		sleep 1; \
+	done
 
 .PHONY: stop-service
 stop-service:

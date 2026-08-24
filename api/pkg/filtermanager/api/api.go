@@ -173,6 +173,12 @@ type StreamInfo interface {
 	VirtualClusterName() (string, bool)
 	// WorkerID returns the ID of the Envoy worker thread
 	WorkerID() uint32
+	// DrainConnectionUponCompletion marks the connection to be drained after the current request completes.
+	// Available since Envoy 1.38. On older versions, this is a no-op.
+	DrainConnectionUponCompletion()
+	// DownstreamSslConnection returns SSL connection info for the downstream connection.
+	// Returns nil if the connection is not secured with SSL/TLS or on Envoy < 1.38.
+	DownstreamSslConnection() SslConnection
 
 	// Methods added by HTNN
 

@@ -477,6 +477,13 @@ func (i *StreamInfo) DownstreamRemoteParsedAddress() *api.IPAddress {
 	}
 }
 
+func (i *StreamInfo) DrainConnectionUponCompletion() {
+}
+
+func (i *StreamInfo) DownstreamSslConnection() api.SslConnection {
+	return nil
+}
+
 var _ api.StreamInfo = (*StreamInfo)(nil)
 
 type LocalResponse struct {

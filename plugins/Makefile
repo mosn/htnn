@@ -46,6 +46,15 @@ build-test-so:
 .PHONY: start-service
 start-service:
 	cd ./tests/integration/testdata/services && docker compose up -d --build
+	@echo "Waiting for services to be ready..."
+	@for i in $$(seq 1 60); do \
+		if curl -sf http://0.0.0.0:4444/.well-known/openid-configuration >/dev/null 2>&1; then \
+			echo "Services are ready (after $${i}s)"; \
+			break; \
+		fi; \
+		if [ $$i -eq 60 ]; then echo "WARNING: Services not ready after 60s"; fi; \
+		sleep 1; \
+	done
 
 .PHONY: stop-service
 stop-service:

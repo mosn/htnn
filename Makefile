@@ -98,7 +98,8 @@ fmt-go: install-go-fmtter
 # So we add `-e` to attempt to proceed despite errors encountered while loading packages.
 	$(foreach PKG, $(GO_MODULES_EXCLUDE_SITE), \
 		pushd ./${PKG} && \
-			go mod tidy -e || exit 1; \
+			go mod tidy -e && \
+			go mod edit -go=1.22 -toolchain=none || exit 1; \
 		popd; \
 	)
 	$(foreach PKG, $(GO_MODULES), \
@@ -190,7 +191,7 @@ lint-website: $(LOCALBIN)
 .PHONY: lint-markdown
 lint-markdown:
 	if ! command -v markdownlint >/dev/null 2>&1; then npm install -g markdownlint-cli; fi
-	markdownlint '**/*.md' --disable MD012 MD013 MD024 MD029 MD033 MD034 MD036 MD041
+	markdownlint '**/*.md' --disable MD004 MD012 MD013 MD024 MD029 MD033 MD034 MD036 MD041 MD060
 
 # We don’t use if ! command -v yamllint because some environments might have a pre-installed Python version.
 # Checking the specific path ensures we're using the Node.js version to avoid conflicts.

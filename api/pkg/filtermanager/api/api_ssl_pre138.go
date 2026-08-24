@@ -12,34 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//go:build !envoy1.29 && !envoydev && !envoy1.35 && !envoy1.36 && !envoy1.37 && !envoy1.38 && !envoy1.39
+//go:build envoy1.35 || envoy1.36 || envoy1.37
 
 package api
 
-import "github.com/envoyproxy/envoy/contrib/golang/common/go/api"
-
-var (
-	LogTrace     = api.LogTrace
-	LogDebug     = api.LogDebug
-	LogInfo      = api.LogInfo
-	LogWarn      = api.LogWarn
-	LogError     = api.LogError
-	LogCritical  = api.LogCritical
-	LogTracef    = api.LogTracef
-	LogDebugf    = api.LogDebugf
-	LogInfof     = api.LogInfof
-	LogWarnf     = api.LogWarnf
-	LogErrorf    = api.LogErrorf
-	LogCriticalf = api.LogCriticalf
-
-	GetLogLevel = api.GetLogLevel
-)
-
-type SecretManager interface {
-}
-
 // SslConnection is not available on Envoy < 1.38.
-// Defined here so the StreamInfo interface compiles on all versions.
+// Defined here so the StreamInfo interface compiles on these versions.
 type SslConnection interface {
 	PeerCertificatePresented() bool
 	PeerCertificateValidated() bool

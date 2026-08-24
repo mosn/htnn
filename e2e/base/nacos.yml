@@ -38,6 +38,17 @@ spec:
         - name: MODE
           value: standalone
         - name: JVM_XMS
-          value: 512m
+          value: 256m
         - name: JVM_XMX
-          value: 512m
+          value: 256m
+        - name: JVM_XMN
+          value: 128m
+        - name: JAVA_TOOL_OPTIONS
+          value: "-XX:-UseContainerSupport"
+        readinessProbe:
+          httpGet:
+            path: /nacos/v1/ns/service/list?pageNo=1&pageSize=1
+            port: 8848
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          failureThreshold: 24

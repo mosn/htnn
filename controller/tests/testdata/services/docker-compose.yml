@@ -20,7 +20,7 @@ services:
     networks:
       service:
   nacosv2-1:
-    image: nacos-registry.cn-hangzhou.cr.aliyuncs.com/nacos/nacos-server:v2.4.2-slim
+    image: nacos/nacos-server:v2.4.2-slim
     env_file:
       - env/nacos.env
     restart: unless-stopped
@@ -31,7 +31,7 @@ services:
     networks:
       service:
   nacosv2-2:
-    image: nacos-registry.cn-hangzhou.cr.aliyuncs.com/nacos/nacos-server:v2.4.2-slim
+    image: nacos/nacos-server:v2.4.2-slim
     env_file:
       - env/nacos.env
     restart: unless-stopped
